@@ -1,11 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
+import {
+  anlagenApi,
+  auftraegeApi,
+  kundenApi,
+  projekteApi,
+  projektAufgabenApi,
+  standorteApi,
+  vorgaengeApi,
+} from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { Sheet } from "../../components/apple/Sheet";
 import { QrScanner } from "../../components/QrScanner";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 
@@ -41,17 +51,42 @@ const PRIORITAET_OPTIONEN = [
   { value: 5, label: "5 – Hoch" },
 ];
 
+// Sheet-DOM-Wurzel liegt ausserhalb des <form> (Sheet.tsx portalt die Kopf-
+// zeile mit den Aktionen als Geschwister statt als Vorfahre des Inhalts) --
+// das HTML-Attribut form="..." verknuepft den Kopfzeilen-Button trotzdem
+// mit dem Formular, ganz ohne eigenen State fuer den Submit-Klick.
+const FORM_ID = "neuer-vorgang-formular";
+
+/** "Neuer Vorgang" (Abschnitt 5.3): frueher eigene Vollbild-Route, jetzt ein
+ * Sheet (mobil von unten, Desktop/Office als 540px-Dialog) -- Inhalt/
+ * Funktionsumfang unveraendert, nur die Praesentation. Abbrechen fuehrt
+ * zurueck zur aufrufenden Seite (Feed oder Office-Vorgangsliste) statt zu
+ * einer fest verdrahteten Route. */
 export function NewVorgangPage() {
   const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // "+ Neuer Vorgang" aus ProjektDetailPanel.tsx/AuftragDetailPanel.tsx
+  // verlinkt hierher mit ?projekt_id=.../?auftrag_id=..., damit der neue
+  // Vorgang direkt der richtigen Ebene zugeordnet ist -- beide Felder
+  // bleiben trotzdem per SearchableSelect aenderbar (siehe dort unten).
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const [kundeId, setKundeId] = useState("");
+  const [kundeId, setKundeId] = useState(searchParams.get("kunde_id") ?? "");
+  const [projektId, setProjektId] = useState(searchParams.get("projekt_id") ?? "");
+  const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
-  const [standortId, setStandortId] = useState("");
+  const [standortId, setStandortId] = useState(searchParams.get("standort_id") ?? "");
   const [weitereAnlagenIds, setWeitereAnlagenIds] = useState<Set<string>>(new Set());
-  const [titel, setTitel] = useState("");
-  const [beschreibung, setBeschreibung] = useState("");
+  const [titel, setTitel] = useState(searchParams.get("titel") ?? "");
+  const [beschreibung, setBeschreibung] = useState(searchParams.get("beschreibung") ?? "");
+  // "+ Neuen Vorgang aus dieser Aufgabe anlegen" aus
+  // ProjektAufgabeDetailPanel.tsx verlinkt hierher mit ?aufgabe_id=... (plus
+  // vorbelegtem kunde_id/anlage_id/standort_id/titel/beschreibung) -- nach
+  // erfolgreichem Anlegen wird die Aufgabe unten auf den neuen Vorgang
+  // verknuepft, damit sie nicht doppelt erfasst werden muss.
+  const aufgabeId = searchParams.get("aufgabe_id") ?? "";
+  const vorbelegteAnlageId = searchParams.get("anlage_id") ?? "";
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("aufwand");
   const [prioritaet, setPrioritaet] = useState(3);
@@ -69,7 +104,13 @@ export function NewVorgangPage() {
   const [adrPlz, setAdrPlz] = useState("");
   const [adrOrt, setAdrOrt] = useState("");
 
+  function schliessen() {
+    navigate(-1);
+  }
+
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list() });
   const { data: anlagenListe } = useQuery({
     queryKey: ["anlagen", kundeId, "aktiv"],
     queryFn: () => anlagenApi.list(kundeId, undefined, true),
@@ -91,6 +132,15 @@ export function NewVorgangPage() {
   useEffect(() => {
     setWeitereAnlagenIds(new Set((standortAnlagen ?? []).map((a) => a.id)));
   }, [standortAnlagen]);
+
+  // Aus der Aufgabe vorbelegte Anlage erst setzbar, sobald anlagenListe (nach
+  // dem vorbelegten kundeId) geladen ist -- das <select> braucht das volle
+  // Anlage-Objekt, nicht nur die ID (siehe QR-Scan-Handhabung oben).
+  useEffect(() => {
+    if (!vorbelegteAnlageId || anlage) return;
+    const gefunden = anlagenListe?.find((a) => a.id === vorbelegteAnlageId);
+    if (gefunden) setAnlage(gefunden);
+  }, [anlagenListe, vorbelegteAnlageId, anlage]);
 
   const createAnlageMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -157,6 +207,8 @@ export function NewVorgangPage() {
         anlage_id: anlage?.id ?? null,
         weitere_anlage_ids: Array.from(weitereAnlagenIds),
         standort_id: standortId || null,
+        projekt_id: projektId || null,
+        auftrag_id: auftragId || null,
         titel,
         beschreibung,
         abrechnungsart,
@@ -175,15 +227,27 @@ export function NewVorgangPage() {
         return { online: false as const };
       }
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+      if (result.online && aufgabeId) {
+        try {
+          await projektAufgabenApi.update(aufgabeId, { vorgang_id: result.vorgang.id });
+          queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
+        } catch {
+          // Vorgang ist bereits angelegt -- die Rueckverknuepfung ist rein
+          // referenziell und laesst sich bei Bedarf im Aufgaben-Panel
+          // manuell nachtragen, ein Fehlschlag hier darf das Anlegen nicht
+          // rueckgaengig machen.
+        }
+      }
       if (result.online) {
         navigate(`/vorgaenge/${result.vorgang.id}`);
       } else {
         navigate("/feed");
       }
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   async function handleScan(code: string) {
@@ -213,56 +277,63 @@ export function NewVorgangPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Neuer Vorgang</h1>
+    <Sheet
+      offen
+      vollbild
+      onClose={schliessen}
+      titel="Neuer Vorgang"
+      links={
+        <button type="button" onClick={schliessen} className="text-[17px] text-tint">
+          Abbrechen
+        </button>
+      }
+      rechts={
+        <button
+          type="submit"
+          form={FORM_ID}
+          disabled={createMutation.isPending}
+          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+        >
+          Anlegen
+        </button>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit} noValidate className="space-y-4 p-4">
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="btn-ap-capsule btn-ap-capsule-secondary w-full"
+        >
+          <ScanLine size={16} strokeWidth={2} aria-hidden="true" /> QR-Code an Anlage scannen
+        </button>
+        {scanError && <p className="text-sm text-st-fehlt">{scanError}</p>}
+        {anlage && (
+          <div className="flex items-center justify-between rounded-[var(--radius-ap-input)] bg-tintbg p-3 text-sm text-tint">
+            <span>
+              Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
+            </span>
+            <span className="flex gap-3">
+              <button type="button" onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-xs underline">
+                ansehen
+              </button>
+              <button type="button" onClick={() => setAnlage(null)} className="text-xs underline">
+                entfernen
+              </button>
+            </span>
+          </div>
+        )}
 
-      <button
-        onClick={() => setShowScanner(true)}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-      >
-        <ScanLine size={16} strokeWidth={2} /> QR-Code an Anlage scannen
-      </button>
-      {scanError && <p className="text-sm text-red-700 dark:text-red-400">{scanError}</p>}
-      {anlage && (
-        <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-500/10 dark:text-blue-200">
-          <span>
-            Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
-          </span>
-          <span className="flex gap-3">
-            <button
-              onClick={() => navigate(`/anlagen/${anlage.id}`)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
-            >
-              ansehen
-            </button>
-            <button
-              onClick={() => setAnlage(null)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
-            >
-              entfernen
-            </button>
-          </span>
-        </div>
-      )}
+        {showScanner && <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 
-      {showScanner && (
-        <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
-      )}
+        <p className="text-sm text-label2">
+          Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
+          Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
+          sich automatisch, sobald wieder eine Verbindung besteht.
+        </p>
 
-      <p className="text-sm text-slate-500 dark:text-stone-400">
-        Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
-        Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
-        sich automatisch, sobald wieder eine Verbindung besteht.
-      </p>
-
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-      >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
-            Kunde <span aria-hidden="true" className="text-red-700 dark:text-red-400">*</span>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+            Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
           </label>
           <select id={`${uid}-0`}
             required
@@ -274,7 +345,7 @@ export function NewVorgangPage() {
               setAnlage(null);
               setStandortId("");
             }}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="field-ap"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -284,38 +355,34 @@ export function NewVorgangPage() {
             ))}
           </select>
           {feldFehler.kunde && (
-            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
+            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
               {feldFehler.kunde}
             </p>
           )}
           {!showNewKunde && (
-            <button
-              type="button"
-              onClick={() => setShowNewKunde(true)}
-              className="btn-touch mt-1 text-xs font-medium text-blue-700 dark:text-blue-400"
-            >
+            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-xs font-medium text-tint">
               + Neuer Kunde
             </button>
           )}
         </div>
 
         {showNewKunde && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Name</label>
               <input id={`${uid}-1`}
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
               <select id={`${uid}-2`}
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -325,13 +392,13 @@ export function NewVorgangPage() {
                 ))}
               </select>
             </div>
-            {newKundeError && <p className="text-sm text-red-700 dark:text-red-400">{newKundeError}</p>}
+            {newKundeError && <p className="text-sm text-st-fehlt">{newKundeError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateKunde}
                 disabled={createKundeMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-ap-primary flex-1"
               >
                 Kunde anlegen
               </button>
@@ -341,7 +408,7 @@ export function NewVorgangPage() {
                   setShowNewKunde(false);
                   setNewKundeError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                className="btn-ap flex-1"
               >
                 Abbrechen
               </button>
@@ -351,14 +418,8 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
-              Standort (optional)
-            </label>
-            <select id={`${uid}-3`}
-              value={standortId}
-              onChange={(e) => setStandortId(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
+            <select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -371,12 +432,10 @@ export function NewVorgangPage() {
 
         {standortId && standortAnlagen && standortAnlagen.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
-              Anlagen an diesem Standort
-            </label>
-            <div className="space-y-1 rounded-md border border-slate-200 p-2 dark:border-stone-700">
+            <label className="mb-1 block text-sm font-medium text-label">Anlagen an diesem Standort</label>
+            <div className="space-y-1 rounded-[var(--radius-ap-input)] bg-fill p-2">
               {standortAnlagen.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+                <label key={a.id} className="flex items-center gap-2 text-sm text-label">
                   <input
                     type="checkbox"
                     checked={weitereAnlagenIds.has(a.id)}
@@ -393,7 +452,7 @@ export function NewVorgangPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
+            <p className="mt-1 text-xs text-label2">
               Alle angehakten Anlagen werden mit in den Vorgang aufgenommen.
             </p>
           </div>
@@ -401,13 +460,11 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlage (optional)</label>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
             <select id={`${uid}-4`}
               value={anlage?.id ?? ""}
-              onChange={(e) =>
-                setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
-              }
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              onChange={(e) => setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)}
+              className="field-ap"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -417,11 +474,7 @@ export function NewVorgangPage() {
               ))}
             </select>
             {!showNewAnlage && (
-              <button
-                type="button"
-                onClick={() => setShowNewAnlage(true)}
-                className="btn-touch mt-1 text-xs font-medium text-blue-700 dark:text-blue-400"
-              >
+              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs font-medium text-tint">
                 + Neue Anlage
               </button>
             )}
@@ -429,32 +482,32 @@ export function NewVorgangPage() {
         )}
 
         {showNewAnlage && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
               <input id={`${uid}-5`}
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
               <input id={`${uid}-6`}
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               />
             </div>
-            {newAnlageError && <p className="text-sm text-red-700 dark:text-red-400">{newAnlageError}</p>}
+            {newAnlageError && <p className="text-sm text-st-fehlt">{newAnlageError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateAnlage}
                 disabled={createAnlageMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-ap-primary flex-1"
               >
                 Anlage anlegen
               </button>
@@ -464,7 +517,7 @@ export function NewVorgangPage() {
                   setShowNewAnlage(false);
                   setNewAnlageError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                className="btn-ap flex-1"
               >
                 Abbrechen
               </button>
@@ -472,71 +525,76 @@ export function NewVorgangPage() {
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
+            <SearchableSelect id={`${uid}-7`}
+              value={projektId}
+              onChange={setProjektId}
+              placeholder="Kein Projekt"
+              options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-label">Auftrag (optional)</label>
+            <SearchableSelect id={`${uid}-8`}
+              value={auftragId}
+              onChange={setAuftragId}
+              placeholder="Kein Auftrag"
+              options={(auftraege ?? []).map((a) => ({ value: a.id, label: a.titel }))}
+            />
+          </div>
+        </div>
+
         <div>
-          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
-            Titel <span aria-hidden="true" className="text-red-700 dark:text-red-400">*</span>
+          <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-label">
+            Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
           </label>
-          <input id={`${uid}-7`}
+          <input
+            id={`${uid}-9`}
             required
             aria-invalid={!!feldFehler.titel}
             aria-describedby={feldFehler.titel ? `${uid}-titel-fehler` : undefined}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="field-ap"
           />
           {feldFehler.titel && (
-            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
+            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
               {feldFehler.titel}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
-          <textarea id={`${uid}-8`}
-            value={beschreibung}
-            onChange={(e) => setBeschreibung(e.target.value)}
-            rows={3}
-            className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-          />
+          <label htmlFor={`${uid}-10`} className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <textarea id={`${uid}-10`} value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
-            Adresse (optional)
-          </label>
-          <p className="mb-1 text-xs text-slate-400 dark:text-stone-500">
+          <label className="mb-1 block text-sm font-medium text-label">Adresse (optional)</label>
+          <p className="mb-1 text-xs text-label2">
             Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
           </p>
           <input
             value={adrStrasse}
             onChange={(e) => setAdrStrasse(e.target.value)}
             placeholder="Straße + Hausnr."
-            className="btn-touch mb-2 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="field-ap mb-2"
           />
           <div className="grid grid-cols-2 gap-2">
-            <input
-              value={adrPlz}
-              onChange={(e) => setAdrPlz(e.target.value)}
-              placeholder="PLZ"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-            <input
-              value={adrOrt}
-              onChange={(e) => setAdrOrt(e.target.value)}
-              placeholder="Ort"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
+            <input value={adrPlz} onChange={(e) => setAdrPlz(e.target.value)} placeholder="PLZ" className="field-ap" />
+            <input value={adrOrt} onChange={(e) => setAdrOrt(e.target.value)} placeholder="Ort" className="field-ap" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
-            <select id={`${uid}-9`}
+            <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
+            <select id={`${uid}-11`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -546,11 +604,11 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label htmlFor={`${uid}-10`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
-            <select id={`${uid}-10`}
+            <label htmlFor={`${uid}-12`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
+            <select id={`${uid}-12`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -560,12 +618,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Priorität</label>
-            <select id={`${uid}-11`}
-              value={prioritaet}
-              onChange={(e) => setPrioritaet(Number(e.target.value))}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
+            <label htmlFor={`${uid}-13`} className="mb-1 block text-sm font-medium text-label">Priorität</label>
+            <select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
@@ -575,16 +629,16 @@ export function NewVorgangPage() {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
-        >
+        {/* Primäraktion liegt in der Kopfzeile (rechts="Anlegen"); dieser
+            Button bleibt als zweite, gut sichtbare Erreichbarkeit am Ende
+            des langen Formulars -- sonst müsste nach dem Ausfüllen wieder
+            ganz nach oben gescrollt werden. */}
+        <button type="submit" disabled={createMutation.isPending} className="btn-ap-primary w-full">
           Vorgang anlegen
         </button>
       </form>
-    </div>
+    </Sheet>
   );
 }

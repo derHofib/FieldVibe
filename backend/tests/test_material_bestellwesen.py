@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.db.session import system_session
 from app.models.material import Material, MaterialBestand, MaterialBewegung
 from app.models.material_bedarf import MaterialBedarf
+from app.models.projekt import Projekt
 from tests.conftest import auth_headers, login
 
 
@@ -167,6 +168,48 @@ async def test_list_material_bedarfe_mit_details_and_filter(
         "/api/material-bedarfe", headers=auth_headers(token), params={"zweck": "bestellung"}
     )
     assert leer_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_material_bedarfe_filter_projekt_id(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Fuer den Positionen-Tab der Projekt-Detailansicht (siehe
+    office/projekte/ProjektDetailPanel.tsx) -- MaterialBedarf selbst hat
+    kein projekt_id, der Filter laeuft ueber den verknuepften Vorgang."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    async with system_session() as session:
+        projekt = Projekt(mandant_id=mandant.id, name="Testprojekt", erstellt_von=admin.id)
+        session.add(projekt)
+        await session.flush()
+        projekt_id = projekt.id
+
+    vorgang_im_projekt = await make_vorgang(mandant=mandant, kunde=kunde, projekt_id=projekt_id)
+    anderer_vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    material = await _make_material(mandant, bezeichnung="Steckdose")
+
+    await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(vorgang_im_projekt.id), "menge": "2"},
+    )
+    await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(anderer_vorgang.id), "menge": "5"},
+    )
+
+    resp = await client.get(
+        "/api/material-bedarfe", headers=auth_headers(token), params={"projekt_id": str(projekt_id)}
+    )
+    assert resp.status_code == 200
+    [eintrag] = resp.json()
+    assert eintrag["menge"] == "2.00"
+    assert eintrag["vorgang_vorgangsnummer"] == vorgang_im_projekt.vorgangsnummer
 
 
 @pytest.mark.asyncio
@@ -366,6 +409,75 @@ async def test_bestellung_status_eingegangen_bucht_wareneingang_und_markiert_bed
 
         refreshed_bedarf = await session.get(MaterialBedarf, bedarf.json()["id"])
         assert refreshed_bedarf.status == "erhalten"
+
+
+@pytest.mark.asyncio
+async def test_bestellung_wareneingang_mit_korrigiertem_preis_aktualisiert_position(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    material = await _make_material(mandant, einzelpreis=Decimal("2.50"))
+    token = await login(client, admin.email, "pw-123456")
+
+    bedarf = await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(vorgang.id), "menge": "8"},
+    )
+    created = await client.post(
+        "/api/bestellungen/from-bedarfe",
+        headers=auth_headers(token),
+        json={"material_bedarf_ids": [bedarf.json()["id"]]},
+    )
+    bestellung_id = created.json()["id"]
+    position_id = created.json()["positionen"][0]["id"]
+    assert created.json()["positionen"][0]["einzelpreis"] == "2.50"
+
+    resp = await client.patch(
+        f"/api/bestellungen/{bestellung_id}",
+        headers=auth_headers(token),
+        json={"status": "eingegangen", "positionen_preise": {position_id: "1.99"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["positionen"][0]["einzelpreis"] == "1.99"
+
+    reread = await client.get(f"/api/bestellungen/{bestellung_id}", headers=auth_headers(token))
+    assert reread.json()["positionen"][0]["einzelpreis"] == "1.99"
+
+
+@pytest.mark.asyncio
+async def test_bestellung_positionen_preise_ohne_wareneingang_wird_abgelehnt(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    material = await _make_material(mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    bedarf = await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(vorgang.id), "menge": "3"},
+    )
+    created = await client.post(
+        "/api/bestellungen/from-bedarfe",
+        headers=auth_headers(token),
+        json={"material_bedarf_ids": [bedarf.json()["id"]]},
+    )
+    bestellung_id = created.json()["id"]
+    position_id = created.json()["positionen"][0]["id"]
+
+    resp = await client.patch(
+        f"/api/bestellungen/{bestellung_id}",
+        headers=auth_headers(token),
+        json={"status": "bestellt", "positionen_preise": {position_id: "1.99"}},
+    )
+    assert resp.status_code == 400
 
 
 @pytest.mark.asyncio

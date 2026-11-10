@@ -1,13 +1,52 @@
-import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
-import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
+import { LANGER_REQUEST_TIMEOUT_MS, apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import type {
+  ImportAnalyse,
+  ImportEntitaet,
+  ImportErgebnis,
+  ImportKonfiguration,
+  ImportLauf,
+} from "../office/datenimport/typen";
+import type { ExportDownload, MandantExport } from "../office/export/exportUtils";
+import {
+  filterQuery,
+  type KettenPruefung,
+  type ProtokollFilter,
+  type ProtokollListe,
+} from "../office/protokoll/protokollUtils";
+import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
+import { partnerApiFetch } from "./partnerClient";
+import type {
+  EffektivRead as OrgEffektivRead,
+  BesetzungCreate as OrgBesetzungCreate,
+  BesetzungErgebnis as OrgBesetzungErgebnis,
+  OrgEinheit,
+  Position as OrgPosition,
+  PositionCreate as OrgPositionCreate,
+  PositionDetail as OrgPositionDetail,
+  PositionUpdate as OrgPositionUpdate,
+  RechteRegistry,
+  RechtOverride as OrgRechtOverride,
+  RechtOverrideIn as OrgRechtOverrideIn,
+} from "../types/organigramm";
+import type {
+  Abwesenheit,
+  AbwesenheitCreate,
+  AbwesenheitKalenderEintrag,
+  AbwesenheitStatus,
+  Urlaubsanspruch,
+  UrlaubsanspruchSetzen,
+  Urlaubskonto,
   AccountTyp,
   AccountTypCreate,
   AccountTypUpdate,
   Adresse,
   Angebot,
+  AngebotMwstSatz,
   AngebotPosition,
+  AngebotAusLvEintrag,
   AngebotPositionstyp,
+  AngebotZeilentyp,
+  AngebotPositionUpdate,
   Anlage,
   AnlagenFeldDefinition,
   AnlagenFeldTyp,
@@ -15,8 +54,17 @@ import type {
   AnlageProfil,
   Ansprechpartner,
   AuditLogEntry,
+  Auftrag,
+  AuftragStatus,
   Bestellung,
+  Board,
+  BoardAnhangUpload,
+  BoardAnhangUrl,
+  BoardHintergrundUrl,
+  BoardListItem,
+  BoardTyp,
   BottomNavPraeferenz,
+  ChecklistenPunkt,
   CurrentKunde,
   CurrentUser,
   Dauerauftrag,
@@ -31,13 +79,30 @@ import type {
   EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
-  Formular,
-  FormularAuftragstypZuordnung,
-  Formularfeld,
+  FehlerberichtArt,
+  FehlerberichtDetail,
+  FehlerberichtListenFilter,
+  FehlerberichtListItem,
+  FehlerberichtUpdate,
+  FehlerberichtZaehler,
+  FormAuftragstypZuordnungV2,
+  FormField,
+  FormFeldTyp,
+  FormGroup,
+  FormLogicEffekt,
+  FormLogicRule,
+  FormPraesentationsTyp,
+  FormPresentationElement,
+  FormSchema,
+  FormSchemaDetail,
+  FormSchemaStatus,
+  FormSchemaVerfuegbar,
+  FormSubmission,
+  FormView,
+  FormViewFieldLayout,
+  FormViewResolved,
+  FormViewTyp,
   FormularfeldDatenquelle,
-  FormularfeldPosition,
-  FormularfeldTyp,
-  FormularVerfuegbar,
   GespeicherterFilter,
   GespeicherterFilterEntitaet,
   Highlight,
@@ -48,8 +113,15 @@ import type {
   KundeLogoUrl,
   KundeProfil,
   KundenportalLinkInfo,
+  Rechtliches,
   KundenportalZugang,
+  Leistungsverzeichnis,
+  LeistungsverzeichnisPosition,
+  LeistungsverzeichnisVerwendung,
+  LeistungsverzeichnisVerwendungMitDetails,
   Leistungstyp,
+  LvKalkulationsmodus,
+  LvMaterialPosten,
   Lieferant,
   MailAccount,
   MailAccountVerbindungTest,
@@ -57,6 +129,7 @@ import type {
   MailMessageDetail,
   MailMessageListResponse,
   Mandant,
+  FahrzeitAbrechnung,
   MandantEinstellungen,
   MandantFirmendaten,
   MandantIntegration,
@@ -68,22 +141,37 @@ import type {
   MaterialBedarfZweck,
   MaterialBewegung,
   MaterialVerwendung,
+  MaterialVerwendungMitDetails,
+  NavKategorienRead,
   NotificationEntry,
   OffenePostenBericht,
   OfficeNavPraeferenz,
   PapierkorbEintrag,
   PapierkorbEntityTyp,
+  Partner,
+  PartnerKommentar,
+  PartnerZugang,
+  PartnerNachweis,
+  PartnerNachweisTyp,
+  PlanSymbol,
   PlattformIntegration,
+  Projekt,
+  ProjektAufgabe,
+  ProjektSpalte,
   Pruefmittel,
   Pruefzyklus,
   PruefzyklusEinheit,
   Rechnung,
+  RechnungAusAngebotCreate,
   RechnungenFilter,
+  RechnungGutschriftCreate,
   RechnungListe,
   RechnungPosition,
+  RechnungPositionQuelle,
+  RechnungPositionVorschlag,
+  RechnungSteuerFelder,
+  AbrechenbarerVorgang,
   RechnungZahlungCreate,
-  RechteAktion,
-  RechteBereich,
   RechteMatrixEintrag,
   SearchResponse,
   Standort,
@@ -100,29 +188,124 @@ import type {
   TokenPair,
   UstVaBericht,
   User,
+  UserAuswahl,
   VersionInfo,
+  PortalAngebot,
+  PortalVerbraucherschutz,
+  PortalAnlage,
+  PortalRechnung,
+  PortalStandort,
+  PortalVorgang,
+  PortalVorgangAnfrage,
+  PortalVorgangEvent,
   Vorgang,
+  VorgangAbhaengigkeit,
+  VorgangAbhaengigkeitenListe,
   VorgangAnfrage,
   VorgangEvent,
   VorgangEventType,
-  VorgangFormular,
+  VorgangKennzahlen,
+  VorgangPartnerZuweisungResponse,
   Zeiterfassung,
+  ArbeitszeitSoll,
+  ArbeitszeitSollSetzen,
+  Bundesland,
+  Feiertag,
+  FeiertageGenerierenErgebnis,
+  Saldo,
+  ZeiterfassungAenderung,
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
+  ZeiterfassungSummenNachStatus,
+  Zeitplan,
+  ZeitplanBasisplan,
+  ZeitplanStraffenAntwort,
+  ProjektVorlage,
+  ProjektVorlageDetail,
+  ZeitplanElementCreate,
+  ZeitplanElementUpdate,
+  ZeitplanAbhaengigkeitArt,
+  ZeitplanBestellungRef,
+  ZeitplanVerschiebeModus,
+  ZeitplanVorgangAuswahl,
+  PartnerZeitplanEintrag,
+  CurrentPartner,
+  PartnerStatusSetzbar,
+  PartnerVorgang,
+  MeinZeitplan,
+  ZeitplanAntrag,
+  ZeitplanAntragCreate,
+  ZeitplanAntragEntscheidung,
+  ZeitplanAntragStatus,
 } from "../types";
+
+import type { UserTokenPair, LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
 
 export const authApi = {
   login: (email: string, password: string) =>
-    apiFetch<TokenPair>("/api/auth/login", {
+    apiFetch<LoginResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  mfaVerifizieren: (mfaToken: string, code: string) =>
+    apiFetch<UserTokenPair>("/api/auth/mfa/verifizieren", {
+      method: "POST",
+      body: JSON.stringify({ mfa_token: mfaToken, code }),
+    }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+  // Loescht das Refresh-Cookie dieses Browsers.
+  abmelden: () => apiFetch<void>("/api/auth/abmelden", { method: "POST" }),
+  ueberallAbmelden: () => apiFetch<void>("/api/auth/ueberall-abmelden", { method: "POST" }),
   registrieren: (token: string, name: string, password: string) =>
-    apiFetch<TokenPair>("/api/auth/registrieren", {
+    apiFetch<UserTokenPair>("/api/auth/registrieren", {
       method: "POST",
       body: JSON.stringify({ token, name, password }),
     }),
+  passwortVergessen: (email: string) =>
+    apiFetch<void>("/api/auth/passwort-vergessen", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwortZuruecksetzen: (token: string, newPassword: string) =>
+    apiFetch<void>("/api/auth/passwort-zuruecksetzen", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  // Liefert ein frisches Token-Paar: alle bisherigen Tokens werden serverseitig
+  // widerrufen, die aufrufende Sitzung laeuft damit weiter.
+  passwortAendern: (oldPassword: string, newPassword: string) =>
+    apiFetch<UserTokenPair>("/api/auth/passwort-aendern", {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+};
+
+export const mfaApi = {
+  status: () => apiFetch<MfaStatus>("/api/auth/mfa/status"),
+  einrichten: () => apiFetch<MfaEinrichtung>("/api/auth/mfa/einrichten", { method: "POST" }),
+  // Widerruft alle Tokens und liefert ein frisches Paar plus die Wiederherstellungscodes.
+  bestaetigen: (code: string) =>
+    apiFetch<MfaAktiviert>("/api/auth/mfa/bestaetigen", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  deaktivieren: (password: string, code: string) =>
+    apiFetch<UserTokenPair>("/api/auth/mfa/deaktivieren", {
+      method: "POST",
+      body: JSON.stringify({ password, code }),
+    }),
+  neueCodes: (password: string, code: string) =>
+    apiFetch<{ wiederherstellungscodes: string[] }>("/api/auth/mfa/wiederherstellungscodes", {
+      method: "POST",
+      body: JSON.stringify({ password, code }),
+    }),
+};
+
+export const streamApi = {
+  // Kurzlebiges Ticket statt Access-Token in der EventSource-URL (siehe
+  // backend/app/api/routes/stream.py).
+  ticket: () =>
+    apiFetch<{ ticket: string; gueltig_bis: string }>("/api/stream/ticket", { method: "POST" }),
 };
 
 export const systemApi = {
@@ -163,6 +346,10 @@ export const mandantenApi = {
 
 export const usersApi = {
   list: () => apiFetch<User[]>("/api/users"),
+  // Schlanke, mandantenweite Liste fuer Zuweisungen/Erwaehnungen (ohne E-Mail); list ist scope-gefiltert.
+  auswahl: () => apiFetch<UserAuswahl[]>("/api/users/auswahl"),
+  // Eigene Funktion statt Parameter an list: die wird vielerorts direkt als queryFn uebergeben.
+  listMitVersteckten: () => apiFetch<User[]>("/api/users?versteckte=1"),
   create: (body: {
     mandant_id: string | null;
     email: string;
@@ -184,6 +371,10 @@ export const usersApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
+  mfaZuruecksetzen: (id: string) =>
+    apiFetch<void>(`/api/users/${id}/mfa-zuruecksetzen`, { method: "POST" }),
+  abmeldenErzwingen: (id: string) =>
+    apiFetch<void>(`/api/users/${id}/abmelden`, { method: "POST" }),
   updateOwnBottomNav: (praeferenz: BottomNavPraeferenz) =>
     apiFetch<BottomNavPraeferenz>("/api/users/me/bottom-nav", {
       method: "PATCH",
@@ -228,11 +419,50 @@ export const accountTypenApi = {
   remove: (id: string) => apiFetch<void>(`/api/account-typen/${id}`, { method: "DELETE" }),
   getRechte: (id: string) =>
     apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`),
-  setRecht: (id: string, bereich: RechteBereich, aktion: RechteAktion, erlaubt: boolean) =>
+  // bereich/aktion als string: gueltige Werte kommen aus der Registry (GET /api/rechte/registry).
+  setRecht: (id: string, bereich: string, aktion: string, erlaubt: boolean) =>
     apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`, {
       method: "PUT",
       body: JSON.stringify({ bereich, aktion, erlaubt }),
     }),
+};
+
+export const organigrammApi = {
+  positionen: (archivierte = false) =>
+    apiFetch<OrgPosition[]>(`/api/organigramm/positionen${archivierte ? "?archivierte=true" : ""}`),
+  position: (id: string) => apiFetch<OrgPositionDetail>(`/api/organigramm/positionen/${id}`),
+  orgEinheiten: () => apiFetch<OrgEinheit[]>("/api/organigramm/org-einheiten"),
+  createPosition: (body: OrgPositionCreate) =>
+    apiFetch<OrgPosition>("/api/organigramm/positionen", { method: "POST", body: JSON.stringify(body) }),
+  updatePosition: (id: string, body: OrgPositionUpdate) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  duplizieren: (id: string) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}/duplizieren`, { method: "POST" }),
+  archivieren: (id: string) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}/archivieren`, { method: "POST" }),
+  loeschen: (id: string) => apiFetch<void>(`/api/organigramm/positionen/${id}`, { method: "DELETE" }),
+  besetzen: (positionId: string, body: OrgBesetzungCreate) =>
+    apiFetch<OrgBesetzungErgebnis>(`/api/organigramm/positionen/${positionId}/besetzungen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  // Ohne gueltig_bis endet die Besetzung "jetzt" (Freistellung).
+  besetzungBeenden: (besetzungId: string, gueltigBis?: string | null) =>
+    apiFetch<OrgBesetzungErgebnis>(`/api/organigramm/besetzungen/${besetzungId}`, {
+      method: "PATCH",
+      body: JSON.stringify(gueltigBis ? { gueltig_bis: gueltigBis } : {}),
+    }),
+  setPositionRechte: (positionId: string, overrides: OrgRechtOverrideIn[]) =>
+    apiFetch<OrgRechtOverride[]>(`/api/organigramm/positionen/${positionId}/rechte`, {
+      method: "PUT",
+      body: JSON.stringify(overrides),
+    }),
+  effektiv: (ziel: { user_id: string } | { position_id: string }) =>
+    apiFetch<OrgEffektivRead>(`/api/organigramm/effektiv?${new URLSearchParams(ziel).toString()}`),
+};
+
+export const rechteApi = {
+  registry: () => apiFetch<RechteRegistry>("/api/rechte/registry"),
 };
 
 export const auditLogApi = {
@@ -241,6 +471,45 @@ export const auditLogApi = {
     const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     return apiFetch<AuditLogEntry[]>(`/api/admin/audit-log${qs ? `?${qs}` : ""}`);
   },
+};
+
+export const protokollApi = {
+  liste: (filter: ProtokollFilter, limit: number, offset: number) =>
+    apiFetch<ProtokollListe>(`/api/audit?${filterQuery(filter, { limit, offset })}`),
+  aktionen: () => apiFetch<string[]>("/api/audit/aktionen"),
+  verifizieren: () => apiFetch<KettenPruefung>("/api/audit/verifizieren"),
+  csv: (filter: ProtokollFilter) => apiFetchBlob(`/api/audit/export.csv?${filterQuery(filter)}`),
+};
+
+export const exporteApi = {
+  liste: () => apiFetch<MandantExport[]>("/api/exporte"),
+  vollexport: () => apiFetch<MandantExport>("/api/exporte/vollexport", { method: "POST" }),
+  z3: (von: string, bis: string) =>
+    apiFetch<MandantExport>("/api/exporte/z3", { method: "POST", body: JSON.stringify({ von, bis }) }),
+  downloadUrl: (id: string) => apiFetch<ExportDownload>(`/api/exporte/${id}/download-url`),
+};
+
+export const fehlerberichteApi = {
+  melden: (formData: FormData) =>
+    apiFetchForm<{ id: string; duplikat_von_id: string | null }>("/api/fehlerberichte", formData),
+  liste: (filter: FehlerberichtListenFilter = {}) => {
+    const eintraege = Object.entries(filter).filter(([, v]) => v !== undefined && v !== "");
+    const qs = new URLSearchParams(eintraege.map(([k, v]) => [k, String(v)])).toString();
+    return apiFetch<FehlerberichtListItem[]>(`/api/fehlerberichte${qs ? `?${qs}` : ""}`);
+  },
+  // Das Backend nimmt hier nur mandant_id (kein Status-/Zeitfilter).
+  zaehler: (mandantId?: string, art?: FehlerberichtArt) => {
+    const qs = new URLSearchParams();
+    if (mandantId) qs.set("mandant_id", mandantId);
+    if (art) qs.set("art", art);
+    const text = qs.toString();
+    return apiFetch<FehlerberichtZaehler>(`/api/fehlerberichte/zaehler${text ? `?${text}` : ""}`);
+  },
+  detail: (id: string) => apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`),
+  aendern: (id: string, body: FehlerberichtUpdate) =>
+    apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/fehlerberichte/${id}`, { method: "DELETE" }),
+  aiBundle: async (id: string) => (await apiFetchBlob(`/api/fehlerberichte/${id}/ai-bundle`)).text(),
 };
 
 export const dsgvoApi = {
@@ -301,7 +570,10 @@ export const kundenApi = {
     adresse?: Adresse;
     notiz?: string;
     ust_idnr?: string;
-  }) => apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+    ust_13b_nachweis_bis?: string;
+    leitweg_id?: string;
+    e_rechnung_format?: "zugferd" | "xrechnung";
+  }) => apiFetch<Kunde>("/api/kunden",{ method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
     body: Partial<{
@@ -310,6 +582,10 @@ export const kundenApi = {
       adresse: Adresse | null;
       notiz: string | null;
       ust_idnr: string | null;
+      ust_13b_nachweis_bis: string | null;
+      leitweg_id: string | null;
+      e_rechnung_format: "zugferd" | "xrechnung" | null;
+      debitorenkonto: string | null;
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -334,6 +610,76 @@ export const kundenApi = {
   // JSON, wird aber wie ein Datei-Download behandelt statt getypt zu werden,
   // da der Inhalt nur zum Speichern gedacht ist.
   datenexport: (id: string) => apiFetchBlob(`/api/kunden/${id}/datenexport`),
+};
+
+export const partnerApi = {
+  list: (q?: string) => apiFetch<Partner[]>(`/api/partner${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  get: (id: string) => apiFetch<Partner>(`/api/partner/${id}`),
+  create: (body: {
+    name: string;
+    gewerk?: string;
+    telefon?: string;
+    email?: string;
+    adresse?: Adresse;
+    notiz?: string;
+  }) => apiFetch<Partner>("/api/partner", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{
+      name: string;
+      gewerk: string | null;
+      ansprechpartner: Ansprechpartner[];
+      telefon: string | null;
+      email: string | null;
+      adresse: Adresse | null;
+      notiz: string | null;
+      aktiv: boolean;
+    }>,
+  ) => apiFetch<Partner>(`/api/partner/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/partner/${id}`, { method: "DELETE" }),
+  nachweise: (id: string) => apiFetch<PartnerNachweis[]>(`/api/partner/${id}/nachweise`),
+  nachweisAnlegen: (id: string, body: { typ: PartnerNachweisTyp; gueltig_bis?: string; notiz?: string }) =>
+    apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  nachweisAktualisieren: (
+    id: string,
+    nachweisId: string,
+    body: Partial<{ gueltig_bis: string | null; notiz: string | null }>,
+  ) =>
+    apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise/${nachweisId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  nachweisEntfernen: (id: string, nachweisId: string) =>
+    apiFetch<void>(`/api/partner/${id}/nachweise/${nachweisId}`, { method: "DELETE" }),
+  nachweisHochladen: (id: string, nachweisId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<{ dokument_s3_key: string }>(
+      `/api/partner/${id}/nachweise/${nachweisId}/upload`,
+      formData,
+    );
+  },
+  nachweisUrl: (id: string, nachweisId: string) =>
+    apiFetch<{ url: string }>(`/api/partner/${id}/nachweise/${nachweisId}/url`),
+  zugaenge: (id: string) => apiFetch<PartnerZugang[]>(`/api/partner/${id}/zugaenge`),
+  zugangAktivSetzen: (id: string, zugangId: string, aktiv: boolean) =>
+    apiFetch<PartnerZugang>(`/api/partner/${id}/zugaenge/${zugangId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ aktiv }),
+    }),
+  einladungen: (id: string) => apiFetch<Einladung[]>(`/api/partner/${id}/einladungen`),
+  einladen: (id: string, email: string) =>
+    apiFetch<Einladung>(`/api/partner/${id}/einladungen`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  einladungErneutSenden: (id: string, einladungId: string) =>
+    apiFetch<Einladung>(`/api/partner/${id}/einladungen/${einladungId}/erneut-senden`, { method: "POST" }),
+  einladungWiderrufen: (id: string, einladungId: string) =>
+    apiFetch<void>(`/api/partner/${id}/einladungen/${einladungId}`, { method: "DELETE" }),
 };
 
 export const technikerZuweisungenApi = {
@@ -421,6 +767,32 @@ export const standorteApi = {
   remove: (id: string) => apiFetch<void>(`/api/standorte/${id}`, { method: "DELETE" }),
 };
 
+export const boardsApi = {
+  list: () => apiFetch<BoardListItem[]>("/api/boards"),
+  get: (id: string) => apiFetch<Board>(`/api/boards/${id}`),
+  create: (body: { name: string; board_typ?: BoardTyp; inhalt_json?: Record<string, unknown> }) =>
+    apiFetch<Board>("/api/boards", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<{ name: string; inhalt_json: Record<string, unknown> }>) =>
+    apiFetch<Board>(`/api/boards/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/boards/${id}`, { method: "DELETE" }),
+  hintergrundUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<Board>(`/api/boards/${id}/hintergrund`, formData);
+  },
+  hintergrundRemove: (id: string) => apiFetch<Board>(`/api/boards/${id}/hintergrund`, { method: "DELETE" }),
+  hintergrundUrl: (id: string) => apiFetch<BoardHintergrundUrl>(`/api/boards/${id}/hintergrund-url`),
+  anhangUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<BoardAnhangUpload>(`/api/boards/${id}/anhang`, formData);
+  },
+  anhangUrl: (id: string, key: string) =>
+    apiFetch<BoardAnhangUrl>(`/api/boards/${id}/anhang-url?key=${encodeURIComponent(key)}`),
+  anhangRemove: (id: string, key: string) =>
+    apiFetch<void>(`/api/boards/${id}/anhang?key=${encodeURIComponent(key)}`, { method: "DELETE" }),
+};
+
 export const gespeicherteFilterApi = {
   list: (entitaet: GespeicherterFilterEntitaet) =>
     apiFetch<GespeicherterFilter[]>(`/api/gespeicherte-filter?entitaet=${entitaet}`),
@@ -492,6 +864,11 @@ export const vorgaengeApi = {
     anlage_id?: string | null;
     weitere_anlage_ids?: string[];
     standort_id?: string | null;
+    // Ordnet den Vorgang direkt beim Anlegen einem Projekt bzw. Auftrag zu
+    // (siehe "+ Neuer Vorgang"-Einstiegspunkte in ProjektDetailPanel.tsx/
+    // AuftragDetailPanel.tsx) -- beide unabhaengig voneinander nutzbar.
+    projekt_id?: string | null;
+    auftrag_id?: string | null;
     titel: string;
     beschreibung?: string;
     abrechnungsart: string;
@@ -521,6 +898,8 @@ export const vorgaengeApi = {
         | "kunde_id"
         | "anlage_id"
         | "standort_id"
+        | "projekt_id"
+        | "auftrag_id"
         | "faelligkeit_am"
         | "adresse"
         | "zugewiesener_user_id"
@@ -543,6 +922,20 @@ export const vorgaengeApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/vorgaenge/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
+  abhaengigkeiten: (id: string) =>
+    apiFetch<VorgangAbhaengigkeitenListe>(`/api/vorgaenge/${id}/abhaengigkeiten`),
+  abhaengigkeitHinzufuegen: (id: string, blockiertVonId: string) =>
+    apiFetch<VorgangAbhaengigkeit>(`/api/vorgaenge/${id}/abhaengigkeiten`, {
+      method: "POST",
+      body: JSON.stringify({ blockiert_von_id: blockiertVonId }),
+    }),
+  abhaengigkeitEntfernen: (id: string, blockiertVonId: string) =>
+    apiFetch<void>(`/api/vorgaenge/${id}/abhaengigkeiten/${blockiertVonId}`, { method: "DELETE" }),
+  partnerZuweisen: (id: string, partnerId: string | null, honorarNetto?: string) =>
+    apiFetch<VorgangPartnerZuweisungResponse>(`/api/vorgaenge/${id}/partner-zuweisung`, {
+      method: "POST",
+      body: JSON.stringify({ partner_id: partnerId, partner_honorar_netto: honorarNetto || undefined }),
+    }),
 };
 
 export const vorgangAnfragenApi = {
@@ -569,6 +962,7 @@ export const vorgangEventsApi = {
       event_type: VorgangEventType;
       body?: string;
       kundensichtbar?: boolean;
+      partner_sichtbar?: boolean;
       client_uuid?: string;
     },
   ) =>
@@ -591,6 +985,21 @@ export const vorgangEventsApi = {
     if (clientUuid) formData.append("client_uuid", clientUuid);
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/foto`, formData);
   },
+  uploadDokument: (
+    vorgangId: string,
+    file: Blob,
+    filename: string,
+    kundensichtbar: boolean,
+    body?: string,
+    clientUuid?: string,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    formData.append("kundensichtbar", String(kundensichtbar));
+    if (body) formData.append("body", body);
+    if (clientUuid) formData.append("client_uuid", clientUuid);
+    return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/dokument`, formData);
+  },
   uploadUnterschrift: (
     vorgangId: string,
     file: Blob,
@@ -605,106 +1014,206 @@ export const vorgangEventsApi = {
   },
 };
 
-export const formulareApi = {
-  list: (aktiv?: boolean) =>
-    apiFetch<Formular[]>(`/api/formulare${aktiv !== undefined ? `?aktiv=${aktiv}` : ""}`),
-  get: (id: string) => apiFetch<Formular>(`/api/formulare/${id}`),
-  create: (body: { name: string; beschreibung?: string; snap_mm?: number | null }) =>
-    apiFetch<Formular>("/api/formulare", { method: "POST", body: JSON.stringify(body) }),
-  update: (
-    id: string,
-    body: Partial<{
-      name: string;
-      beschreibung: string;
-      aktiv: boolean;
-      snap_mm: number | null;
-      anzahl_seiten: number;
-    }>,
-  ) => apiFetch<Formular>(`/api/formulare/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  createFeld: (
-    formularId: string,
-    body: {
-      feld_typ: FormularfeldTyp;
-      label: string;
-      hilfetext?: string;
-      pflichtfeld?: boolean;
-      optionen?: Record<string, unknown>;
-      seite?: number;
-      x_mm?: number;
-      y_mm?: number;
-      breite_mm?: number;
-      hoehe_mm?: number;
-      datenquelle?: FormularfeldDatenquelle | null;
-    },
-  ) =>
-    apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  updateFeld: (
-    formularId: string,
-    feldId: string,
-    body: Partial<{
-      feld_typ: FormularfeldTyp;
-      label: string;
-      hilfetext: string | null;
-      pflichtfeld: boolean;
-      optionen: Record<string, unknown>;
-      datenquelle: FormularfeldDatenquelle | null;
-    }>,
-  ) =>
-    apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder/${feldId}`, {
+export const formModulApi = {
+  listSchemas: (status?: FormSchemaStatus) =>
+    apiFetch<FormSchema[]>(`/api/form-schemas${status ? `?status=${status}` : ""}`),
+  getSchema: (id: string) => apiFetch<FormSchemaDetail>(`/api/form-schemas/${id}`),
+  createSchema: (body: { name: string; beschreibung?: string }) =>
+    apiFetch<FormSchema>("/api/form-schemas", { method: "POST", body: JSON.stringify(body) }),
+  updateSchema: (id: string, body: Partial<{ name: string; beschreibung: string; status: FormSchemaStatus }>) =>
+    apiFetch<FormSchemaDetail>(`/api/form-schemas/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  createGroup: (
+    schemaId: string,
+    body: { key: string; label?: Record<string, string>; repeatable?: boolean; min_items?: number | null; max_items?: number | null; reihenfolge?: number },
+  ) => apiFetch<FormGroup>(`/api/form-schemas/${schemaId}/groups`, { method: "POST", body: JSON.stringify(body) }),
+  updateGroup: (schemaId: string, groupId: string, body: Partial<FormGroup>) =>
+    apiFetch<FormGroup>(`/api/form-schemas/${schemaId}/groups/${groupId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
-  updatePositionen: (formularId: string, positionen: FormularfeldPosition[]) =>
-    apiFetch<Formularfeld[]>(`/api/formulare/${formularId}/felder/positionen`, {
-      method: "PUT",
-      body: JSON.stringify(positionen),
+  deleteGroup: (schemaId: string, groupId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/groups/${groupId}`, { method: "DELETE" }),
+
+  createField: (
+    schemaId: string,
+    body: {
+      key: string;
+      feld_typ: FormFeldTyp;
+      label?: Record<string, string>;
+      hilfetext?: string;
+      pflichtfeld?: boolean;
+      validation?: Record<string, unknown>;
+      default_value?: unknown;
+      optionen?: Record<string, unknown>;
+      group_key?: string | null;
+      datenquelle?: FormularfeldDatenquelle | null;
+      reihenfolge?: number;
+    },
+  ) => apiFetch<FormField>(`/api/form-schemas/${schemaId}/fields`, { method: "POST", body: JSON.stringify(body) }),
+  updateField: (schemaId: string, fieldId: string, body: Partial<FormField>) =>
+    apiFetch<FormField>(`/api/form-schemas/${schemaId}/fields/${fieldId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
     }),
-  deleteFeld: (formularId: string, feldId: string) =>
-    apiFetch<void>(`/api/formulare/${formularId}/felder/${feldId}`, { method: "DELETE" }),
-  createZuordnung: (formularId: string, body: { leistungstyp: Leistungstyp; pflicht_vor_abschluss?: boolean }) =>
-    apiFetch<FormularAuftragstypZuordnung>(`/api/formulare/${formularId}/zuordnungen`, {
+  deleteField: (schemaId: string, fieldId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/fields/${fieldId}`, { method: "DELETE" }),
+
+  listViews: (schemaId: string) => apiFetch<FormView[]>(`/api/form-schemas/${schemaId}/views`),
+  createView: (schemaId: string, body: { type: FormViewTyp; name: string; konfiguration?: Record<string, unknown> }) =>
+    apiFetch<FormView>(`/api/form-schemas/${schemaId}/views`, { method: "POST", body: JSON.stringify(body) }),
+  getView: (schemaId: string, viewId: string, submissionId?: string) =>
+    apiFetch<FormViewResolved>(
+      `/api/form-schemas/${schemaId}/views/${viewId}${submissionId ? `?submission_id=${submissionId}` : ""}`,
+    ),
+  updateView: (schemaId: string, viewId: string, body: Partial<{ name: string; konfiguration: Record<string, unknown> }>) =>
+    apiFetch<FormView>(`/api/form-schemas/${schemaId}/views/${viewId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteView: (schemaId: string, viewId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/views/${viewId}`, { method: "DELETE" }),
+  replaceLayouts: (schemaId: string, viewId: string, layouts: FormViewFieldLayout[] | Omit<FormViewFieldLayout, "id">[]) =>
+    apiFetch<FormViewFieldLayout[]>(`/api/form-schemas/${schemaId}/views/${viewId}/layouts`, {
+      method: "PUT",
+      body: JSON.stringify(layouts),
+    }),
+
+  createElement: (
+    schemaId: string,
+    viewId: string,
+    body: {
+      type: FormPraesentationsTyp;
+      inhalt?: Record<string, unknown>;
+      reihenfolge?: number;
+      seite?: number;
+      x_mm?: number | null;
+      y_mm?: number | null;
+      breite_mm?: number | null;
+      hoehe_mm?: number | null;
+    },
+  ) =>
+    apiFetch<FormPresentationElement>(`/api/form-schemas/${schemaId}/views/${viewId}/elements`, {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  updateZuordnung: (formularId: string, zuordnungId: string, pflichtVorAbschluss: boolean) =>
-    apiFetch<FormularAuftragstypZuordnung>(`/api/formulare/${formularId}/zuordnungen/${zuordnungId}`, {
+  updateElement: (schemaId: string, viewId: string, elementId: string, body: Partial<FormPresentationElement>) =>
+    apiFetch<FormPresentationElement>(`/api/form-schemas/${schemaId}/views/${viewId}/elements/${elementId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteElement: (schemaId: string, viewId: string, elementId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/views/${viewId}/elements/${elementId}`, { method: "DELETE" }),
+
+  listRules: (schemaId: string) => apiFetch<FormLogicRule[]>(`/api/form-schemas/${schemaId}/rules`),
+  createRule: (
+    schemaId: string,
+    body: { view_id?: string | null; target_key: string; effect: FormLogicEffekt; condition: unknown; value?: unknown; reihenfolge?: number },
+  ) => apiFetch<FormLogicRule>(`/api/form-schemas/${schemaId}/rules`, { method: "POST", body: JSON.stringify(body) }),
+  updateRule: (schemaId: string, ruleId: string, body: Partial<FormLogicRule>) =>
+    apiFetch<FormLogicRule>(`/api/form-schemas/${schemaId}/rules/${ruleId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteRule: (schemaId: string, ruleId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/rules/${ruleId}`, { method: "DELETE" }),
+
+  createZuordnung: (schemaId: string, body: { leistungstyp: Leistungstyp; pflicht_vor_abschluss?: boolean }) =>
+    apiFetch<FormAuftragstypZuordnungV2>(`/api/form-schemas/${schemaId}/zuordnungen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateZuordnung: (schemaId: string, zuordnungId: string, pflichtVorAbschluss: boolean) =>
+    apiFetch<FormAuftragstypZuordnungV2>(`/api/form-schemas/${schemaId}/zuordnungen/${zuordnungId}`, {
       method: "PATCH",
       body: JSON.stringify({ pflicht_vor_abschluss: pflichtVorAbschluss }),
     }),
-  deleteZuordnung: (formularId: string, zuordnungId: string) =>
-    apiFetch<void>(`/api/formulare/${formularId}/zuordnungen/${zuordnungId}`, { method: "DELETE" }),
+  deleteZuordnung: (schemaId: string, zuordnungId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/zuordnungen/${zuordnungId}`, { method: "DELETE" }),
 };
 
-export const vorgangFormulareApi = {
-  verfuegbar: (vorgangId: string) =>
-    apiFetch<FormularVerfuegbar[]>(`/api/vorgang-formulare/verfuegbar?vorgang_id=${vorgangId}`),
-  list: (vorgangId: string) =>
-    apiFetch<VorgangFormular[]>(`/api/vorgang-formulare?vorgang_id=${vorgangId}`),
-  start: (vorgangId: string, formularId: string) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare?vorgang_id=${vorgangId}`, {
-      method: "POST",
-      body: JSON.stringify({ formular_id: formularId }),
-    }),
-  get: (id: string) => apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}`),
-  updateAntworten: (id: string, antworten: Record<string, unknown>) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ antworten }),
-    }),
-  abschliessen: (id: string) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}/abschliessen`, { method: "POST" }),
-  remove: (id: string) => apiFetch<void>(`/api/vorgang-formulare/${id}`, { method: "DELETE" }),
-  pdf: (id: string) => apiFetchBlob(`/api/vorgang-formulare/${id}/pdf`),
-  uploadDatei: (id: string, feldId: string, file: Blob, filename: string) => {
+// Mandanten-eigene Symbol-Bibliothek fuer den Feldtyp "foto_plan" (siehe
+// PlanSymbolePage.tsx + FormBuilderCanvas.tsx-Inspector).
+export const planSymboleApi = {
+  list: () => apiFetch<PlanSymbol[]>("/api/plan-symbole"),
+  upload: (file: Blob, name: string, filename = "symbol.png") => {
     const formData = new FormData();
     formData.append("file", file, filename);
-    return apiFetchForm<{ feld_id: string; key: string; content_type: string; size: number; url: string }>(
-      `/api/vorgang-formulare/${id}/dateien?feld_id=${encodeURIComponent(feldId)}`,
+    formData.append("name", name);
+    return apiFetchForm<PlanSymbol>("/api/plan-symbole", formData);
+  },
+  rename: (symbolId: string, name: string) =>
+    apiFetch<PlanSymbol>(`/api/plan-symbole/${symbolId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  remove: (symbolId: string) => apiFetch<void>(`/api/plan-symbole/${symbolId}`, { method: "DELETE" }),
+};
+
+export const formSubmissionsApi = {
+  verfuegbar: (vorgangId: string) =>
+    apiFetch<FormSchemaVerfuegbar[]>(`/api/form-submissions/verfuegbar?vorgang_id=${vorgangId}`),
+  list: (vorgangId: string) => apiFetch<FormSubmission[]>(`/api/form-submissions?vorgang_id=${vorgangId}`),
+  start: (vorgangId: string, schemaId: string) =>
+    apiFetch<FormSubmission>(`/api/form-submissions?vorgang_id=${vorgangId}`, {
+      method: "POST",
+      body: JSON.stringify({ schema_id: schemaId }),
+    }),
+  get: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}`),
+  updateValues: (id: string, values: Record<string, unknown>) =>
+    apiFetch<FormSubmission>(`/api/form-submissions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ values }),
+    }),
+  abschliessen: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}/abschliessen`, { method: "POST" }),
+  remove: (id: string) => apiFetch<void>(`/api/form-submissions/${id}`, { method: "DELETE" }),
+  pdf: (id: string, viewId?: string) =>
+    apiFetchBlob(`/api/form-submissions/${id}/pdf${viewId ? `?view_id=${viewId}` : ""}`),
+  uploadDatei: (id: string, fieldKey: string, file: Blob, filename: string) => {
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    return apiFetchForm<{ field_key: string; key: string; content_type: string; size: number; url: string; filename: string | null }>(
+      `/api/form-submissions/${id}/dateien?field_key=${encodeURIComponent(fieldKey)}`,
       formData,
     );
+  },
+};
+
+export const statistikApi = {
+  vorgangKennzahlen: (filter: { projekt_id?: string; von?: string; bis?: string } = {}) => {
+    const entries = Object.entries(filter).filter(([, v]) => v);
+    const qs = new URLSearchParams(entries as [string, string][]).toString();
+    return apiFetch<VorgangKennzahlen>(`/api/statistik/vorgang-kennzahlen${qs ? `?${qs}` : ""}`);
+  },
+};
+
+export const arbeitszeitApi = {
+  soll: (userId?: string) =>
+    apiFetch<ArbeitszeitSoll[]>(`/api/arbeitszeit/soll${userId ? `?user_id=${userId}` : ""}`),
+  sollSetzen: (userId: string, body: ArbeitszeitSollSetzen) =>
+    apiFetch<ArbeitszeitSoll>(`/api/arbeitszeit/soll/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  feiertage: (jahr: number) => apiFetch<Feiertag[]>(`/api/arbeitszeit/feiertage?jahr=${jahr}`),
+  feiertagAnlegen: (body: { datum: string; bezeichnung: string }) =>
+    apiFetch<Feiertag>("/api/arbeitszeit/feiertage", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  feiertagLoeschen: (id: string) =>
+    apiFetch<void>(`/api/arbeitszeit/feiertage/${id}`, { method: "DELETE" }),
+  feiertageGenerieren: (jahr: number) =>
+    apiFetch<FeiertageGenerierenErgebnis>("/api/arbeitszeit/feiertage/generieren", {
+      method: "POST",
+      body: JSON.stringify({ jahr }),
+    }),
+  bundesland: () => apiFetch<{ bundesland: Bundesland | null }>("/api/arbeitszeit/bundesland"),
+  bundeslandSetzen: (bundesland: Bundesland | null) =>
+    apiFetch<{ bundesland: Bundesland | null }>("/api/arbeitszeit/bundesland", {
+      method: "PATCH",
+      body: JSON.stringify({ bundesland }),
+    }),
+  saldo: (params: { von: string; bis: string; user_id?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString();
+    return apiFetch<Saldo>(`/api/arbeitszeit/saldo?${qs}`);
   },
 };
 
@@ -715,19 +1224,42 @@ export const zeiterfassungApi = {
       method: "POST",
       body: JSON.stringify({ vorgang_id: vorgangId, taetigkeit }),
     }),
-  stop: (id: string) =>
-    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, { method: "POST" }),
+  // ende_at/grund nur wirksam beim Beenden EINES FREMDEN Timers (Recht
+  // "Zeiten buchen" nötig) -- beim eigenen Timer werden beide ignoriert.
+  stop: (id: string, body?: { ende_at?: string; grund?: string }) =>
+    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
   list: (vorgangId: string) =>
     apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
-  listFuerZeitraum: (params: { techniker_id?: string; von?: string; bis?: string }) => {
-    const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
-    ).toString();
+  listFuerZeitraum: (params: {
+    techniker_id?: string;
+    von?: string;
+    bis?: string;
+    buchungsstatus?: string;
+    // Fuer die Seite "Zeiten buchen" (docs/konzepte/ZEITERFASSUNG.md
+    // Abschnitt 7.3) -- siehe list_zeiterfassung in
+    // backend/app/api/routes/zeiterfassung.py.
+    kunde_id?: string;
+    auftrag_id?: string;
+    projekt_id?: string;
+    laufend?: boolean;
+    vermerkt_aelter_als_tage?: number;
+  }) => {
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined) as [string, string | number | boolean][];
+    const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     return apiFetch<Zeiterfassung[]>(`/api/zeiterfassung${qs ? `?${qs}` : ""}`);
   },
   statistik: (technikerId?: string) =>
     apiFetch<ZeiterfassungStatistik>(
       `/api/zeiterfassung/statistik${technikerId ? `?techniker_id=${technikerId}` : ""}`
+    ),
+  // "Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4) -- genau eines der
+  // beiden Felder angeben.
+  summen: (filter: { auftrag_id: string } | { projekt_id: string }) =>
+    apiFetch<ZeiterfassungSummenNachStatus>(
+      `/api/zeiterfassung/summen?${new URLSearchParams(filter).toString()}`
     ),
   wochenzettelPdf: (wocheStart: string, technikerId?: string) =>
     apiFetchBlob(
@@ -742,6 +1274,12 @@ export const zeiterfassungApi = {
     vorgang_id?: string;
     taetigkeit?: string;
     abrechenbar?: boolean;
+    lv_position_id?: string;
+    // Nur mit dem Recht "Zeiten buchen" wirksam ("für andere nachtragen").
+    techniker_id?: string;
+    // Nur bei kategorie="fahrzeit" erlaubt (Stufe 3).
+    km?: string;
+    fahrzeug_id?: string;
   }) =>
     apiFetch<Zeiterfassung>("/api/zeiterfassung/manuell", {
       method: "POST",
@@ -756,9 +1294,34 @@ export const zeiterfassungApi = {
       vorgang_id: string | null;
       taetigkeit: string;
       abrechenbar: boolean;
+      lv_position_id: string | null;
+      km: string | null;
+      fahrzeug_id: string | null;
+      // Pflicht beim Bearbeiten eines fremden Eintrags (Recht "Zeiten buchen").
+      grund: string;
     }>
   ) => apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  loeschen: (id: string) => apiFetch<void>(`/api/zeiterfassung/${id}`, { method: "DELETE" }),
+  loeschen: (id: string, grund?: string) =>
+    apiFetch<void>(`/api/zeiterfassung/${id}${grund ? `?grund=${encodeURIComponent(grund)}` : ""}`, {
+      method: "DELETE",
+    }),
+  // Buchungsablauf (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 6.1) -- jeweils
+  // alles oder nichts über die übergebene ID-Liste.
+  vormerken: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/vormerken", { method: "POST", body: JSON.stringify({ ids }) }),
+  vormerkungZurueckziehen: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/vormerkung-zurueckziehen", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+  buchen: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/buchen", { method: "POST", body: JSON.stringify({ ids }) }),
+  buchungStornieren: (ids: string[], grund: string) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/buchung-stornieren", {
+      method: "POST",
+      body: JSON.stringify({ ids, grund }),
+    }),
+  verlauf: (id: string) => apiFetch<ZeiterfassungAenderung[]>(`/api/zeiterfassung/${id}/verlauf`),
 };
 
 export const termineApi = {
@@ -896,7 +1459,7 @@ export const angeboteApi = {
     return apiFetch<Angebot[]>(`/api/angebote${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Angebot>(`/api/angebote/${id}`),
-  create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string }) =>
+  create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
     apiFetch<Angebot>("/api/angebote", { method: "POST", body: JSON.stringify(body) }),
   createFromMaengel: (mangelIds: string[], gueltigBis?: string) =>
     apiFetch<Angebot>("/api/angebote/from-maengel", {
@@ -918,10 +1481,29 @@ export const angeboteApi = {
     body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
       artikelnummer?: string;
       positionstyp?: AngebotPositionstyp;
+      zeilentyp?: AngebotZeilentyp;
+      ebene?: 1 | 2;
+      einzelpreis_lohn?: string;
+      einzelpreis_material?: string;
     },
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  positionenAusLv: (
+    id: string,
+    body: { lv_id: string; eintraege: AngebotAusLvEintrag[]; mit_gliederung: boolean },
+  ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen/aus-lv`, { method: "POST", body: JSON.stringify(body) }),
+  updatePosition: (id: string, positionId: string, body: AngebotPositionUpdate) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/${positionId}`, { method: "PATCH", body: JSON.stringify(body) }),
+  removePosition: (id: string, positionId: string) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/${positionId}`, { method: "DELETE" }),
+  positionenNeuOrdnen: (id: string, positionIds: string[]) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/neu-ordnen`, {
+      method: "POST",
+      body: JSON.stringify({ position_ids: positionIds }),
+    }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  update: (id: string, body: { gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
+    apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/angebote/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/angebote/${id}/emails`),
@@ -963,11 +1545,38 @@ export const rechnungenApi = {
     faellig_am?: string;
     leistungsdatum?: string;
     positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
+    rechnungsart?: "rechnung" | "abschlag";
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
+  ausAngebot: (body: RechnungAusAngebotCreate) =>
+    apiFetch<Rechnung>("/api/rechnungen/aus-angebot", { method: "POST", body: JSON.stringify(body) }),
+  abschlaegeAnrechnen: (id: string, abschlagRechnungIds?: string[]) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/abschlaege-anrechnen`, {
+      method: "POST",
+      body: JSON.stringify(abschlagRechnungIds ? { abschlag_rechnung_ids: abschlagRechnungIds } : {}),
+    }),
+  gutschrift: (id: string, body: RechnungGutschriftCreate) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/gutschrift`, { method: "POST", body: JSON.stringify(body) }),
   addPosition: (
     id: string,
-    body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+    body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
+      quelle?: RechnungPositionQuelle;
+      lv_position_id?: string | null;
+      material_id?: string | null;
+    } & Partial<RechnungSteuerFelder>,
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  removePosition: (id: string, positionId: string) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, { method: "DELETE" }),
+  updatePosition: (
+    id: string,
+    positionId: string,
+    body: { beschreibung?: string; einzelpreis?: string } & Partial<RechnungSteuerFelder>,
+  ) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  abrechenbareVorgaenge: (kundeId: string) =>
+    apiFetch<AbrechenbarerVorgang[]>(`/api/rechnungen/abrechenbare-vorgaenge?kunde_id=${encodeURIComponent(kundeId)}`),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),
@@ -981,6 +1590,18 @@ export const rechnungenApi = {
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen`, { method: "POST", body: JSON.stringify(body) }),
   stornoZahlung: (id: string, zahlungId: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen/${zahlungId}/storno`, { method: "POST" }),
+  vorgangVorschlaege: (id: string, vorgangId: string) =>
+    apiFetch<RechnungPositionVorschlag[]>(`/api/rechnungen/${id}/vorgaenge/${vorgangId}/vorschlaege`),
+  vorgangUebernehmen: (
+    id: string,
+    body: {
+      vorgang_id: string;
+      stundensatz: string;
+      auswahl: { quelle: RechnungPositionQuelle; lv_position_id?: string | null; material_id?: string | null }[];
+    },
+  ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/vorgaenge`, { method: "POST", body: JSON.stringify(body) }),
+  positionsvorschlaege: (id: string) =>
+    apiFetch<RechnungPositionVorschlag[]>(`/api/rechnungen/${id}/positionsvorschlaege`),
 };
 
 export const eingangsrechnungenApi = {
@@ -1039,6 +1660,12 @@ export const eingangsrechnungenApi = {
     return apiFetchForm<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, formData);
   },
   belegUrl: (id: string) => apiFetch<EingangsrechnungBelegUrl>(`/api/eingangsrechnungen/${id}/beleg-url`),
+  eRechnungImport: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetchForm<Eingangsrechnung>("/api/eingangsrechnungen/e-rechnung", formData);
+  },
+  xmlUrl: (id: string) => apiFetch<EingangsrechnungBelegUrl>(`/api/eingangsrechnungen/${id}/xml-url`),
   belegRemove: (id: string) =>
     apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, { method: "DELETE" }),
 };
@@ -1109,6 +1736,8 @@ export const materialApi = {
     }),
   bewegungen: (materialId: string) =>
     apiFetch<MaterialBewegung[]>(`/api/material/${materialId}/bewegungen`),
+  verwendungen: (vorgangId: string) =>
+    apiFetch<MaterialVerwendungMitDetails[]>(`/api/material/verwendungen?vorgang_id=${vorgangId}`),
   verwenden: (materialId: string, vorgangId: string, lagerId: string, menge: string) =>
     apiFetch<MaterialVerwendung>(`/api/material/${materialId}/verwendung`, {
       method: "POST",
@@ -1117,11 +1746,96 @@ export const materialApi = {
   remove: (id: string) => apiFetch<void>(`/api/material/${id}`, { method: "DELETE" }),
 };
 
+interface LvSchreibbareFelder {
+  name: string;
+  beschreibung?: string | null;
+  kunden_ids?: string[];
+}
+
+export const leistungsverzeichnisseApi = {
+  list: () => apiFetch<Leistungsverzeichnis[]>("/api/leistungsverzeichnisse"),
+  get: (id: string) => apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}`),
+  create: (body: LvSchreibbareFelder) =>
+    apiFetch<Leistungsverzeichnis>("/api/leistungsverzeichnisse", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<LvSchreibbareFelder>) =>
+    apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/leistungsverzeichnisse/${id}`, { method: "DELETE" }),
+  duplizieren: (id: string) =>
+    apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}/duplizieren`, { method: "POST" }),
+};
+
+interface LvPositionSchreibbarePfelder {
+  leistungsverzeichnis_id?: string;
+  eltern_position_id?: string;
+  bezeichnung: string;
+  einheit?: string;
+  einzelpreis?: string;
+  ist_stundensatz?: boolean;
+  notiz?: string;
+  kalkulationsmodus?: LvKalkulationsmodus;
+  lohn_minuten?: number | null;
+  lohn_stundensatz?: string | null;
+  lohn_gemeinkosten_prozent?: string;
+  material_posten?: (Omit<LvMaterialPosten, "material_id"> & { material_id?: string | null })[];
+  material_aufschlag_prozent?: string;
+  gewinn_wagnis_prozent?: string;
+}
+
+export const leistungsverzeichnisApi = {
+  // Ohne Filter: ALLE eigenstaendigen Positionen des Mandanten. Mit
+  // leistungsverzeichnisId: nur die Hauptpunkte dieses einen LV
+  // (Verwaltungsseite). Mit kundeId: nur die fuer diesen Kunden anwendbaren
+  // (aus allgemeinen LVs + ihm zugewiesenen LVs) -- siehe
+  // app/api/routes/leistungsverzeichnis.py.
+  list: (kundeId?: string, nurStundensaetze = false, leistungsverzeichnisId?: string) => {
+    const params = new URLSearchParams();
+    if (leistungsverzeichnisId) params.set("leistungsverzeichnis_id", leistungsverzeichnisId);
+    else if (kundeId) params.set("kunde_id", kundeId);
+    if (nurStundensaetze) params.set("nur_stundensaetze", "true");
+    return apiFetch<LeistungsverzeichnisPosition[]>(`/api/leistungsverzeichnis?${params}`);
+  },
+  unterpunkte: (elternPositionId: string) =>
+    apiFetch<LeistungsverzeichnisPosition[]>(
+      `/api/leistungsverzeichnis?eltern_position_id=${elternPositionId}`,
+    ),
+  create: (body: LvPositionSchreibbarePfelder) =>
+    apiFetch<LeistungsverzeichnisPosition>("/api/leistungsverzeichnis", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: string,
+    body: Partial<Omit<LvPositionSchreibbarePfelder, "eltern_position_id" | "leistungsverzeichnis_id">>,
+  ) =>
+    apiFetch<LeistungsverzeichnisPosition>(`/api/leistungsverzeichnis/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/leistungsverzeichnis/${id}`, { method: "DELETE" }),
+  verwendungen: (vorgangId: string) =>
+    apiFetch<LeistungsverzeichnisVerwendungMitDetails[]>(
+      `/api/leistungsverzeichnis/verwendungen?vorgang_id=${vorgangId}`
+    ),
+  verwenden: (lvPositionId: string, vorgangId: string, menge: string) =>
+    apiFetch<LeistungsverzeichnisVerwendung>(`/api/leistungsverzeichnis/${lvPositionId}/verwendung`, {
+      method: "POST",
+      body: JSON.stringify({ vorgang_id: vorgangId, menge }),
+    }),
+  verwendungEntfernen: (verwendungId: string) =>
+    apiFetch<void>(`/api/leistungsverzeichnis/verwendungen/${verwendungId}`, { method: "DELETE" }),
+};
+
 export const lieferantenApi = {
   list: () => apiFetch<Lieferant[]>("/api/lieferanten"),
-  create: (body: { name: string; email?: string; telefon?: string; notiz?: string }) =>
+  create: (body: { name: string; email?: string; telefon?: string; notiz?: string; kreditorenkonto?: string }) =>
     apiFetch<Lieferant>("/api/lieferanten", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">>) =>
+  update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">> & { kreditorenkonto?: string | null }) =>
     apiFetch<Lieferant>(`/api/lieferanten/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/lieferanten/${id}`, { method: "DELETE" }),
 };
@@ -1139,13 +1853,21 @@ export const materialBedarfeApi = {
 export const bestellungenApi = {
   list: () => apiFetch<Bestellung[]>("/api/bestellungen"),
   get: (id: string) => apiFetch<Bestellung>(`/api/bestellungen/${id}`),
-  createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string) =>
+  createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string, liefertermin?: string) =>
     apiFetch<Bestellung>("/api/bestellungen/from-bedarfe", {
       method: "POST",
-      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz }),
+      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz, liefertermin: liefertermin || undefined }),
     }),
-  update: (id: string, body: { status?: string; lieferant_id?: string | null; notiz?: string }) =>
-    apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      status?: string;
+      lieferant_id?: string | null;
+      notiz?: string;
+      liefertermin?: string | null;
+      positionen_preise?: Record<string, string>;
+    },
+  ) => apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/bestellungen/${id}`, { method: "DELETE" }),
   csv: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/csv`),
   pdf: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/pdf`),
@@ -1223,9 +1945,26 @@ export const kundenportalAuthApi = {
     }),
 };
 
+export const rechtlichesApi = {
+  get: (portalSlug?: string | null) =>
+    apiFetch<Rechtliches>(
+      portalSlug
+        ? `/api/public/rechtliches?portal_slug=${encodeURIComponent(portalSlug)}`
+        : "/api/public/rechtliches",
+    ),
+};
+
 export const mandantEinstellungenApi = {
   get: () => apiFetch<MandantEinstellungen>("/api/mandant/einstellungen"),
-  update: (body: { scheduler_stunde_utc?: number | null; wiedervorlage_standard_tage?: number | null }) =>
+  update: (body: {
+    scheduler_stunde_utc?: number | null;
+    wiedervorlage_standard_tage?: number | null;
+    standard_lohn_gemeinkosten_prozent?: string;
+    standard_gewinn_wagnis_prozent?: string;
+    km_satz_netto?: string | null;
+    fahrzeit_satz_netto?: string | null;
+    fahrzeit_abrechnung?: FahrzeitAbrechnung;
+  }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -1243,6 +1982,256 @@ export const mandantEinstellungenApi = {
   logoRemove: () =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen/logo", { method: "DELETE" }),
   logoUrl: () => apiFetch<MandantLogoUrl>("/api/mandant/einstellungen/logo-url"),
+};
+
+export const navKategorienApi = {
+  get: () => apiFetch<NavKategorienRead>("/api/nav-kategorien"),
+  set: (body: NavKategorienRead) =>
+    apiFetch<NavKategorienRead>("/api/nav-kategorien", { method: "PUT", body: JSON.stringify(body) }),
+};
+
+export const projekteApi = {
+  list: (filter?: { vertrag_id?: string }) => {
+    const qs = filter?.vertrag_id ? `?vertrag_id=${filter.vertrag_id}` : "";
+    return apiFetch<Projekt[]>(`/api/projekte${qs}`);
+  },
+  get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
+  create: (body: { name: string; beschreibung?: string; vertrag_id?: string }) =>
+    apiFetch<Projekt>("/api/projekte", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: { name?: string; beschreibung?: string; archiviert?: boolean; vertrag_id?: string | null },
+  ) => apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekte/${id}`, { method: "DELETE" }),
+  spalten: (projektId: string) =>
+    apiFetch<ProjektSpalte[]>(`/api/projekte/${projektId}/spalten`),
+  createSpalte: (projektId: string, name: string) =>
+    apiFetch<ProjektSpalte>(`/api/projekte/${projektId}/spalten`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  updateSpalte: (projektId: string, spalteId: string, body: { name?: string; reihenfolge?: number }) =>
+    apiFetch<ProjektSpalte>(`/api/projekte/${projektId}/spalten/${spalteId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeSpalte: (projektId: string, spalteId: string) =>
+    apiFetch<void>(`/api/projekte/${projektId}/spalten/${spalteId}`, { method: "DELETE" }),
+};
+
+// Gantt-Zeitplan eines Projekts: jeder mutierende Aufruf liefert den kompletten
+// Zeitplan zurueck (das Backend verschiebt abhaengige Elemente selbst).
+export const zeitplanApi = {
+  get: (projektId: string, basisplanId?: string | null) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan${basisplanId ? `?basisplan_id=${encodeURIComponent(basisplanId)}` : ""}`),
+  basisplaene: (projektId: string) => apiFetch<ZeitplanBasisplan[]>(`/api/projekte/${projektId}/zeitplan/basisplaene`),
+  createBasisplan: (projektId: string, name: string) =>
+    apiFetch<ZeitplanBasisplan>(`/api/projekte/${projektId}/zeitplan/basisplaene`, { method: "POST", body: JSON.stringify({ name }) }),
+  removeBasisplan: (projektId: string, basisplanId: string) =>
+    apiFetch<void>(`/api/projekte/${projektId}/zeitplan/basisplaene/${basisplanId}`, { method: "DELETE" }),
+  straffen: (projektId: string, body: { phase_id: string | null; vorschau: boolean }) =>
+    apiFetch<ZeitplanStraffenAntwort>(`/api/projekte/${projektId}/zeitplan/straffen`, { method: "POST", body: JSON.stringify(body) }),
+  vorlageAnwenden: (projektId: string, body: { vorlage_id: string; start_am: string }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/vorlage-anwenden`, { method: "POST", body: JSON.stringify(body) }),
+  pdf: (projektId: string, basisplanId: string | null, kritischerPfad: boolean) =>
+    apiFetchBlob(
+      `/api/projekte/${projektId}/zeitplan/pdf?kritischer_pfad=${kritischerPfad}${basisplanId ? `&basisplan_id=${encodeURIComponent(basisplanId)}` : ""}`,
+    ),
+  createElement: (projektId: string, body: ZeitplanElementCreate) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente`, { method: "POST", body: JSON.stringify(body) }),
+  updateElement: (projektId: string, elementId: string, body: ZeitplanElementUpdate) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente/${elementId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeElement: (projektId: string, elementId: string) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente/${elementId}`, { method: "DELETE" }),
+  createAbhaengigkeit: (
+    projektId: string,
+    body: { vorgaenger_id: string; nachfolger_id: string; versatz_tage?: number; art?: ZeitplanAbhaengigkeitArt },
+  ) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateAbhaengigkeit: (projektId: string, depId: string, body: { art?: ZeitplanAbhaengigkeitArt; versatz_tage?: number }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten/${depId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeAbhaengigkeit: (projektId: string, depId: string) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten/${depId}`, { method: "DELETE" }),
+  updateEinstellungen: (projektId: string, body: { verschiebe_modus: ZeitplanVerschiebeModus }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/einstellungen`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  auswahlVorgaenge: (projektId: string, q: string, limit = 30) =>
+    apiFetch<ZeitplanVorgangAuswahl[]>(
+      `/api/projekte/${projektId}/zeitplan/auswahl/vorgaenge?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
+  auswahlBestellungen: (projektId: string, q: string, limit = 30) =>
+    apiFetch<ZeitplanBestellungRef[]>(
+      `/api/projekte/${projektId}/zeitplan/auswahl/bestellungen?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
+  /** Projekte, in denen der Nutzer mitarbeitet (Feld-App-Einstieg für Nutzer ohne projekte.sehen). */
+  meine: () => apiFetch<MeinZeitplan[]>("/api/projekte/meine-zeitplaene"),
+  antraege: (projektId: string, status?: ZeitplanAntragStatus) =>
+    apiFetch<ZeitplanAntrag[]>(`/api/projekte/${projektId}/zeitplan/antraege${status ? `?status=${status}` : ""}`),
+  createAntrag: (projektId: string, body: ZeitplanAntragCreate) =>
+    apiFetch<ZeitplanAntrag>(`/api/projekte/${projektId}/zeitplan/antraege`, { method: "POST", body: JSON.stringify(body) }),
+  antragAnnehmen: (projektId: string, antragId: string, antwort?: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/annehmen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort: antwort || null }),
+    }),
+  antragAblehnen: (projektId: string, antragId: string, antwort: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/ablehnen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort }),
+    }),
+  antragZurueckziehen: (projektId: string, antragId: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/zurueckziehen`, {
+      method: "POST",
+    }),
+};
+
+export const projektVorlagenApi = {
+  list: () => apiFetch<ProjektVorlage[]>("/api/projekt-vorlagen"),
+  get: (id: string) => apiFetch<ProjektVorlageDetail>(`/api/projekt-vorlagen/${id}`),
+  ausProjekt: (projektId: string, body: { name: string; beschreibung?: string | null }) =>
+    apiFetch<ProjektVorlage>(`/api/projekt-vorlagen/aus-projekt/${projektId}`, { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: { name?: string; beschreibung?: string | null }) =>
+    apiFetch<ProjektVorlage>(`/api/projekt-vorlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekt-vorlagen/${id}`, { method: "DELETE" }),
+};
+
+// Partnerportal: eigener Token-Typ ("partner_access"), daher eigener Client
+// (partnerClient.ts) -- nie apiFetch, sonst ginge der Mitarbeiter-Token raus.
+export const partnerPortalAuthApi = {
+  login: (email: string, password: string) =>
+    partnerApiFetch<TokenPair>("/api/partnerportal/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => partnerApiFetch<CurrentPartner>("/api/partnerportal/auth/me"),
+  passwortVergessen: (email: string) =>
+    partnerApiFetch<void>("/api/partnerportal/auth/passwort-vergessen", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwortZuruecksetzen: (token: string, newPassword: string) =>
+    partnerApiFetch<void>("/api/partnerportal/auth/passwort-zuruecksetzen", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  registrieren: (token: string, name: string, password: string) =>
+    partnerApiFetch<TokenPair>("/api/partnerportal/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
+    }),
+};
+
+export const partnerPortalApi = {
+  zeitplan: () => partnerApiFetch<PartnerZeitplanEintrag[]>("/api/partnerportal/zeitplan"),
+  auftraege: () => partnerApiFetch<PartnerVorgang[]>("/api/partnerportal/auftraege"),
+  auftrag: (id: string) => partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}`),
+  antworten: (id: string, status: "angenommen" | "abgelehnt", ablehnungGrund?: string) =>
+    partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}/antwort`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, ablehnung_grund: ablehnungGrund || null }),
+    }),
+  statusSetzen: (id: string, status: PartnerStatusSetzbar) =>
+    partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  kommentare: (id: string) =>
+    partnerApiFetch<PartnerKommentar[]>(`/api/partnerportal/auftraege/${id}/kommentare`),
+  kommentieren: (id: string, body: string) =>
+    partnerApiFetch<VorgangEvent>(`/api/partnerportal/auftraege/${id}/kommentare`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
+};
+
+export const auftraegeApi = {
+  list: (filter?: { projekt_id?: string; kunde_id?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filter?.projekt_id) params.set("projekt_id", filter.projekt_id);
+    if (filter?.kunde_id) params.set("kunde_id", filter.kunde_id);
+    if (filter?.status) params.set("status", filter.status);
+    const qs = params.toString();
+    return apiFetch<Auftrag[]>(`/api/auftraege${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Auftrag>(`/api/auftraege/${id}`),
+  create: (body: { titel: string; beschreibung?: string; projekt_id?: string | null; kunde_id?: string | null }) =>
+    apiFetch<Auftrag>("/api/auftraege", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      titel?: string;
+      beschreibung?: string;
+      projekt_id?: string | null;
+      kunde_id?: string | null;
+      status?: AuftragStatus;
+    },
+  ) => apiFetch<Auftrag>(`/api/auftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/auftraege/${id}`, { method: "DELETE" }),
+};
+
+export const projektAufgabenApi = {
+  list: (filter: {
+    projekt_id?: string;
+    vorgang_id?: string;
+    eltern_aufgabe_id?: string;
+    mir_zugewiesen?: boolean;
+  }) => {
+    const params = new URLSearchParams();
+    if (filter.projekt_id) params.set("projekt_id", filter.projekt_id);
+    if (filter.vorgang_id) params.set("vorgang_id", filter.vorgang_id);
+    if (filter.eltern_aufgabe_id) params.set("eltern_aufgabe_id", filter.eltern_aufgabe_id);
+    if (filter.mir_zugewiesen) params.set("mir_zugewiesen", "true");
+    return apiFetch<ProjektAufgabe[]>(`/api/projekt-aufgaben?${params}`);
+  },
+  get: (id: string) => apiFetch<ProjektAufgabe>(`/api/projekt-aufgaben/${id}`),
+  create: (body: {
+    // projekt_id fehlt/undefined -> private Aufgabe (kein Kanban-Board).
+    projekt_id?: string;
+    spalte_id?: string;
+    eltern_aufgabe_id?: string;
+    titel: string;
+    beschreibung?: string;
+    faelligkeit_am?: string | null;
+    prioritaet?: string;
+    zugewiesen_an?: string | null;
+    vorgang_id?: string | null;
+    anlage_id?: string | null;
+    kunde_id?: string | null;
+    standort_id?: string | null;
+    checkliste?: ChecklistenPunkt[];
+    zusatzfelder?: Record<string, string>;
+  }) => apiFetch<ProjektAufgabe>("/api/projekt-aufgaben", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      spalte_id?: string;
+      eltern_aufgabe_id?: string;
+      titel?: string;
+      beschreibung?: string;
+      faelligkeit_am?: string | null;
+      prioritaet?: string;
+      zugewiesen_an?: string | null;
+      erledigt?: boolean;
+      vorgang_id?: string | null;
+      anlage_id?: string | null;
+      kunde_id?: string | null;
+      standort_id?: string | null;
+      checkliste?: ChecklistenPunkt[];
+      zusatzfelder?: Record<string, string>;
+    },
+  ) => apiFetch<ProjektAufgabe>(`/api/projekt-aufgaben/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekt-aufgaben/${id}`, { method: "DELETE" }),
 };
 
 export const integrationenApi = {
@@ -1321,33 +2310,47 @@ export const mailApi = {
 };
 
 export const kundenportalApi = {
-  vorgaenge: () => kundenApiFetch<Vorgang[]>("/api/kundenportal/vorgaenge"),
-  vorgang: (id: string) => kundenApiFetch<Vorgang>(`/api/kundenportal/vorgaenge/${id}`),
-  vorgangEvents: (id: string) => kundenApiFetch<VorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
-  angebote: () => kundenApiFetch<Angebot[]>("/api/kundenportal/angebote"),
-  angebot: (id: string) => kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`),
-  antwortAufAngebot: (id: string, status: "angenommen" | "abgelehnt") =>
-    kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`, {
+  vorgaenge: () => kundenApiFetch<PortalVorgang[]>("/api/kundenportal/vorgaenge"),
+  vorgang: (id: string) => kundenApiFetch<PortalVorgang>(`/api/kundenportal/vorgaenge/${id}`),
+  vorgangEvents: (id: string) => kundenApiFetch<PortalVorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
+  angebote: () => kundenApiFetch<PortalAngebot[]>("/api/kundenportal/angebote"),
+  angebot: (id: string) => kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`),
+  antwortAufAngebot: (
+    id: string,
+    status: "angenommen" | "abgelehnt",
+    b2c?: { belehrung_version: string; fassung_sha256: string },
+  ) =>
+    kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(
+        b2c && status === "angenommen"
+          ? { status, bestaetigung: true, belehrung_version: b2c.belehrung_version, fassung_sha256: b2c.fassung_sha256 }
+          : { status },
+      ),
+    }),
+  verbraucherschutz: () => kundenApiFetch<PortalVerbraucherschutz>("/api/kundenportal/verbraucherschutz"),
+  widerrufAngebot: (id: string) =>
+    kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}/widerruf`, {
+      method: "POST",
+      body: JSON.stringify({ bestaetigung: true }),
     }),
   angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
-  rechnungen: () => kundenApiFetch<Rechnung[]>("/api/kundenportal/rechnungen"),
+  rechnungen: () => kundenApiFetch<PortalRechnung[]>("/api/kundenportal/rechnungen"),
   rechnungPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/rechnungen/${id}/pdf`),
-  standorte: () => kundenApiFetch<Standort[]>("/api/kundenportal/standorte"),
+  standorte: () => kundenApiFetch<PortalStandort[]>("/api/kundenportal/standorte"),
   standortAnlegen: (body: { bezeichnung: string; adresse?: Adresse }) =>
-    kundenApiFetch<Standort>("/api/kundenportal/standorte", {
+    kundenApiFetch<PortalStandort>("/api/kundenportal/standorte", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  anlagen: () => kundenApiFetch<Anlage[]>("/api/kundenportal/anlagen"),
+  anlagen: () => kundenApiFetch<PortalAnlage[]>("/api/kundenportal/anlagen"),
   anlageAnlegen: (body: { standort_id?: string | null; bezeichnung: string; adresse?: Adresse; anlagentyp?: string }) =>
-    kundenApiFetch<Anlage>("/api/kundenportal/anlagen", {
+    kundenApiFetch<PortalAnlage>("/api/kundenportal/anlagen", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  anfragen: () => kundenApiFetch<VorgangAnfrage[]>("/api/kundenportal/anfragen"),
-  anfrage: (id: string) => kundenApiFetch<VorgangAnfrage>(`/api/kundenportal/anfragen/${id}`),
+  anfragen: () => kundenApiFetch<PortalVorgangAnfrage[]>("/api/kundenportal/anfragen"),
+  anfrage: (id: string) => kundenApiFetch<PortalVorgangAnfrage>(`/api/kundenportal/anfragen/${id}`),
   anfrageAnlegen: (body: {
     titel: string;
     beschreibung?: string;
@@ -1355,8 +2358,76 @@ export const kundenportalApi = {
     standort_id?: string | null;
     anlage_id?: string | null;
   }) =>
-    kundenApiFetch<VorgangAnfrage>("/api/kundenportal/anfragen", {
+    kundenApiFetch<PortalVorgangAnfrage>("/api/kundenportal/anfragen", {
       method: "POST",
       body: JSON.stringify(body),
     }),
+};
+
+export const abwesenheitenApi = {
+  anlegen: (body: AbwesenheitCreate) =>
+    apiFetch<Abwesenheit>("/api/abwesenheiten", { method: "POST", body: JSON.stringify(body) }),
+  liste: (params: {
+    user_id?: string;
+    alle?: boolean;
+    status?: AbwesenheitStatus;
+    von?: string;
+    bis?: string;
+    nur_offene?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== false) qs.set(k, String(v));
+    return apiFetch<Abwesenheit[]>(`/api/abwesenheiten${qs.size ? `?${qs}` : ""}`);
+  },
+  genehmigen: (id: string) => apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/genehmigen`, { method: "POST" }),
+  ablehnen: (id: string, antwort?: string | null) =>
+    apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/ablehnen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort: antwort || null }),
+    }),
+  zurueckziehen: (id: string) =>
+    apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/zurueckziehen`, { method: "POST" }),
+  konto: (params: { user_id?: string; jahr?: number } = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, String(v));
+    return apiFetch<Urlaubskonto>(`/api/abwesenheiten/konto${qs.size ? `?${qs}` : ""}`);
+  },
+  anspruchSetzen: (userId: string, jahr: number, body: UrlaubsanspruchSetzen) =>
+    apiFetch<Urlaubsanspruch>(`/api/abwesenheiten/anspruch/${userId}/${jahr}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  kalender: (von: string, bis: string) =>
+    apiFetch<AbwesenheitKalenderEintrag[]>(`/api/abwesenheiten/kalender?von=${von}&bis=${bis}`),
+};
+
+export const datenimportApi = {
+  analyse: (datei: File, entitaet: ImportEntitaet, blatt?: string | null) => {
+    const form = new FormData();
+    form.append("datei", datei);
+    form.append("entitaet", entitaet);
+    if (blatt) form.append("blatt", blatt);
+    return apiFetchForm<ImportAnalyse>("/api/import/analyse", form, false, LANGER_REQUEST_TIMEOUT_MS);
+  },
+  probelauf: (id: string, konfig: ImportKonfiguration) =>
+    apiFetch<ImportErgebnis>(
+      `/api/import/${id}/probelauf`,
+      { method: "POST", body: JSON.stringify(konfig) },
+      false,
+      LANGER_REQUEST_TIMEOUT_MS,
+    ),
+  ausfuehren: (id: string, konfig: ImportKonfiguration) =>
+    apiFetch<ImportErgebnis>(
+      `/api/import/${id}/ausfuehren`,
+      { method: "POST", body: JSON.stringify(konfig) },
+      false,
+      LANGER_REQUEST_TIMEOUT_MS,
+    ),
+  rueckgaengig: (id: string) =>
+    apiFetch<ImportLauf>(`/api/import/${id}/rueckgaengig`, { method: "POST" }, false, LANGER_REQUEST_TIMEOUT_MS),
+  verwerfen: (id: string) => apiFetch<void>(`/api/import/${id}`, { method: "DELETE" }),
+  laeufe: () => apiFetch<ImportLauf[]>("/api/import"),
+  fehlerbericht: (id: string, arten = "fehler") =>
+    apiFetchBlob(`/api/import/${id}/fehlerbericht.csv?arten=${encodeURIComponent(arten)}`),
+  vorlage: (entitaet: ImportEntitaet) => apiFetchBlob(`/api/import/vorlagen/${entitaet}.csv`),
 };

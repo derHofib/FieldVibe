@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquareText } from "lucide-react";
-import { type FormEvent, useId, useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -24,13 +25,12 @@ const STATUS_LABEL: Record<VorgangAnfrageStatus, string> = {
 };
 
 const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
-  offen: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  angenommen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgelehnt: "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-300",
+  offen: "border border-st-arbeit text-st-arbeit ",
+  angenommen: "border border-st-erledigt text-st-erledigt ",
+  abgelehnt: "border border-sep text-label2 ",
 };
 
 function NeueAnfrage() {
-  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [titel, setTitel] = useState("");
@@ -41,6 +41,7 @@ function NeueAnfrage() {
   const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [gesendet, setGesendet] = useState(false);
 
   const { data: standorte } = useQuery({
     queryKey: ["portal-standorte"],
@@ -83,6 +84,8 @@ function NeueAnfrage() {
       setStandortId("");
       setAnlageId("");
       setError(null);
+      setGesendet(true);
+      window.setTimeout(() => setGesendet(false), 4000);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anfrage konnte nicht gesendet werden"),
   });
@@ -99,47 +102,63 @@ function NeueAnfrage() {
 
   if (!zeigen) {
     return (
-      <button
-        onClick={() => setZeigen(true)}
-        className="btn-touch w-full rounded-lg btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-3 text-sm font-medium text-white"
-      >
-        + Neue Auftragsanfrage stellen
-      </button>
+      <div className="space-y-2">
+        {gesendet && (
+          <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
+            Ihre Anfrage wurde gesendet.
+          </p>
+        )}
+        <button
+          onClick={() => setZeigen(true)}
+          className="btn-touch w-full rounded-lg btn-ap-primary py-3 text-sm font-medium"
+        >
+          + Neue Vorgangsanfrage stellen
+        </button>
+      </div>
     );
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="space-y-3 card-ap p-4"
     >
-      <p className="text-xs text-slate-500 dark:text-stone-400">
-        Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
+      <p className="text-xs text-label2">
+        Ihre Anfrage wird von uns geprüft und in einen Vorgang übernommen, sobald sie bestätigt ist.
       </p>
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
-        <input id={`${uid}-0`}
+        <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
+          Titel
+        </label>
+        <input
+          id="portal-anfrage-titel"
           autoFocus
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       <div>
-        <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
-        <textarea id={`${uid}-1`}
+        <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
+          Beschreibung
+        </label>
+        <textarea
+          id="portal-anfrage-beschreibung"
           value={beschreibung}
           onChange={(e) => setBeschreibung(e.target.value)}
           rows={3}
-          className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full resize-none border border-sep bg-transparent p-2 text-label"
         />
       </div>
       <div>
-        <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Art</label>
-        <select id={`${uid}-2`}
+        <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
+          Art
+        </label>
+        <select
+          id="portal-anfrage-art"
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           {LEISTUNGSTYPEN.map((l) => (
             <option key={l.value} value={l.value}>
@@ -151,16 +170,17 @@ function NeueAnfrage() {
 
       {(standorte ?? []).length > 0 && (
         <div>
-          <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
             Standort (optional)
           </label>
-          <select id={`${uid}-3`}
+          <select
+            id="portal-anfrage-standort"
             value={standortId}
             onChange={(e) => {
               setStandortId(e.target.value);
               setAnlageId("");
             }}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Kein Standort</option>
             {standorte?.filter((s) => s.aktiv).map((s) => (
@@ -176,7 +196,7 @@ function NeueAnfrage() {
         <button
           type="button"
           onClick={() => setZeigeNeuerStandort(true)}
-          className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+          className="btn-touch text-xs font-medium text-tint "
         >
           + Neuer Standort
         </button>
@@ -186,7 +206,7 @@ function NeueAnfrage() {
             value={neuerStandortName}
             onChange={(e) => setNeuerStandortName(e.target.value)}
             placeholder="Bezeichnung (z.B. Filiale Nord)"
-            className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
           <button
             type="button"
@@ -201,13 +221,14 @@ function NeueAnfrage() {
 
       {anlagenFuerStandort.length > 0 && (
         <div>
-          <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
             Anlage (optional)
           </label>
-          <select id={`${uid}-4`}
+          <select
+            id="portal-anfrage-anlage"
             value={anlageId}
             onChange={(e) => setAnlageId(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Keine Anlage</option>
             {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
@@ -219,20 +240,20 @@ function NeueAnfrage() {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anfrage senden
         </button>
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -242,18 +263,20 @@ function NeueAnfrage() {
 }
 
 export function PortalAnfragenPage() {
-  const { data: anfragen, isLoading } = useQuery({
+  const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-anfragen"],
     queryFn: kundenportalApi.anfragen,
   });
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Ihre Auftragsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Vorgangsanfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !anfragen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
         <EmptyState icon={MessageSquareText} text="Noch keine Anfragen gestellt." />
       ) : (
@@ -261,19 +284,24 @@ export function PortalAnfragenPage() {
           {anfragen.map((a) => (
             <div
               key={a.id}
-              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-ap p-4"
             >
               <div className="flex items-start justify-between">
-                <div className="font-medium text-slate-800 dark:text-stone-100">{a.titel}</div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[a.status]}`}>
+                <div className="font-medium text-label">{a.titel}</div>
+                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[a.status]}`}>
                   {STATUS_LABEL[a.status]}
                 </span>
               </div>
               {a.beschreibung && (
-                <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">{a.beschreibung}</p>
+                <p className="mt-1 text-sm text-label2">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
-                <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">Grund: {a.ablehnungsgrund}</p>
+                <>
+                  <p className="mt-1 text-xs text-label2">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-xs text-label2">
+                    Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
+                  </p>
+                </>
               )}
             </div>
           ))}

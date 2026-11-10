@@ -81,13 +81,13 @@ export function AnlagenFelderPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Anlagen-Zusatzfelder</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <h1 className="text-lg font-bold text-label">Anlagen-Zusatzfelder</h1>
+        <p className="mt-1 text-sm text-label2">
           Lege je Anlagentyp (z. B. „Fahrzeug", „Ladestation", „Elektroanlage") eigene Felder fest, die
           beim Anlegen/Bearbeiten einer Anlage dieses Typs zusätzlich abgefragt werden.
         </p>
@@ -95,16 +95,16 @@ export function AnlagenFelderPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="space-y-2 card-ap p-4"
       >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlagentyp</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Anlagentyp</label>
           <input id={`${uid}-0`}
             list="bekannte-anlagentypen"
             value={anlagentyp}
             onChange={(e) => setAnlagentyp(e.target.value)}
             placeholder="z.B. Fahrzeug, Ladestation, Elektroanlage"
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           />
           <datalist id="bekannte-anlagentypen">
             {bekannteTypen.map((t) => (
@@ -117,12 +117,12 @@ export function AnlagenFelderPage() {
             value={feldName}
             onChange={(e) => setFeldName(e.target.value)}
             placeholder="Feldname, z.B. Kennzeichen"
-            className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
           />
           <select
             value={feldTyp}
             onChange={(e) => setFeldTyp(e.target.value as AnlagenFeldTyp)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           >
             {Object.entries(FELD_TYP_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
@@ -131,40 +131,40 @@ export function AnlagenFelderPage() {
             ))}
           </select>
         </div>
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Feld hinzufügen
         </button>
       </form>
 
       {gruppen.length === 0 ? (
-        <p className="text-center text-sm text-slate-400 dark:text-stone-500">Noch keine Zusatzfelder definiert.</p>
+        <p className="text-center text-sm text-label2">Noch keine Zusatzfelder definiert.</p>
       ) : (
         <div className="space-y-3">
           {gruppen.map(([typ, felder]) => (
             <div
               key={typ}
-              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-ap p-4"
             >
-              <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">{typ}</h2>
+              <h2 className="mb-2 text-sm font-semibold text-label2">{typ}</h2>
               <div className="space-y-1.5">
                 {felder!.map((f) => (
                   <div
                     key={f.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 dark:bg-stone-800/60"
+                    className="flex items-center justify-between rounded-md bg-fill px-3 py-2"
                   >
-                    <span className="text-sm text-slate-700 dark:text-stone-200">{f.feld_name}</span>
+                    <span className="text-sm text-label">{f.feld_name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                      <span className="border border-sep px-2 py-0.5 text-xs text-label">
                         {FELD_TYP_LABEL[f.feld_typ]}
                       </span>
                       <button
                         onClick={() => deleteMutation.mutate(f.id)}
-                        className="btn-touch text-xs text-red-600 dark:text-red-400"
+                        className="btn-touch text-xs text-st-fehlt "
                       >
                         Entfernen
                       </button>

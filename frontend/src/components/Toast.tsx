@@ -18,6 +18,7 @@ interface ToastApi {
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
+const KEIN_TOAST: ToastApi = { erfolg: () => {}, fehler: () => {}, info: () => {} };
 
 // Fehler bleiben länger stehen: man muss sie lesen können, bevor sie verschwinden.
 const DAUER_MS: Record<ToastArt, number> = { erfolg: 4000, info: 4000, fehler: 8000 };
@@ -116,7 +117,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 export function useToast(): ToastApi {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast braucht einen ToastProvider");
-  return ctx;
+  // Ohne Provider (isoliert gerenderte Komponente im Test) schweigen statt abstürzen
+  return useContext(ToastContext) ?? KEIN_TOAST;
 }

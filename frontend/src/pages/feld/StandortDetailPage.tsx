@@ -8,17 +8,18 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
+  neu: "border border-tint text-tint ",
+  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2",
 };
 
 function AdresseBearbeiten({
@@ -58,9 +59,9 @@ function AdresseBearbeiten({
     return (
       <div className="mt-1 flex items-center gap-2">
         {zeile ? (
-          <p className="text-sm text-slate-500 dark:text-stone-400">{zeile}</p>
+          <p className="text-sm text-label2">{zeile}</p>
         ) : (
-          kannVerwalten && <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
+          kannVerwalten && <p className="text-sm text-label2">Keine Adresse hinterlegt.</p>
         )}
         {kannVerwalten && (
           <button
@@ -68,7 +69,7 @@ function AdresseBearbeiten({
               setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -78,38 +79,38 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+    <div className="mt-2 space-y-2 border border-sepstrong p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -189,12 +190,12 @@ function AnlagenVerwaltung({
   if (modus === "keine") {
     return (
       <div className="flex gap-3">
-        <button onClick={() => setModus("neu")} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+        <button onClick={() => setModus("neu")} className="btn-touch text-xs font-medium text-tint ">
           + Neue Anlage
         </button>
         <button
           onClick={() => setModus("zuordnen")}
-          className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+          className="btn-touch text-xs font-medium text-tint "
         >
           Bestehende Anlage zuordnen
         </button>
@@ -204,33 +205,33 @@ function AnlagenVerwaltung({
 
   if (modus === "neu") {
     return (
-      <form onSubmit={handleSubmitNeu} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+      <form onSubmit={handleSubmitNeu} className="space-y-2 border border-sepstrong p-3">
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="Bezeichnung"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="Typ (optional)"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={neuMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
           <button
             type="button"
             onClick={reset}
-            className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+            className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
           >
             Abbrechen
           </button>
@@ -240,16 +241,16 @@ function AnlagenVerwaltung({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+    <div className="space-y-2 border border-sepstrong p-3">
       {zuordenbar.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">
+        <p className="text-sm text-label2">
           Keine weiteren Anlagen dieses Kunden verfügbar.
         </p>
       ) : (
         <select
           value={zuordnenId}
           onChange={(e) => setZuordnenId(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Anlage wählen…</option>
           {zuordenbar.map((a) => (
@@ -259,19 +260,19 @@ function AnlagenVerwaltung({
           ))}
         </select>
       )}
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
           onClick={() => zuordnenMutation.mutate()}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Zuordnen
         </button>
         <button
           type="button"
           onClick={reset}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -289,7 +290,7 @@ export function StandortDetailPage() {
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const kannLoeschen = hatRecht("kunden", "loeschen");
 
-  const { data: profil, isLoading } = useQuery({
+  const { data: profil, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["standort-profil", id],
     queryFn: () => standorteApi.profil(id!),
     enabled: !!id,
@@ -309,12 +310,14 @@ export function StandortDetailPage() {
     },
   });
 
+  if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Der Standort" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !profil) return <DetailSkeleton />;
+
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -325,35 +328,35 @@ export function StandortDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Standort löschen
           </button>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
+          <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-xs font-semibold text-label disabled:opacity-50 "
             >
               {profil.aktiv ? "Deaktivieren" : "Aktivieren"}
             </button>
           )}
         </div>
         {!profil.aktiv && (
-          <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+          <span className="mt-1 inline-block border border-sep px-2 py-0.5 text-xs text-label">
             inaktiv
           </span>
         )}
         {profil.kunde && (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
-            className="mt-1 block text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="mt-1 block text-sm text-tint underline-offset-2 hover:underline "
           >
             {profil.kunde.name}
           </button>
@@ -361,17 +364,17 @@ export function StandortDetailPage() {
         <AdresseBearbeiten standortId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Vorgänge an diesem Standort.</p>
+          <p className="text-sm text-label2">Noch keine Vorgänge an diesem Standort.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
               <span
                 key={status}
-                className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                  STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                className={`px-2 py-1 text-xs font-semibold ${
+                  STATUS_BADGE[status] ?? "border border-sep text-label"
                 }`}
               >
                 {anzahl}× {status}
@@ -382,7 +385,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Assets an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-label2">Assets an diesem Standort</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Assets an diesem Standort." className="py-4" />
         ) : (
@@ -391,16 +394,16 @@ export function StandortDetailPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/anlagen/${a.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-stone-500">{a.anlagentyp}</div>}
+                  <div className="text-sm font-medium text-label">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
                 </div>
                 {!a.aktiv && (
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                  <span className="border border-sep px-2 py-0.5 text-xs text-label">
                     inaktiv
                   </span>
                 )}
@@ -417,7 +420,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge an diesem Standort</h2>
         {profil.vorgaenge.length === 0 ? (
           <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
@@ -426,23 +429,23 @@ export function StandortDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-xs text-label2">
                     {v.vorgangsnummer}
                     {v.dauerauftrag_id && (
                       <>
                         {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
+                  <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}
                 </span>
               </button>

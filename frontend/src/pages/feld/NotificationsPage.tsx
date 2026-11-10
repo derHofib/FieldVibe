@@ -5,12 +5,19 @@ import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
+import { istOfficeHost } from "../../office/hostname";
 import type { NotificationEntry } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function targetPath(n: NotificationEntry): string | null {
   if (n.ref_entity_type === "vorgang" && n.ref_entity_id) return `/vorgaenge/${n.ref_entity_id}`;
   if (n.ref_entity_type === "anlage" && n.ref_entity_id) return `/anlagen/${n.ref_entity_id}`;
   if (n.ref_entity_type === "eingangsrechnung" && n.ref_entity_id) return `/rechnungseingang/${n.ref_entity_id}`;
+  if (n.ref_entity_type === "angebot" && n.ref_entity_id) return `/angebote/${n.ref_entity_id}`;
+  // Zeitplan-Antraege: Office oeffnet das Projekt im Zeitplan-Tab, die Feld-App die Zeitplan-Liste.
+  if (n.ref_entity_type === "projekt" && n.ref_entity_id) {
+    return istOfficeHost() ? `/projekte?projekt=${n.ref_entity_id}&tab=zeitplan` : `/projekte/${n.ref_entity_id}/zeitplan`;
+  }
   return null;
 }
 
@@ -18,7 +25,7 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationsApi.list(),
   });
@@ -42,11 +49,11 @@ export function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Benachrichtigungen</h1>
+        <h1 className="text-lg font-bold text-label">Benachrichtigungen</h1>
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
-            className="btn-touch text-sm font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-sm font-medium text-tint "
           >
             Alle als gelesen markieren
           </button>
@@ -55,6 +62,8 @@ export function NotificationsPage() {
 
       {isLoading ? (
         <SkeletonList count={4} />
+      ) : ladeFehler && !notifications ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Benachrichtigungen" onErneut={() => void neuLaden()} />
       ) : !notifications || notifications.length === 0 ? (
         <EmptyState icon={Bell} text="Keine Benachrichtigungen." />
       ) : (
@@ -63,17 +72,17 @@ export function NotificationsPage() {
             <button
               key={n.id}
               onClick={() => handleClick(n)}
-              className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-xs dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
-                n.gelesen_am ? "bg-white dark:bg-stone-900" : "bg-blue-50 dark:bg-blue-500/10"
+              className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-xs dark:shadow-none dark:ring-1 ${
+                n.gelesen_am ? "bg-card" : "bg-tintbg "
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{n.titel}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-sm font-medium text-label">{n.titel}</div>
+                <div className="text-xs text-label2">
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>
-              {!n.gelesen_am && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />}
+              {!n.gelesen_am && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-tint" />}
             </button>
           ))}
         </div>

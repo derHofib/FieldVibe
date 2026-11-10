@@ -5,7 +5,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_recht, require_roles
 from app.schemas.auswertung import OffenePostenBericht, UstVaBericht
-from app.services.auswertung_service import datev_export_csv, offene_posten_bericht, ust_va_bericht
+from app.services.auswertung_service import (
+    KontoNichtKonfiguriert,
+    datev_export_csv,
+    offene_posten_bericht,
+    ust_va_bericht,
+)
+from app.services.audit_service import export_protokollieren
+from app.services.datev_service import DatevKonfigurationFehler
+from app.services.zuweisung_service import erlaubte_kunde_ids
+
+
+async def _nicht_eingeschraenkt(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> None:
+    """Auswertungen aggregieren mandantenweit (inkl. Eingangsrechnungen ohne
+    Kundenbezug) -- eine Teilsicht fuer Nutzer mit nur_zugewiesene_kunden
+    waere unvollstaendig bzw. irrefuehrend, daher komplett gesperrt."""
+    if await erlaubte_kunde_ids(session, auth) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Auswertungen sind für Nutzer mit Kundeneinschränkung nicht verfügbar",
+        )
+
 
 router = APIRouter(
     prefix="/api/auswertung",
@@ -14,6 +36,7 @@ router = APIRouter(
         Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
+        Depends(_nicht_eingeschraenkt),
     ],
 )
 
@@ -27,7 +50,9 @@ async def get_ust_va_bericht(
 ) -> UstVaBericht:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await ust_va_bericht(session, auth.mandant_id, von, bis)
+    bericht = await ust_va_bericht(session, auth.mandant_id, von, bis)
+    await export_protokollieren(session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="ustva", von=von, bis=bis)
+    return bericht
 
 
 @router.get("/offene-posten", response_model=OffenePostenBericht)
@@ -46,4 +71,9 @@ async def get_datev_export(
 ) -> Response:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await datev_export_csv(session, auth.mandant_id, von, bis)
+    try:
+        antwort = await datev_export_csv(session, auth.mandant_id, von, bis)
+    except (KontoNichtKonfiguriert, DatevKonfigurationFehler) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    await export_protokollieren(session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="datev", von=von, bis=bis)
+    return antwort

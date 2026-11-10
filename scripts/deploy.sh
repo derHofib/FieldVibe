@@ -22,10 +22,38 @@ set -euo pipefail
 # Idempotent: bereits gesetzte Secrets/Domains/Modus in einer vorhandenen
 # .env werden nicht ueberschrieben, ein vorhandener Backup-Cron-Eintrag
 # nicht dupliziert -- das Skript kann daher auch spaeter fuer Updates
-# erneut ausgefuehrt werden (git pull + Stack neu bauen + Migrationen).
+# erneut ausgefuehrt werden.
+#
+# Reihenfolge eines Updates (Details und Rollback: docs/DEPLOYMENT.md, docs/BETRIEB.md):
+#   Vorab-Check -> Backup (Abbruch bei Fehlschlag) -> Images bauen -> Datenbank-
+#   Migration VOR dem Rollout -> Rollout -> Health-Gate (/health/ready) -> bei
+#   Fehlschlag automatischer Rollback auf die vorherigen Image-Tags (.deploy-state).
+#
+# Optionen:
+#   --ohne-backup          Backup vor dem Update ueberspringen (nur bewusst!)
+#   --nicht-interaktiv     keine Rueckfragen (Plattform-Administrator wird nicht angelegt)
+#   --health-timeout SEK   Wartezeit des Health-Gates, Standard 300
+#   -h, --help             diese Hilfe
+
+DEPLOY_OHNE_BACKUP=0
+NICHT_INTERAKTIV=0
+DEPLOY_HEALTH_TIMEOUT=300
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ohne-backup)      DEPLOY_OHNE_BACKUP=1 ;;
+    --nicht-interaktiv) NICHT_INTERAKTIV=1 ;;
+    --health-timeout)   shift; [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]] || { echo "--health-timeout braucht eine Zahl (Sekunden)." >&2; exit 1; }; DEPLOY_HEALTH_TIMEOUT="$1" ;;
+    -h|--help)          sed -n '4,36p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)                  echo "Unbekannte Option: $1 (siehe --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+export DEPLOY_OHNE_BACKUP DEPLOY_HEALTH_TIMEOUT
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
+# shellcheck source=scripts/deploy-lib.sh
+source "$REPO_DIR/scripts/deploy-lib.sh"
 
 log()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mWarnung:\033[0m %s\n' "$*" >&2; }
@@ -131,15 +159,21 @@ fi
 log "Prüfe/generiere Secrets in .env (bereits gesetzte Werte bleiben unverändert)..."
 
 is_placeholder POSTGRES_PASSWORD && set_env POSTGRES_PASSWORD "$(gen_secret)"
-PG_USER="$(get_env POSTGRES_USER)"
-PG_PW="$(get_env POSTGRES_PASSWORD)"
-PG_DB="$(get_env POSTGRES_DB)"
-set_env DATABASE_URL "postgresql+asyncpg://${PG_USER}:${PG_PW}@postgres:5432/${PG_DB}"
-set_env DATABASE_URL_SYNC "postgresql+psycopg2://${PG_USER}:${PG_PW}@postgres:5432/${PG_DB}"
+# DATABASE_URL/DATABASE_URL_SYNC setzt scripts/app_rolle_einrichten.sh in
+# Abschnitt 8 -- die Anwendung verbindet sich als eigene App-Rolle, nicht als
+# POSTGRES_USER (Bootstrap-Superuser, siehe dort).
 
 is_placeholder JWT_SECRET && set_env JWT_SECRET "$(gen_secret)"
 is_placeholder INTEGRATION_SECRET_KEY && set_env INTEGRATION_SECRET_KEY "$(gen_secret)"
 is_placeholder MINIO_ROOT_PASSWORD && set_env MINIO_ROOT_PASSWORD "$(gen_secret)"
+# Auch Bestandsinstallationen: eine aus .env.example kopierte .env traegt
+# ENVIRONMENT=development -- das haette die Startpruefung auf Platzhalter-
+# Secrets (app/core/config.py) und die API-Doku-Sperre ausgehebelt.
+set_env ENVIRONMENT "production"
+# Eigener Key statt gen_secret(): MinIO braucht echtes, unverstuemmeltes
+# Base64 eines 32-Byte-Schluessels (gen_secret() entfernt bewusst
+# =/+ fuer Passwoerter, die z.B. in einer DATABASE_URL landen).
+is_placeholder MINIO_KMS_SECRET_KEY && set_env MINIO_KMS_SECRET_KEY "fieldvibe-minio:$(openssl rand -base64 32)"
 
 # --- 6. Domains bzw. Server-IP ----------------------------------------------
 # Fester Standard fuer dieses Deployment -- Enter druecken uebernimmt ihn,
@@ -212,6 +246,30 @@ else
   fi
 fi
 
+# --- 6b. Rechtstexte (Impressum/Datenschutz) ---------------------------------
+# Nur Hinweis, kein Abbruch: die Links werden zur Build-Zeit ins Frontend
+# gebacken; ohne Wert zeigt das Frontend die Platzhalter-Seiten der App.
+for legal_var in VITE_IMPRESSUM_URL VITE_DATENSCHUTZ_URL; do
+  if [[ -z "$(get_env "$legal_var")" ]]; then
+    log "Hinweis: ${legal_var} ist in der .env nicht gesetzt -- die App nutzt Platzhalter-Seiten (/impressum, /datenschutz); echte URLs in den Firmendaten oder in der .env hinterlegen (Pflicht für den Produktivbetrieb, §5 DDG / Art. 13 DSGVO). Nach einer .env-Änderung dieses Skript erneut ausführen, damit das Frontend neu gebaut wird."
+  fi
+done
+
+# --- 6c. Error-Tracking (optional) ---------------------------------------------
+# Die Frontend-DSN wird zur Build-Zeit eingebacken; ihr Host muss in der CSP
+# (connect-src) stehen, sonst blockiert der Browser die Meldungen. Ohne DSN bleibt
+# SENTRY_CSP_HOST leer, die CSP bleibt unveraendert.
+if [[ -n "$(get_env VITE_SENTRY_DSN)" ]]; then
+  SENTRY_HOST="$(get_env VITE_SENTRY_DSN | sed -E 's#^https?://[^@/]*@([^/]+)/.*#https://\1#')"
+  set_env SENTRY_CSP_HOST "$SENTRY_HOST"
+  log "Error-Tracking (Frontend) aktiv: ${SENTRY_HOST}. Nur EU-gehostet oder selbst betrieben, AVV nicht vergessen (docs/BETRIEB.md)."
+elif [[ -n "$(get_env SENTRY_CSP_HOST)" ]]; then
+  set_env SENTRY_CSP_HOST ""
+fi
+if [[ -n "$(get_env SENTRY_DSN)" ]]; then
+  log "Error-Tracking (Backend/Worker) aktiv. Nur EU-gehostet oder selbst betrieben, AVV nicht vergessen (docs/BETRIEB.md)."
+fi
+
 # --- 7. Vorhandenes Repo aktualisieren (falls kein Erststart) --------------
 if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
   if [[ -z "$(git status --porcelain)" ]]; then
@@ -222,37 +280,105 @@ if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
   fi
 fi
 
-# --- 8. Stack starten -------------------------------------------------------
-# GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die
-# informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
-# Commit auf GitHub), siehe app/services/version_service.py. Kein git-
-# Repo (z.B. per curl heruntergeladenes Tarball) -> bleibt "unknown".
-export GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-log "Baue und starte den Stack (Postgres, MinIO, Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
-"${COMPOSE[@]}" up -d --build
+# GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken (Update-Anzeige im Super-Admin-
+# Bereich, Release-Tag fuer das Error-Tracking) und ist zugleich der Image-Tag dieses
+# Releases: damit bleibt der Vorgaengerstand fuer einen Rollback auf dem Host liegen.
+# Kein git-Repo (Tarball) -> "unknown" fuer die Anzeige, der Tag wird dann ein Zeitstempel.
+GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export GIT_COMMIT
+IMAGE_TAG="$GIT_COMMIT"
+[[ "$IMAGE_TAG" == "unknown" ]] && IMAGE_TAG="local-$(date +%Y%m%d%H%M%S)"
+if [[ -d .git ]] && [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then IMAGE_TAG="${IMAGE_TAG}-lokal$(date +%H%M%S)"; fi
+# Gleicher Stand erneut (z. B. nur .env geaendert): eigener Tag, sonst ueberschriebe der
+# Neubau das Rollback-Ziel.
+if [[ "$IMAGE_TAG" == "$(deploy_state_lesen CURRENT_TAG)" ]]; then IMAGE_TAG="${IMAGE_TAG}-r$(date +%H%M%S)"; fi
+export IMAGE_TAG
+
+# --- 7b. Vorab-Check ------------------------------------------------------------
+log "Vorab-Check (Docker, Compose-Dateien, Plattenplatz)..."
+deploy_vorabcheck || err "Vorab-Check fehlgeschlagen -- es wurde nichts veraendert."
+
+mkdir -p "$(get_env BACKUP_DIR | grep . || echo /opt/fieldvibe-backups)"
+
+# --- 7c. Backup vor jeder Aenderung ----------------------------------------------
+# Vor Rollen-Umstellung, Migration und Rollout. Scheitert die Sicherung, bricht das
+# Deployment ab (Opt-out: --ohne-backup). Erstinstallation: noch nichts zu sichern.
+deploy_backup || err "Abbruch wegen fehlgeschlagenem Backup (siehe oben)."
+DEPLOY_BACKUP_ERLEDIGT=1
+export DEPLOY_BACKUP_ERLEDIGT
+
+# --- 8. Datenbank-Rolle absichern ------------------------------------------
+# Das offizielle postgres-Image macht POSTGRES_USER zum Bootstrap-Superuser,
+# dem sich SUPERUSER/BYPASSRLS nicht entziehen lassen -- und ein Superuser
+# umgeht Row-Level-Security immer. Backend und Worker verweigern daher den
+# Start mit so einer Rolle (app/db/rollen_pruefung.py). Stattdessen laeuft
+# die Anwendung als eigene Rolle (APP_DB_USER, Standard fieldvibe_app); das
+# Skript legt sie an, uebertraegt das Eigentum an bestehenden Tabellen und
+# stellt DATABASE_URL in .env um. Muss VOR dem Start von Backend/Worker und
+# den Migrationen laufen; bei einer Neuinstallation ist das Schema noch
+# leer. Idempotent, bei jedem Lauf sicher wiederholbar.
+log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirksame Mandantentrennung per Row-Level-Security)..."
+# Optional (DB_GETRENNTER_OWNER=1 in der .env oder schon vorhandene .env.migration):
+# getrennte Owner-Rolle, damit die App-Rolle RLS nicht per ALTER TABLE abschalten kann.
+OWNER_ARG=()
+if [[ "$(get_env DB_GETRENNTER_OWNER)" == "1" || -f .env.migration ]]; then OWNER_ARG=(--getrennter-owner); fi
+./scripts/app_rolle_einrichten.sh --nur-rolle ${OWNER_ARG[@]+"${OWNER_ARG[@]}"} --compose "${COMPOSE[*]}" \
+  || err "Einrichtung der App-Rolle fehlgeschlagen -- Row-Level-Security wäre sonst wirkungslos, Deployment abgebrochen."
+
+# --- 8a. MinIO-Image bereitstellen -------------------------------------------
+# Das in docker-compose.yml gepinnte MinIO-Tag gibt es auf Docker Hub nicht
+# (MinIO liefert keine Community-Images mehr) -- es wird lokal aus dem
+# bisherigen :latest erzeugt, damit `up` nicht am Pull scheitert.
+MINIO_IMAGE="$(grep -oE 'minio/minio:RELEASE[^[:space:]]+' docker-compose.yml | head -n1)"
+if [[ -n "$MINIO_IMAGE" ]] && ! docker image inspect "$MINIO_IMAGE" &>/dev/null; then
+  if docker image inspect minio/minio:latest &>/dev/null || docker pull minio/minio:latest; then
+    log "Setze lokales MinIO-Tag $MINIO_IMAGE (aus minio/minio:latest)..."
+    docker tag minio/minio:latest "$MINIO_IMAGE"
+  else
+    err "MinIO-Image $MINIO_IMAGE nicht verfügbar und minio/minio:latest nicht ladbar."
+  fi
+fi
+
+# --- 8b. Datenbank und Objektspeicher starten ---------------------------------
+# Nur die Infrastruktur: Backend, Worker und Frontend starten erst NACH der Migration
+# (Abschnitt 9). Frueher kam der ganze Stack vor der Migration hoch -- ein Backend mit
+# neuem Code gegen ein noch altes Schema.
+log "Starte Datenbank und Objektspeicher..."
+"${COMPOSE[@]}" up -d postgres minio
+
+# --- 8c. MinIO-Service-Account ----------------------------------------------
+# Backend und Worker sollen nicht mit dem MinIO-Root-Zugang laufen, sondern mit
+# einem Service-Account, dessen Policy nur den Foto-Bucket erlaubt. Idempotent;
+# geaenderte Zugangsdaten uebernimmt der Rollout (Compose erzeugt Container mit
+# geaenderter Umgebung neu). Scheitert der Schritt (z. B. mc-Syntax anderer
+# MinIO-Version), laeuft der Stack mit dem Root-Zugang weiter -- das ist ein
+# Sicherheitshinweis, kein Deployment-Abbruch.
+log "Richte den MinIO-Service-Account für die Anwendung ein (Bucket-beschränkter Zugang statt Root)..."
+./scripts/minio-service-account.sh --compose "${COMPOSE[*]}" \
+  || warn "MinIO-Service-Account konnte nicht eingerichtet werden -- Backend/Worker nutzen weiter den Root-Zugang. Nachholen: ./scripts/minio-service-account.sh (siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."
+
+# --- 9. Release: bauen, migrieren, ausrollen, Health-Gate, ggf. Rollback ------
+log "Release ${IMAGE_TAG}: Images bauen, Migration, Rollout, Health-Gate (Stack: Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
+RELEASE_RC=0
+deploy_release "$IMAGE_TAG" || RELEASE_RC=$?
+case "$RELEASE_RC" in
+  0) ;;
+  "$DEPLOY_RC_BACKUP")        err "Abgebrochen: Backup fehlgeschlagen. Es wurde nichts veraendert." ;;
+  "$DEPLOY_RC_BAUEN")         err "Abgebrochen: Build bzw. Start der Infrastruktur fehlgeschlagen. Die laufende Version ist unveraendert." ;;
+  "$DEPLOY_RC_MIGRATION")     err "Abgebrochen: Migration fehlgeschlagen, nichts ausgerollt. Die laufende Version bleibt aktiv (docs/BETRIEB.md, \"Migration scheitert\")." ;;
+  "$DEPLOY_RC_ROLLBACK_OK")   err "Release ${IMAGE_TAG} hat das Health-Gate nicht bestanden und wurde automatisch zurueckgerollt (Stand $(deploy_state_lesen CURRENT_TAG)). Ursache: ${COMPOSE[*]} logs backend worker" ;;
+  *)                          err "Release ${IMAGE_TAG} hat das Health-Gate nicht bestanden, der Rollback war nicht moeglich bzw. ist fehlgeschlagen. Manuell eingreifen: docs/BETRIEB.md (\"Deploy fehlgeschlagen\")." ;;
+esac
 
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   log "Caddy holt beim allerersten Start ein bis zwei Minuten lang die TLS-Zertifikate. Fortschritt: ${COMPOSE[*]} logs -f caddy"
 fi
 
-# --- 8b. Datenbank-Rolle absichern ------------------------------------------
-# Das offizielle postgres-Image macht POSTGRES_USER standardmaessig zu einem
-# Superuser -- ein Superuser umgeht Row-Level-Security immer, unabhaengig von
-# den RLS-Policies der Anwendung. Die Mandantentrennung in der Datenbank
-# greift daher erst, wenn diese Rolle kein Superuser mehr ist. Idempotent,
-# daher bei jedem Lauf (auch Updates auf bereits laufenden Servern) sicher
-# erneut ausfuehrbar.
-log "Entziehe der Datenbank-Rolle Superuser-Rechte (Voraussetzung fuer wirksame Mandantentrennung per Row-Level-Security)..."
-"${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" \
-  -c "ALTER ROLE \"${PG_USER}\" NOSUPERUSER NOBYPASSRLS;" \
-  || err "Konnte der Datenbank-Rolle nicht die Superuser-Rechte entziehen -- Row-Level-Security waere sonst wirkungslos, Deployment abgebrochen."
-
-# --- 9. Migrationen ----------------------------------------------------------
-log "Wende Datenbank-Migrationen an..."
-"${COMPOSE[@]}" run --rm backend alembic upgrade head
-
 # --- 10. Ersten Plattform-Administrator anlegen -----------------------------
-read -rp $'\nJetzt einen Plattform-Administrator anlegen? [Y/n] ' create_admin
+create_admin="n"
+if [[ "$NICHT_INTERAKTIV" != "1" ]]; then
+  read -rp $'\nJetzt einen Plattform-Administrator anlegen? [Y/n] ' create_admin || create_admin="n"
+fi
 if [[ ! "$create_admin" =~ ^[Nn]$ ]]; then
   read -rp "E-Mail: " ADMIN_EMAIL
   read -rp "Name: " ADMIN_NAME
@@ -274,6 +400,7 @@ if ! command -v crontab &>/dev/null; then
 fi
 
 CRON_LINE="30 2 * * * ${REPO_DIR}/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1"
+PRUEF_CRON_LINE="30 4 * * 0 ${REPO_DIR}/scripts/backup-pruefen.sh >> /var/log/fieldvibe-backup-pruefen.log 2>&1"
 if command -v crontab &>/dev/null; then
   if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
     log "Richte tägliches Backup per Cron ein (02:30 Uhr)..."
@@ -282,6 +409,22 @@ if command -v crontab &>/dev/null; then
   else
     log "Backup-Cron bereits eingerichtet, überspringe."
   fi
+  if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup-pruefen.sh"; then
+    log "Richte wöchentliche Backup-Prüfung (Test-Restore) per Cron ein (sonntags 04:30 Uhr)..."
+    (crontab -l 2>/dev/null; echo "$PRUEF_CRON_LINE") | crontab - \
+      || warn "Cron-Eintrag konnte nicht angelegt werden, bitte manuell eintragen: $PRUEF_CRON_LINE"
+  else
+    log "Cron für die Backup-Prüfung bereits eingerichtet, überspringe."
+  fi
+fi
+
+# Nur Hinweise, nichts Interaktives: die Werte gehören in die .env (siehe
+# .env.example, Block "Backups").
+if [[ -z "$(get_env BACKUP_TARGETS)" && -z "$(get_env BACKUP_OFFSITE_REMOTE)" ]]; then
+  warn "Weder BACKUP_TARGETS noch BACKUP_OFFSITE_REMOTE in der .env gesetzt -- die Backups liegen nur auf diesem Server und überleben einen Plattendefekt oder Totalverlust nicht. Ziele einrichten: docs/DEPLOYMENT.md, Abschnitt 5."
+fi
+if [[ -z "$(get_env BACKUP_GPG_RECIPIENT)" ]]; then
+  warn "BACKUP_GPG_RECIPIENT in der .env nicht gesetzt -- Backups sind unverschlüsselt, das Secrets-Bündel (.env) wird dann nur lokal abgelegt, und Uploads zu Remote-Zielen werden verweigert. Einrichtung: docs/DEPLOYMENT.md, Abschnitt 5."
 fi
 
 # --- 12. Zusammenfassung ------------------------------------------------------
@@ -291,8 +434,7 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
 
   App (Handy):     https://$(get_env DOMAIN_APP)
   Office (Desktop): https://$(get_env DOMAIN_OFFICE)
-  API-Docs:        https://$(get_env DOMAIN_API)/docs
-  Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
+  Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   Falls das Zertifikat noch nicht bereit ist:
     ${COMPOSE[*]} logs -f caddy
@@ -303,8 +445,7 @@ else
   cat <<SUMMARY
 
   App:       http://$(get_env DEPLOY_IP):4173
-  API-Docs:  http://$(get_env DEPLOY_IP):8000/docs
-  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
+  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   ⚠ Unverschlüsselt (kein HTTPS) -- nur für Tests/internes Netz gedacht.
     Für echten Betrieb später auf eine Domain umsteigen: die Zeile

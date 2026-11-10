@@ -84,7 +84,13 @@ async def test_run_email_ingest_legt_entwurf_pro_pdf_anhang_an(make_mandant, mon
 async def test_run_email_ingest_ohne_aktive_integration_tut_nichts(make_mandant):
     mandant = await make_mandant()
     ergebnis = await email_ingest_service.run_email_ingest([mandant.id])
-    assert ergebnis == {"neue_entwuerfe": 0, "fehler": 0}
+    assert ergebnis == {
+        "neue_entwuerfe": 0,
+        "neue_e_rechnungen": 0,
+        "uebersprungen": {},
+        "uebersprungen_details": [],
+        "fehler": 0,
+    }
 
 
 def test_pdf_anhaenge_ignoriert_nicht_pdf_dateien():

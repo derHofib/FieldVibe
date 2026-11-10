@@ -83,26 +83,26 @@ export function FilterVorlagenLeiste({
   return (
     <div className="space-y-2">
       {(vorlagen ?? []).length > 0 && (
-        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 py-0.5">
           {vorlagen!.map((v) => {
             const aktiv = filtersEqual(filter, v.filter_json);
             return (
               <div
                 key={v.id}
-                className={`flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-3 pr-1.5 text-xs font-medium ${
-                  aktiv
-                    ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                    : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-xs font-medium ${
+                  aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
                 }`}
               >
-                <button onClick={() => onApply(v.filter_json)} className="btn-touch whitespace-nowrap">
+                {/* Gleiche Masse wie FilterChip statt btn-touch: sonst waechst der Chip je
+                    nach Zustand unterschiedlich und die Leiste springt. */}
+                <button onClick={() => onApply(v.filter_json)} className="whitespace-nowrap pr-1">
                   {v.ist_standard && "★ "}
                   {v.name}
                 </button>
                 <button
                   onClick={() => standardMutation.mutate(v)}
                   title={v.ist_standard ? "Als Standard entfernen" : "Als Standard setzen"}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-stone-500"}`}
+                  className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >
                   {v.ist_standard ? "★" : "☆"}
                 </button>
@@ -110,7 +110,7 @@ export function FilterVorlagenLeiste({
                   onClick={async () => {
                     if (await bestaetigen({ titel: `Filter-Vorlage "${v.name}" löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate(v.id);
                   }}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-stone-500"}`}
+                  className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >
                   ×
                 </button>
@@ -124,7 +124,7 @@ export function FilterVorlagenLeiste({
         {hatAktivenFilter && (
           <button
             onClick={() => onApply({})}
-            className="btn-touch text-xs text-slate-500 underline dark:text-stone-400"
+            className="btn-touch text-xs text-label2 underline "
           >
             Filter zurücksetzen
           </button>
@@ -132,35 +132,35 @@ export function FilterVorlagenLeiste({
         <button
           onClick={() => setZeigeSpeichern((v) => !v)}
           disabled={!hatAktivenFilter}
-          className="btn-touch text-xs text-blue-700 underline disabled:opacity-40 dark:text-blue-400"
+          className="btn-touch text-xs text-tint underline disabled:opacity-40 "
         >
           {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
         </button>
       </div>
 
       {zeigeSpeichern && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2 dark:bg-stone-800/60">
+        <div className="flex flex-wrap items-center gap-2 border border-sepstrong p-2">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name der Vorlage"
-            className="btn-touch min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch min-w-0 flex-1 border border-sep bg-transparent px-3 py-1.5 text-sm text-label"
           />
-          <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600 dark:text-stone-300">
+          <label className="flex shrink-0 items-center gap-1 text-xs text-label">
             <input type="checkbox" checked={alsStandard} onChange={(e) => setAlsStandard(e.target.checked)} />
             Als Standard
           </label>
           <button
             disabled={!name.trim() || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1.5 text-xs font-medium disabled:opacity-50"
           >
             Speichern
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
     </div>
   );
 }

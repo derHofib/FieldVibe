@@ -1,13 +1,37 @@
-import { Repeat, Timer, Wrench } from "lucide-react";
+import { useState } from "react";
+import { LogOut, MonitorSmartphone, Repeat, Timer, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { authApi } from "../../api/endpoints";
+import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
+import { MfaKarte } from "./MfaKarte";
+import { PasswortAendernKarte } from "./PasswortAendernKarte";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 export function ProfilePage() {
-  const { currentUser, hatRecht, logout } = useAuth();
+  const bestaetigen = useBestaetigung();
+  const { currentUser, hatRecht, isImpersonating, logout } = useAuth();
   const navigate = useNavigate();
+  const [abmeldenLaeuft, setAbmeldenLaeuft] = useState(false);
+  const [abmeldenFehler, setAbmeldenFehler] = useState<string | null>(null);
+
+  const ueberallAbmelden = async () => {
+    if (!(await bestaetigen({ titel: "Auf allen Geräten abmelden?", text: "Du musst dich danach überall neu anmelden.", bestaetigenLabel: "Abmelden", destruktiv: false }))) {
+      return;
+    }
+    setAbmeldenLaeuft(true);
+    setAbmeldenFehler(null);
+    try {
+      await authApi.ueberallAbmelden();
+      logout();
+    } catch {
+      setAbmeldenFehler("Abmelden auf allen Geräten ist fehlgeschlagen.");
+      setAbmeldenLaeuft(false);
+    }
+  };
 
   // "Disponieren" (Techniker einteilen, Dauer-Auftraege verwalten) bleibt
   // hier auf dem Profil, weil es operative Alltagsarbeit ist, nicht
@@ -17,14 +41,14 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="card-ap p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-bold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <div className="flex h-12 w-12 items-center justify-center border border-sep text-lg font-bold text-label">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>
-            <div className="font-semibold text-slate-800 dark:text-stone-100">{currentUser?.name}</div>
-            <div className="text-sm text-slate-500 dark:text-stone-400">
+            <div className="font-semibold text-label">{currentUser?.name}</div>
+            <div className="text-sm text-label2">
               {currentUser &&
                 (currentUser.role === "custom"
                   ? (currentUser.account_typ_name ?? "Account")
@@ -34,12 +58,12 @@ export function ProfilePage() {
         </div>
         <dl className="mt-4 space-y-1 text-sm">
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">E-Mail</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{currentUser?.email}</dd>
+            <dt className="text-label2">E-Mail</dt>
+            <dd className="text-label">{currentUser?.email}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Mandant</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{currentUser?.mandant_name}</dd>
+            <dt className="text-label2">Mandant</dt>
+            <dd className="text-label">{currentUser?.mandant_name}</dd>
           </div>
         </dl>
       </div>
@@ -47,36 +71,53 @@ export function ProfilePage() {
       {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
-          <Wrench size={16} strokeWidth={2} className="text-emerald-500" /> Techniker-Zuweisungen
+          <IconBadge icon={Wrench} tone="emerald" size="sm" />
+          <span className="font-medium text-label">Techniker-Zuweisungen</span>
         </button>
       )}
 
       {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
         <button
           onClick={() => navigate("/dauerauftraege")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
-          <Repeat size={16} strokeWidth={2} className="text-amber-500" /> Dauer-Aufträge
+          <IconBadge icon={Repeat} tone="amber" size="sm" />
+          <span className="font-medium text-label">Dauer-Aufträge</span>
         </button>
       )}
 
-      {istModulAktiv(currentUser, "statistik") && (
+      {istModulAktiv(currentUser, "zeiterfassung") && (
         <button
           onClick={() => navigate("/statistik")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
-          <Timer size={16} strokeWidth={2} className="text-cyan-500" />{" "}
-          {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+          <IconBadge icon={Timer} tone="cyan" size="sm" />
+          <span className="font-medium text-label">
+            {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+          </span>
         </button>
       )}
+
+      {/* Bei Impersonation gehoert das Profil dem Super-Admin, nicht dem Mandanten-Nutzer. */}
+      {!isImpersonating && <PasswortAendernKarte />}
+      {!isImpersonating && <MfaKarte />}
+
+      <button
+        onClick={ueberallAbmelden}
+        disabled={abmeldenLaeuft}
+        className="btn-touch btn-ap flex w-full items-center justify-center gap-2 disabled:opacity-40"
+      >
+        <MonitorSmartphone size={16} strokeWidth={1.5} /> Auf allen Geräten abmelden
+      </button>
+      {abmeldenFehler && <p className="text-sm text-st-fehlt">{abmeldenFehler}</p>}
 
       <button
         onClick={logout}
-        className="card-interactive btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="btn-touch btn-ap flex w-full items-center justify-center gap-2"
       >
-        Abmelden
+        <LogOut size={16} strokeWidth={1.5} /> Abmelden
       </button>
     </div>
   );

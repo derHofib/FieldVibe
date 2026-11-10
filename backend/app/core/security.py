@@ -2,7 +2,7 @@ import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -25,7 +25,10 @@ class TokenType(StrEnum):
     PARTNER_ACCESS = "partner_access"
     PARTNER_REFRESH = "partner_refresh"
     PARTNER_PASSWORD_RESET = "partner_password_reset"
+    USER_PASSWORD_RESET = "user_password_reset"
+    USER_MFA = "user_mfa"
     EINLADUNG = "einladung"
+    STREAM = "stream"
 
 
 def hash_password(password: str) -> str:
@@ -70,6 +73,7 @@ def _create_token(
     mandant_id: UUID | None,
     token_type: TokenType,
     expires_delta: timedelta,
+    token_version: int,
     account_typ_id: UUID | None = None,
     extra_claims: dict | None = None,
 ) -> str:
@@ -80,6 +84,9 @@ def _create_token(
         "mandant_id": str(mandant_id) if mandant_id else None,
         "account_typ_id": str(account_typ_id) if account_typ_id else None,
         "type": token_type.value,
+        # Widerruf: Token gilt nur, solange der Zaehler am Account noch
+        # diesem Wert entspricht (siehe app/api/deps.py).
+        "tv": token_version,
         "iat": now,
         "exp": now + expires_delta,
     }
@@ -89,38 +96,58 @@ def _create_token(
 
 
 def create_access_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID | None,
+    token_version: int,
+    account_typ_id: UUID | None = None,
+    mfa_einrichtung: bool = False,
 ) -> str:
+    # mfa_einrichtung: Pflicht-MFA des Mandanten ist an, der Account hat aber
+    # noch keine -- das Token oeffnet nur die Einrichtungsendpunkte (siehe
+    # app/api/deps.py:get_current_user).
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
         account_typ_id=account_typ_id,
+        token_version=token_version,
         token_type=TokenType.ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
+        extra_claims={"mfa_einrichtung": True} if mfa_einrichtung else None,
     )
 
 
 def create_refresh_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID | None,
+    token_version: int,
+    account_typ_id: UUID | None = None,
 ) -> str:
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
         account_typ_id=account_typ_id,
+        token_version=token_version,
         token_type=TokenType.REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
     )
 
 
 def create_impersonation_token(
-    *, subject: UUID, role: str, mandant_id: UUID, impersonated_by: UUID
+    *, subject: UUID, role: str, mandant_id: UUID, impersonated_by: UUID, token_version: int
 ) -> str:
+    # token_version ist die des echten Super-Admins (= subject): dessen
+    # Widerruf macht damit auch seine Impersonation-Tokens ungueltig.
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.IMPERSONATION,
         expires_delta=timedelta(minutes=_settings.impersonation_token_expire_minutes),
         extra_claims={"impersonated_by": str(impersonated_by)},
@@ -148,6 +175,41 @@ def create_kundenportal_password_reset_token(*, zugang_id: UUID) -> str:
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 
 
+def create_user_password_reset_token(*, user_id: UUID, token_version: int) -> str:
+    """Single-Purpose-Token fuer den 'Passwort vergessen'-Link der
+    Mitarbeiter. Traegt wie ein Zugriffstoken den "tv"-Claim: der Reset
+    erhoeht token_version (widerrufe_tokens) und entwertet damit denselben
+    Link -- einmalig verwendbar, ohne eigene Tabelle fuer verbrauchte Tokens.
+    Kein role/mandant_id, und der abweichende `type` verhindert, dass es als
+    Bearer-Token fuer die API durchgeht (siehe get_current_user)."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "type": TokenType.USER_PASSWORD_RESET.value,
+        "tv": token_version,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.user_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+def create_user_mfa_token(*, user_id: UUID, token_version: int) -> str:
+    """Zwischenschritt des zweistufigen Logins: Passwort stimmt, der zweite
+    Faktor fehlt noch. Eigener `type` (wie USER_PASSWORD_RESET), damit es weder
+    als Bearer-Token noch als Refresh-Token durchgeht; kein role/mandant_id.
+    Der "tv"-Claim entwertet es bei jedem Widerruf. Mehrfach verwendbar bis
+    zum Ablauf -- die Begrenzung der Code-Versuche leistet der Login-Limiter."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "type": TokenType.USER_MFA.value,
+        "tv": token_version,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.mfa_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
 # Kundenportal-Tokens tragen absichtlich role="kunde" -- ein Wert, den keine
 # echte User-Rolle je annimmt (siehe app.models.user.ROLES). Ein
 # Kundenportal-Token kann dadurch nie versehentlich eine
@@ -157,12 +219,13 @@ _KUNDE_PSEUDOROLLE = "kunde"
 
 
 def create_kundenportal_access_token(
-    *, subject: UUID, mandant_id: UUID, kunde_id: UUID
+    *, subject: UUID, mandant_id: UUID, kunde_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_KUNDE_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.KUNDENPORTAL_ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
         extra_claims={"kunde_id": str(kunde_id)},
@@ -170,12 +233,13 @@ def create_kundenportal_access_token(
 
 
 def create_kundenportal_refresh_token(
-    *, subject: UUID, mandant_id: UUID, kunde_id: UUID
+    *, subject: UUID, mandant_id: UUID, kunde_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_KUNDE_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.KUNDENPORTAL_REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
         extra_claims={"kunde_id": str(kunde_id)},
@@ -188,12 +252,13 @@ _PARTNER_PSEUDOROLLE = "partner"
 
 
 def create_partner_access_token(
-    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_PARTNER_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.PARTNER_ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
         extra_claims={"partner_id": str(partner_id)},
@@ -201,12 +266,13 @@ def create_partner_access_token(
 
 
 def create_partner_refresh_token(
-    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_PARTNER_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.PARTNER_REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
         extra_claims={"partner_id": str(partner_id)},
@@ -237,3 +303,30 @@ def create_einladung_token(*, einladung_id: UUID) -> str:
         "exp": now + timedelta(minutes=_settings.einladung_token_expire_minutes),
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+STREAM_TICKET_SEKUNDEN = 60
+
+
+def create_stream_ticket(
+    *, subject: UUID, role: str, mandant_id: UUID, token_version: int
+) -> tuple[str, datetime]:
+    """Kurzlebiges Ticket fuer GET /api/stream (EventSource kann keinen
+    Authorization-Header setzen). Bewusst eigener Typ "stream": weder als
+    Bearer-Token noch als Refresh-Token verwendbar, damit ein im Access-Log
+    gelandetes Ticket nichts ausser dem Stream oeffnet. Bindung an Account
+    (sub) und token_version -- ein Widerruf entwertet auch offene Tickets."""
+    now = datetime.now(timezone.utc)
+    gueltig_bis = now + timedelta(seconds=STREAM_TICKET_SEKUNDEN)
+    payload = {
+        "sub": str(subject),
+        "role": role,
+        "mandant_id": str(mandant_id),
+        "type": TokenType.STREAM.value,
+        "tv": token_version,
+        "jti": uuid4().hex,
+        "iat": now,
+        "exp": gueltig_bis,
+    }
+    token = jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+    return token, gueltig_bis

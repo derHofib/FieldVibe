@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { vorgaengeApi } from "../../api/endpoints";
+import { Monogramm } from "../../components/apple/Monogramm";
 import {
   KANBAN_SPALTEN,
   STATUS_LABEL,
@@ -64,9 +65,9 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   return (
     <div>
       {fehler && (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
-            <AlertTriangle size={14} strokeWidth={2} /> {fehler}
+            <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {fehler}
           </span>
           <button onClick={() => setFehler(null)} className="text-xs underline">
             Ausblenden
@@ -88,10 +89,10 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
               className="min-w-0 rounded-lg"
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-slate-500 dark:text-stone-400">
+                <span className="text-xs font-bold text-label2">
                   {STATUS_LABEL[status]}
                 </span>
-                <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+                <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label3">
                   {spalte.length}
                 </span>
               </div>
@@ -107,43 +108,60 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                         e.dataTransfer.setData("text/plain", v.id);
                         e.dataTransfer.effectAllowed = "move";
                       }}
-                      onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                      className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
-                        ueberfaellig
-                          ? "border-rose-300 dark:border-rose-500/40"
-                          : "border-slate-200 dark:border-stone-800"
-                      }`}
+                      className="card-interactive card-ap w-full cursor-grab p-3"
+                      // .card-ap setzt den Rahmen als CSS-Shorthand ausserhalb
+                      // jedes @layer -- eine Tailwind-Randfarb-Utility (im
+                      // "utilities"-Layer) koennte das nie ueberschreiben,
+                      // deshalb hier per Inline-Style statt Klasse.
+                      style={ueberfaellig ? { borderColor: "var(--st-fehlt-dot)" } : undefined}
                     >
-                      <p className="text-[10.5px] font-bold text-slate-400 dark:text-stone-500">
-                        {v.vorgangsnummer}
-                      </p>
-                      <p className="mt-0.5 text-[13px] font-semibold text-slate-800 dark:text-stone-100">
-                        {v.titel}
-                      </p>
-                      <p className="mt-2 truncate text-[11.5px] text-slate-500 dark:text-stone-400">
-                        {v.kunde_name}
-                      </p>
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
-                        {ueberfaellig ? (
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                            {tageSeit(v.faelligkeit_am!)} Tage
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        {v.zugewiesener_name && (
-                          <span
-                            title={v.zugewiesener_name}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-                          >
-                            {v.zugewiesener_name
-                              .split(" ")
-                              .map((t) => t[0])
-                              .slice(0, 2)
-                              .join("")}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
+                        className="block w-full text-left"
+                      >
+                        <p className="text-[10.5px] font-bold text-label2">
+                          {v.vorgangsnummer}
+                        </p>
+                        <p className="mt-0.5 text-[13px] font-semibold text-label">
+                          {v.titel}
+                        </p>
+                        <p className="mt-2 truncate text-[11.5px] text-label2">
+                          {v.kunde_name}
+                        </p>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          {ueberfaellig ? (
+                            <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
+                              {tageSeit(v.faelligkeit_am!)} Tage
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          {v.zugewiesener_name && (
+                            <span title={v.zugewiesener_name}>
+                              <Monogramm name={v.zugewiesener_name} groesse={20} />
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      {/* Tastatur-/Screenreader-Alternative zum Drag&Drop-Statuswechsel
+                          -- die Karte selbst ist nur per Maus zwischen Spalten
+                          verschiebbar. */}
+                      <label htmlFor={`kanban-status-${v.id}`} className="sr-only">
+                        Status von „{v.titel}“ ändern
+                      </label>
+                      <select
+                        id={`kanban-status-${v.id}`}
+                        value={effektiverStatus(v)}
+                        onChange={(e) => handleDrop(e.target.value as VorgangStatus, v.id)}
+                        className="field-ap mt-1.5 h-auto px-1 py-0.5 text-[10px]"
+                      >
+                        {KANBAN_SPALTEN.map((s) => (
+                          <option key={s} value={s}>
+                            {STATUS_LABEL[s]}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   );
                 })}

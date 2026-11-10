@@ -7,13 +7,15 @@ import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
 import { usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 
 export function TeamZeitenPage() {
   const uid = useId();
   const navigate = useNavigate();
-  const { hatRecht } = useAuth();
-  const darf = hatRecht("mitarbeiterverwaltung", "bearbeiten");
+  const { hatRecht, currentUser } = useAuth();
+  const darf = hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung");
+  const kannAuswerten = istModulAktiv(currentUser, "statistik");
 
   const [technikerId, setTechnikerId] = useState<string>("");
   const [wocheMontag, setWocheMontag] = useState(() => montagDerWoche(new Date()));
@@ -42,22 +44,18 @@ export function TeamZeitenPage() {
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
-  if (!darf) {
-    return <EmptyState icon={Clock} text="Keine Berechtigung für diese Seite." />;
-  }
-
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Team-Zeiten</h1>
+      <h1 className="text-lg font-bold text-label">Team-Zeiten</h1>
 
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
           Techniker
         </label>
         <select id={`${uid}-0`}
           value={technikerId}
           onChange={(e) => setTechnikerId(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Bitte wählen…</option>
           {techniker.map((t) => (
@@ -69,7 +67,7 @@ export function TeamZeitenPage() {
       </div>
 
       {technikerId && (
-        <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="card-ap p-3">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {
@@ -77,11 +75,11 @@ export function TeamZeitenPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
+            <span className="text-sm font-medium text-label">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -90,7 +88,7 @@ export function TeamZeitenPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               Woche →
             </button>
@@ -105,14 +103,16 @@ export function TeamZeitenPage() {
             />
           )}
 
-          <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
-            <button
-              onClick={exportieren}
-              className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
-            >
-              <FileText size={15} strokeWidth={2} /> Als PDF exportieren
-            </button>
-          </div>
+          {kannAuswerten && (
+            <div className="mt-2 flex items-center justify-end border-t border-sep pt-2 ">
+              <button
+                onClick={exportieren}
+                className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+              >
+                <FileText size={15} strokeWidth={2} /> Als PDF exportieren
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

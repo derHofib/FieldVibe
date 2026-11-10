@@ -132,6 +132,6 @@ export function BestaetigungProvider({ children }: { children: ReactNode }) {
 /** Promise-Ersatz für window.confirm: `if (!(await bestaetigen({...}))) return;` */
 export function useBestaetigung(): BestaetigenFn {
   const ctx = useContext(BestaetigungContext);
-  if (!ctx) throw new Error("useBestaetigung braucht einen BestaetigungProvider");
-  return ctx;
+  // Ohne Provider (z. B. isoliert gerenderte Komponente im Test) auf den nativen Dialog zurückfallen
+  return ctx ?? ((o) => Promise.resolve(window.confirm(o.text ? `${o.titel}\n${o.text}` : o.titel)));
 }

@@ -40,11 +40,12 @@ from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
 from app.schemas.kundenportal import KundenportalZugangRead, KundenportalZugangUpdate
 from app.schemas.profile import KundeProfil
 from app.schemas.standort import StandortRead
-from app.schemas.user import UserRead
+from app.schemas.user import MIN_PASSWORT_LAENGE, UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
-from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
+from app.services.token_widerruf_service import widerrufe_tokens
+from app.services import angebot_service, datev_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
     create_einladung,
     registrierungslink_erzeugen,
@@ -53,8 +54,13 @@ from app.services.einladung_service import (
 )
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    require_kunde_zugriff,
+    scope_cache_leeren,
+    technik_user_ids,
+    zuweisbare_user_ids,
+)
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
@@ -81,10 +87,9 @@ async def list_kunden(
     stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
-        stmt = stmt.where(Kunde.id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(Kunde.id.in_(erlaubt))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -103,6 +108,8 @@ async def create_kunde(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Kunde:
+    if body.debitorenkonto:
+        await _debitorenkonto_pruefen(session, auth.mandant_id, body.debitorenkonto)
     kundennummer = body.kundennummer or await next_kundennummer(session, auth.mandant_id)
     kunde = Kunde(
         mandant_id=auth.mandant_id,
@@ -113,6 +120,10 @@ async def create_kunde(
         adresse=body.adresse,
         notiz=body.notiz,
         ust_idnr=body.ust_idnr,
+        ust_13b_nachweis_bis=body.ust_13b_nachweis_bis,
+        leitweg_id=body.leitweg_id,
+        e_rechnung_format=body.e_rechnung_format,
+        debitorenkonto=body.debitorenkonto,
         # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
         # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
         # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
@@ -123,19 +134,28 @@ async def create_kunde(
         await session.flush()
     except IntegrityError as exc:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Kundennummer bereits vergeben"
+            status_code=status.HTTP_409_CONFLICT, detail=_integritaetsfehler_text(exc)
         ) from exc
     return kunde
 
 
+def _integritaetsfehler_text(exc: IntegrityError) -> str:
+    if "uq_kunden_mandant_debitorenkonto" in str(exc.orig):
+        return "Debitorenkonto bereits vergeben"
+    return "Kundennummer bereits vergeben"
+
+
+async def _debitorenkonto_pruefen(session: AsyncSession, mandant_id: UUID, konto: str) -> None:
+    try:
+        await datev_service.personenkonto_fuer_mandant_pruefen(session, mandant_id, konto, "debitor")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
 async def _require_kunde_zugriff(
-    session: AsyncSession, auth: AuthContext, kunde_id: UUID
+    session: AsyncSession, auth: AuthContext, kunde_id: UUID, aktion: str = "sehen"
 ) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    )
-    if beschraenkt and kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await require_kunde_zugriff(session, auth, kunde_id, "Kunde nicht gefunden", aktion)
 
 
 @router.get(
@@ -190,7 +210,7 @@ async def send_kunde_email(
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
-    await _require_kunde_zugriff(session, auth, kunde_id)
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     log = await send_email_and_log(
         session,
@@ -396,6 +416,7 @@ async def set_kunde_techniker(
 ) -> list[User]:
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     user_ids = set(body.user_ids)
     if user_ids:
@@ -411,6 +432,15 @@ async def set_kunde_techniker(
     )
     bestehende = {z.user_id: z for z in bestehende_result.scalars().all()}
 
+    # Nur neue Zuweisungen pruefen: ein inzwischen deaktivierter Techniker darf
+    # in der unveraenderten Liste mitgeschickt werden, ohne dass das Speichern scheitert.
+    neue_ids = user_ids - bestehende.keys()
+    if neue_ids and await zuweisbare_user_ids(session, neue_ids) != neue_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
+        )
+
     for user_id, zuweisung in bestehende.items():
         if user_id not in user_ids:
             await session.delete(zuweisung)
@@ -419,6 +449,7 @@ async def set_kunde_techniker(
             KundeZuweisung(mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=user_id)
         )
     await session.flush()
+    scope_cache_leeren(session)
 
     result = await session.execute(
         select(User)
@@ -439,20 +470,34 @@ async def set_kunde_techniker(
     ],
 )
 async def update_kunde(
-    kunde_id: UUID, body: KundeUpdate, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    body: KundeUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> Kunde:
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     # mode="json" statt des Standard-model_dump(): ansprechpartner enthaelt
     # verschachtelte AnsprechpartnerEintrag-Objekte, deren id ein UUID-Objekt
     # ist -- die JSONB-Spalte braucht dafuer JSON-taugliche Werte (str statt
     # UUID), sonst schlaegt das Schreiben in die Datenbank fehl.
     changes = body.model_dump(exclude_unset=True, mode="json")
+    # Date-Spalte: mode="json" liefert einen String, den asyncpg nicht annimmt.
+    if "ust_13b_nachweis_bis" in changes:
+        changes["ust_13b_nachweis_bis"] = body.ust_13b_nachweis_bis
+    if changes.get("debitorenkonto"):
+        await _debitorenkonto_pruefen(session, auth.mandant_id, changes["debitorenkonto"])
     for field, value in changes.items():
         setattr(kunde, field, value)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_integritaetsfehler_text(exc)
+        ) from exc
     if changes:
         await session.refresh(kunde)
     return kunde
@@ -477,6 +522,7 @@ async def delete_kunde(
     # kaskadierend in den Papierkorb (siehe app/services/papierkorb_service.py).
     # Portal-Zugaenge/Tag-Zuordnungen bleiben unangetastet stehen, da der
     # Kunden-Datensatz selbst nicht mehr geloescht, sondern nur markiert wird.
+    await _require_kunde_zugriff(session, auth, kunde_id, "loeschen")
     kunde = await papierkorb_service.soft_delete(
         session, entity_typ="kunde", entity_id=kunde_id, actor_user_id=auth.user_id
     )
@@ -504,15 +550,19 @@ async def list_portal_zugaenge(
     "/{kunde_id}/einladungen",
     response_model=list[EinladungRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
 async def list_kunde_einladungen(
-    kunde_id: UUID, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> list[EinladungRead]:
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     result = await session.execute(
         select(Einladung)
         .where(Einladung.art == "kunde", Einladung.kunde_id == kunde_id)
@@ -547,6 +597,7 @@ async def kunde_einladen(
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     einladender = await session.get(User, auth.user_id)
     einladung = await create_einladung(
@@ -571,7 +622,8 @@ async def kunde_einladen(
     "/{kunde_id}/einladungen/{einladung_id}/erneut-senden",
     response_model=EinladungRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
@@ -581,6 +633,7 @@ async def kunde_einladung_erneut_senden(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> EinladungRead:
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     einladung = await session.get(Einladung, einladung_id)
     if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
@@ -600,13 +653,18 @@ async def kunde_einladung_erneut_senden(
     "/{kunde_id}/einladungen/{einladung_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
 async def kunde_einladung_widerrufen(
-    kunde_id: UUID, einladung_id: UUID, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    einladung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> None:
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     einladung = await session.get(Einladung, einladung_id)
     if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
@@ -634,18 +692,21 @@ async def update_portal_zugang(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zugang nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
+    tokens_widerrufen = (changes.get("aktiv") is False and zugang.aktiv) or body.password is not None
     for field, value in changes.items():
         setattr(zugang, field, value)
     if body.password is not None:
-        if len(body.password) < 10:
+        if len(body.password) < MIN_PASSWORT_LAENGE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Passwort muss mindestens 10 Zeichen haben",
+                detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
             )
         zugang.password_hash = hash_password(body.password)
         changes["password_hash"] = zugang.password_hash
 
     await session.flush()
+    if tokens_widerrufen:
+        await widerrufe_tokens(session, zugang)
     if changes:
         await session.refresh(zugang)
     return zugang
@@ -682,7 +743,7 @@ async def upload_kunde_logo(
         )
 
     alter_key = kunde.logo_object_key
-    key = storage_service.new_kunde_logo_key(kunde_id, file.filename or "logo.png")
+    key = storage_service.new_kunde_logo_key(kunde.mandant_id, kunde_id, file.filename or "logo.png")
     await storage_service.upload_bytes(key, data, file.content_type)
     kunde.logo_object_key = key
     await session.flush()

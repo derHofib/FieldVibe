@@ -5,6 +5,9 @@ import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 
 import { App } from "./App";
+import { authStore } from "./api/authStore";
+import { initFehlerbericht } from "./bugreport";
+import { installFehlerweiterleitung } from "./bugreport/fehlerweiterleitung";
 import { BestaetigungProvider } from "./components/ConfirmDialog";
 import { mutationToasts, ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./context/AuthContext";
@@ -12,6 +15,47 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
 import { istOfficeHost } from "./office/hostname";
 import "./index.css";
+
+// Die /me-Query lebt nur im React-Baum (AuthProvider); der Fehlerbericht braucht
+// aber schon vor dem ersten Render Zugriff. Die IDs und die Rolle stehen als
+// Claims (sub, mandant_id, role) im Access-Token -- reine Dekodierung, kein
+// Netzwerkzugriff, und es werden weder Namen noch E-Mails gelesen.
+function sitzungAusToken() {
+  const token = authStore.getActiveAccessToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      sub?: string;
+      mandant_id?: string | null;
+      role?: string;
+    };
+    return {
+      user_id: payload.sub,
+      mandant_id: payload.mandant_id ?? undefined,
+      rolle: payload.role,
+      flags: authStore.isImpersonating() ? ["impersonation"] : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Vor allem anderen, damit auch frueh auftretende Fehler und Requests erfasst werden.
+initFehlerbericht({
+  appVersion: __APP_VERSION__,
+  commitSha: __GIT_COMMIT__,
+  getSitzung: sitzungAusToken,
+});
+
+// Automatische Fehlermeldung nur mit gesetzter DSN (Build-Arg VITE_SENTRY_DSN); leer = kein Netzverkehr.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  installFehlerweiterleitung({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    release: `${__APP_VERSION__}+${__GIT_COMMIT__}`,
+    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
+    sampleRate: Number(import.meta.env.VITE_SENTRY_SAMPLE_RATE || "1"),
+  });
+}
 
 const istOffice = istOfficeHost();
 

@@ -1,25 +1,36 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 
 from app.api.routes import (
+    fehlerberichte,
+    health,
+    rechte,
+    organigramm,
     account_typen,
+    abwesenheiten,
+    arbeitszeit,
     angebote,
     anlagen,
+    aufbewahrung,
     anlagen_feld_definitionen,
+    audit,
     audit_log,
+    auftraege,
     auswertung,
     auth,
     bestellungen,
+    boards,
+    datenimport,
     dauerauftraege,
     dsgvo,
     eingangsrechnungen,
+    exporte,
     fahrzeug_zuweisungen,
     feed,
-    formulare,
+    form_modul,
     gespeicherte_filter,
     highlights,
     impersonation,
@@ -29,25 +40,34 @@ from app.api.routes import (
     kunden,
     kundenportal,
     kundenportal_auth,
+    leistungsverzeichnis,
+    leistungsverzeichnisse,
     lieferanten,
     maengel,
     mail_accounts,
+    mail_outbox,
     mail_messages,
     mandant_einstellungen,
+    mfa,
+    public_rechtliches,
     mandanten,
     material,
     material_bedarfe,
+    nav_kategorien,
     notifications,
     papierkorb,
     partner,
     partner_auth,
     partner_portal,
+    plan_symbole,
     plattform_integrationen,
+    projekte,
     pruefmittel,
     pruefzyklen,
     rechnungen,
     search,
     standorte,
+    statistik,
     stories,
     stream,
     system_resources,
@@ -59,25 +79,47 @@ from app.api.routes import (
     vorgaenge,
     vorgang_anfragen,
     vorgang_events,
-    vorgang_formulare,
     zeiterfassung,
+    zeitplan,
     zuweisungen,
 )
+from app.core.audit_kontext import AuditKontextMiddleware
 from app.core.config import get_settings
+from app.services.audit_service import siegel_vor_antwort
+from app.core.error_tracking import init_error_tracking
+from app.core.logging_config import konfiguriere_logging
+from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
+from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
-from app.services.scheduler_service import get_last_scheduler_run
+from app.services.health_service import watchdog_schleife
 from app.services.storage_service import ensure_bucket
 from app.services.system_resources_service import resource_sampler_loop
 
 settings = get_settings()
+# Unter pytest (ENVIRONMENT=test) nicht anfassen: pytest/caplog haengen eigene
+# Handler an den Root-Logger.
+if not settings.ist_dev_umgebung or settings.log_format:
+    konfiguriere_logging(format=settings.log_format_aktiv, level=settings.log_level)
+init_error_tracking(komponente="backend")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await pruefe_db_rolle(engine)
     await ensure_bucket()
     sampler_task = asyncio.create_task(resource_sampler_loop())
+    # Erkennt auch einen toten Worker: die Auswertung laeuft im Backend-Prozess.
+    watchdog_task = asyncio.create_task(watchdog_schleife())
     yield
     sampler_task.cancel()
+    watchdog_task.cancel()
+
+
+def docs_optionen(einstellungen) -> dict:
+    """Ohne API-Doku liefern /docs, /redoc und /openapi.json schlicht 404."""
+    if einstellungen.api_docs_aktiv:
+        return {}
+    return {"docs_url": None, "redoc_url": None, "openapi_url": None}
 
 
 app = FastAPI(
@@ -88,6 +130,8 @@ app = FastAPI(
     ),
     version="0.7.0",
     lifespan=lifespan,
+    dependencies=[Depends(siegel_vor_antwort, scope="function")],
+    **docs_optionen(settings),
 )
 
 app.add_middleware(
@@ -96,15 +140,28 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[REQUEST_ID_HEADER],
 )
+# Zuletzt hinzugefuegt = aeusserste Schicht: die Request-ID gilt auch fuer
+# CORS-Preflights und Fehlerantworten der inneren Schichten.
+app.add_middleware(RequestKontextMiddleware)
 
+app.add_middleware(AuditKontextMiddleware)
+
+app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(mfa.router)
 app.include_router(account_typen.router)
+app.include_router(rechte.router)
+app.include_router(organigramm.router)
 app.include_router(angebote.router)
 app.include_router(mandanten.router)
 app.include_router(users.router)
 app.include_router(impersonation.router)
 app.include_router(audit_log.router)
+app.include_router(audit.router)
+app.include_router(aufbewahrung.router)
+app.include_router(exporte.router)
 app.include_router(version.router)
 app.include_router(dsgvo.router)
 app.include_router(kunden.router)
@@ -114,18 +171,24 @@ app.include_router(standorte.router)
 app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
+app.include_router(auftraege.router)
 app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
-app.include_router(formulare.router)
-app.include_router(vorgang_formulare.router)
+app.include_router(form_modul.router)
+app.include_router(form_modul.submissions_router)
+app.include_router(plan_symbole.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
 app.include_router(gespeicherte_filter.router)
+app.include_router(boards.router)
 app.include_router(stories.router)
 app.include_router(search.router)
+app.include_router(statistik.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
 app.include_router(zeiterfassung.router)
+app.include_router(arbeitszeit.router)
+app.include_router(abwesenheiten.router)
 app.include_router(termine.router)
 app.include_router(pruefzyklen.router)
 app.include_router(pruefmittel.router)
@@ -135,6 +198,8 @@ app.include_router(eingangsrechnungen.router)
 app.include_router(auswertung.router)
 app.include_router(kundenportal_auth.router)
 app.include_router(kundenportal.router)
+app.include_router(leistungsverzeichnis.router)
+app.include_router(leistungsverzeichnisse.router)
 app.include_router(highlights.router)
 app.include_router(material.router)
 app.include_router(lieferanten.router)
@@ -143,28 +208,25 @@ app.include_router(bestellungen.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
+app.include_router(public_rechtliches.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
+app.include_router(datenimport.router)
 app.include_router(system_resources.router)
 app.include_router(mail_accounts.router)
+app.include_router(mail_outbox.router)
 app.include_router(mail_messages.router)
 app.include_router(partner.router)
 app.include_router(partner_auth.router)
 app.include_router(partner_portal.router)
 app.include_router(plattform_integrationen.router)
-
-
-@app.get("/healthz")
-async def healthz() -> dict:
-    async with engine.connect() as conn:
-        await conn.execute(text("SELECT 1"))
-    await ensure_bucket()
-    letzter_scheduler_lauf = await get_last_scheduler_run()
-    return {
-        "status": "ok",
-        "scheduler_letzter_lauf": letzter_scheduler_lauf.isoformat()
-        if letzter_scheduler_lauf
-        else None,
-    }
+app.include_router(nav_kategorien.router)
+app.include_router(zeitplan.meine_router)
+app.include_router(projekte.router)
+app.include_router(projekte.aufgaben_router)
+app.include_router(zeitplan.router)
+app.include_router(zeitplan.vorlagen_router)
+app.include_router(fehlerberichte.router)
+app.include_router(fehlerberichte.service_router)

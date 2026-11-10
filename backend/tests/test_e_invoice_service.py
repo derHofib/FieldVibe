@@ -154,3 +154,137 @@ def test_baue_hybrid_pdf_bettet_xml_ein():
     assert hybrid_bytes.startswith(b"%PDF")
     assert b"factur-x.xml" in hybrid_bytes
     assert len(hybrid_bytes) > len(pdf_bytes)
+
+
+def test_waehrung_nur_am_steuerbetrag():
+    # CII-DT-031 der EN-16931-Geschaeftsregeln: currencyID nur am Steuerbetrag (BT-110).
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    xml = e_invoice_service.cii_xml_bytes(dokument).decode("utf-8")
+    assert '<ram:TaxTotalAmount currencyID="EUR">57.00</ram:TaxTotalAmount>' in xml
+    assert "currencyID" not in xml.replace('<ram:TaxTotalAmount currencyID="EUR">', "")
+
+
+def _verkaeufer_ids(xml: bytes) -> list[tuple[str | None, str]]:
+    from lxml import etree
+
+    ns = {"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+    wurzel = etree.fromstring(xml)
+    verkaeufer = wurzel.xpath("//ram:SellerTradeParty", namespaces=ns)[0]
+    kennung = [(None, e.text) for e in verkaeufer.xpath("ram:ID", namespaces=ns)]
+    steuer = [(e.get("schemeID"), e.text) for e in verkaeufer.xpath("ram:SpecifiedTaxRegistration/ram:ID", namespaces=ns)]
+    return kennung + steuer
+
+
+def test_verkaeufer_nur_mit_steuernummer_bekommt_verkaeuferkennung():
+    # BR-CO-26: BT-29/BT-30/BT-31 muessen vorhanden sein, die Steuernummer (BT-32) zaehlt nicht.
+    mandant = _mandant(ust_idnr=None, steuernummer="12/345/67890", ist_kleinunternehmer=True)
+    dokument = e_invoice_service.baue_cii_dokument(
+        mandant, _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("300.00")
+    )
+    assert _verkaeufer_ids(e_invoice_service.cii_xml_bytes(dokument)) == [(None, "12/345/67890"), ("FC", "12/345/67890")]
+
+
+def test_verkaeufer_mit_ust_idnr_bekommt_keine_zusaetzliche_kennung():
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(steuernummer="12/345/67890"), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    assert _verkaeufer_ids(e_invoice_service.cii_xml_bytes(dokument)) == [("VA", "DE123456789")]
+
+
+_RAM_NS = {"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+
+
+def _summen_und_korrekturen(xml: bytes) -> dict:
+    from lxml import etree
+
+    wurzel = etree.fromstring(xml)
+
+    def text(pfad: str) -> list[str]:
+        return [e.text for e in wurzel.xpath(pfad, namespaces=_RAM_NS)]
+
+    kopf = "//ram:ApplicableHeaderTradeSettlement"
+    return {
+        "zeilen": text("//ram:IncludedSupplyChainTradeLineItem//ram:LineTotalAmount"),
+        "zeilensumme": text(f"{kopf}//ram:LineTotalAmount"),
+        "zuschlaege": text(f"{kopf}//ram:ChargeTotalAmount"),
+        "abschlaege": text(f"{kopf}//ram:AllowanceTotalAmount"),
+        "basis": text(f"{kopf}//ram:TaxBasisTotalAmount"),
+        "korrekturen": [
+            (
+                e.xpath("string(ram:ChargeIndicator/*)", namespaces=_RAM_NS),
+                e.xpath("string(ram:ActualAmount)", namespaces=_RAM_NS),
+                e.xpath("string(ram:Reason)", namespaces=_RAM_NS),
+                e.xpath("string(ram:CategoryTradeTax/ram:CategoryCode)", namespaces=_RAM_NS),
+            )
+            for e in wurzel.xpath(f"{kopf}/ram:SpecifiedTradeAllowanceCharge", namespaces=_RAM_NS)
+        ],
+    }
+
+
+def test_rundungsdifferenz_abschlag_wenn_zeilen_hoeher_als_gruppensumme():
+    # 2 x (0,5 x 10,01 = 5,005 -> 5,01) = 10,02, die Gruppe rundet erst die Rohsumme 10,01.
+    positionen = [
+        _position(position=1, menge=Decimal("0.5"), einzelpreis=Decimal("10.01")),
+        _position(position=2, menge=Decimal("0.5"), einzelpreis=Decimal("10.01")),
+    ]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), positionen, Decimal("10.01"), Decimal("11.91")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["zeilen"] == ["5.01", "5.01"]
+    assert ergebnis["zeilensumme"] == ["10.02"]
+    assert ergebnis["abschlaege"] == ["0.01"] and ergebnis["zuschlaege"] == ["0.00"]
+    assert ergebnis["basis"] == ["10.01"]
+    assert ergebnis["korrekturen"] == [("false", "0.01", "Rundungsdifferenz", "S")]
+
+
+def test_rundungsdifferenz_zuschlag_wenn_zeilen_niedriger_als_gruppensumme():
+    # 3 x (0,33 x 1,01 = 0,3333 -> 0,33) = 0,99, die Rohsumme 0,9999 rundet auf 1,00.
+    positionen = [_position(position=i, menge=Decimal("0.33"), einzelpreis=Decimal("1.01")) for i in (1, 2, 3)]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), positionen, Decimal("1.00"), Decimal("1.19")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["zeilensumme"] == ["0.99"]
+    assert ergebnis["zuschlaege"] == ["0.01"] and ergebnis["abschlaege"] == ["0.00"]
+    assert ergebnis["korrekturen"] == [("true", "0.01", "Rundungsdifferenz", "S")]
+
+
+def test_storno_zeile_mit_negativem_preis_wandert_vorzeichen_in_die_menge():
+    # BR-27: BT-146 (Nettopreis) nie negativ; Zeilenbetrag und Belegsummen bleiben negativ.
+    from lxml import etree
+
+    rechnung = _rechnung(ist_storno=True)
+    positionen = [_position(menge=Decimal("2"), einzelpreis=Decimal("-50.00"))]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), rechnung, _kunde(), positionen, Decimal("-100.00"), Decimal("-119.00")
+    )
+    wurzel = etree.fromstring(e_invoice_service.cii_xml_bytes(dokument))
+    zeile = wurzel.xpath("//ram:IncludedSupplyChainTradeLineItem", namespaces=_RAM_NS)[0]
+    assert zeile.xpath("string(.//ram:NetPriceProductTradePrice/ram:ChargeAmount)", namespaces=_RAM_NS) == "50.00"
+    assert zeile.xpath("string(.//*[local-name()='BilledQuantity'])") == "-2"
+    assert zeile.xpath("string(.//ram:LineTotalAmount)", namespaces=_RAM_NS) == "-100.00"
+
+
+def test_storno_nullsteuer_gruppe_ohne_negative_null():
+    # BR-Z-09/BR-E-09/BR-AE-09: der Steuerbetrag muss 0 sein, "-0.00" gilt nicht.
+    positionen = [
+        _position(einzelpreis=Decimal("-200.00"), steuer_kategorie="Z", steuer_satz=Decimal("0"), steuer_grund="pv_12_3"),
+    ]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(ist_storno=True), _kunde(), positionen, Decimal("-200.00"), Decimal("-200.00")
+    )
+    xml = e_invoice_service.cii_xml_bytes(dokument).decode("utf-8")
+    assert "<ram:CalculatedAmount>0.00</ram:CalculatedAmount>" in xml
+    assert "-0.00" not in xml
+
+
+def test_keine_rundungsdifferenz_wenn_zeilen_aufgehen():
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["korrekturen"] == []
+    assert ergebnis["zeilensumme"] == ergebnis["basis"] == ["300.00"]

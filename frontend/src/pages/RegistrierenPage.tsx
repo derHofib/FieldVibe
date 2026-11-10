@@ -3,8 +3,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { authApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
-import { Starfield } from "../components/Starfield";
+import Blueprint from "../components/Blueprint";
+import { Logo } from "../components/brand/Logo";
 import { useAuth } from "../context/AuthContext";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
+import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 export function RegistrierenPage() {
   const uid = useId();
@@ -33,53 +36,59 @@ export function RegistrierenPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950">
-      <Starfield />
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <Logo variante="wortmarke" hoehe={32} />
+        </div>
 
-      <div className="relative w-full max-w-sm rounded-xl border border-cyan-400/20 bg-slate-900/60 p-8 shadow-[0_0_45px_-10px_rgba(34,211,238,0.25)] backdrop-blur-xl">
-        <h1 className="mb-6 text-xl font-bold tracking-wide text-white">
-          Field<span className="text-cyan-400">Vibe</span> — Einladung annehmen
-        </h1>
+        <Blueprint className="bg-card p-8">
+          <h1 className="mb-6 text-center font-heading text-sm font-semibold uppercase tracking-[0.14em] text-label2">
+            Einladung annehmen
+          </h1>
 
-        {!token && (
-          <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-            Der Link ist unvollständig. Bitte den Einladungslink erneut vom Absender anfordern.
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-              {error}
-            </div>
+          {!token && (
+            <p className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              Der Link ist unvollständig. Bitte den Einladungslink erneut vom Absender anfordern.
+            </p>
           )}
 
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">Name</label>
-          <input id={`${uid}-0`}
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
-          />
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+                {error}
+              </div>
+            )}
 
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
-          <input id={`${uid}-1`}
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="btn-touch mb-6 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
-          />
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <input id={`${uid}-0`}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="field-ap btn-touch mb-4"
+            />
 
-          <button
-            type="submit"
-            disabled={submitting || !token}
-            className="btn-touch w-full rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 font-medium text-white shadow-[0_0_20px_-5px_rgba(34,211,238,0.6)] hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50"
-          >
-            {submitting ? "Registrieren…" : "Konto erstellen"}
-          </button>
-        </form>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Passwort</label>
+            <input id={`${uid}-1`}
+              type="password"
+              required
+              minLength={MIN_PASSWORT_LAENGE}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="field-ap btn-touch mb-1"
+            />
+            <p className="mb-6 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+
+            <button
+              type="submit"
+              disabled={submitting || !token}
+              className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
+            >
+              {submitting ? "Registrieren…" : "Konto erstellen"}
+            </button>
+          </form>
+        </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </div>
     </div>
   );

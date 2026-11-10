@@ -90,3 +90,31 @@ async def test_kundensichtbar_flag_is_respected(
     )
     assert resp.status_code == 201
     assert resp.json()["kundensichtbar"] is True
+
+
+@pytest.mark.asyncio
+async def test_events_liste_enthaelt_leistung_und_eingangsrechnung_status_typen(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Regression: app/schemas/vorgang_event.py:EventType (Literal) hinkte dem
+    Model/der Check-Constraint hinterher -- "leistung" (Leistungsverzeichnis)
+    und "eingangsrechnung_status" fehlten dort, wodurch GET .../events mit
+    einem 500er crashte, sobald ein Vorgang irgendeinen Kommentar/Event NEBEN
+    einem solchen Eintrag hatte (Pydantic validiert die gesamte Liste)."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    create_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events",
+        headers=auth_headers(token),
+        json={"event_type": "leistung", "body": "1 h Stundensatz verwendet"},
+    )
+    assert create_resp.status_code == 201
+
+    list_resp = await client.get(f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token))
+    assert list_resp.status_code == 200
+    event_types = [e["event_type"] for e in list_resp.json()]
+    assert "leistung" in event_types

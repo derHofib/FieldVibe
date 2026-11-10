@@ -50,9 +50,11 @@ async def authenticate_kunde(email: str, password: str) -> TokenPair:
 
         return TokenPair(
             access_token=create_kundenportal_access_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
             refresh_token=create_kundenportal_refresh_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
         )

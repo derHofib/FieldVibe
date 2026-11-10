@@ -1,12 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { exportApi, insightsApi } from "../../api/endpoints";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
@@ -21,18 +21,17 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 
 function Kachel({ label, wert }: { label: string; wert: string }) {
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <div className="text-xs font-medium text-slate-500 dark:text-stone-400">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-slate-800 dark:text-stone-100">{wert}</div>
+    <div className="card-ap p-4">
+      <div className="text-xs font-medium text-label2">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-label">{wert}</div>
     </div>
   );
 }
 
 export function InsightsPage() {
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["insights"],
     queryFn: insightsApi.get,
   });
@@ -54,18 +53,17 @@ export function InsightsPage() {
     onSuccess: (blob) => downloadBlob(blob, "Eingangsrechnungen.csv"),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
-    return <Navigate to="/feed" replace />;
+  if (ladeFehler && !insights) return <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !insights) return <DetailSkeleton />;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-stone-100">
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
         <BarChart3 size={19} strokeWidth={2} className="text-sky-500" /> Insights
       </h1>
 
@@ -84,21 +82,21 @@ export function InsightsPage() {
         <Kachel label="Angebote angenommen" wert={String(insights.angebote_angenommen)} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge nach Status</h2>
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge nach Status</h2>
         <div className="space-y-1.5">
           {Object.entries(insights.vorgaenge_nach_status).map(([status, count]) => (
             <div key={status} className="flex items-center gap-2">
-              <span className="w-32 shrink-0 text-sm text-slate-600 dark:text-stone-300">
+              <span className="w-32 shrink-0 text-sm text-label">
                 {STATUS_LABEL[status as VorgangStatus] ?? status}
               </span>
-              <div className="h-4 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
+              <div className="h-4 flex-1 overflow-hidden rounded-full bg-fill">
                 <div
-                  className="h-full rounded-full btn-clay bg-linear-to-r from-cyan-500 to-blue-600"
+                  className="h-full rounded-full bg-tint"
                   style={{ width: `${gesamtVorgaenge > 0 ? (count / gesamtVorgaenge) * 100 : 0}%` }}
                 />
               </div>
-              <span className="w-8 shrink-0 text-right text-sm font-medium text-slate-700 dark:text-stone-300">
+              <span className="w-8 shrink-0 text-right text-sm font-medium text-label">
                 {count}
               </span>
             </div>
@@ -106,18 +104,18 @@ export function InsightsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">
           Techniker-Auslastung (diese Woche)
         </h2>
         {insights.techniker_auslastung.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Techniker erfasst.</p>
+          <p className="text-sm text-label2">Keine Techniker erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {insights.techniker_auslastung.map((t) => (
               <div key={t.techniker_id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-700 dark:text-stone-300">{t.name}</span>
-                <span className="font-medium text-slate-800 dark:text-stone-100">
+                <span className="text-label">{t.name}</span>
+                <span className="font-medium text-label">
                   {formatStundenAlsHHMM(Number(t.stunden_diese_woche))} Std.
                 </span>
               </div>
@@ -126,34 +124,34 @@ export function InsightsPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Export</h2>
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Export</h2>
         <div className="space-y-2">
           <button
             onClick={() => vorgaengeExportMutation.mutate()}
             disabled={vorgaengeExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Vorgänge (CSV)
           </button>
           <button
             onClick={() => zeiterfassungExportMutation.mutate()}
             disabled={zeiterfassungExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
             disabled={materialExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Material-Bestand (CSV)
           </button>
           <button
             onClick={() => eingangsrechnungenExportMutation.mutate()}
             disabled={eingangsrechnungenExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Eingangsrechnungen (CSV)
           </button>

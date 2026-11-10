@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 
 export function DauerauftraegePage() {
   const navigate = useNavigate();
-  const { data: dauerauftraege, isLoading } = useQuery({
+  const { data: dauerauftraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftraege"],
     queryFn: () => dauerauftraegeApi.list(),
   });
@@ -15,40 +16,42 @@ export function DauerauftraegePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Dauer-Aufträge</h1>
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <h1 className="text-lg font-bold text-label">Dauer-Aufträge</h1>
+      <p className="text-sm text-label2">
         Wiederkehrende Aufträge im Überblick -- die daraus erzeugten Vorgänge erscheinen zusätzlich
         ganz normal im Feed.
       </p>
 
       {isLoading ? (
         <SkeletonList count={4} />
+      ) : ladeFehler && !dauerauftraege ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Daueraufträge" onErneut={() => void neuLaden()} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Dauer-Aufträge angelegt.</p>
+        <p className="text-sm text-label2">Noch keine Dauer-Aufträge angelegt.</p>
       ) : (
         <div className="space-y-2">
           {dauerauftraege.map((d) => (
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
+                <div className="text-sm font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500 dark:bg-stone-800 dark:text-stone-400">
+                    <span className="ml-2 border border-sep px-2 py-0.5 text-xs font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-xs text-label2">
                   {kundeNameById.get(d.kunde_id) ?? "–"} · alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                <span className="border border-sep px-2 py-1 text-xs text-label">
                   pausiert
                 </span>
               )}
@@ -59,7 +62,7 @@ export function DauerauftraegePage() {
 
       <button
         onClick={() => navigate("/dauerauftraege/neu")}
-        className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white"
+        className="btn-touch w-full rounded-md btn-ap-primary py-2 font-medium"
       >
         + Neuer Dauer-Auftrag
       </button>

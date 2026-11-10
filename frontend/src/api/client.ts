@@ -1,5 +1,5 @@
 import { authStore } from "./authStore";
-import type { TokenPair } from "../types";
+import type { UserTokenPair } from "../types";
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -17,9 +17,39 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+// FastAPI liefert bei 422 (Pydantic-Validierung) `detail` als ARRAY von
+// {loc, msg, type}-Objekten statt eines Strings -- das `typeof === "string"`-
+// Pruefung darunter griff dafuer nie, jeder 422-Fehler fiel deshalb bislang
+// auf resp.statusText ("Unprocessable Entity") zurueck, egal wie aussage-
+// kraeftig die eigentliche Meldung (z.B. ein model_validator-ValueError)
+// gewesen waere.
+function extractErrorDetail(body: unknown): string | null {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const messages = detail
+      .map((d) => {
+        if (!d || typeof d !== "object") return null;
+        const msgRaw = (d as { msg?: unknown }).msg;
+        if (typeof msgRaw !== "string") return null;
+        const msg = msgRaw.replace(/^Value error,\s*/, "");
+        const loc = (d as { loc?: unknown }).loc;
+        const feld = Array.isArray(loc) ? loc.filter((l) => l !== "body").pop() : null;
+        return typeof feld === "string" ? `${feld}: ${msg}` : msg;
+      })
+      .filter((m): m is string => !!m);
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return null;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
@@ -27,43 +57,80 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
   }
 }
 
+// Das Refresh-Token ist ein HttpOnly-Cookie am API-Host (Path=/api/auth) und
+// fuer JavaScript unsichtbar. Der Header sagt dem Server, dass es dieses Cookie
+// nutzt und das Token nicht zusaetzlich im Body erwartet.
+const COOKIE_HEADER = { "X-Refresh-Cookie": "1" };
+
+function istAuthPfad(path: string): boolean {
+  return path.startsWith("/api/auth/");
+}
+
+/** Tauscht das Refresh-Cookie (bzw. ein noch gespeichertes Alt-Token) gegen
+ * einen neuen Access-Token. Loescht die Sitzung nur bei klarer Ablehnung, nicht
+ * bei Netz-/Serverproblemen. */
+async function refreshAccessToken(altToken?: string): Promise<boolean> {
+  const resp = await fetchWithTimeout(`${BASE_URL}/api/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...COOKIE_HEADER },
+    body: JSON.stringify(altToken ? { refresh_token: altToken } : {}),
+  });
+  if (!resp.ok) {
+    if (resp.status === 401 || resp.status === 403) authStore.clear();
+    return false;
+  }
+  const data = (await resp.json()) as UserTokenPair;
+  authStore.setPrimary({ accessToken: data.access_token });
+  return true;
+}
+
 async function refreshPrimaryToken(): Promise<boolean> {
   const primary = authStore.getState().primary;
   if (!primary) return false;
+  return refreshAccessToken(primary.refreshToken);
+}
 
-  const resp = await fetchWithTimeout(`${BASE_URL}/api/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: primary.refreshToken }),
-  });
-  if (!resp.ok) {
-    authStore.clear();
+/** Beim App-Start ohne gespeicherten Token: Sitzung aus dem Cookie holen
+ * (z. B. nach Reload oder wenn die andere Shell app./office. schon angemeldet
+ * ist). Liefert false, wenn es keine Sitzung gibt oder der Server nicht erreichbar ist. */
+export async function sitzungAusCookieWiederherstellen(): Promise<boolean> {
+  try {
+    return await refreshAccessToken();
+  } catch {
     return false;
   }
-  const data = (await resp.json()) as TokenPair;
-  authStore.setPrimary({ accessToken: data.access_token, refreshToken: data.refresh_token });
-  return true;
 }
+
+// Datenimport: Pruefen und Schreiben von bis zu 20.000 Zeilen laeuft synchron im Request.
+export const LANGER_REQUEST_TIMEOUT_MS = 120000;
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
   _isRetry = false,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = authStore.getActiveAccessToken();
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const authPfad = istAuthPfad(path);
+  if (authPfad) headers.set("X-Refresh-Cookie", "1");
 
-  const resp = await fetchWithTimeout(`${BASE_URL}${path}`, { ...options, headers });
+  const resp = await fetchWithTimeout(
+    `${BASE_URL}${path}`,
+    { ...options, headers, ...(authPfad ? { credentials: "include" as const } : {}) },
+    timeoutMs,
+  );
 
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
       authStore.setImpersonation(null);
-      return apiFetch<T>(path, options, true);
+      return apiFetch<T>(path, options, true, timeoutMs);
     }
     if (await refreshPrimaryToken()) {
-      return apiFetch<T>(path, options, true);
+      return apiFetch<T>(path, options, true, timeoutMs);
     }
   }
 
@@ -71,7 +138,7 @@ export async function apiFetch<T>(
     let detail = resp.statusText;
     try {
       const body = await resp.json();
-      if (typeof body?.detail === "string") detail = body.detail;
+      detail = extractErrorDetail(body) ?? detail;
     } catch {
       /* response had no JSON body */
     }
@@ -89,6 +156,7 @@ export async function apiFetchForm<T>(
   path: string,
   formData: FormData,
   _isRetry = false,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = authStore.getActiveAccessToken();
   const headers = new Headers();
@@ -98,15 +166,15 @@ export async function apiFetchForm<T>(
     method: "POST",
     headers,
     body: formData,
-  });
+  }, timeoutMs);
 
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
       authStore.setImpersonation(null);
-      return apiFetchForm<T>(path, formData, true);
+      return apiFetchForm<T>(path, formData, true, timeoutMs);
     }
     if (await refreshPrimaryToken()) {
-      return apiFetchForm<T>(path, formData, true);
+      return apiFetchForm<T>(path, formData, true, timeoutMs);
     }
   }
 
@@ -114,7 +182,7 @@ export async function apiFetchForm<T>(
     let detail = resp.statusText;
     try {
       const body = await resp.json();
-      if (typeof body?.detail === "string") detail = body.detail;
+      detail = extractErrorDetail(body) ?? detail;
     } catch {
       /* response had no JSON body */
     }
@@ -146,7 +214,15 @@ export async function apiFetchBlob(path: string, _isRetry = false): Promise<Blob
   }
 
   if (!resp.ok) {
-    throw new ApiError(resp.status, resp.statusText);
+    // Fehler kommen auch bei Downloads als JSON-`detail` (z. B. 422 des
+    // DATEV-Exports mit dem fehlenden Erlöskonto); ohne Body bleibt statusText.
+    let detail = resp.statusText;
+    try {
+      detail = extractErrorDetail(await resp.json()) ?? detail;
+    } catch {
+      /* response had no JSON body */
+    }
+    throw new ApiError(resp.status, detail);
   }
   return await resp.blob();
 }

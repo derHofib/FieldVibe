@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Addition zweier Felder",
+    "expression": { "+": [{ "var": "a" }, { "var": "b" }] },
+    "context": { "a": 2, "b": 3 },
+    "expected": 5
+  },
+  {
+    "name": "Addition dreier Operanden (n-aer)",
+    "expression": { "+": [{ "var": "a" }, { "var": "b" }, { "var": "c" }] },
+    "context": { "a": 1, "b": 2, "c": 3 },
+    "expected": 6
+  },
+  {
+    "name": "Subtraktion",
+    "expression": { "-": [{ "var": "soll" }, { "var": "ist" }] },
+    "context": { "soll": 10, "ist": 4 },
+    "expected": 6
+  },
+  {
+    "name": "Multiplikation (Flaeche aus Laenge x Breite)",
+    "expression": { "*": [{ "var": "laenge" }, { "var": "breite" }] },
+    "context": { "laenge": 2.5, "breite": 4 },
+    "expected": 10
+  },
+  {
+    "name": "Division",
+    "expression": { "/": [{ "var": "gesamt" }, { "var": "anzahl" }] },
+    "context": { "gesamt": 9, "anzahl": 3 },
+    "expected": 3
+  },
+  {
+    "name": "Division durch 0 liefert null statt Fehler",
+    "expression": { "/": [{ "var": "a" }, { "var": "b" }] },
+    "context": { "a": 5, "b": 0 },
+    "expected": null
+  },
+  {
+    "name": "verschachtelte Formel: (a + b) * c",
+    "expression": { "*": [{ "+": [{ "var": "a" }, { "var": "b" }] }, { "var": "c" }] },
+    "context": { "a": 2, "b": 3, "c": 4 },
+    "expected": 20
+  },
+  {
+    "name": "fehlendes Feld (undefined/None) liefert null statt Fehler",
+    "expression": { "+": [{ "var": "a" }, { "var": "fehlt" }] },
+    "context": { "a": 5 },
+    "expected": null
+  },
+  {
+    "name": "nicht-numerischer Operand liefert null statt Fehler",
+    "expression": { "+": [{ "var": "a" }, { "var": "text" }] },
+    "context": { "a": 5, "text": "abc" },
+    "expected": null
+  },
+  {
+    "name": "Formel mit Literal-Operand",
+    "expression": { "*": [{ "var": "menge" }, 2] },
+    "context": { "menge": 59.5 },
+    "expected": 119
+  }
+]

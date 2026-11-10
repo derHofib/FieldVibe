@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.rollen import ist_mitarbeiter_account
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -20,6 +21,8 @@ from app.schemas.termin import TerminCreate, TerminCreateResult, TerminRead, Ter
 from app.services import papierkorb_service
 from app.services.dispo_service import compute_warnungen
 from app.services.event_bus import event_bus
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.zuweisung_service import assigned_kunde_ids, erlaubte_user_ids, require_user_scope
 
 router = APIRouter(
     prefix="/api/termine",
@@ -45,11 +48,27 @@ async def _load_vorgang_and_techniker(
     if (
         techniker is None
         or techniker.mandant_id != vorgang.mandant_id
-        or techniker.role not in ("mandant_admin", "custom")
+        or not ist_mitarbeiter_account(techniker)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Techniker nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    # Ohne diese Pruefung konnte ein Termin fuer einen auf zugewiesene Kunden
+    # beschraenkten Techniker angelegt werden, dessen Account aber gar keinen
+    # Zugriff auf den Kunden dieses Vorgangs hat (siehe zuweisung_service.py)
+    # -- der Techniker sah dann einen Termin im Feed, dessen Vorgang-Detail
+    # fuer ihn 404 liefert (Sackgasse). Frueh mit klarer Meldung ablehnen,
+    # statt diesen kaputten Zustand ueberhaupt erst entstehen zu lassen.
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=techniker.role, account_typ_id=techniker.account_typ_id, user_id=techniker.id
+    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, techniker.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"{techniker.name} ist dem Kunden dieses Vorgangs nicht zugewiesen -- "
+                "zuerst über Kundenverwaltung → Techniker-Zuweisung zuordnen."
+            ),
         )
     return vorgang
 
@@ -58,15 +77,25 @@ async def _load_vorgang_and_techniker(
 async def list_termine(
     techniker_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
     von: datetime | None = Query(default=None),
     bis: datetime | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Termin]:
     stmt = select(Termin).where(Termin.geloescht_am.is_(None)).order_by(Termin.start_at.asc())
+    erlaubt = await erlaubte_user_ids(session, auth, "dispo")
+    if erlaubt is not None:
+        stmt = stmt.where(Termin.techniker_id.in_(erlaubt))
     if techniker_id:
         stmt = stmt.where(Termin.techniker_id == techniker_id)
     if vorgang_id:
         stmt = stmt.where(Termin.vorgang_id == vorgang_id)
+    if projekt_id:
+        # Termin selbst hat kein projekt_id -- Filter ueber den verknuepften
+        # Vorgang, damit sich die Dispo-Zeitachse auf ein Projekt eingrenzen
+        # laesst (siehe office/dispo/OfficeDispoPage.tsx).
+        stmt = stmt.join(Vorgang, Vorgang.id == Termin.vorgang_id).where(Vorgang.projekt_id == projekt_id)
     if von:
         stmt = stmt.where(Termin.ende_at >= von)
     if bis:
@@ -76,10 +105,15 @@ async def list_termine(
 
 
 @router.get("/{termin_id}", response_model=TerminRead)
-async def get_termin(termin_id: UUID, session: AsyncSession = Depends(get_db)) -> Termin:
+async def get_termin(
+    termin_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Termin:
     termin = await session.get(Termin, termin_id)
     if termin is None or termin.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")
+    await require_user_scope(session, auth, "dispo", "sehen", termin.techniker_id, "Termin nicht gefunden")
     return termin
 
 
@@ -148,6 +182,9 @@ async def update_termin(
     termin = await session.get(Termin, termin_id)
     if termin is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")
+    await require_user_scope(
+        session, auth, "dispo", "bearbeiten", termin.techniker_id, "Termin nicht gefunden"
+    )
 
     changes = body.model_dump(exclude_unset=True)
     if "status" in changes and changes["status"] not in (
@@ -208,6 +245,11 @@ async def delete_termin(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    vorab = await session.get(Termin, termin_id)
+    if vorab is not None:
+        await require_user_scope(
+            session, auth, "dispo", "loeschen", vorab.techniker_id, "Termin nicht gefunden"
+        )
     termin = await papierkorb_service.soft_delete(
         session, entity_typ="termin", entity_id=termin_id, actor_user_id=auth.user_id
     )

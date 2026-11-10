@@ -8,8 +8,24 @@ import type { MailAccount, MailVerschluesselung } from "../../types";
 const VERSCHLUESSELUNG_OPTIONEN: { wert: MailVerschluesselung; label: string }[] = [
   { wert: "ssl", label: "SSL/TLS" },
   { wert: "starttls", label: "STARTTLS" },
-  { wert: "keine", label: "Keine" },
 ];
+
+// "Keine" (Klartext-Login) wird nur angezeigt, solange das bestehende Konto
+// sie noch hat -- das Backend lehnt sie beim Speichern ab.
+function optionenFuer(aktuell: MailVerschluesselung) {
+  return aktuell === "keine"
+    ? [...VERSCHLUESSELUNG_OPTIONEN, { wert: "keine" as const, label: "Keine (unsicher)" }]
+    : VERSCHLUESSELUNG_OPTIONEN;
+}
+
+function KlartextHinweis({ wert }: { wert: MailVerschluesselung }) {
+  if (wert !== "keine") return null;
+  return (
+    <span className="mt-1 block text-[11px] font-normal text-amber-700 dark:text-amber-300">
+      Unverschlüsselt nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen.
+    </span>
+  );
+}
 
 interface Props {
   bestehendesKonto?: MailAccount;
@@ -116,159 +132,161 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300">
           <Mail size={18} strokeWidth={2} />
         </span>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-white">
+        <h1 className="text-lg font-bold text-label">
           {bearbeiten ? "Postfach bearbeiten" : "Postfach verbinden"}
         </h1>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-label2">
           Name (nur für dich sichtbar)
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z. B. Mein Geschäftspostfach"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-label2">
           E-Mail-Adresse
           <input
             type="email"
             value={emailAdresse}
             onChange={(e) => setEmailAdresse(e.target.value)}
             placeholder="technik@meinbetrieb.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
           Posteingang (IMAP)
         </p>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Server
           <input
             value={imapHost}
             onChange={(e) => setImapHost(e.target.value)}
             placeholder="imap.provider.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Port
           <input
             type="number"
             value={imapPort}
             onChange={(e) => setImapPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Verschlüsselung
           <select
             value={imapVerschluesselung}
             onChange={(e) => setImapVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
-            {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
+            {optionenFuer(imapVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
           </select>
+          <KlartextHinweis wert={imapVerschluesselung} />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Benutzername
           <input
             value={imapBenutzername}
             onChange={(e) => setImapBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
           Postausgang (SMTP)
         </p>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Server
           <input
             value={smtpHost}
             onChange={(e) => setSmtpHost(e.target.value)}
             placeholder="smtp.provider.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Port
           <input
             type="number"
             value={smtpPort}
             onChange={(e) => setSmtpPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Verschlüsselung
           <select
             value={smtpVerschluesselung}
             onChange={(e) => setSmtpVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
-            {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
+            {optionenFuer(smtpVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
           </select>
+          <KlartextHinweis wert={smtpVerschluesselung} />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-label2">
           Benutzername
           <input
             value={smtpBenutzername}
             onChange={(e) => setSmtpBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-label2">
           Passwort{bearbeiten && " (leer lassen, um es unverändert zu lassen)"}
           <input
             type="password"
             value={passwort}
             onChange={(e) => setPasswort(e.target.value)}
             placeholder={bearbeiten ? "••••••••" : ""}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
           {imapHost.toLowerCase().includes("gmail") || smtpHost.toLowerCase().includes("gmail") ? (
-            <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">
+            <span className="mt-1 block text-[11px] text-st-arbeit ">
               Bei Gmail mit Zwei-Faktor-Anmeldung ein App-Passwort statt des normalen Passworts verwenden.
             </span>
           ) : null}
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-label2">
           Signatur (optional, wird an jede gesendete Mail angehängt)
           <textarea
             value={signatur}
             onChange={(e) => setSignatur(e.target.value)}
             rows={3}
-            className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
       </div>
 
       {testStatus === "ok" && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <p className="rounded-lg bg-st-erledigt-bg px-3 py-2 text-xs font-medium text-st-erledigt ">
           Verbindung erfolgreich.
         </p>
       )}
       {testStatus === "fehler" && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
           {testFehler}
         </p>
       )}
       {speicherFehler && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
           {speicherFehler}
         </p>
       )}
@@ -278,7 +296,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           type="button"
           disabled={!imapHost || !smtpHost || !imapBenutzername || !smtpBenutzername || !passwort || testMutation.isPending}
           onClick={() => testMutation.mutate()}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40 dark:border-stone-700 dark:text-stone-300"
+          className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-2 text-xs font-semibold text-label disabled:opacity-40 "
         >
           {testMutation.isPending && <Loader2 size={13} className="animate-spin" />}
           Verbindung testen
@@ -289,7 +307,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             <button
               type="button"
               onClick={onAbbrechen}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 dark:text-stone-400"
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-label2"
             >
               Abbrechen
             </button>
@@ -297,7 +315,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <button
             type="submit"
             disabled={!kannSpeichern || speichernMutation.isPending}
-            className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+            className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
           >
             {speichernMutation.isPending && <Loader2 size={13} className="animate-spin" />}
             {bearbeiten ? "Speichern" : "Postfach anlegen"}

@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 
@@ -35,6 +35,8 @@ class VorgangCreate(BaseModel):
     standort_id: UUID | None = None
     vertrag_id: UUID | None = None
     parent_vorgang_id: UUID | None = None
+    projekt_id: UUID | None = None
+    auftrag_id: UUID | None = None
     titel: str
     beschreibung: str | None = None
     abrechnungsart: VorgangAbrechnungsart
@@ -47,6 +49,14 @@ class VorgangCreate(BaseModel):
     # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
+
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
 
 
 class VorgangAnlagenHinzufuegen(BaseModel):
@@ -64,6 +74,8 @@ class VorgangUpdate(BaseModel):
     anlage_id: UUID | None = None
     standort_id: UUID | None = None
     vertrag_id: UUID | None = None
+    projekt_id: UUID | None = None
+    auftrag_id: UUID | None = None
     abrechnungsart: VorgangAbrechnungsart | None = None
     leistungstyp: Leistungstyp | None = None
     status: VorgangStatusSetzbar | None = None
@@ -80,6 +92,16 @@ class VorgangUpdate(BaseModel):
     # app/api/routes/vorgaenge.py und Mandant.wiedervorlage_standard_tage).
     wiedervorlage_tage: int | None = Field(default=None, gt=0)
 
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
+
 
 class VorgangRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -91,6 +113,8 @@ class VorgangRead(BaseModel):
     standort_id: UUID | None
     vertrag_id: UUID | None
     parent_vorgang_id: UUID | None
+    projekt_id: UUID | None
+    auftrag_id: UUID | None
     dauerauftrag_id: UUID | None
     titel: str
     beschreibung: str | None

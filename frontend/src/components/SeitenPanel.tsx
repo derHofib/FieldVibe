@@ -1,89 +1,63 @@
+// Rechtsseitiges Slide-over-Panel -- Industry-Standardmuster fuer
+// Detail-/Bearbeiten-Ansichten, die zu viel Inhalt fuer ein zentriertes
+// Modal haben (z.B. verschachtelte Unterlisten) oder bei denen der Kontext
+// der dahinterliegenden Seite sichtbar bleiben soll. Ersetzt in diesen
+// Faellen das aeltere "fixed inset-0 flex items-center justify-center"-
+// Modal-Rezept. Haarlinie statt Schatten-Karte, eckig statt rounded-xl --
+// siehe fieldvibe-design-Skill.
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-const FOKUSSIERBAR = "button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
-
-/**
- * Anlegen-/Bearbeiten-Formular außerhalb der Liste: auf dem Handy als Sheet von
- * unten, ab md (Office, Desktop) als Panel von rechts. Eine Komponente für
- * beide, damit Feld-App-Seiten, die im Office eingebettet laufen, nicht
- * verzweigen müssen.
- */
-export function SeitenPanel({
-  offen,
-  titel,
-  onClose,
-  children,
-}: {
-  offen: boolean;
-  titel: string;
+interface SeitenPanelProps {
   onClose: () => void;
+  title: string;
   children: ReactNode;
-}) {
-  const titelId = useId();
-  const boxRef = useRef<HTMLDivElement>(null);
+  // Fuer Inhalte mit mehr Spalten (z.B. Formulare mit Nebeneinander-
+  // Layouts) -- Default passt fuer die meisten Detail-/Formular-Panels.
+  breit?: boolean;
+  // Rueckt das Panel um so viele px vom rechten Rand ab -- fuer gestapelte
+  // Panels (z.B. Unterformular-Editor + darueber das Regeln-Panel): das
+  // hintere Panel bekommt die Breite des vorderen als Versatz, damit sein
+  // rechter Rand sichtbar hinter dem neuen Panel hervorschaut statt
+  // komplett verdeckt zu werden (siehe FormBuilderCanvas.tsx).
+  versatzRechtsPx?: number;
+}
 
+export function SeitenPanel({ onClose, title, children, breit = false, versatzRechtsPx = 0 }: SeitenPanelProps) {
+  // Panel wird zunaechst ausserhalb des sichtbaren Bereichs gerendert und
+  // erst im naechsten Frame eingeblendet, damit die CSS-Transition beim
+  // OEFFNEN greift (ein sofort gesetztes translate-x-0 haette keinen
+  // Ausgangszustand zum Uebergang).
+  const [eingeblendet, setEingeblendet] = useState(false);
   useEffect(() => {
-    if (!offen) return;
-    const vorher = document.activeElement as HTMLElement | null;
-    // Fokus ins Formular statt auf "Schließen", damit sofort getippt werden kann
-    const ziel = boxRef.current?.querySelector<HTMLElement>("input, select, textarea") ?? boxRef.current;
-    ziel?.focus();
-    return () => vorher?.focus?.();
-  }, [offen]);
-
-  if (!offen) return null;
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
-      return;
-    }
-    if (e.key !== "Tab") return;
-    const elemente = boxRef.current?.querySelectorAll<HTMLElement>(FOKUSSIERBAR);
-    if (!elemente || elemente.length === 0) return;
-    const erstes = elemente[0];
-    const letztes = elemente[elemente.length - 1];
-    if (e.shiftKey && document.activeElement === erstes) {
-      e.preventDefault();
-      letztes.focus();
-    } else if (!e.shiftKey && document.activeElement === letztes) {
-      e.preventDefault();
-      erstes.focus();
-    }
-  };
+    const frame = requestAnimationFrame(() => setEingeblendet(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-stretch md:justify-end"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      onKeyDown={onKeyDown}
+      className={`fixed inset-0 z-50 flex justify-end bg-slate-900/35 transition-opacity duration-200 ${
+        eingeblendet ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={onClose}
     >
       <div
-        ref={boxRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titelId}
-        tabIndex={-1}
-        className="flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-white shadow-xl outline-none md:max-h-none md:max-w-md md:rounded-none dark:bg-stone-900 dark:ring-1 dark:ring-stone-800"
+        onClick={(e) => e.stopPropagation()}
+        style={{ marginRight: versatzRechtsPx }}
+        className={`flex h-full w-full ${breit ? "max-w-2xl" : "max-w-md"} flex-col border-l border-sep bg-card shadow-2xl transition-[transform,margin] duration-200 ease-out ${
+          eingeblendet ? "translate-x-0" : "translate-x-full"
+        }`}
       >
-        <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
-          <h2 id={titelId} className="text-base font-semibold text-slate-900 dark:text-stone-100">
-            {titel}
-          </h2>
+        <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4">
+          <h2 className="min-w-0 truncate text-base font-bold text-label">{title}</h2>
           <button
-            type="button"
             onClick={onClose}
-            aria-label="Schließen"
-            className="btn-touch rounded-md p-1 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="btn-touch btn-ap-toolbar shrink-0"
           >
-            <X size={18} aria-hidden="true" />
+            <X size={16} strokeWidth={1.5} />
           </button>
         </div>
-        <div className="space-y-3 overflow-y-auto px-4 pb-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
       </div>
     </div>
   );

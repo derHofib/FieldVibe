@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 
 function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
@@ -21,7 +22,7 @@ function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktu
       value={aktuellesFahrzeugId ?? ""}
       onChange={(e) => setzenMutation.mutate(e.target.value || null)}
       disabled={setzenMutation.isPending}
-      className="btn-touch mt-2 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:opacity-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+      className="btn-touch mt-2 w-full border border-sep bg-transparent px-2 py-1.5 text-sm disabled:opacity-50 text-label"
     >
       <option value="">Kein Fahrzeug</option>
       {(fahrzeuge ?? []).map((f) => (
@@ -35,7 +36,7 @@ function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktu
 
 export function TechnikerZuweisungenPage() {
   const navigate = useNavigate();
-  const { data: uebersicht, isLoading } = useQuery({
+  const { data: uebersicht, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["techniker-zuweisungen"],
     queryFn: technikerZuweisungenApi.uebersicht,
   });
@@ -49,42 +50,44 @@ export function TechnikerZuweisungenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Techniker-Zuweisungen</h1>
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <h1 className="text-lg font-bold text-label">Techniker-Zuweisungen</h1>
+      <p className="text-sm text-label2">
         Welcher Techniker betreut welche Kunden und faehrt welches Fahrzeug. Kunden zuweisen/ändern
         geht über das Kunden-Profil, das Fahrzeug direkt hier.
       </p>
 
       {isLoading ? (
         <SkeletonList count={4} />
+      ) : ladeFehler && !uebersicht ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Techniker" onErneut={() => void neuLaden()} />
       ) : !uebersicht || uebersicht.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Keine Techniker in diesem Mandanten angelegt.</p>
+        <p className="text-sm text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
       ) : (
         <div className="space-y-3">
           {uebersicht.map((row) => (
             <div
               key={row.techniker.id}
-              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-ap p-4"
             >
-              <div className="font-semibold text-slate-800 dark:text-stone-100">{row.techniker.name}</div>
-              <div className="text-xs text-slate-400 dark:text-stone-500">{row.techniker.email}</div>
+              <div className="font-semibold text-label">{row.techniker.name}</div>
+              <div className="text-xs text-label2">{row.techniker.email}</div>
               {row.kunden.length === 0 ? (
-                <p className="mt-2 text-sm text-slate-400 dark:text-stone-500">Kein Kunde zugewiesen.</p>
+                <p className="mt-2 text-sm text-label2">Kein Kunde zugewiesen.</p>
               ) : (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {row.kunden.map((k) => (
                     <button
                       key={k.id}
                       onClick={() => navigate(`/kunden/${k.id}`)}
-                      className="btn-touch rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                      className="btn-touch border border-sep px-2 py-0.5 text-xs text-label"
                     >
                       {k.name}
                     </button>
                   ))}
                 </div>
               )}
-              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-stone-800">
-                <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Fahrzeug</label>
+              <div className="mt-2 border-t border-sep pt-2 ">
+                <label className="mb-1 block text-xs text-label2">Fahrzeug</label>
                 <FahrzeugAuswahl
                   userId={row.techniker.id}
                   aktuellesFahrzeugId={fahrzeugByTechnikerId.get(row.techniker.id)?.id ?? null}
