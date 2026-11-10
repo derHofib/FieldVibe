@@ -1099,8 +1099,15 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
   );
 }
 
-export function KundeProfilePage() {
-  const { id } = useParams<{ id: string }>();
+/** `id`/`eingebettet`/`onGeloescht` nur für das Detailpanel der Office-Liste
+ * (office/kunden): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
+export function KundeProfilePage({
+  id: idProp,
+  eingebettet = false,
+  onGeloescht,
+}: { id?: string; eingebettet?: boolean; onGeloescht?: () => void } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
   const [anlageFilter, setAnlageFilter] = useState("");
@@ -1140,7 +1147,7 @@ export function KundeProfilePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: () => kundenApi.remove(id!),
-    onSuccess: () => navigate("/geschaeft"),
+    onSuccess: () => (onGeloescht ? onGeloescht() : navigate("/geschaeft")),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
@@ -1153,9 +1160,11 @@ export function KundeProfilePage() {
     if (kundeLoading || !kunde) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
-          ← Zurück
-        </button>
+        {!eingebettet && (
+          <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+            ← Zurück
+          </button>
+        )}
         <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="text-xs text-slate-400 dark:text-stone-500">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde.name}</h1>
@@ -1171,9 +1180,11 @@ export function KundeProfilePage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
-        ← Zurück
-      </button>
+      {!eingebettet && (
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+          ← Zurück
+        </button>
+      )}
 
       <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">

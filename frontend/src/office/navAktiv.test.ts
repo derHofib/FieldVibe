@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { NAV_SEITEN } from "../config/navSeiten";
 import { aktiverNavKey, fuerOffice } from "./navAktiv";
 
-const seiten = fuerOffice(NAV_SEITEN);
+const alleRechte = () => true;
+const seiten = fuerOffice(NAV_SEITEN, {
+  currentUser: undefined,
+  hatRecht: alleRechte,
+});
 
 describe("aktiverNavKey", () => {
   it("markiert die Vorgangsliste und ihre Detailseiten", () => {
@@ -16,6 +20,13 @@ describe("aktiverNavKey", () => {
     expect(aktiverNavKey("/rechnungen/1", seiten)).toBe("rechnungen");
     expect(aktiverNavKey("/angebote/1", seiten)).toBe("rechnungen");
     expect(aktiverNavKey("/formulare/1", seiten)).toBe("formulare");
+  });
+
+  it("markiert Kunden und Material samt Detail-URL und Unterseiten", () => {
+    expect(aktiverNavKey("/kunden/abc", seiten)).toBe("kunden");
+    expect(aktiverNavKey("/standorte/1", seiten)).toBe("kunden");
+    expect(aktiverNavKey("/material", seiten)).toBe("material");
+    expect(aktiverNavKey("/bestellungen/1", seiten)).toBe("geschaeft");
   });
 
   it("verwechselt Präfixe nicht", () => {

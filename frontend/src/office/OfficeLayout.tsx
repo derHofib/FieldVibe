@@ -12,7 +12,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
-import { aktiverNavKey, fuerOffice } from "./navAktiv";
+import { aktiverNavKey, fuerOffice, OFFICE_ZUSATZ_KEYS } from "./navAktiv";
 import { Tooltip } from "./OfficeUi";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
@@ -28,11 +28,16 @@ export function OfficeLayout() {
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
 
-  const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht));
+  const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht), { currentUser, hatRecht });
   // null = keine Auswahl gespeichert -> unveraendertes Verhalten (alles zeigen)
   const eigeneAuswahl = currentUser?.office_nav_items?.items;
   const angezeigt = eigeneAuswahl
-    ? sichtbar.filter((seite) => eigeneAuswahl.includes(seite.key))
+    ? sichtbar.filter(
+        (seite) =>
+          eigeneAuswahl.includes(seite.key) ||
+          // Kunden/Material gehören zur Auswahl-Zeile "Geschäft"
+          (OFFICE_ZUSATZ_KEYS.includes(seite.key) && eigeneAuswahl.includes("geschaeft")),
+      )
     : sichtbar;
   const gruppen = NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({
     kategorie,

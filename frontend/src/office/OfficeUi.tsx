@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 /** Kleine, geteilte Bausteine der Desktop-Oberflaeche. Bewusst hier gebuendelt
@@ -159,5 +159,25 @@ export function TabellenRahmen({ children }: { children: ReactNode }) {
     <Karte className="overflow-hidden">
       <div className="overflow-x-auto">{children}</div>
     </Karte>
+  );
+}
+
+/** Fehlerzustand einer Datenansicht -- darf weder wie "leer" noch wie endloses
+ * Laden aussehen. */
+export function FehlerHinweis({ text, onNochmal }: { text: string; onNochmal: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-col items-center gap-3 rounded-xl bg-rose-50 px-4 py-8 text-center dark:bg-rose-500/10"
+    >
+      <AlertTriangle size={20} strokeWidth={2} className="text-rose-600 dark:text-rose-300" />
+      <p className="text-sm text-rose-700 dark:text-rose-300">{text}</p>
+      <button
+        onClick={onNochmal}
+        className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/15"
+      >
+        Erneut versuchen
+      </button>
+    </div>
   );
 }

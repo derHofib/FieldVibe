@@ -5,8 +5,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 
-export function MaterialDetailPage() {
-  const { id } = useParams<{ id: string }>();
+/** `id`/`eingebettet`/`onGeloescht` nur für das Detailpanel der Office-Liste
+ * (office/material): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
+export function MaterialDetailPage({
+  id: idProp,
+  eingebettet = false,
+  onGeloescht,
+}: { id?: string; eingebettet?: boolean; onGeloescht?: () => void } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
@@ -16,7 +23,8 @@ export function MaterialDetailPage() {
     mutationFn: () => materialApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material"] });
-      navigate("/geschaeft");
+      if (onGeloescht) onGeloescht();
+      else navigate("/geschaeft");
     },
   });
 
@@ -103,9 +111,13 @@ export function MaterialDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
-          ← Zurück
-        </button>
+        {eingebettet ? (
+          <span />
+        ) : (
+          <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+            ← Zurück
+          </button>
+        )}
         {kannLoeschen && (
           <button
             onClick={() => {

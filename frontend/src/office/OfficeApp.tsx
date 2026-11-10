@@ -17,8 +17,6 @@ import { GeschaeftPage } from "../pages/feld/GeschaeftPage";
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
-import { KundeProfilePage } from "../pages/feld/KundeProfilePage";
-import { MaterialDetailPage } from "../pages/feld/MaterialDetailPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
@@ -37,14 +35,16 @@ import { OfficeLayout } from "./OfficeLayout";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
+import { OfficeKundenPage } from "./kunden/OfficeKundenPage";
+import { OfficeMaterialPage } from "./material/OfficeMaterialPage";
 import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
 import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 
-/** Router der Desktop-Oberflaeche. Die vier ausgebauten Bereiche (Vorgaenge,
- * Rechnungen/Angebote, Formulare, Dispo/Buchhaltung) haben eigene, auf die
+/** Router der Desktop-Oberflaeche. Die ausgebauten Bereiche (Vorgaenge,
+ * Rechnungen/Angebote, Formulare, Dispo/Buchhaltung, Kunden, Material) haben eigene, auf die
  * Breite ausgelegte Seiten; alles Uebrige nutzt bewusst dieselbe Komponente
  * wie die Feld-App -- diese Seiten sind ohnehin schmale Formular-/
  * Detailansichten, fuer die eine zweite Fassung nur Pflegeaufwand waere. */
@@ -64,6 +64,10 @@ export function OfficeApp() {
         <Route path="/formulare/:id" element={<OfficeFormularDetailPage />} />
         <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
         <Route path="/postfach" element={<OfficePostfachPage />} />
+        <Route path="/kunden" element={<OfficeKundenPage />} />
+        <Route path="/kunden/:id" element={<OfficeKundenPage />} />
+        <Route path="/material" element={<OfficeMaterialPage />} />
+        <Route path="/material/:id" element={<OfficeMaterialPage />} />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
@@ -73,7 +77,6 @@ export function OfficeApp() {
         <Route path="/suche" element={<SearchPage />} />
         <Route path="/benachrichtigungen" element={<NotificationsPage />} />
         <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/kunden/:id" element={<KundeProfilePage />} />
         <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
         <Route path="/standorte/:id" element={<StandortDetailPage />} />
         <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
@@ -89,7 +92,6 @@ export function OfficeApp() {
         <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
         <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
         <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
-        <Route path="/material/:id" element={<MaterialDetailPage />} />
         <Route path="/highlights" element={<HighlightsPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/integrationen" element={<IntegrationenPage />} />

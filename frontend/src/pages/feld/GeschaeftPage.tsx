@@ -18,6 +18,7 @@ import {
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
+import { filtereKunden, filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { istModulAktiv } from "../../utils/module";
 import type {
@@ -52,11 +53,7 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   abgelehnt: "Abgelehnt",
 };
 
-function istUnterbestand(m: Material): boolean {
-  return Number(m.bestand_gesamt) <= Number(m.mindestbestand);
-}
-
-function MaterialZeile({
+export function MaterialZeile({
   material,
   lagerorte,
   lieferantName,
@@ -405,11 +402,7 @@ export function GeschaeftPage() {
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
   });
-  const kundenGefiltert = (kunden ?? []).filter((k) => {
-    if (!kundenSuche.trim()) return true;
-    const q = kundenSuche.trim().toLowerCase();
-    return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
-  });
+  const kundenGefiltert = filtereKunden(kunden ?? [], kundenSuche);
   const { data: angebote, isLoading: angeboteLoading } = useQuery({
     queryKey: ["angebote"],
     queryFn: () => angeboteApi.list(),
@@ -437,17 +430,11 @@ export function GeschaeftPage() {
     queryFn: tagsApi.list,
     enabled: materialAktiv,
   });
-  const materialGefiltert = (material ?? []).filter((m) => {
-    if (matFilterLieferantId && m.lieferant_id !== matFilterLieferantId) return false;
-    if (matFilterTagId && !m.tag_ids.includes(matFilterTagId)) return false;
-    if (matFilterUnterbestand && !istUnterbestand(m)) return false;
-    if (matSuche.trim()) {
-      const q = matSuche.trim().toLowerCase();
-      const treffer =
-        m.bezeichnung.toLowerCase().includes(q) || (m.artikelnummer ?? "").toLowerCase().includes(q);
-      if (!treffer) return false;
-    }
-    return true;
+  const materialGefiltert = filtereMaterial(material ?? [], {
+    lieferantId: matFilterLieferantId,
+    tagId: matFilterTagId,
+    nurUnterbestand: matFilterUnterbestand,
+    suche: matSuche,
   });
 
   const { data: offeneBedarfe } = useQuery({
