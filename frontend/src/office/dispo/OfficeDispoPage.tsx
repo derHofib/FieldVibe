@@ -22,6 +22,7 @@ import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { useAuth } from "../../context/AuthContext";
 
 const START_STUNDE = 7;
 const ENDE_STUNDE = 19;
@@ -107,7 +108,8 @@ export function OfficeDispoPage() {
   const ende = useMemo(() => tagsEnde(tag), [tag]);
   const heute = istGleicherTag(tag, new Date());
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { hatRecht } = useAuth();
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker eingeplant werden.
   const technikers: Techniker[] = (technikerListe ?? []).filter(

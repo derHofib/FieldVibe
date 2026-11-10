@@ -280,7 +280,7 @@ export function FeedPage() {
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
 
   function setField(key: string, value: string) {
     setFilter((f) => {

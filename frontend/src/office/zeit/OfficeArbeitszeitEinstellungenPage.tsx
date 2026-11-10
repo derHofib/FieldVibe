@@ -264,12 +264,12 @@ function leeresFormular(vorlage?: ArbeitszeitSoll): SollFormular {
 
 function SollAbschnitt() {
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [userId, setUserId] = useState(currentUser?.id ?? "");
   const [form, setForm] = useState<SollFormular>(() => leeresFormular());
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: historie, isLoading } = useQuery({
     queryKey: ["arbeitszeit-soll", userId],
     queryFn: () => arbeitszeitApi.soll(userId),

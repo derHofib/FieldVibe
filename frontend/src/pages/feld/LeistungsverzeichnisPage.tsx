@@ -248,9 +248,12 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
 
 function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
   const { data: einstellungen } = useQuery({
     queryKey: ["mandant-einstellungen"],
     queryFn: mandantEinstellungenApi.get,
+    // Backend: /api/mandant-einstellungen nur mandant_admin.
+    enabled: currentUser?.role === "mandant_admin",
   });
   const [offen, setOffen] = useState(false);
   const [gemeinkosten, setGemeinkosten] = useState(einstellungen?.standard_lohn_gemeinkosten_prozent ?? "0");

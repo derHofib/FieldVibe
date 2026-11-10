@@ -178,7 +178,7 @@ export function OfficeLayout() {
     if (route) navigate(route);
   };
 
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: hatRecht("projekte", "sehen") });
   const aktiveProjekte = (projekte ?? []).filter((p) => !p.archiviert).slice(0, 6);
 
   // Exakte Zaehlung nur fuer "Alle" (aus dem bereits vorhandenen Kennzahlen-

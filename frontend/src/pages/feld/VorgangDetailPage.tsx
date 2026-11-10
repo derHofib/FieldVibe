@@ -717,7 +717,7 @@ export function VorgangDetailPage({
     queryFn: () => getOutboxItems(id!),
     enabled: !!id,
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: laufenderTimer } = useQuery({
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,
@@ -848,7 +848,7 @@ export function VorgangDetailPage({
     },
   });
 
-  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list(), enabled: hatRecht("material", "sehen") });
   const { data: alleAnlagenFuerLager } = useQuery({
     queryKey: ["lagerorte"],
     queryFn: () => anlagenApi.list(),

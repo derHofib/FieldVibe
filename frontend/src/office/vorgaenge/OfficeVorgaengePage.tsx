@@ -14,6 +14,7 @@ import {
   STATUS_LABEL,
   filterChipLabel,
 } from "../../config/vorgangDarstellung";
+import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, VorgangStatus } from "../../types";
 import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
@@ -60,13 +61,14 @@ const LEER_FILTER: Record<string, string> = {};
  * kein Platzproblem wie auf dem Handy. */
 export function OfficeVorgaengePage() {
   const navigate = useNavigate();
+  const { hatRecht } = useAuth();
   const [ansicht, setAnsicht] = useState<Ansicht>(gespeicherteAnsicht);
   const [suche, setSuche] = useState("");
   const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
   const [zeigeFilter, setZeigeFilter] = useState(false);
 
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: hatRecht("projekte", "sehen") });
   // Wie beim Leistungsverzeichnis abhaengiger Picker: erst ab gewaehltem
   // Kunden laden, sonst waere die Liste ueber alle Mandanten-Anlagen hinweg
   // fuer einen reinen Filter unnoetig gross.

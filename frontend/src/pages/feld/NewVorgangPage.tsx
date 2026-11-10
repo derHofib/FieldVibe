@@ -18,6 +18,7 @@ import { QrScanner } from "../../components/QrScanner";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 const KUNDE_TYPEN: { value: KundeTyp; label: string }[] = [
   { value: "privat", label: "Privat" },
@@ -107,9 +108,12 @@ export function NewVorgangPage() {
     navigate(-1);
   }
 
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
-  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list() });
+  const { hatRecht } = useAuth();
+  // Backend: /api/projekte und /api/auftraege verlangen projekte.sehen.
+  const darfProjekte = hatRecht("projekte", "sehen");
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfProjekte });
+  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfProjekte });
   const { data: anlagenListe } = useQuery({
     queryKey: ["anlagen", kundeId, "aktiv"],
     queryFn: () => anlagenApi.list(kundeId, undefined, true),
@@ -512,7 +516,7 @@ export function NewVorgangPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        {darfProjekte && <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
             <SearchableSelect
@@ -531,7 +535,7 @@ export function NewVorgangPage() {
               options={(auftraege ?? []).map((a) => ({ value: a.id, label: a.titel }))}
             />
           </div>
-        </div>
+        </div>}
 
         <div>
           <label className="mb-1 block text-sm font-medium text-label">Titel</label>

@@ -33,7 +33,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -48,7 +48,7 @@ export function PruefmittelPage() {
     queryKey: ["pruefmittel"],
     queryFn: () => pruefmittelApi.list(),
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const zuweisbareNutzer = (users ?? []).filter((u) => u.aktiv);
 
   const createMutation = useMutation({

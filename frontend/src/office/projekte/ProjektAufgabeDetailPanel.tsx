@@ -14,6 +14,7 @@ import {
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SymbolKachel, type KachelFarbe } from "../../components/apple/SymbolKachel";
 import type { ChecklistenPunkt, ProjektAufgabe, ProjektAufgabePrioritaet, ProjektSpalte } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 const PRIORITAET_OPTIONEN: { wert: ProjektAufgabePrioritaet; label: string }[] = [
   { wert: "niedrig", label: "Niedrig" },
@@ -128,7 +129,8 @@ export function ProjektAufgabeDetailPanel({
   const [neuerPunkt, setNeuerPunkt] = useState("");
   const [neueUnteraufgabe, setNeueUnteraufgabe] = useState("");
 
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: () => usersApi.auswahl() });
+  const { hatRecht } = useAuth();
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: () => usersApi.auswahl(), enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: alleVorgaenge } = useQuery({ queryKey: ["vorgaenge-alle"], queryFn: () => vorgaengeApi.list() });
   const { data: alleKunden } = useQuery({ queryKey: ["kunden-alle"], queryFn: () => kundenApi.list() });
   const { data: alleAnlagen } = useQuery({ queryKey: ["anlagen-alle"], queryFn: () => anlagenApi.list() });
