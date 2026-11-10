@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CalendarX, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type { Termin, TerminWarnung } from "../../types";
@@ -60,6 +61,8 @@ export function DispoBoardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
+  // Handy-Tagesansicht: Index 0 = Montag der angezeigten Woche; startet auf heute.
+  const [tagIndex, setTagIndex] = useState(() => (new Date().getDay() + 6) % 7);
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NeuerTerminForm | null>(null);
@@ -143,6 +146,29 @@ export function DispoBoardPage() {
     });
   };
 
+  function tagWechseln(schritt: -1 | 1) {
+    const neu = tagIndex + schritt;
+    if (neu < 0) {
+      setWeekOffset((w) => w - 1);
+      setTagIndex(6);
+    } else if (neu > 6) {
+      setWeekOffset((w) => w + 1);
+      setTagIndex(0);
+    } else {
+      setTagIndex(neu);
+    }
+  }
+
+  const gewaehlterTag = days[tagIndex];
+  const tagesTermine = technikers
+    .map((tech) => ({
+      tech,
+      eintraege: (terminenNachTechnikerUndTag.get(tech.id)?.get(dateKey(gewaehlterTag)) ?? [])
+        .slice()
+        .sort((a, b) => a.start_at.localeCompare(b.start_at)),
+    }))
+    .filter((z) => z.eintraege.length > 0);
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
       <div className="flex items-center justify-between">
@@ -162,7 +188,47 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="space-y-2 md:hidden">
+        <div className="flex items-center justify-between rounded-lg bg-white p-2 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <button
+            onClick={() => tagWechseln(-1)}
+            aria-label="Vorheriger Tag"
+            className="btn-touch flex items-center justify-center rounded-md bg-slate-100 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <ChevronLeft size={20} strokeWidth={2} />
+          </button>
+          <span className="text-sm font-semibold text-slate-700 dark:text-stone-200">
+            {gewaehlterTag.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" })}
+          </span>
+          <button
+            onClick={() => tagWechseln(1)}
+            aria-label="Nächster Tag"
+            className="btn-touch flex items-center justify-center rounded-md bg-slate-100 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <ChevronRight size={20} strokeWidth={2} />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="Wochentag">
+          {days.map((day, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={i === tagIndex}
+              onClick={() => setTagIndex(i)}
+              className={`btn-touch flex flex-col items-center justify-center rounded-lg py-1 text-xs ${
+                i === tagIndex
+                  ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 font-semibold text-white"
+                  : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              }`}
+            >
+              {WOCHENTAGE[i]}
+              <span className="text-[11px] opacity-80">{day.getDate()}.</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden items-center justify-between rounded-lg bg-white p-3 shadow-xs md:flex dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
           className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
@@ -302,7 +368,39 @@ export function DispoBoardPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="md:hidden">
+        {tagesTermine.length === 0 ? (
+          <EmptyState icon={CalendarX} text="Keine Termine an diesem Tag." />
+        ) : (
+          <div className="space-y-3">
+            {tagesTermine.map(({ tech, eintraege }) => (
+              <section key={tech.id}>
+                <h2 className="mb-1 text-sm font-semibold text-slate-500 dark:text-stone-400">{tech.name}</h2>
+                <div className="space-y-2">
+                  {eintraege.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => navigate(`/vorgaenge/${t.vorgang_id}`)}
+                      className={`card-interactive btn-touch flex w-full flex-col items-start rounded-lg p-3 text-left text-sm shadow-xs ${
+                        t.status === "abgesagt"
+                          ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
+                          : "bg-white text-slate-800 dark:bg-stone-900 dark:text-stone-100 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                      }`}
+                    >
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                        {formatTime(t.start_at)}–{formatTime(t.ende_at)}
+                      </span>
+                      <span className="font-medium">{t.titel}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg bg-white shadow-xs md:block dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-200 dark:border-stone-800">
