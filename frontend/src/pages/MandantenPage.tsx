@@ -1,11 +1,14 @@
 import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantStatus } from "../types";
+import { AnlegenPanel } from "../components/AnlegenPanel";
+import { EmptyState } from "../components/EmptyState";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 
@@ -21,11 +24,16 @@ const STATUS_BADGE: Record<MandantStatus, string> = {
   gekuendigt: "border border-st-fehlt text-st-fehlt ",
 };
 
+// Entspricht dem Backend-Muster für Mandanten-Slugs (Subdomain).
+const SLUG_MUSTER = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+
 export function MandantenPage() {
   const uid = useId();
   const queryClient = useQueryClient();
   const { isImpersonating } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
+  const [zeigeNeu, setZeigeNeu] = useState(false);
+  const [feldFehler, setFeldFehler] = useState<{ name?: string; slug?: string }>({});
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [branche, setBranche] = useState("elektro");
@@ -47,6 +55,7 @@ export function MandantenPage() {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });
       setName("");
       setSlug("");
+      setZeigeNeu(false);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
   });
@@ -54,60 +63,94 @@ export function MandantenPage() {
   function handleCreate(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
+    const f = {
+      name: name.trim() ? undefined : "Bitte einen Namen eingeben.",
+      slug: SLUG_MUSTER.test(slug)
+        ? undefined
+        : "Nur Kleinbuchstaben, Ziffern und Bindestriche; Anfang und Ende ohne Bindestrich.",
+    };
+    setFeldFehler(f);
+    if (f.name || f.slug) return;
     createMutation.mutate({ name, slug, branche });
   }
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="mb-4 text-lg font-bold text-label">Neuen Mandanten anlegen</h2>
-        <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-label">Mandanten</h2>
+        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap px-4 py-2 text-sm font-medium">
+          + Neuer Mandant
+        </button>
+      </div>
+
+      <AnlegenPanel offen={zeigeNeu} titel="Neuer Mandant" onClose={() => setZeigeNeu(false)}>
+        <form onSubmit={handleCreate} className="space-y-3 p-4" noValidate>
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
-            <input id={`${uid}-0`}
-              required
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+              Name <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
+            <input
+              id={`${uid}-0`}
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+              aria-invalid={!!feldFehler.name}
+              aria-describedby={feldFehler.name ? `${uid}-name-fehler` : undefined}
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
+            {feldFehler.name && (
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {feldFehler.name}
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">
-              Slug (Subdomain)
+              Slug (Subdomain) <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
-            <input id={`${uid}-1`}
-              required
-              pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
+            <input
+              id={`${uid}-1`}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+              aria-invalid={!!feldFehler.slug}
+              aria-describedby={feldFehler.slug ? `${uid}-slug-fehler` : undefined}
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
+            {feldFehler.slug && (
+              <p id={`${uid}-slug-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {feldFehler.slug}
+              </p>
+            )}
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Branche</label>
-            <input id={`${uid}-2`}
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">
+              Branche
+            </label>
+            <input
+              id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
-          <button
-            type="submit"
-            disabled={createMutation.isPending}
-            className="btn-touch btn-ap-primary"
-          >
+          {formError && (
+            <p role="alert" className="text-sm text-st-fehlt">
+              {formError}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full">
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
-      </section>
+      </AnlegenPanel>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-label">Mandanten</h2>
         {isLoading ? (
           <SkeletonList count={4} />
         ) : ladeFehler && !mandanten ? (
           <FehlerZustand fehler={ladeFehler} was="Die Mandanten" onErneut={() => void neuLaden()} />
+        ) : !mandanten || mandanten.length === 0 ? (
+          <EmptyState icon={Building2} text="Noch keine Mandanten angelegt." />
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
             <thead className="bg-fill text-sm text-label ">
