@@ -19,6 +19,7 @@ from app.db.session import system_session
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.mandant import Mandant
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
@@ -83,12 +84,12 @@ MANDANTEN = [
                 "anlagen": [
                     {
                         "bezeichnung": "Hauptverteilung Wohnanlage Rheinblick",
-                        "anlagentyp": "niederspannung",
+                        "anlagentyp": "Niederspannung",
                         "qr_code": "QR-MUELLER-001",
                     },
                     {
                         "bezeichnung": "PV-Anlage Dach Block C",
-                        "anlagentyp": "pv",
+                        "anlagentyp": "PV-Anlage",
                         "qr_code": "QR-MUELLER-002",
                     },
                 ],
@@ -106,7 +107,7 @@ MANDANTEN = [
                 "name": "Café Sonnenschein",
                 "typ": "gewerbe",
                 "anlagen": [
-                    {"bezeichnung": "Hauptverteilung Café Sonnenschein", "anlagentyp": "niederspannung"},
+                    {"bezeichnung": "Hauptverteilung Café Sonnenschein", "anlagentyp": "Niederspannung"},
                 ],
                 "vertraege": [],
             },
@@ -115,11 +116,16 @@ MANDANTEN = [
                 "name": "Familie Schneider",
                 "typ": "privat",
                 "anlagen": [
-                    {"bezeichnung": "Zählerschrank EFH Schneider", "anlagentyp": "niederspannung"},
+                    {"bezeichnung": "Zählerschrank EFH Schneider", "anlagentyp": "Niederspannung"},
                 ],
                 "vertraege": [],
             },
         ],
+        # Ohne Zuweisung sehen Techniker (nur_zugewiesene_kunden) einen leeren Feed.
+        "zuweisungen": {
+            "technik1@mueller.example.de": ["K-1001", "K-1002"],
+            "technik2@mueller.example.de": ["K-1003"],
+        },
         "vorgaenge": [
             {
                 "vorgangsnummer": "V-1001",
@@ -206,7 +212,7 @@ MANDANTEN = [
                 "anlagen": [
                     {
                         "bezeichnung": "Ladeinfrastruktur Kundenparkplatz",
-                        "anlagentyp": "ladeinfrastruktur",
+                        "anlagentyp": "Ladeinfrastruktur",
                         "qr_code": "QR-BLITZ-001",
                     },
                 ],
@@ -224,7 +230,7 @@ MANDANTEN = [
                 "name": "Stadtverwaltung Musterhausen",
                 "typ": "oeffentlich",
                 "anlagen": [
-                    {"bezeichnung": "BMA Rathaus", "anlagentyp": "niederspannung"},
+                    {"bezeichnung": "BMA Rathaus", "anlagentyp": "Niederspannung"},
                 ],
                 "vertraege": [],
             },
@@ -233,11 +239,15 @@ MANDANTEN = [
                 "name": "Herr und Frau Kaiser",
                 "typ": "privat",
                 "anlagen": [
-                    {"bezeichnung": "Zählerschrank EFH Kaiser", "anlagentyp": "niederspannung"},
+                    {"bezeichnung": "Zählerschrank EFH Kaiser", "anlagentyp": "Niederspannung"},
                 ],
                 "vertraege": [],
             },
         ],
+        "zuweisungen": {
+            "technik1@blitz.example.de": ["K-2001", "K-2002"],
+            "technik2@blitz.example.de": ["K-2003"],
+        },
         "vorgaenge": [
             {
                 "vorgangsnummer": "V-2001",
@@ -458,6 +468,21 @@ async def _seed_kunden(session, mandant: Mandant, kunden_data: list[dict]) -> di
     return kunden_by_nummer
 
 
+async def _seed_zuweisungen(session, mandant: Mandant, zuweisungen: dict[str, list[str]]) -> None:
+    for email, kundennummern in zuweisungen.items():
+        user = await _get_or_none(session, User, email=email)
+        if user is None:
+            continue
+        for kundennummer in kundennummern:
+            kunde = await _get_or_none(session, Kunde, mandant_id=mandant.id, kundennummer=kundennummer)
+            if kunde is None:
+                continue
+            if await _get_or_none(session, KundeZuweisung, kunde_id=kunde.id, user_id=user.id) is None:
+                session.add(KundeZuweisung(mandant_id=mandant.id, kunde_id=kunde.id, user_id=user.id))
+                print(f"[seed]   Zuweisung: {email} -> {kundennummer}")
+    await session.flush()
+
+
 async def _seed_vorgaenge(
     session, mandant: Mandant, vorgaenge_data: list[dict], admin_user: User | None
 ) -> None:
@@ -497,6 +522,9 @@ async def _seed_vorgaenge(
         )
         if status in ("abgeschlossen", "abgerechnet"):
             vorgang.abgeschlossen_am = datetime.now(timezone.utc) - timedelta(days=3)
+            # created_at defaultet auf jetzt -- ohne Rückdatierung läge der Abschluss
+            # vor der Anlage und jede Durchlaufzeit wäre negativ.
+            vorgang.created_at = (vorgang.abgeschlossen_am - timedelta(days=5)).replace(tzinfo=None)
         session.add(vorgang)
         await session.flush()
 
@@ -571,6 +599,7 @@ async def seed() -> None:
             mandant, admin_user = await _seed_users_and_mandant(session, mandant_data)
             await _seed_system_tags(session, mandant)
             await _seed_kunden(session, mandant, mandant_data["kunden"])
+            await _seed_zuweisungen(session, mandant, mandant_data.get("zuweisungen", {}))
             await _seed_vorgaenge(session, mandant, mandant_data["vorgaenge"], admin_user)
 
     print("\n[seed] Fertig.")
