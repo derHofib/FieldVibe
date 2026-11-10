@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { statusBadgeKlasse, statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, Inbox, Repeat } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,16 +9,6 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
-};
 
 function AdresseBearbeiten({
   standortId,
@@ -365,10 +356,10 @@ export function StandortDetailPage() {
               <span
                 key={status}
                 className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                  STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                  statusBadgeKlasse(status)
                 }`}
               >
-                {anzahl}× {status}
+                {anzahl}× {statusLabel(status)}
               </span>
             ))}
           </div>
@@ -436,8 +427,8 @@ export function StandortDetailPage() {
                   </div>
                   <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusBadgeKlasse(v.status)}`}>
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

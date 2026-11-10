@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
+import { statusBadgeKlasse, statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, Inbox, MapPin, Repeat } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -380,16 +382,6 @@ function AnsprechpartnerVerwaltung({
     </div>
   );
 }
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
-};
 
 function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
   const queryClient = useQueryClient();
@@ -1159,7 +1151,7 @@ export function KundeProfilePage() {
         <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="text-xs text-slate-400 dark:text-stone-500">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde.name}</h1>
-          {kunde.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{kunde.typ}</span>}
+          {kunde.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{kundeTypLabel(kunde.typ)}</span>}
         </div>
       </div>
     );
@@ -1180,7 +1172,7 @@ export function KundeProfilePage() {
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">{profil.kundennummer}</div>
             <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.name}</h1>
-            {profil.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{profil.typ}</span>}
+            {profil.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{kundeTypLabel(profil.typ)}</span>}
           </div>
           {kannVerwalten && (
             <div className="flex shrink-0 gap-2">
@@ -1337,8 +1329,8 @@ export function KundeProfilePage() {
                   </div>
                   <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusBadgeKlasse(v.status)}`}>
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

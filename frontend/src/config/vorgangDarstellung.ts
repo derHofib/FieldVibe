@@ -25,6 +25,19 @@ export const STATUS_BADGE: Record<VorgangStatus, string> = {
   storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
 };
 
+/** Für Stellen, die den Status nur als String kennen (z. B. Suchtreffer,
+ * Auswertungen nach Status) -- unbekannte Werte werden unverändert gezeigt. */
+export function statusLabel(status: string): string {
+  return (STATUS_LABEL as Record<string, string>)[status] ?? status;
+}
+
+export function statusBadgeKlasse(status: string): string {
+  return (
+    (STATUS_BADGE as Record<string, string>)[status] ??
+    "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+  );
+}
+
 export const LEISTUNGSTYP_LABEL: Record<string, string> = {
   installation: "Installation",
   pruefung: "Prüfung",

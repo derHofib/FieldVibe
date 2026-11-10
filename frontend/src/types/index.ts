@@ -495,7 +495,7 @@ export interface StoriesResponse {
   wartet_kunde: StoryItem[];
 }
 
-export type SearchKategorie = "kunde" | "anlage" | "vorgang" | "tag";
+export type SearchKategorie = "kunde" | "anlage" | "vorgang" | "rechnung" | "tag";
 
 export interface SearchHit {
   kategorie: SearchKategorie;

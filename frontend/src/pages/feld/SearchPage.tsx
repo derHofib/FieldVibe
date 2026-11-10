@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { statusLabel } from "../../config/vorgangDarstellung";
+import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { SearchX } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,8 +14,20 @@ const KATEGORIE_LABEL: Record<string, string> = {
   kunde: "Kunde",
   anlage: "Anlage",
   vorgang: "Vorgang",
+  rechnung: "Rechnung",
   tag: "Tag",
 };
+
+// Das Backend liefert Status/Typ als Rohwert im Untertitel.
+function subtitelLabel(hit: SearchHit): string {
+  const text = hit.subtitel ?? "";
+  if (hit.kategorie === "vorgang") return statusLabel(text);
+  if (hit.kategorie === "rechnung") {
+    const [name, status] = text.split(" · ");
+    return status ? `${name} · ${(RECHNUNG_STATUS_LABEL as Record<string, string>)[status] ?? status}` : text;
+  }
+  return text;
+}
 
 function hitPath(hit: SearchHit): string {
   switch (hit.kategorie) {
@@ -80,7 +94,7 @@ export function SearchPage() {
                 <div>
                   <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{hit.titel}</div>
                   {hit.subtitel && (
-                    <div className="text-xs text-slate-400 dark:text-stone-500">{hit.subtitel}</div>
+                    <div className="text-xs text-slate-400 dark:text-stone-500">{subtitelLabel(hit)}</div>
                   )}
                 </div>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-stone-800 dark:text-stone-400">
