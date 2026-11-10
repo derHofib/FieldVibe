@@ -175,9 +175,9 @@ function NeueAnfrage() {
         <button
           type="button"
           onClick={() => setZeigeNeuerStandort(true)}
-          className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
         >
-          + Neuen Standort anlegen
+          + Neuer Standort
         </button>
       ) : (
         <div className="flex gap-2">

@@ -227,13 +227,13 @@ export function NewVorgangPage() {
           <span className="flex gap-3">
             <button
               onClick={() => navigate(`/anlagen/${anlage.id}`)}
-              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
             >
               ansehen
             </button>
             <button
               onClick={() => setAnlage(null)}
-              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
             >
               entfernen
             </button>
@@ -277,9 +277,9 @@ export function NewVorgangPage() {
             <button
               type="button"
               onClick={() => setShowNewKunde(true)}
-              className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
+              className="btn-touch mt-1 text-xs font-medium text-blue-700 dark:text-blue-400"
             >
-              + Neuen Kunden anlegen
+              + Neuer Kunde
             </button>
           )}
         </div>
@@ -405,9 +405,9 @@ export function NewVorgangPage() {
               <button
                 type="button"
                 onClick={() => setShowNewAnlage(true)}
-                className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
+                className="btn-touch mt-1 text-xs font-medium text-blue-700 dark:text-blue-400"
               >
-                + Neue Anlage anlegen
+                + Neue Anlage
               </button>
             )}
           </div>

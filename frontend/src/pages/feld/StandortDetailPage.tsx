@@ -188,12 +188,12 @@ function AnlagenVerwaltung({
   if (modus === "keine") {
     return (
       <div className="flex gap-3">
-        <button onClick={() => setModus("neu")} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
-          + Neue Anlage anlegen
+        <button onClick={() => setModus("neu")} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+          + Neue Anlage
         </button>
         <button
           onClick={() => setModus("zuordnen")}
-          className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
         >
           Bestehende Anlage zuordnen
         </button>

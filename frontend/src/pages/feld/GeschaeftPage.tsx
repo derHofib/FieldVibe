@@ -280,7 +280,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
           onClick={() => setShowForm((v) => !v)}
           className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
         >
-          {showForm ? "Abbrechen" : "+ Neu"}
+          {showForm ? "Abbrechen" : "+ Neuer Eintrag"}
         </button>
       </div>
 
@@ -1099,7 +1099,7 @@ export function GeschaeftPage() {
                 onClick={() => setShowLieferantForm((v) => !v)}
                 className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
               >
-                {showLieferantForm ? "Abbrechen" : "+ Neu"}
+                {showLieferantForm ? "Abbrechen" : "+ Neuer Lieferant"}
               </button>
             </div>
             {showLieferantForm && (

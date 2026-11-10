@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { searchApi, tagsApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { SearchHit } from "../../types";
 
 const KATEGORIE_LABEL: Record<string, string> = {
@@ -29,7 +30,8 @@ function hitPath(hit: SearchHit): string {
 }
 
 export function SearchPage() {
-  const [q, setQ] = useState("");
+  const [eingabe, setQ] = useState("");
+  const q = useDebouncedValue(eingabe);
   const navigate = useNavigate();
 
   const { data: tags } = useQuery({ queryKey: ["tags"], queryFn: tagsApi.list });
@@ -43,7 +45,7 @@ export function SearchPage() {
     <div className="space-y-4">
       <input
         autoFocus
-        value={q}
+        value={eingabe}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Kunde, Anlage, Vorgangsnummer, #Tag…"
         className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"

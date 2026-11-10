@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { MailAccount, MailAttachment } from "../../types";
 import { ComposePanel, type ComposeModus } from "./ComposePanel";
 
@@ -46,7 +47,8 @@ export function MailClient({ account }: { account: MailAccount }) {
   const queryClient = useQueryClient();
   const [aktiverOrdner, setAktiverOrdner] = useState<string | null>(null);
   const [aktiveNachricht, setAktiveNachricht] = useState<string | null>(null);
-  const [suche, setSuche] = useState("");
+  const [sucheEingabe, setSuche] = useState("");
+  const suche = useDebouncedValue(sucheEingabe);
   const [compose, setCompose] = useState<ComposeModus | null>(null);
 
   const { data: ordner } = useQuery({
@@ -146,7 +148,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-slate-400 dark:text-stone-500"
           />
           <input
-            value={suche}
+            value={sucheEingabe}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suchen…"
             className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"

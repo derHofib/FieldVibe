@@ -105,7 +105,7 @@ export function RechnungseingangPage() {
             onClick={() => setShowForm((v) => !v)}
             className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
           >
-            {showForm ? "Abbrechen" : "+ Neu"}
+            {showForm ? "Abbrechen" : "+ Neue Eingangsrechnung"}
           </button>
         )}
       </div>

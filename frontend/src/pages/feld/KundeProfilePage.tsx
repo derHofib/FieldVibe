@@ -302,7 +302,7 @@ function AnsprechpartnerVerwaltung({
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Ansprechpartner</h2>
         {kannVerwalten && !neuAnlegen && (
           <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
-            + Neu
+            + Neuer Ansprechpartner
           </button>
         )}
       </div>
@@ -354,7 +354,7 @@ function AnsprechpartnerVerwaltung({
                 <div className="mt-2 flex gap-3">
                   <button
                     onClick={() => setBearbeitenId(a.id)}
-                    className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+                    className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
                   >
                     Bearbeiten
                   </button>
@@ -441,7 +441,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
             setAuswahl(zugewiesen.map((t) => t.id));
             setBearbeiten(true);
           }}
-          className="btn-touch mt-2 text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch mt-2 text-xs font-medium text-blue-700 dark:text-blue-400"
         >
           Bearbeiten
         </button>
@@ -541,8 +541,8 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
-        + Neue Anlage anlegen
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+        + Neue Anlage
       </button>
     );
   }
@@ -575,7 +575,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           <button
             type="button"
             onClick={() => setZeigeNeuerStandort((v) => !v)}
-            className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
           >
             {zeigeNeuerStandort ? "Abbrechen" : "+ Neuer Standort"}
           </button>
@@ -678,8 +678,8 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
-        + Neuen Standort anlegen
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+        + Neuer Standort
       </button>
     );
   }
@@ -981,8 +981,8 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
-        + Neuen Zugang anlegen
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+        + Neuer Zugang
       </button>
     );
   }
@@ -1101,9 +1101,9 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
       )}
       <button
         onClick={() => navigate(`/dauerauftraege/neu?kunde_id=${kundeId}`)}
-        className="btn-touch mt-2 text-xs text-blue-700 underline dark:text-blue-400"
+        className="btn-touch mt-2 text-xs font-medium text-blue-700 dark:text-blue-400"
       >
-        + Neuen Dauer-Auftrag anlegen
+        + Neuer Dauer-Auftrag
       </button>
     </div>
   );
