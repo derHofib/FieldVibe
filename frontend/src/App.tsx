@@ -77,6 +77,7 @@ import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 import { PartnerPortalApp } from "./partner/PartnerPortalApp";
+import { NichtGefunden } from "./components/NichtGefunden";
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -163,7 +164,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
           <Route path="/einstellungen" element={<EinstellungenPage />} />
-          <Route path="*" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="/" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/uebersicht" startLabel="Zur Übersicht" />} />
         </Route>
       )}
 
@@ -228,7 +230,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
             <Route path="/team-zeiten" element={<TeamZeitenPage />} />
             <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
             <Route path="/papierkorb" element={<PapierkorbPage />} />
-            <Route path="*" element={<Navigate to={standardStartseite} replace />} />
+            <Route path="/" element={<Navigate to={standardStartseite} replace />} />
+            <Route path="*" element={<NichtGefunden startRoute={standardStartseite} />} />
           </Route>
         </Route>
       )}

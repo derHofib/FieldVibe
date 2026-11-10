@@ -63,6 +63,7 @@ import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
+import { NichtGefunden } from "../components/NichtGefunden";
 
 /** Router der Desktop-Oberflaeche. Die drei ausgebauten Bereiche (Vorgaenge,
  * Rechnungen/Angebote, Dispo/Buchhaltung) haben eigene, auf die Breite
@@ -203,7 +204,8 @@ export function OfficeApp() {
           <Route path="/papierkorb" element={<PapierkorbPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to={startseite} replace />} />
+          <Route path="/" element={<Navigate to={startseite} replace />} />
+          <Route path="*" element={<NichtGefunden startRoute={startseite} alsH1 />} />
         </Route>
       </Route>
     </Routes>

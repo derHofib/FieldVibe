@@ -10,6 +10,7 @@ import { PartnerProfilPage } from "./PartnerProfilPage";
 import { PartnerRegistrierenPage } from "./PartnerRegistrierenPage";
 import { PartnerResetPasswordPage } from "./PartnerResetPasswordPage";
 import { PartnerZeitplanPage } from "./PartnerZeitplanPage";
+import { NichtGefunden } from "../components/NichtGefunden";
 
 function PartnerPortalRoutes() {
   const { isAuthenticated, isLoading } = usePartnerAuth();
@@ -34,7 +35,8 @@ function PartnerPortalRoutes() {
           <Route path="auftraege/:id" element={<PartnerAuftragDetailPage />} />
           <Route path="zeitplan" element={<PartnerZeitplanPage />} />
           <Route path="profil" element={<PartnerProfilPage />} />
-          <Route path="*" element={<Navigate to="/partnerportal/auftraege" replace />} />
+          <Route index element={<Navigate to="/partnerportal/auftraege" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/partnerportal/auftraege" alsH1 />} />
         </Route>
       )}
     </Routes>
