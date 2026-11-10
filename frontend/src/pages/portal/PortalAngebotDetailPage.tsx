@@ -7,6 +7,7 @@ import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { SkeletonCard } from "../../components/Skeleton";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 import { datumZeit, widerrufFristLetzterTag } from "../../utils/portalAngebot";
 import { openPdfBlob } from "../../utils/pdf";
@@ -140,7 +141,7 @@ export function PortalAngebotDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["portal-verbraucherschutz"] });
   };
 
-  const { data: angebot } = useQuery({
+  const { data: angebot, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-angebot", id],
     queryFn: () => kundenportalApi.angebot(id!),
     enabled: !!id,
@@ -176,7 +177,8 @@ export function PortalAngebotDetailPage() {
     onError: meldeFehler,
   });
 
-  if (!angebot) return <SkeletonCard />;
+  if (isLoading) return <SkeletonCard />;
+  if (!angebot) return <FehlerZustand fehler={ladeFehler} was="Das Angebot" zurueck onErneut={() => void neuLaden()} />;
 
   async function ablehnen() {
     if (await bestaetigen({ titel: "Angebot ablehnen?", text: "Der Betrieb wird darüber benachrichtigt.", bestaetigenLabel: "Ablehnen" })) {

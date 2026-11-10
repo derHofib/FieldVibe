@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { SkeletonCard } from "../../components/Skeleton";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { PortalVorgangEvent, VorgangStatus } from "../../types";
 
@@ -55,7 +56,7 @@ export function PortalVorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: vorgang } = useQuery({
+  const { data: vorgang, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-vorgang", id],
     queryFn: () => kundenportalApi.vorgang(id!),
     enabled: !!id,
@@ -66,7 +67,8 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <SkeletonCard />;
+  if (isLoading) return <SkeletonCard />;
+  if (!vorgang) return <FehlerZustand fehler={ladeFehler} was="Der Vorgang" zurueck onErneut={() => void neuLaden()} />;
 
   const eventsChronological = [...(events ?? [])].reverse();
 

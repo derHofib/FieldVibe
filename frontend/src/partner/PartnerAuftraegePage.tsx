@@ -7,6 +7,7 @@ import { AbschnittskopfB } from "../components/apple/AbschnittsKopf";
 import { GroupedList, GroupedListRow } from "../components/apple/GroupedList";
 import { StatusPille } from "../components/apple/StatusPille";
 import { EmptyState } from "../components/EmptyState";
+import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 import type { PartnerVorgang } from "../types";
 import { auftragsPhase, auftragsPille, type AuftragsPhase } from "./partnerStatus";
@@ -19,7 +20,7 @@ const GRUPPEN: { phase: AuftragsPhase; titel: string }[] = [
 
 export function PartnerAuftraegePage() {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["partnerportal-auftraege"],
     queryFn: partnerPortalApi.auftraege,
   });
@@ -37,9 +38,7 @@ export function PartnerAuftraegePage() {
           <SkeletonList count={4} />
         </div>
       ) : error ? (
-        <p role="alert" className="px-5 pt-4 text-sm text-st-fehlt">
-          Die Aufträge konnten nicht geladen werden.
-        </p>
+        <FehlerZustand fehler={error} was="Die Aufträge" onErneut={() => void refetch()} className="px-4 pt-4" />
       ) : (data ?? []).length === 0 ? (
         <div className="px-4 pt-4">
           <EmptyState icon={ClipboardList} text="Ihnen sind noch keine Aufträge zugewiesen." />
