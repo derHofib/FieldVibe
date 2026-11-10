@@ -131,3 +131,36 @@ async def test_non_super_admin_cannot_impersonate(client, make_mandant, make_use
         headers=auth_headers(token),
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_super_admin_impersoniert_und_liest_vorgaenge_nur_des_mandanten(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Laeuft mit der NOSUPERUSER-Rolle (conftest erzwingt das): Super-Admin-
+    Zugriff beruht auf der Session-Variable app.is_super_admin, nicht auf
+    einem DB-Superuser."""
+    mandant_a = await make_mandant(name="Mandant A")
+    mandant_b = await make_mandant(name="Mandant B")
+    vorgang_a = await make_vorgang(
+        mandant=mandant_a, kunde=await make_kunde(mandant=mandant_a), titel="Vorgang A"
+    )
+    vorgang_b = await make_vorgang(
+        mandant=mandant_b, kunde=await make_kunde(mandant=mandant_b), titel="Vorgang B"
+    )
+    super_admin = await make_user(mandant=None, role="super_admin", password="pw-123456")
+    token = await login(client, super_admin.email, "pw-123456")
+
+    imp = await client.post(
+        f"/api/admin/mandanten/{mandant_a.id}/impersonate", headers=auth_headers(token)
+    )
+    imp_headers = auth_headers(imp.json()["access_token"])
+
+    resp = await client.get("/api/vorgaenge", headers=imp_headers)
+    assert resp.status_code == 200
+    ids = {v["id"] for v in resp.json()}
+    assert str(vorgang_a.id) in ids
+    assert str(vorgang_b.id) not in ids
+
+    fremd = await client.get(f"/api/vorgaenge/{vorgang_b.id}", headers=imp_headers)
+    assert fremd.status_code == 404

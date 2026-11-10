@@ -1,13 +1,17 @@
+import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db, require_module_kunde
+from app.core.rate_limit import client_ip
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
 from app.models.standort import Standort
@@ -15,24 +19,45 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.anlage import AnlageRead
-from app.schemas.angebot import AngebotRead
-from app.schemas.kundenportal import KundenAngebotAntwort, KundenAnlageCreate, KundenStandortCreate
-from app.schemas.rechnung import RechnungRead
-from app.schemas.standort import StandortRead
-from app.schemas.vorgang import VorgangRead
-from app.schemas.vorgang_anfrage import VorgangAnfrageCreate, VorgangAnfrageRead
-from app.schemas.vorgang_event import VorgangEventRead
-from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.schemas.kundenportal import (
+    PORTAL_EVENT_TYPEN,
+    AngebotPortalRead,
+    AnlagePortalRead,
+    BelehrungPortalRead,
+    KundenAngebotAntwort,
+    KundenAngebotWiderruf,
+    KundenAnlageCreate,
+    KundenStandortCreate,
+    RechnungPortalRead,
+    StandortPortalRead,
+    VerbraucherschutzPortalRead,
+    VorgangAnfragePortalRead,
+    VorgangEventPortalRead,
+    VorgangPortalRead,
+)
+from app.schemas.vorgang_anfrage import VorgangAnfrageCreate
+from app.services import angebot_annahme_service as annahme_service
+from app.services import verbraucherschutz_service as vs
+from app.services.angebot_service import (
+    apply_status_transition,
+    berechne_fassung_sha256,
+    letzter_nachweis,
+    positionen_fuer,
+    summen,
+    to_read_model,
+)
 from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
 from app.services.rechnung_service import (
     positionen_fuer as rechnung_positionen_fuer,
+    vorgang_koepfe_map,
     to_read_model as rechnung_to_read_model,
 )
 from app.services.storage_service import download_bytes
 from app.services.vorgang_anfrage_service import notify_neue_anfrage
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/kundenportal",
@@ -48,23 +73,55 @@ _KUNDE_ERLAUBTE_STATUS = ("angenommen", "abgelehnt")
 
 async def _require_own_vorgang(session: AsyncSession, auth: KundenAuthContext, vorgang_id: UUID) -> Vorgang:
     vorgang = await session.get(Vorgang, vorgang_id)
-    if vorgang is None or vorgang.kunde_id != auth.kunde_id:
+    if vorgang is None or vorgang.kunde_id != auth.kunde_id or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
 
 
-@router.get("/vorgaenge", response_model=list[VorgangRead])
+async def _angebot_portal(
+    session: AsyncSession,
+    angebot: Angebot,
+    *,
+    mandant: Mandant | None = None,
+    kunde: Kunde | None = None,
+) -> AngebotPortalRead:
+    read = AngebotPortalRead.model_validate(await to_read_model(session, angebot), from_attributes=True)
+    mandant = mandant or await session.get(Mandant, angebot.mandant_id)
+    kunde = kunde or await session.get(Kunde, angebot.kunde_id)
+    zusatz: dict = {"verbraucherschutz": vs.b2c_ablauf_aktiv(mandant, kunde)}
+    nachweis = await letzter_nachweis(session, angebot.id)
+    if nachweis is not None:
+        zusatz["nachweis_referenz"] = str(nachweis.id)
+    # Der Widerruf haengt am Nachweis der Annahme (b2c_flag), nicht an der
+    # heutigen Einstellung: schaltet der Betrieb den Schutz spaeter ab, behaelt
+    # der Verbraucher sein Widerrufsrecht fuer den bereits geschlossenen Vertrag.
+    if angebot.status == "angenommen":
+        grund, ende = await annahme_service.widerruf_pruefung(session, angebot, datetime.now(timezone.utc))
+        if ende is not None:
+            zusatz.update(widerruf_moeglich=grund is None, widerruf_frist_bis=ende, widerruf_hinweis=grund)
+    return read.model_copy(update=zusatz)
+
+
+async def _rechnung_portal(session: AsyncSession, rechnung: Rechnung) -> RechnungPortalRead:
+    return RechnungPortalRead.model_validate(
+        await rechnung_to_read_model(session, rechnung), from_attributes=True
+    )
+
+
+@router.get("/vorgaenge", response_model=list[VorgangPortalRead])
 async def list_eigene_vorgaenge(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> list[Vorgang]:
     result = await session.execute(
-        select(Vorgang).where(Vorgang.kunde_id == auth.kunde_id).order_by(Vorgang.last_activity_at.desc())
+        select(Vorgang)
+        .where(Vorgang.kunde_id == auth.kunde_id, Vorgang.geloescht_am.is_(None))
+        .order_by(Vorgang.last_activity_at.desc())
     )
     return list(result.scalars().all())
 
 
-@router.get("/vorgaenge/{vorgang_id}", response_model=VorgangRead)
+@router.get("/vorgaenge/{vorgang_id}", response_model=VorgangPortalRead)
 async def get_eigener_vorgang(
     vorgang_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -73,12 +130,12 @@ async def get_eigener_vorgang(
     return await _require_own_vorgang(session, auth, vorgang_id)
 
 
-@router.get("/vorgaenge/{vorgang_id}/events", response_model=list[VorgangEventRead])
+@router.get("/vorgaenge/{vorgang_id}/events", response_model=list[VorgangEventPortalRead])
 async def list_eigene_vorgang_events(
     vorgang_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[VorgangEventRead]:
+) -> list[VorgangEventPortalRead]:
     await _require_own_vorgang(session, auth, vorgang_id)
     # kundensichtbar ist exakt die in Phase 2/3 dafuer eingefuehrte Trennung
     # zwischen interner und kundenfreigegebener Kommunikation -- hier hart
@@ -87,59 +144,221 @@ async def list_eigene_vorgang_events(
     # umschalten und sieht trotzdem alles; ein Kunde darf das nie).
     result = await session.execute(
         select(VorgangEvent)
-        .where(VorgangEvent.vorgang_id == vorgang_id, VorgangEvent.kundensichtbar.is_(True))
+        .where(
+            VorgangEvent.vorgang_id == vorgang_id,
+            VorgangEvent.kundensichtbar.is_(True),
+            VorgangEvent.event_type.in_(PORTAL_EVENT_TYPEN),
+        )
         .order_by(VorgangEvent.id.desc())
     )
-    return [event_to_read_model(e) for e in result.scalars().all()]
+    return [
+        VorgangEventPortalRead.model_validate(event_to_read_model(e), from_attributes=True)
+        for e in result.scalars().all()
+    ]
 
 
-@router.get("/angebote", response_model=list[AngebotRead])
+@router.get("/angebote", response_model=list[AngebotPortalRead])
 async def list_eigene_angebote(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[AngebotRead]:
+) -> list[AngebotPortalRead]:
     result = await session.execute(
-        select(Angebot).where(Angebot.kunde_id == auth.kunde_id).order_by(Angebot.created_at.desc())
+        select(Angebot)
+        .where(
+            Angebot.kunde_id == auth.kunde_id,
+            Angebot.geloescht_am.is_(None),
+            Angebot.status != "entwurf",
+        )
+        .order_by(Angebot.created_at.desc())
     )
-    return [await to_read_model(session, a) for a in result.scalars().all()]
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    return [
+        await _angebot_portal(session, a, mandant=mandant, kunde=kunde) for a in result.scalars().all()
+    ]
 
 
 async def _require_own_angebot(session: AsyncSession, auth: KundenAuthContext, angebot_id: UUID) -> Angebot:
     angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.kunde_id != auth.kunde_id:
+    if (
+        angebot is None
+        or angebot.kunde_id != auth.kunde_id
+        or angebot.geloescht_am is not None
+        or angebot.status == "entwurf"
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     return angebot
 
 
-@router.get("/angebote/{angebot_id}", response_model=AngebotRead)
+@router.get("/angebote/{angebot_id}", response_model=AngebotPortalRead)
 async def get_eigenes_angebot(
     angebot_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> AngebotRead:
+) -> AngebotPortalRead:
     angebot = await _require_own_angebot(session, auth, angebot_id)
-    return await to_read_model(session, angebot)
+    return await _angebot_portal(session, angebot)
 
 
-@router.patch("/angebote/{angebot_id}", response_model=AngebotRead)
+@router.patch("/angebote/{angebot_id}", response_model=AngebotPortalRead)
 async def antwort_auf_angebot(
     angebot_id: UUID,
     body: KundenAngebotAntwort,
+    request: Request,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> AngebotRead:
+) -> AngebotPortalRead:
     if body.status not in _KUNDE_ERLAUBTE_STATUS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Als Kunde können Sie ein Angebot nur annehmen oder ablehnen",
         )
     angebot = await _require_own_angebot(session, auth, angebot_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    zugang = await session.get(KundenportalZugang, auth.zugang_id)
+    aktion = "annahme" if body.status == "angenommen" else "ablehnung"
+
+    # Button-Loesung (§ 312j Abs. 3 BGB) nur bei der Annahme durch einen
+    # Verbraucher; das Ablehnen bleibt formlos, wird aber protokolliert.
+    b2c = vs.b2c_ablauf_aktiv(mandant, kunde)
+    belehrung = vs.belehrung_fuer(mandant) if b2c and aktion == "annahme" else None
+    if belehrung is not None:
+        if body.bestaetigung is not True:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Die Beauftragung muss ausdrücklich als zahlungspflichtig bestätigt werden",
+            )
+        if body.belehrung_version != belehrung.version:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Die Widerrufsbelehrung fehlt oder wurde aktualisiert – bitte die Seite neu laden",
+            )
+    fassung_konflikt = HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Das Angebot wurde seit dem Laden der Seite geändert – bitte die Seite neu laden und erneut prüfen",
+    )
+    if body.fassung_sha256 is not None and body.fassung_sha256 != berechne_fassung_sha256(
+        angebot, await positionen_fuer(session, angebot.id)
+    ):
+        raise fassung_konflikt
+
     await apply_status_transition(
         session, angebot, body.status, mandant_id=auth.mandant_id, actor_user_id=None
     )
+    # Hash aus dem gesperrten, frischen Stand: faengt eine Aenderung zwischen
+    # Vorpruefung und Sperre ab (die Transaktion rollt beim 409 zurueck).
+    positionen = await positionen_fuer(session, angebot.id)
+    fassung = berechne_fassung_sha256(angebot, positionen)
+    if body.fassung_sha256 is not None and body.fassung_sha256 != fassung:
+        raise fassung_konflikt
+
+    zeitpunkt = angebot.angenommen_am if aktion == "annahme" else angebot.abgelehnt_am
+    nachweis = await annahme_service.protokolliere(
+        session,
+        angebot=angebot,
+        aktion=aktion,
+        zugang=zugang,
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        fassung_sha256=fassung,
+        zeitpunkt=zeitpunkt,
+        b2c=b2c,
+        belehrung=belehrung,
+    )
     await session.flush()
     await session.refresh(angebot)
-    return await to_read_model(session, angebot)
+
+    if belehrung is not None:
+        betreff, text = annahme_service.baue_annahme_mail(
+            mandant=mandant,
+            angebot=angebot,
+            zugang=zugang,
+            brutto=summen(positionen, angebot.mwst_satz)[1],
+            nachweis=nachweis,
+            belehrung=belehrung,
+        )
+        try:
+            pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
+            anhang = (f"{angebot.angebotsnummer}.pdf", pdf_bytes, "application/pdf")
+        except Exception:
+            logger.exception("Angebots-PDF für Bestätigungsmail %s nicht erzeugt", angebot.angebotsnummer)
+            anhang = None
+        await annahme_service.sende_kundenmail(
+            session, angebot=angebot, zugang=zugang, betreff=betreff, text=text, anhang=anhang
+        )
+    return await _angebot_portal(session, angebot, mandant=mandant, kunde=kunde)
+
+
+@router.get("/verbraucherschutz", response_model=VerbraucherschutzPortalRead)
+async def get_verbraucherschutz(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> VerbraucherschutzPortalRead:
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    if not vs.b2c_ablauf_aktiv(mandant, kunde):
+        return VerbraucherschutzPortalRead(verbraucherschutz=False, widerrufsfrist_tage=vs.WIDERRUFSFRIST_TAGE)
+    belehrung = vs.belehrung_fuer(mandant)
+    return VerbraucherschutzPortalRead(
+        verbraucherschutz=True,
+        widerrufsfrist_tage=vs.WIDERRUFSFRIST_TAGE,
+        belehrung=BelehrungPortalRead(
+            version=belehrung.version, text=belehrung.text, ist_platzhalter=belehrung.ist_platzhalter
+        ),
+        widerrufsformular_text=vs.muster_widerrufsformular(mandant),
+    )
+
+
+@router.post("/angebote/{angebot_id}/widerruf", response_model=AngebotPortalRead)
+async def widerruf_angebot(
+    angebot_id: UUID,
+    body: KundenAngebotWiderruf,
+    request: Request,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> AngebotPortalRead:
+    """Widerrufsbutton (§ 356a BGB), zweite Stufe: erst die Bestaetigungsseite
+    im Portal schickt `bestaetigung: true`."""
+    if body.bestaetigung is not True:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Der Widerruf muss ausdrücklich bestätigt werden",
+        )
+    angebot = await _require_own_angebot(session, auth, angebot_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    zugang = await session.get(KundenportalZugang, auth.zugang_id)
+
+    jetzt = await annahme_service.widerrufe(session, angebot, mandant_id=auth.mandant_id)
+    nachweis = await annahme_service.protokolliere(
+        session,
+        angebot=angebot,
+        aktion="widerruf",
+        zugang=zugang,
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        fassung_sha256=berechne_fassung_sha256(angebot, await positionen_fuer(session, angebot.id)),
+        zeitpunkt=jetzt,
+        b2c=True,
+    )
+    await session.refresh(angebot)
+
+    betreff, text = annahme_service.baue_widerruf_mail(
+        mandant=mandant, angebot=angebot, zugang=zugang, nachweis=nachweis
+    )
+    await annahme_service.sende_kundenmail(session, angebot=angebot, zugang=zugang, betreff=betreff, text=text)
+    await annahme_service.benachrichtige_mandant_widerruf(
+        session, mandant=mandant, angebot=angebot, kunde=kunde, nachweis=nachweis
+    )
+    return await _angebot_portal(session, angebot, mandant=mandant, kunde=kunde)
+
+
+async def _angebot_pdf_bytes(session: AsyncSession, mandant: Mandant, angebot: Angebot, kunde: Kunde) -> bytes:
+    positionen = await positionen_fuer(session, angebot.id)
+    bearbeiter = await session.get(User, angebot.erstellt_von)
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
+    return generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
 
 
 @router.get("/angebote/{angebot_id}/pdf")
@@ -150,12 +369,9 @@ async def eigenes_angebot_pdf(
 ) -> Response:
     angebot = await _require_own_angebot(session, auth, angebot_id)
     kunde = await session.get(Kunde, angebot.kunde_id)
-    positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    bearbeiter = await session.get(User, angebot.erstellt_von)
-    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
+    pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -163,32 +379,43 @@ async def eigenes_angebot_pdf(
     )
 
 
-@router.get("/rechnungen", response_model=list[RechnungRead])
+@router.get("/rechnungen", response_model=list[RechnungPortalRead])
 async def list_eigene_rechnungen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[RechnungRead]:
+) -> list[RechnungPortalRead]:
     result = await session.execute(
-        select(Rechnung).where(Rechnung.kunde_id == auth.kunde_id).order_by(Rechnung.created_at.desc())
+        select(Rechnung)
+        .where(
+            Rechnung.kunde_id == auth.kunde_id,
+            Rechnung.geloescht_am.is_(None),
+            Rechnung.status != "entwurf",
+        )
+        .order_by(Rechnung.created_at.desc())
     )
-    return [await rechnung_to_read_model(session, r) for r in result.scalars().all()]
+    return [await _rechnung_portal(session, r) for r in result.scalars().all()]
 
 
 async def _require_own_rechnung(session: AsyncSession, auth: KundenAuthContext, rechnung_id: UUID) -> Rechnung:
     rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.kunde_id != auth.kunde_id:
+    if (
+        rechnung is None
+        or rechnung.kunde_id != auth.kunde_id
+        or rechnung.geloescht_am is not None
+        or rechnung.status == "entwurf"
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     return rechnung
 
 
-@router.get("/rechnungen/{rechnung_id}", response_model=RechnungRead)
+@router.get("/rechnungen/{rechnung_id}", response_model=RechnungPortalRead)
 async def get_eigene_rechnung(
     rechnung_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> RechnungRead:
+) -> RechnungPortalRead:
     rechnung = await _require_own_rechnung(session, auth, rechnung_id)
-    return await rechnung_to_read_model(session, rechnung)
+    return await _rechnung_portal(session, rechnung)
 
 
 @router.get("/rechnungen/{rechnung_id}/pdf")
@@ -201,8 +428,32 @@ async def eigene_rechnung_pdf(
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     positionen = await rechnung_positionen_fuer(session, rechnung.id)
+    # Die Stornorechnung gehoert demselben Kunden wie das Original; ueber die
+    # RLS-Session des Portals bleibt sie trotzdem mandantengetrennt.
+    storniert_rechnung = None
+    if rechnung.storniert_rechnung_id is not None:
+        storniert_rechnung = await session.get(Rechnung, rechnung.storniert_rechnung_id)
+        if storniert_rechnung is not None and storniert_rechnung.kunde_id != auth.kunde_id:
+            storniert_rechnung = None
 
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
+    bezug_rechnung = None
+    if rechnung.bezug_rechnung_id is not None:
+        bezug_rechnung = await session.get(Rechnung, rechnung.bezug_rechnung_id)
+        if bezug_rechnung is not None and bezug_rechnung.kunde_id != auth.kunde_id:
+            bezug_rechnung = None
+
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
+
+    pdf_bytes = generate_rechnung_pdf(
+        mandant,
+        rechnung,
+        kunde,
+        positionen,
+        storniert_rechnung=storniert_rechnung,
+        vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
+        logo_bytes=logo_bytes,
+        bezug_rechnung=bezug_rechnung,
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -213,18 +464,20 @@ async def eigene_rechnung_pdf(
 # --- Standorte (Selfservice: der Kunde legt eigene Standorte an) -----------
 
 
-@router.get("/standorte", response_model=list[StandortRead])
+@router.get("/standorte", response_model=list[StandortPortalRead])
 async def list_eigene_standorte(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> list[Standort]:
     result = await session.execute(
-        select(Standort).where(Standort.kunde_id == auth.kunde_id).order_by(Standort.bezeichnung)
+        select(Standort)
+        .where(Standort.kunde_id == auth.kunde_id, Standort.geloescht_am.is_(None))
+        .order_by(Standort.bezeichnung)
     )
     return list(result.scalars().all())
 
 
-@router.post("/standorte", response_model=StandortRead, status_code=status.HTTP_201_CREATED)
+@router.post("/standorte", response_model=StandortPortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigenen_standort(
     body: KundenStandortCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -253,18 +506,20 @@ async def create_eigenen_standort(
 # --- Anlagen (Selfservice: der Kunde legt eigene Anlagen an) ---------------
 
 
-@router.get("/anlagen", response_model=list[AnlageRead])
+@router.get("/anlagen", response_model=list[AnlagePortalRead])
 async def list_eigene_anlagen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> list[Anlage]:
     result = await session.execute(
-        select(Anlage).where(Anlage.kunde_id == auth.kunde_id).order_by(Anlage.bezeichnung)
+        select(Anlage)
+        .where(Anlage.kunde_id == auth.kunde_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
     )
     return list(result.scalars().all())
 
 
-@router.post("/anlagen", response_model=AnlageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/anlagen", response_model=AnlagePortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigene_anlage(
     body: KundenAnlageCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -272,7 +527,7 @@ async def create_eigene_anlage(
 ) -> Anlage:
     if body.standort_id is not None:
         standort = await session.get(Standort, body.standort_id)
-        if standort is None or standort.kunde_id != auth.kunde_id:
+        if standort is None or standort.kunde_id != auth.kunde_id or standort.geloescht_am is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Standort nicht gefunden"
             )
@@ -303,32 +558,32 @@ async def create_eigene_anlage(
 # --- Auftragsanfragen (muessen von einem Mitarbeiter bestaetigt werden) ----
 
 
-@router.get("/anfragen", response_model=list[VorgangAnfrageRead])
+@router.get("/anfragen", response_model=list[VorgangAnfragePortalRead])
 async def list_eigene_anfragen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> list[VorgangAnfrage]:
     result = await session.execute(
         select(VorgangAnfrage)
-        .where(VorgangAnfrage.kunde_id == auth.kunde_id)
+        .where(VorgangAnfrage.kunde_id == auth.kunde_id, VorgangAnfrage.geloescht_am.is_(None))
         .order_by(VorgangAnfrage.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-@router.get("/anfragen/{anfrage_id}", response_model=VorgangAnfrageRead)
+@router.get("/anfragen/{anfrage_id}", response_model=VorgangAnfragePortalRead)
 async def get_eigene_anfrage(
     anfrage_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> VorgangAnfrage:
     anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None or anfrage.kunde_id != auth.kunde_id:
+    if anfrage is None or anfrage.kunde_id != auth.kunde_id or anfrage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
     return anfrage
 
 
-@router.post("/anfragen", response_model=VorgangAnfrageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/anfragen", response_model=VorgangAnfragePortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigene_anfrage(
     body: VorgangAnfrageCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -336,7 +591,7 @@ async def create_eigene_anfrage(
 ) -> VorgangAnfrage:
     if body.standort_id is not None:
         standort = await session.get(Standort, body.standort_id)
-        if standort is None or standort.kunde_id != auth.kunde_id:
+        if standort is None or standort.kunde_id != auth.kunde_id or standort.geloescht_am is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Standort nicht gefunden"
             )
@@ -346,7 +601,7 @@ async def create_eigene_anfrage(
             )
     if body.anlage_id is not None:
         anlage = await session.get(Anlage, body.anlage_id)
-        if anlage is None or anlage.kunde_id != auth.kunde_id:
+        if anlage is None or anlage.kunde_id != auth.kunde_id or anlage.geloescht_am is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Anlage nicht gefunden"
             )

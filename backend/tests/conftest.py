@@ -1,5 +1,8 @@
+import asyncio
 import os
+import socket
 import uuid
+from urllib.parse import urlparse
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -10,13 +13,33 @@ os.environ.setdefault(
     "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
-# Fixed port (not dynamically chosen) because app.services.storage_service
-# builds its boto3 clients at import time -- these env vars must exist
-# before `from app.main import app` pulls that module in below, so the
-# ThreadedMotoServer fixture further down just has to bind the same port
-# rather than discover and propagate one after the fact.
-os.environ.setdefault("S3_ENDPOINT_URL", "http://localhost:9199")
-os.environ.setdefault("S3_PUBLIC_URL_BASE", "http://localhost:9199")
+# Ohne explizite Dev/Test-Umgebung bricht die Settings-Pruefung bei den
+# Test-Secrets ab (app/core/config.py).
+os.environ.setdefault("ENVIRONMENT", "test")
+# Bestehende Tests nutzen das Refresh-Token aus dem Body -- die Uebergangsfrist
+# (config.refresh_body_bis) darf sie nicht mit dem Kalender kippen lassen.
+os.environ.setdefault("FIELDVIBE_REFRESH_BODY_BIS", "2999-12-31")
+
+
+def _moto_port_ermitteln() -> int:
+    # Explizit gesetzt (TEST_MOTO_PORT oder vorhandene S3_ENDPOINT_URL) gewinnt;
+    # sonst einen vom OS vergebenen freien Port nehmen, damit parallele
+    # pytest-Laeufe nicht um denselben Port konkurrieren. Muss vor dem Import
+    # der App passieren: storage_service baut seine boto3-Clients zur
+    # Importzeit gegen S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE.
+    if os.environ.get("TEST_MOTO_PORT"):
+        return int(os.environ["TEST_MOTO_PORT"])
+    vorhanden = urlparse(os.environ.get("S3_ENDPOINT_URL", "")).port
+    if vorhanden:
+        return vorhanden
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+_MOTO_PORT = _moto_port_ermitteln()
+os.environ.setdefault("S3_ENDPOINT_URL", f"http://localhost:{_MOTO_PORT}")
+os.environ.setdefault("S3_PUBLIC_URL_BASE", f"http://localhost:{_MOTO_PORT}")
 os.environ.setdefault("S3_BUCKET_FOTOS", "fieldvibe-fotos-test")
 
 import pytest
@@ -33,11 +56,19 @@ from app.core.rate_limit import (
     login_account_limiter,
     login_ip_limiter,
     password_reset_ip_limiter,
+    fehlerbericht_user_limiter,
+    fehlerbericht_service_ip_limiter,
 )
 from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
-from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
+from app.services.organigramm_sync_service import (
+    besetzung_pflegen,
+    position_fuer_account_typ_anlegen,
+    scope_fuer_neues_recht,
+    wurzel_fuer_mandant_anlegen,
+)
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
@@ -76,6 +107,7 @@ _LEGACY_RECHTE: dict[str, dict[str, set[str]]] = {
         "abrechnung": {"sehen"},
         "statistik": {"sehen"},
         "mitarbeiterverwaltung": {"sehen"},
+        "projekte": {"zeitplan_sehen", "zeitplan_beantragen"},
     },
     "controller": {
         "vorgaenge": {"sehen"},
@@ -120,16 +152,18 @@ async def _get_or_create_legacy_account_typ(session, *, mandant_id: uuid.UUID, r
     await session.flush()
     rechte = _LEGACY_RECHTE[rolle]
     for bereich, aktionen in rechte.items():
-        for aktion in ("sehen", "erstellen", "bearbeiten", "loeschen"):
+        for aktion in aktionen_fuer_bereich(bereich):
             session.add(
                 AccountTypRecht(
                     account_typ_id=account_typ.id,
                     bereich=bereich,
                     aktion=aktion,
                     erlaubt=aktion in aktionen,
+                    scope=scope_fuer_neues_recht(account_typ, bereich),
                 )
             )
     await session.flush()
+    await position_fuer_account_typ_anlegen(session, account_typ)
     return account_typ
 
 
@@ -162,9 +196,40 @@ async def _fresh_engine_pool_per_test():
     yield
 
 
+def _ensure_db_role_is_not_superuser() -> None:
+    """Postgres-Superuser umgehen Row-Level-Security immer, unabhaengig von
+    FORCE ROW LEVEL SECURITY und den Policies selbst -- das ist eingebautes
+    Postgres-Verhalten, keine Anwendungslogik. Das offizielle postgres-Image
+    macht POSTGRES_USER beim allerersten Start zum Bootstrap-Superuser, der
+    sich nicht herabstufen laesst; Produktion und CI nutzen deshalb eine
+    eigene Rolle (scripts/app_rolle_einrichten.sh bzw. ci.yml). Lokale und
+    Test-Datenbanken durchlaufen deploy.sh nie -- ohne diesen Check
+    wuerden alle RLS-Isolations-Tests grau/gruen bleiben, obwohl sie faktisch
+    nichts mehr pruefen, weil die Rolle jede Policy ignoriert.
+    """
+    sync_url = sqlalchemy.engine.make_url(_settings.database_url_sync)
+    check_engine = create_engine(sync_url)
+    with check_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
+        ).one()
+    check_engine.dispose()
+    if row.rolsuper or row.rolbypassrls:
+        raise RuntimeError(
+            f"Die DB-Rolle '{sync_url.username}' ist Superuser oder hat BYPASSRLS -- "
+            "Row-Level-Security-Policies werden fuer diese Rolle komplett ignoriert, "
+            "RLS-Isolations-Tests wuerden also grundlos gruen sein. Fix: DATABASE_URL/"
+            "DATABASE_URL_SYNC auf eine Rolle ohne diese Rechte mit CREATEDB zeigen lassen, "
+            "z. B. CREATE ROLE fieldvibe_test LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS "
+            "CREATEDB; (siehe .github/workflows/ci.yml). Der Bootstrap-User des "
+            "postgres-Images laesst sich nicht herabstufen."
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _migrated_database():
     _ensure_test_database_exists()
+    _ensure_db_role_is_not_superuser()
     cfg = Config(os.path.join(_BACKEND_DIR, "alembic.ini"))
     cfg.set_main_option("script_location", os.path.join(_BACKEND_DIR, "alembic"))
     command.upgrade(cfg, "head")
@@ -178,15 +243,24 @@ def _s3_test_server():
     intercepts calls to actual AWS hostnames, not a custom endpoint_url like
     ours). storage_service's module-level boto3 clients were already built
     against S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE at import time, so this just
-    has to listen on that same fixed port.
+    has to listen on that same port (_MOTO_PORT).
     """
-    server = ThreadedMotoServer(port=9199)
+    server = ThreadedMotoServer(port=_MOTO_PORT)
     server.start()
     try:
         storage_service._internal_client.create_bucket(Bucket=storage_service.BUCKET)
         yield
     finally:
         server.stop()
+
+
+@pytest.fixture(autouse=True)
+def _mail_dns_ohne_netz(monkeypatch):
+    # Mail-Hosts in Tests (imap.example.de ...) sind nicht aufloesbar; ohne
+    # diese Stub-Aufloesung scheitert die SSRF-Zielpruefung (mail_netz) schon
+    # vor dem gemockten Verbindungsaufbau. Tests zur Zielpruefung ueberschreiben
+    # _aufloesen selbst.
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["93.184.216.34"])
 
 
 @pytest.fixture(autouse=True)
@@ -199,6 +273,8 @@ def _reset_rate_limiters():
     login_account_limiter._failures.clear()
     login_ip_limiter._failures.clear()
     password_reset_ip_limiter._failures.clear()
+    fehlerbericht_user_limiter._failures.clear()
+    fehlerbericht_service_ip_limiter._failures.clear()
     yield
 
 
@@ -224,6 +300,19 @@ async def _clean_tables():
         )
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _hintergrund_tasks_abwarten(_clean_tables):
+    """Export- und S3-Aufraeum-Tasks starten nach dem COMMIT im Hintergrund (after_commit). Sie
+    muessen vor dem TRUNCATE von _clean_tables fertig sein, sonst blockieren sich beide (Deadlock);
+    die Abhaengigkeit stellt die Abbau-Reihenfolge sicher."""
+    yield
+    from app.services import export_job_service, s3_aufraeumen_service
+
+    tasks = [*export_job_service.hintergrund_tasks(), *s3_aufraeumen_service.hintergrund_tasks()]
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 @pytest_asyncio.fixture
 async def client():
     transport = ASGITransport(app=app)
@@ -238,6 +327,7 @@ async def make_mandant():
             mandant = Mandant(name=name, slug=f"{name.lower()}-{uuid.uuid4().hex[:8]}", status=status)
             session.add(mandant)
             await session.flush()
+            await wurzel_fuer_mandant_anlegen(session, mandant.id)
             # Spiegelt app/api/routes/mandanten.py:create_mandant -- jeder
             # Mandant bekommt sofort einen Lagerort fuer die Materialwirtschaft.
             session.add(
@@ -290,6 +380,7 @@ async def make_user():
             )
             session.add(user)
             await session.flush()
+            await besetzung_pflegen(session, user, neu=True)
             await session.refresh(user)
             user._plaintext_password = password  # convenience for tests
             return user

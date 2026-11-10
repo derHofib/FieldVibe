@@ -1,60 +1,23 @@
-import { Package, Users } from "lucide-react";
-
-import type { NavSeite } from "../config/navSeiten";
-import { istModulAktiv } from "../utils/module";
-
-// Nur im Office: Kunden und Material haben dort eigene Desktop-Seiten
-// (office/kunden, office/material). In der Handy-App stecken sie weiter als
-// Tabs in "Geschäft" -- deshalb leben die Einträge hier und nicht in
-// config/navSeiten.ts. Rechte/Module wie die Tabs in GeschaeftPage.
-const OFFICE_ZUSATZ_SEITEN: NavSeite[] = [
-  {
-    key: "kunden",
-    label: "Kunden",
-    icon: Users,
-    tone: "emerald",
-    route: "/kunden",
-    kategorie: "Arbeit",
-    sichtbar: ({ currentUser, hatRecht }) =>
-      hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung"),
-  },
-  {
-    key: "material",
-    label: "Material",
-    icon: Package,
-    tone: "amber",
-    route: "/material",
-    kategorie: "Arbeit",
-    sichtbar: ({ currentUser, hatRecht }) =>
-      hatRecht("material", "sehen") && istModulAktiv(currentUser, "material"),
-  },
-];
-
-export const OFFICE_ZUSATZ_KEYS = OFFICE_ZUSATZ_SEITEN.map((s) => s.key);
+import { seiteInWorkspace, type NavSeite, type Workspace } from "../config/navSeiten";
 
 /** Die Office-Seitenleiste zeigt die Vorgangsliste unter ihrem eigenen Namen.
  * In config/navSeiten.ts heißt der Eintrag "Feed" und zeigt auf /feed (die
  * Handy-Startseite); im Office leitet /feed nur auf /vorgaenge um, ein Link
- * dorthin wäre daher nie als aktiv erkennbar. Kunden und Material werden
- * direkt hinter "Geschäft" eingefügt. */
-export function fuerOffice(seiten: NavSeite[], ctx?: Parameters<NavSeite["sichtbar"]>[0]): NavSeite[] {
-  const zusatz = ctx ? OFFICE_ZUSATZ_SEITEN.filter((s) => s.sichtbar(ctx)) : [];
-  return seiten.flatMap((seite) => {
-    if (seite.key === "feed") {
-      return [{ ...seite, label: "Vorgänge", route: "/vorgaenge", kategorie: "Arbeit" as const }];
-    }
-    return seite.key === "geschaeft" ? [seite, ...zusatz] : [seite];
-  });
+ * dorthin wäre daher nie als aktiv erkennbar. */
+export function fuerOffice(seiten: NavSeite[]): NavSeite[] {
+  return seiten.map((seite) =>
+    seite.key === "feed" ? { ...seite, label: "Vorgänge", route: "/vorgaenge" } : seite,
+  );
 }
 
 // Unterseiten, die zu einem Eintrag gehören, aber nicht unter dessen Route
 // liegen (Angebote hängen an "Rechnungen", Neuanlage an "Vorgänge" usw.).
 const ROUTEN_ZUORDNUNG: [route: string, key: string][] = [
   ["/neu", "feed"],
-  ["/vorgang-formulare", "feed"],
+  ["/form-submissions", "feed"],
   ["/dauerauftraege", "feed"],
   ["/angebote", "rechnungen"],
-  ["/bestellungen", "geschaeft"],
+  ["/bestellungen", "material"],
   ["/standorte", "kunden"],
   ["/anlagen", "kunden"],
   ["/einstellungen", "profil"],
@@ -75,4 +38,18 @@ export function aktiverNavKey(pfad: string, seiten: NavSeite[]): string | null {
   const keys = new Set(seiten.map((s) => s.key));
   const zugeordnet = ROUTEN_ZUORDNUNG.find(([route, key]) => keys.has(key) && liegtUnter(pfad, route));
   return zugeordnet?.[1] ?? null;
+}
+
+/** Workspace folgt der Route: gehört die aktive Seite nicht zum gemerkten
+ * Workspace, wird der erste passende gewählt (Deep-Link, Reload, Link aus
+ * einer anderen Seite). Gemeinsame Seiten und Seiten ohne Eintrag lassen den
+ * gemerkten Workspace unverändert. */
+export function workspaceFuerRoute(
+  aktiveSeite: NavSeite | undefined,
+  workspaces: Workspace[],
+  gemerkt: string | null,
+): Workspace | undefined {
+  const basis = workspaces.find((w) => w.key === gemerkt) ?? workspaces[0];
+  if (!aktiveSeite || !basis || seiteInWorkspace(aktiveSeite, basis)) return basis;
+  return workspaces.find((w) => seiteInWorkspace(aktiveSeite, w)) ?? basis;
 }

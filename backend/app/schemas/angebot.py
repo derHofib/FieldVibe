@@ -3,9 +3,19 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+
+from app.services.steuer_service import runde_cent
 
 AngebotPositionstyp = Literal["material", "arbeitszeit"]
+AngebotZeilentyp = Literal["position", "titel"]
+ERLAUBTE_MWST_SAETZE = (Decimal("19.00"), Decimal("7.00"), Decimal("0.00"))
+
+
+def _pruefe_mwst_satz(wert: Decimal | None) -> Decimal | None:
+    if wert is not None and wert not in ERLAUBTE_MWST_SAETZE:
+        raise ValueError("Steuersatz muss 19, 7 oder 0 sein")
+    return wert
 
 
 class AngebotPositionCreate(BaseModel):
@@ -15,6 +25,48 @@ class AngebotPositionCreate(BaseModel):
     einheit: str = "Stk"
     einzelpreis: Decimal = Decimal("0")
     positionstyp: AngebotPositionstyp = "material"
+    zeilentyp: AngebotZeilentyp = "position"
+    ebene: int = Field(default=1, ge=1, le=2)
+    einzelpreis_lohn: Decimal | None = Field(default=None, ge=0)
+    einzelpreis_material: Decimal | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _titel_und_anteile(self) -> "AngebotPositionCreate":
+        if self.zeilentyp == "titel":
+            # Titel tragen weder Menge noch Preis, sonst ginge Geld an einer
+            # Zeile durch, die in Summen und Rechnung nicht vorkommt.
+            self.menge = Decimal("0")
+            self.einzelpreis = Decimal("0")
+            self.einzelpreis_lohn = None
+            self.einzelpreis_material = None
+        elif self.einzelpreis_lohn is not None or self.einzelpreis_material is not None:
+            self.einzelpreis = (self.einzelpreis_lohn or Decimal("0")) + (self.einzelpreis_material or Decimal("0"))
+        return self
+
+
+class AngebotPositionUpdate(BaseModel):
+    artikelnummer: str | None = None
+    beschreibung: str | None = Field(default=None, min_length=1)
+    menge: Decimal | None = Field(default=None, gt=0)
+    einheit: str | None = Field(default=None, min_length=1)
+    einzelpreis: Decimal | None = Field(default=None, ge=0)
+    positionstyp: AngebotPositionstyp | None = None
+    ebene: int | None = Field(default=None, ge=1, le=2)
+    einzelpreis_lohn: Decimal | None = Field(default=None, ge=0)
+    einzelpreis_material: Decimal | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _kein_explizites_null(self) -> "AngebotPositionUpdate":
+        # Nur die Artikelnummer ist leerbar; bei den Pflichtfeldern wuerde ein
+        # explizites null sonst stillschweigend ignoriert statt abgelehnt.
+        for feld in ("beschreibung", "menge", "einheit", "einzelpreis", "positionstyp", "ebene"):
+            if feld in self.model_fields_set and getattr(self, feld) is None:
+                raise ValueError(f"{feld} darf nicht leer sein")
+        return self
+
+
+class AngebotPositionenNeuOrdnen(BaseModel):
+    position_ids: list[UUID]
 
 
 class AngebotPositionRead(BaseModel):
@@ -28,18 +80,43 @@ class AngebotPositionRead(BaseModel):
     einheit: str
     einzelpreis: Decimal
     positionstyp: AngebotPositionstyp
+    zeilentyp: AngebotZeilentyp = "position"
+    ebene: int = 1
+    lv_position_id: UUID | None = None
+    einzelpreis_lohn: Decimal | None = None
+    einzelpreis_material: Decimal | None = None
+    # Vom Service gesetzt (berechnet, nicht gespeichert).
+    ordnungszahl: str | None = None
+    zwischensumme: Decimal | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def gesamt(self) -> Decimal:
-        return (self.menge * self.einzelpreis).quantize(Decimal("0.01"))
+        return runde_cent(self.menge * self.einzelpreis)
+
+
+class AngebotAusLvEintrag(BaseModel):
+    lv_position_id: UUID
+    menge: Decimal = Field(default=Decimal("1"), gt=0)
+
+
+class AngebotAusLv(BaseModel):
+    lv_id: UUID
+    # Ein Hauptpunkt zieht alle seine Unterpunkte nach; ein Unterpunkt-Eintrag
+    # setzt dessen Menge (sonst gilt die des Hauptpunkts).
+    eintraege: list[AngebotAusLvEintrag] = Field(min_length=1)
+    mit_gliederung: bool = True
 
 
 class AngebotCreate(BaseModel):
     kunde_id: UUID
     vorgang_id: UUID | None = None
     gueltig_bis: date | None = None
+    # None = Standard (19 %, beim Kleinunternehmer 0 %).
+    mwst_satz: Decimal | None = None
     positionen: list[AngebotPositionCreate] = Field(default_factory=list)
+
+    _mwst_satz_erlaubt = field_validator("mwst_satz")(_pruefe_mwst_satz)
 
 
 class AngebotAusMaengelnCreate(BaseModel):
@@ -60,6 +137,35 @@ class AngebotAusVorgangCreate(BaseModel):
 class AngebotUpdate(BaseModel):
     status: str | None = None
     gueltig_bis: date | None = None
+    mwst_satz: Decimal | None = None
+
+    _mwst_satz_erlaubt = field_validator("mwst_satz")(_pruefe_mwst_satz)
+
+
+class AngebotAbschlagRead(BaseModel):
+    rechnung_id: UUID
+    rechnungsnummer: str
+    status: str
+    netto: Decimal
+
+
+class AngebotNachweisRead(BaseModel):
+    """Letzter Portal-Nachweis (Annahme/Ablehnung/Widerruf) fuer die Office-
+    Ansicht. IP und User-Agent bleiben hier sichtbar: es ist der Beleg des
+    Betriebs, nicht des Kunden (Portal-Schemas enthalten sie nie)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    aktion: str
+    zugang_email: str
+    zugang_name: str
+    ip: str
+    user_agent: str
+    fassung_sha256: str
+    b2c_flag: bool
+    belehrung_version: str | None
+    created_at: datetime
 
 
 class AngebotRead(BaseModel):
@@ -76,8 +182,27 @@ class AngebotRead(BaseModel):
     versendet_am: datetime | None
     angenommen_am: datetime | None
     abgelehnt_am: datetime | None
+    auftrag_vorgang_id: UUID | None
+    nachgefasst_am: datetime | None
+    widerrufen_am: datetime | None = None
     created_at: datetime
     updated_at: datetime
     positionen: list[AngebotPositionRead]
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
+    ist_abgelaufen: bool
+    # Netto-Summen nach Anteil; Zeilen ohne Anteile zaehlen nach positionstyp.
+    summe_lohn: Decimal = Decimal("0.00")
+    summe_material: Decimal = Decimal("0.00")
+    # Hash der aktuellen Fassung -- derselbe Wert, den der Nachweis bei Annahme
+    # festhaelt; Abweichung zum Nachweis = Angebot wurde danach geaendert.
+    fassung_sha256: str = ""
+    letzter_nachweis: AngebotNachweisRead | None = None
+    # Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen,
+    # weil sie ihr Kontingent bereits belegen).
+    abschlaege: list[AngebotAbschlagRead] = Field(default_factory=list)
+    abgerechnet_netto: Decimal = Decimal("0.00")
+    rest_netto: Decimal = Decimal("0.00")
+    schlussrechnung_id: UUID | None = None
+    # Rechnung ohne Abschlaege (aus dem Angebot erstellt).
+    rechnung_id: UUID | None = None

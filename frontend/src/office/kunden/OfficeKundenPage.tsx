@@ -7,13 +7,16 @@ import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import { StatusBadge } from "../../components/StatusBadge";
+import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { KundeProfilePage } from "../../pages/feld/KundeProfilePage";
 import type { Kunde, KundeTyp } from "../../types";
 import { filtereKunden } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
-import { FehlerHinweis, FilterChip, SeitenKopf } from "../OfficeUi";
+import { SeitenKopf } from "../OfficeUi";
 import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 
 const TYP_LABEL: Record<KundeTyp, string> = {
@@ -31,7 +34,8 @@ const SPALTEN: Spalte<Kunde>[] = [
   {
     key: "typ",
     label: "Typ",
-    render: (k) => (k.typ ? <StatusBadge label={TYP_LABEL[k.typ]} tone="slate" /> : "–"),
+    render: (k) =>
+      k.typ ? <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
     sortWert: (k) => (k.typ ? TYP_LABEL[k.typ] : ""),
   },
   { key: "ort", label: "Ort", render: (k) => ORT(k) || "–", sortWert: ORT },
@@ -64,47 +68,28 @@ export function OfficeKundenPage() {
   const vorhandeneTypen = Array.from(new Set((data ?? []).map((k) => k.typ).filter((t): t is KundeTyp => !!t)));
 
   const waehlen = (kunde: Kunde) => {
-    setNeu(false);
     navigate(`/kunden/${kunde.id}`);
   };
   const schliessen = () => {
-    setNeu(false);
     if (id) navigate("/kunden");
   };
 
-  const panel = neu ? (
-    <NeuerKundeFormular
-      onAbbrechen={() => setNeu(false)}
-      onAngelegt={(kunde) => {
-        setNeu(false);
-        navigate(`/kunden/${kunde.id}`);
-      }}
-    />
-  ) : id ? (
-    <KundeProfilePage key={id} id={id} eingebettet onGeloescht={() => navigate("/kunden")} />
-  ) : null;
+  const panel = id ? <KundeProfilePage key={id} id={id} eingebettet /> : null;
 
   return (
     <div>
       <SeitenKopf titel="Kunden" anzahl={isLoading || isError ? undefined : gefiltert.length}>
-        <label className="relative block">
-          <span className="sr-only">Kunden suchen</span>
-          <Search
-            size={13}
-            strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-slate-400 dark:text-stone-500"
-          />
-          <input
-            value={suche}
-            onChange={(e) => setSuche(e.target.value)}
-            placeholder="Name oder Kundennummer…"
-            className="w-56 rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-slate-700 placeholder:text-slate-400 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-500"
-          />
-        </label>
+        <SearchField
+          value={suche}
+          onChange={setSuche}
+          placeholder="Name oder Kundennummer…"
+          ariaLabel="Kunden suchen"
+          className="w-64"
+        />
         {hatRecht("kunden", "erstellen") && (
           <button
             onClick={() => setNeu(true)}
-            className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neuer Kunde
@@ -116,28 +101,20 @@ export function OfficeKundenPage() {
         <div className="mb-4 flex flex-wrap gap-2">
           <FilterChip label="Alle" aktiv={typFilter === "alle"} onClick={() => setTypFilter("alle")} />
           {vorhandeneTypen.map((typ) => (
-            <FilterChip
-              key={typ}
-              label={TYP_LABEL[typ]}
-              aktiv={typFilter === typ}
-              onClick={() => setTypFilter(typ)}
-            />
+            <FilterChip key={typ} label={TYP_LABEL[typ]} aktiv={typFilter === typ} onClick={() => setTypFilter(typ)} />
           ))}
         </div>
       )}
 
       <ListeMitPanel
-        panelTitel={neu ? "Neuer Kunde" : "Kundenprofil"}
+        panelTitel="Kundenprofil"
         panel={panel}
         onSchliessen={schliessen}
         liste={
           isLoading ? (
             <SkeletonList count={6} />
           ) : isError ? (
-            <FehlerHinweis
-              text={error instanceof ApiError ? error.message : "Die Kunden konnten nicht geladen werden."}
-              onNochmal={() => refetch()}
-            />
+            <FehlerZustand fehler={error} was="Die Kunden" onErneut={() => void refetch()} />
           ) : (data ?? []).length === 0 ? (
             <EmptyState
               icon={Users}
@@ -157,13 +134,22 @@ export function OfficeKundenPage() {
           )
         }
       />
+
+      <SeitenPanel offen={neu} onClose={() => setNeu(false)} titel="Neuer Kunde">
+        <NeuerKundeFormular
+          onAbbrechen={() => setNeu(false)}
+          onAngelegt={(kunde) => {
+            setNeu(false);
+            navigate(`/kunden/${kunde.id}`);
+          }}
+        />
+      </SeitenPanel>
     </div>
   );
 }
 
-const FELD =
-  "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
-const LABEL = "mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400";
+const FELD = "field-ap";
+const LABEL = "mb-1 block text-xs font-medium text-label2";
 
 function NeuerKundeFormular({
   onAbbrechen,
@@ -212,9 +198,8 @@ function NeuerKundeFormular({
         e.preventDefault();
         anlegen.mutate();
       }}
-      className="space-y-3"
+      className="space-y-3 p-4"
     >
-      <h2 className="text-base font-bold text-slate-800 dark:text-stone-100">Neuer Kunde</h2>
       <div>
         <label htmlFor="kunde-name" className={LABEL}>
           Name *
@@ -295,11 +280,11 @@ function NeuerKundeFormular({
         </label>
         <textarea id="kunde-notiz" rows={2} value={form.notiz} onChange={(e) => setze({ notiz: e.target.value })} className={FELD} />
       </div>
-      <p className="text-xs text-slate-400 dark:text-stone-500">
+      <p className="text-xs text-label2">
         Ansprechpartner können anschließend im Kundenprofil angelegt werden.
       </p>
       {anlegen.isError && (
-        <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">
+        <p role="alert" className="text-xs text-st-fehlt">
           {anlegen.error instanceof ApiError ? anlegen.error.message : "Anlegen fehlgeschlagen."}
         </p>
       )}
@@ -307,14 +292,14 @@ function NeuerKundeFormular({
         <button
           type="button"
           onClick={onAbbrechen}
-          className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="btn-ap px-3 py-2 text-xs font-semibold"
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={anlegen.isPending}
-          className="btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          className="btn-ap-primary px-4 py-2 text-xs font-semibold disabled:opacity-50"
         >
           {anlegen.isPending ? "Legt an…" : "Kunde anlegen"}
         </button>

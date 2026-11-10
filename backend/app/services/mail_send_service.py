@@ -1,4 +1,3 @@
-import smtplib
 from email.message import EmailMessage
 from email.utils import make_msgid
 
@@ -6,18 +5,17 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.security import decrypt_secret
 from app.models.mail_account import MailAccount
+from app.services.mail_netz import uebersetze_fehler, verbinde_smtp
 
 
 def _send_blockierend(
     *, host: str, port: int, verschluesselung: str, benutzername: str, passwort: str,
     nachricht: EmailMessage, empfaenger: list[str],
 ) -> None:
-    if verschluesselung == "ssl":
-        verbindung: smtplib.SMTP = smtplib.SMTP_SSL(host, port, timeout=20)
-    else:
-        verbindung = smtplib.SMTP(host, port, timeout=20)
-        if verschluesselung == "starttls":
-            verbindung.starttls()
+    try:
+        verbindung = verbinde_smtp(host, port, verschluesselung, 20)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
     try:
         verbindung.login(benutzername, passwort)
         # to_addrs explizit -- sonst liest smtplib die Empfaenger aus den
@@ -25,6 +23,8 @@ def _send_blockierend(
         # NICHT als Kopfzeile gesetzt (siehe sende_nachricht), muss also so
         # ins SMTP-Envelope, sonst kaemen Bcc-Empfaenger die Mail nie an.
         verbindung.send_message(nachricht, to_addrs=empfaenger)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
     finally:
         try:
             verbindung.quit()

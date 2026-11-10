@@ -3,7 +3,9 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.kontakt import AnsprechpartnerEintrag
 
 PartnerNachweisTyp = Literal[
     "freistellungsbescheinigung",
@@ -19,7 +21,7 @@ PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 class PartnerCreate(BaseModel):
     name: str
     gewerk: str | None = None
-    ansprechpartner: str | None = None
+    ansprechpartner: list[AnsprechpartnerEintrag] = Field(default_factory=list)
     telefon: str | None = None
     email: str | None = None
     adresse: dict | None = None
@@ -29,7 +31,7 @@ class PartnerCreate(BaseModel):
 class PartnerUpdate(BaseModel):
     name: str | None = None
     gewerk: str | None = None
-    ansprechpartner: str | None = None
+    ansprechpartner: list[AnsprechpartnerEintrag] | None = None
     telefon: str | None = None
     email: str | None = None
     adresse: dict | None = None
@@ -43,7 +45,7 @@ class PartnerRead(BaseModel):
     id: UUID
     name: str
     gewerk: str | None
-    ansprechpartner: str | None
+    ansprechpartner: list[AnsprechpartnerEintrag]
     telefon: str | None
     email: str | None
     adresse: dict | None
@@ -56,13 +58,11 @@ class PartnerRead(BaseModel):
 class PartnerNachweisCreate(BaseModel):
     typ: PartnerNachweisTyp
     gueltig_bis: date | None = None
-    dokument_s3_key: str | None = None
     notiz: str | None = None
 
 
 class PartnerNachweisUpdate(BaseModel):
     gueltig_bis: date | None = None
-    dokument_s3_key: str | None = None
     notiz: str | None = None
 
 
@@ -78,6 +78,14 @@ class PartnerNachweisRead(BaseModel):
     abgelaufen: bool
     created_at: datetime
     updated_at: datetime
+
+
+class PartnerNachweisUploadResponse(BaseModel):
+    dokument_s3_key: str
+
+
+class PartnerNachweisUrl(BaseModel):
+    url: str
 
 
 class PartnerZugangUpdate(BaseModel):
@@ -117,6 +125,8 @@ class CurrentPartner(BaseModel):
     partner_name: str
     name: str
     email: str
+    mandant_name: str
+    mandant_logo_url: str | None = None
 
 
 class PartnerPasswortVergessenRequest(BaseModel):
@@ -135,6 +145,14 @@ class PartnerPasswortResetRequest(BaseModel):
 
 class PartnerVorgangKommentar(BaseModel):
     body: str
+
+
+class PartnerKommentarRead(BaseModel):
+    id: int
+    text: str
+    erstellt_am: datetime
+    autor: Literal["partner", "betrieb"]
+    autor_name: str
 
 
 class PartnerVorgangStatusUpdate(BaseModel):
@@ -175,3 +193,17 @@ class VorgangPartnerZuweisungResponse(BaseModel):
     partner_id: UUID | None
     partner_freigabe_status: PartnerFreigabeStatus | None
     freistellungsbescheinigung_warnung: bool
+
+
+class PartnerZeitplanSchritt(BaseModel):
+    """Bewusst minimal: ein Fremdgewerk-Schritt aus einem Projekt-Zeitplan,
+    ohne Zustaendige, Kundendaten oder interne Verweise."""
+
+    id: UUID
+    titel: str
+    projekt_name: str
+    phase_titel: str | None
+    start_am: date | None
+    ende_am: date | None
+    fortschritt: int
+    erledigt: bool

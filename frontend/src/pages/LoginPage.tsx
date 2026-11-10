@@ -1,77 +1,147 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import { Starfield } from "../components/Starfield";
+import Blueprint from "../components/Blueprint";
+import { Logo } from "../components/brand/Logo";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginMfa } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      if (mfaToken) {
+        await loginMfa(mfaToken, code);
+      } else {
+        const zwischenToken = await login(email, password);
+        if (zwischenToken) {
+          setMfaToken(zwischenToken);
+          return;
+        }
+      }
       // Fuer Nicht-Platform-Admins faengt das Catch-All in App.tsx diesen
       // Pfad ab und leitet zur echten Startseite (Feed/Papierkorb) um.
       navigate("/uebersicht", { replace: true });
     } catch (err) {
+      // Abgelaufener Zwischen-Token (401): zurueck zur Passwort-Eingabe.
+      if (mfaToken && err instanceof ApiError && err.status === 401 && !/Code/.test(err.message)) {
+        zurueckZumPasswort();
+      }
       setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen");
     } finally {
       setSubmitting(false);
     }
   }
 
+  function zurueckZumPasswort() {
+    setMfaToken(null);
+    setCode("");
+    setPassword("");
+  }
+
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950">
-      <Starfield />
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <Logo variante="wortmarke" hoehe={32} />
+        </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="relative w-full max-w-sm rounded-xl border border-cyan-400/20 bg-slate-900/60 p-8 shadow-[0_0_45px_-10px_rgba(34,211,238,0.25)] backdrop-blur-xl"
-      >
-        <h1 className="mb-6 text-xl font-bold tracking-wide text-white">
-          FieldVibe <span className="text-cyan-400">Anmeldung</span>
-        </h1>
+        <Blueprint className="bg-card p-8">
+          <h1 className="mb-6 text-center font-heading text-sm font-semibold uppercase tracking-[0.14em] text-label2">
+            Anmeldung
+          </h1>
 
-        {error && (
-          <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              {error}
+            </div>
+          )}
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
-        />
+          {mfaToken ? (
+            <>
+              <p className="mb-4 text-sm text-label2">
+                Gib den 6-stelligen Code aus deiner Authenticator-App ein – oder einen deiner
+                Wiederherstellungscodes.
+              </p>
+              <label htmlFor="mfa-code" className="mb-1 block text-sm font-medium text-label">
+                Code
+              </label>
+              <input
+                id="mfa-code"
+                type="text"
+                required
+                autoFocus
+                autoComplete="one-time-code"
+                inputMode="text"
+                autoCapitalize="characters"
+                spellCheck={false}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="field-ap btn-touch mb-6 tracking-widest"
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-label">E-Mail</label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="field-ap btn-touch mb-4"
+              />
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="btn-touch mb-6 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
-        />
+              <label htmlFor="login-passwort" className="mb-1 block text-sm font-medium text-label">Passwort</label>
+              <input
+                id="login-passwort"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="field-ap btn-touch mb-6"
+              />
+            </>
+          )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="btn-touch w-full rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 font-medium text-white shadow-[0_0_20px_-5px_rgba(34,211,238,0.6)] hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50"
-        >
-          {submitting ? "Anmelden…" : "Anmelden"}
-        </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
+          >
+            {submitting ? "Anmelden…" : mfaToken ? "Bestätigen" : "Anmelden"}
+          </button>
+
+          {mfaToken && (
+            <button
+              type="button"
+              onClick={() => {
+                zurueckZumPasswort();
+                setError(null);
+              }}
+              className="mt-4 block w-full text-center text-sm text-label2 hover:text-label"
+            >
+              Zurück
+            </button>
+          )}
+
+          <Link to="/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+            Passwort vergessen?
+          </Link>
+        </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </form>
     </div>
   );

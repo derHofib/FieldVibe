@@ -1,6 +1,8 @@
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
+from pypdf import PdfReader
 
 from app.core.security import hash_password
 from app.db.session import system_session
@@ -53,6 +55,7 @@ async def test_kunde_login_and_me(client, make_mandant, make_kunde):
     assert body["kunde_id"] == str(kunde.id)
     assert body["kunde_name"] == "Café Sonnenschein"
     assert body["zugang_id"] == str(zugang.id)
+    assert body["portal_slug"] == kunde.portal_slug
 
 
 @pytest.mark.asyncio
@@ -323,6 +326,7 @@ async def test_kunde_sieht_nur_eigene_rechnungen(client, make_mandant, make_user
             mandant_id=mandant.id,
             kunde_id=kunde1.id,
             rechnungsnummer="R-TEST-1",
+            status="versendet",
             betrag_netto=Decimal("100"),
             erstellt_von=admin.id,
         )
@@ -330,6 +334,7 @@ async def test_kunde_sieht_nur_eigene_rechnungen(client, make_mandant, make_user
             mandant_id=mandant.id,
             kunde_id=kunde2.id,
             rechnungsnummer="R-TEST-2",
+            status="versendet",
             betrag_netto=Decimal("200"),
             erstellt_von=admin.id,
         )
@@ -422,3 +427,343 @@ async def test_techniker_cannot_invite_kunde(client, make_mandant, make_user, ma
         json={"email": "x@example.de"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_kundenportal_storno_pdf_nennt_originalrechnung(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await _make_zugang(mandant, kunde, email="kunde11@example.de")
+
+    async with system_session() as session:
+        original = Rechnung(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            rechnungsnummer="R-ORIG-1",
+            status="storniert",
+            betrag_netto=Decimal("100"),
+            erstellt_von=admin.id,
+        )
+        session.add(original)
+        await session.flush()
+        storno = Rechnung(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            rechnungsnummer="R-STORNO-1",
+            status="versendet",
+            betrag_netto=Decimal("-100"),
+            erstellt_von=admin.id,
+            ist_storno=True,
+            storniert_rechnung_id=original.id,
+        )
+        session.add(storno)
+        await session.flush()
+        storno_id = storno.id
+        await session.commit()
+
+    tokens = await _kunden_login(client, "kunde11@example.de", "kunden-pw-123")
+    resp = await client.get(
+        f"/api/kundenportal/rechnungen/{storno_id}/pdf", headers=auth_headers(tokens["access_token"])
+    )
+    assert resp.status_code == 200
+    reader = PdfReader(BytesIO(resp.content))
+    text = "\n".join(p.extract_text() for p in reader.pages)
+    assert "Storniert Rechnung R-ORIG-1" in text
+
+
+async def _portal_headers(client, mandant, kunde, email):
+    await _make_zugang(mandant, kunde, email=email)
+    tokens = await _kunden_login(client, email, "kunden-pw-123")
+    return auth_headers(tokens["access_token"])
+
+
+@pytest.mark.asyncio
+async def test_portal_vorgang_enthaelt_keine_internen_felder(
+    client, make_mandant, make_kunde, make_vorgang, make_partner
+):
+    mandant = await make_mandant()
+    kunde = await make_kunde(mandant=mandant)
+    partner = await make_partner(mandant=mandant)
+    vorgang = await make_vorgang(
+        mandant=mandant,
+        kunde=kunde,
+        titel="Sichtbarer Auftrag",
+        partner_id=partner.id,
+        partner_freigabe_status="abgelehnt",
+        partner_ablehnung_grund="zu teuer",
+        partner_honorar_netto=Decimal("123.45"),
+    )
+    headers = await _portal_headers(client, mandant, kunde, "kunde-intern@example.de")
+
+    liste = await client.get("/api/kundenportal/vorgaenge", headers=headers)
+    detail = await client.get(f"/api/kundenportal/vorgaenge/{vorgang.id}", headers=headers)
+    assert liste.status_code == 200 and detail.status_code == 200
+
+    verboten = {
+        "partner_honorar_netto",
+        "partner_id",
+        "partner_freigabe_status",
+        "partner_ablehnung_grund",
+        "abrechnungsart",
+        "prioritaet",
+        "zugewiesener_user_id",
+        "zugewiesener_name",
+        "erstellt_von",
+        "erstellt_von_kundenportal_zugang_id",
+        "wiedervorlage_am",
+        "kunde_id",
+        "vertrag_id",
+        "projekt_id",
+        "auftrag_id",
+        "dauerauftrag_id",
+        "parent_vorgang_id",
+    }
+    for body in (liste.json()[0], detail.json()):
+        assert body["titel"] == "Sichtbarer Auftrag"
+        assert verboten.isdisjoint(body.keys())
+    assert "123.45" not in liste.text and "zu teuer" not in detail.text
+
+
+@pytest.mark.asyncio
+async def test_portal_events_ohne_interne_felder_und_nur_freigegebene_typen(
+    client, make_mandant, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-events@example.de")
+
+    async with system_session() as session:
+        for event_type, body in (
+            ("kommentar", "Fuer den Kunden"),
+            ("zeit_start", "Interne Zeit"),
+            ("eingangsrechnung_status", "Interne Eingangsrechnung"),
+        ):
+            session.add(
+                VorgangEvent(
+                    mandant_id=mandant.id,
+                    vorgang_id=vorgang.id,
+                    event_type=event_type,
+                    body=body,
+                    payload={"partner_id": "geheim"},
+                    kundensichtbar=True,
+                )
+            )
+        await session.commit()
+
+    resp = await client.get(f"/api/kundenportal/vorgaenge/{vorgang.id}/events", headers=headers)
+    assert resp.status_code == 200
+    assert [e["body"] for e in resp.json()] == ["Fuer den Kunden"]
+    for feld in ("payload", "author_user_id", "client_uuid", "ref_entity_id", "kundensichtbar"):
+        assert feld not in resp.json()[0]
+    assert "geheim" not in resp.text
+
+
+@pytest.mark.asyncio
+async def test_portal_geloeschte_datensaetze_nicht_sichtbar(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    from datetime import datetime, timezone
+
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-geloescht@example.de")
+
+    jetzt = datetime.now(timezone.utc)
+    async with system_session() as session:
+        rechnung = Rechnung(
+            mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-DEL-1",
+            status="versendet", betrag_netto=Decimal("10"), erstellt_von=admin.id, geloescht_am=jetzt,
+        )
+        angebot = Angebot(
+            mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-DEL-1",
+            status="versendet", erstellt_von=admin.id, geloescht_am=jetzt,
+        )
+        session.add_all([rechnung, angebot])
+        await session.flush()
+        rechnung_id, angebot_id = rechnung.id, angebot.id
+        vorgang_db = await session.get(type(vorgang), vorgang.id)
+        vorgang_db.geloescht_am = jetzt
+        await session.commit()
+
+    assert (await client.get("/api/kundenportal/vorgaenge", headers=headers)).json() == []
+    for pfad in (
+        f"/vorgaenge/{vorgang.id}",
+        f"/vorgaenge/{vorgang.id}/events",
+        f"/rechnungen/{rechnung_id}",
+        f"/rechnungen/{rechnung_id}/pdf",
+        f"/angebote/{angebot_id}",
+        f"/angebote/{angebot_id}/pdf",
+    ):
+        resp = await client.get(f"/api/kundenportal{pfad}", headers=headers)
+        assert resp.status_code == 404, pfad
+    assert (await client.get("/api/kundenportal/rechnungen", headers=headers)).json() == []
+    assert (await client.get("/api/kundenportal/angebote", headers=headers)).json() == []
+
+
+@pytest.mark.asyncio
+async def test_portal_entwurf_rechnung_und_angebot_nicht_sichtbar(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-entwurf@example.de")
+
+    async with system_session() as session:
+        rechnung = Rechnung(
+            mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-ENT-1",
+            betrag_netto=Decimal("10"), erstellt_von=admin.id,
+        )
+        angebot = Angebot(
+            mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-ENT-1", erstellt_von=admin.id
+        )
+        session.add_all([rechnung, angebot])
+        await session.flush()
+        assert rechnung.status == "entwurf" and angebot.status == "entwurf"
+        rechnung_id, angebot_id = rechnung.id, angebot.id
+        await session.commit()
+
+    assert (await client.get("/api/kundenportal/rechnungen", headers=headers)).json() == []
+    assert (await client.get("/api/kundenportal/angebote", headers=headers)).json() == []
+    for pfad in (
+        f"/rechnungen/{rechnung_id}",
+        f"/rechnungen/{rechnung_id}/pdf",
+        f"/angebote/{angebot_id}",
+        f"/angebote/{angebot_id}/pdf",
+    ):
+        resp = await client.get(f"/api/kundenportal{pfad}", headers=headers)
+        assert resp.status_code == 404, pfad
+    antwort = await client.patch(
+        f"/api/kundenportal/angebote/{angebot_id}", headers=headers, json={"status": "angenommen"}
+    )
+    assert antwort.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_portal_angebot_und_rechnung_ohne_interne_felder(
+    client, make_mandant, make_user, make_kunde
+):
+    from app.models.angebot import AngebotPosition
+    from app.models.rechnung import RechnungPosition, RechnungZahlung
+
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-intern2@example.de")
+
+    async with system_session() as session:
+        angebot = Angebot(
+            mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-INT-1",
+            status="versendet", erstellt_von=admin.id,
+        )
+        rechnung = Rechnung(
+            mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-INT-1",
+            status="teilweise_bezahlt", betrag_netto=Decimal("100"), erstellt_von=admin.id,
+            mahnstufe=2,
+        )
+        session.add_all([angebot, rechnung])
+        await session.flush()
+        session.add_all(
+            [
+                AngebotPosition(
+                    mandant_id=mandant.id, angebot_id=angebot.id, position=1,
+                    artikelnummer="ART-GEHEIM", beschreibung="Kabel", menge=Decimal("2"),
+                    einzelpreis=Decimal("5"),
+                ),
+                RechnungPosition(
+                    mandant_id=mandant.id, rechnung_id=rechnung.id, position=1,
+                    beschreibung="Arbeit", menge=Decimal("1"), einzelpreis=Decimal("100"),
+                    quelle="zeit",
+                ),
+                RechnungZahlung(
+                    mandant_id=mandant.id, rechnung_id=rechnung.id, betrag=Decimal("40"),
+                    erstellt_von=admin.id,
+                ),
+            ]
+        )
+        angebot_id, rechnung_id = angebot.id, rechnung.id
+        await session.commit()
+
+    angebot_verboten = {"erstellt_von", "vorgang_id", "kunde_id", "updated_at"}
+    angebot_position_verboten = {"artikelnummer", "positionstyp"}
+    liste = await client.get("/api/kundenportal/angebote", headers=headers)
+    detail = await client.get(f"/api/kundenportal/angebote/{angebot_id}", headers=headers)
+    antwort = await client.patch(
+        f"/api/kundenportal/angebote/{angebot_id}", headers=headers, json={"status": "angenommen"}
+    )
+    for resp, body in ((liste, liste.json()[0]), (detail, detail.json()), (antwort, antwort.json())):
+        assert resp.status_code == 200
+        assert {"angebotsnummer", "status", "gesamt_netto", "gesamt_brutto", "positionen"} <= body.keys()
+        assert angebot_verboten.isdisjoint(body.keys())
+        assert body["positionen"][0]["gesamt"] == "10.00"
+        assert angebot_position_verboten.isdisjoint(body["positionen"][0].keys())
+        assert "ART-GEHEIM" not in resp.text
+
+    rechnung_verboten = {
+        "erstellt_von", "vorgang_id", "kunde_id", "mahnstufe", "letzte_mahnung_am", "zahlungen",
+        "xml_object_key", "storniert_rechnung_id", "vorgaenge", "updated_at", "tage_ueberfaellig",
+    }
+    position_verboten = {"quelle", "vorgang_id", "lv_position_id", "material_id"}
+    liste = await client.get("/api/kundenportal/rechnungen", headers=headers)
+    detail = await client.get(f"/api/kundenportal/rechnungen/{rechnung_id}", headers=headers)
+    for resp, body in ((liste, liste.json()[0]), (detail, detail.json())):
+        assert resp.status_code == 200
+        assert {
+            "rechnungsnummer", "status", "betrag_netto", "betrag_brutto", "bezahlter_betrag",
+            "offener_betrag", "ist_ueberfaellig", "faellig_am", "positionen",
+        } <= body.keys()
+        assert rechnung_verboten.isdisjoint(body.keys())
+        assert position_verboten.isdisjoint(body["positionen"][0].keys())
+        assert body["bezahlter_betrag"] == "40.00"
+        assert body["offener_betrag"] == "79.00"
+
+
+@pytest.mark.asyncio
+async def test_portal_anlage_und_anfrage_ohne_interne_felder(
+    client, make_mandant, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    kunde = await make_kunde(mandant=mandant)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-intern3@example.de")
+    await make_anlage(
+        mandant=mandant, kunde=kunde, bezeichnung="Heizung", notiz="Kunde zahlt schlecht",
+        stammdaten={"intern": "x"}, qr_code="QR-INTERN-1", geo_lat=1.0, geo_lng=2.0,
+    )
+
+    anlage_verboten = {
+        "notiz", "stammdaten", "qr_code", "geo_lat", "geo_lng", "anschaffungsdatum", "objekttyp",
+        "kunde_id", "erstellt_von_kundenportal_zugang_id", "updated_at",
+    }
+    liste = await client.get("/api/kundenportal/anlagen", headers=headers)
+    assert liste.status_code == 200
+    assert {"id", "bezeichnung", "standort_id", "anlagentyp", "aktiv"} <= liste.json()[0].keys()
+    assert anlage_verboten.isdisjoint(liste.json()[0].keys())
+    assert "zahlt schlecht" not in liste.text
+
+    neu = await client.post(
+        "/api/kundenportal/anlagen", headers=headers, json={"bezeichnung": "Neue Anlage"}
+    )
+    assert neu.status_code == 201
+    assert neu.json()["bezeichnung"] == "Neue Anlage"
+    assert anlage_verboten.isdisjoint(neu.json().keys())
+
+    anfrage_verboten = {
+        "kunde_id", "kundenportal_zugang_id", "vorgang_id", "bearbeitet_von", "bearbeitet_am",
+    }
+    erstellt = await client.post(
+        "/api/kundenportal/anfragen",
+        headers=headers,
+        json={"titel": "Heizung kalt", "beschreibung": "Seit gestern", "leistungstyp": "stoerung"},
+    )
+    assert erstellt.status_code == 201
+    anfrage_id = erstellt.json()["id"]
+    liste = await client.get("/api/kundenportal/anfragen", headers=headers)
+    detail = await client.get(f"/api/kundenportal/anfragen/{anfrage_id}", headers=headers)
+    for body in (erstellt.json(), liste.json()[0], detail.json()):
+        assert {"id", "titel", "beschreibung", "leistungstyp", "status", "ablehnungsgrund"} <= body.keys()
+        assert body["status"] == "offen"
+        assert anfrage_verboten.isdisjoint(body.keys())

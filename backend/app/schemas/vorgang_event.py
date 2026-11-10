@@ -18,7 +18,9 @@ EventType = Literal[
     "rechnung_status",
     "system",
     "unterschrift",
+    "eingangsrechnung_status",
     "formular",
+    "leistung",
 ]
 
 
@@ -29,6 +31,8 @@ class VorgangEventCreate(BaseModel):
     ref_entity_type: str | None = None
     ref_entity_id: UUID | None = None
     kundensichtbar: bool = False
+    # Nur fuer Kommentare an Vorgaengen mit zugewiesenem Partner erlaubt.
+    partner_sichtbar: bool = False
     client_uuid: UUID | None = None
 
 
@@ -41,15 +45,19 @@ class VorgangEventRead(BaseModel):
     author_user_id: UUID | None
     is_system: bool
     kundensichtbar: bool
+    partner_sichtbar: bool = False
     body: str | None
     payload: dict
     ref_entity_type: str | None
     ref_entity_id: UUID | None
     client_uuid: UUID | None
     created_at: datetime
-    # Nur bei event_type == "foto"/"unterschrift" gesetzt: bei jedem Lesen
-    # frisch aus dem in payload gespeicherten S3-Key signiert (presigned
-    # URLs laufen ab, koennen also nicht einfach mitgespeichert werden).
+    # Nur bei event_type == "foto"/"unterschrift"/"dokument" gesetzt: bei
+    # jedem Lesen frisch aus dem in payload gespeicherten S3-Key signiert
+    # (presigned URLs laufen ab, koennen also nicht einfach mitgespeichert
+    # werden).
     foto_url: str | None = None
     foto_thumbnail_url: str | None = None
     unterschrift_url: str | None = None
+    dokument_url: str | None = None
+    dokument_dateiname: str | None = None

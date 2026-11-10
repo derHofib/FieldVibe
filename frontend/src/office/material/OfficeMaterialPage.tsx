@@ -1,19 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Plus, Search } from "lucide-react";
+import { Boxes, Package, Plus, Search, Truck } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { anlagenApi, lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
+import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { MaterialDetailPage } from "../../pages/feld/MaterialDetailPage";
-import { MaterialZeile } from "../../pages/feld/GeschaeftPage";
+import { LagerorteVerwaltung, MaterialPage, MaterialZeile } from "../../pages/feld/MaterialPage";
 import type { Material } from "../../types";
 import { filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
-import { FehlerHinweis, FilterChip, SeitenKopf } from "../OfficeUi";
+import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 
 const EURO = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -30,6 +34,8 @@ export function OfficeMaterialPage() {
   const [tagId, setTagId] = useState("");
   const [nurUnterbestand, setNurUnterbestand] = useState(false);
   const [neu, setNeu] = useState(false);
+  const [ansicht, setAnsicht] = useState<"material" | "bestellwesen">("material");
+  const [lagerorteZeigen, setLagerorteZeigen] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["material"],
@@ -54,7 +60,7 @@ export function OfficeMaterialPage() {
       render: (m) => (
         <span
           className={
-            istUnterbestand(m) ? "font-semibold text-rose-600 dark:text-rose-300" : undefined
+            istUnterbestand(m) ? "font-semibold text-st-fehlt" : undefined
           }
         >
           {m.bestand_gesamt} {m.einheit}
@@ -81,23 +87,15 @@ export function OfficeMaterialPage() {
   ];
 
   const schliessen = () => {
-    setNeu(false);
     if (id) navigate("/material");
   };
 
-  const panel = neu ? (
-    <NeuesMaterialFormular
-      lagerorte={lagerorte.map((l) => ({ id: l.id, bezeichnung: l.bezeichnung }))}
-      lieferanten={lieferanten ?? []}
-      onAbbrechen={() => setNeu(false)}
-      onAngelegt={() => setNeu(false)}
-    />
-  ) : id ? (
+  const panel = id ? (
     <div className="space-y-4">
-      <MaterialDetailPage key={id} id={id} eingebettet onGeloescht={() => navigate("/material")} />
+      <MaterialDetailPage key={id} id={id} eingebettet />
       {gewaehltesMaterial && (
         <div>
-          <h3 className="mb-2 text-xs font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+          <h3 className="mb-2 text-xs font-bold tracking-wider text-label2 uppercase">
             Bestände je Lager
           </h3>
           <MaterialZeile
@@ -114,27 +112,34 @@ export function OfficeMaterialPage() {
   return (
     <div>
       <SeitenKopf titel="Material" anzahl={isLoading || isError ? undefined : gefiltert.length}>
-        <label className="relative block">
-          <span className="sr-only">Material suchen</span>
-          <Search
-            size={13}
-            strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-slate-400 dark:text-stone-500"
-          />
-          <input
+        <AnsichtUmschalter
+          wert={ansicht}
+          optionen={[
+            { wert: "material", label: "Material", icon: Boxes },
+            { wert: "bestellwesen", label: "Bestellwesen", icon: Truck },
+          ]}
+          onWechsel={(neuerWert) => {
+            setAnsicht(neuerWert);
+            if (id) navigate("/material");
+          }}
+        />
+        {ansicht === "material" && (
+          <SearchField
             value={suche}
-            onChange={(e) => setSuche(e.target.value)}
+            onChange={setSuche}
             placeholder="Bezeichnung oder Art.-Nr.…"
-            className="w-56 rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-slate-700 placeholder:text-slate-400 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-500"
+            ariaLabel="Material suchen"
+            className="w-64"
           />
-        </label>
+        )}
         {hatRecht("material", "erstellen") && (
           <button
             onClick={() => {
               if (id) navigate("/material");
+              setAnsicht("material");
               setNeu(true);
             }}
-            className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neues Material
@@ -142,60 +147,76 @@ export function OfficeMaterialPage() {
         )}
       </SeitenKopf>
 
-      {(data ?? []).length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <FilterChip
-            label="Nur Unterbestand"
-            aktiv={nurUnterbestand}
-            onClick={() => setNurUnterbestand((v) => !v)}
-          />
-          <label className="sr-only" htmlFor="material-lieferant">
-            Lieferant filtern
-          </label>
-          <select
-            id="material-lieferant"
-            value={lieferantId}
-            onChange={(e) => setLieferantId(e.target.value)}
-            className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
-          >
-            <option value="">Alle Lieferanten</option>
-            {(lieferanten ?? []).map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="material-tag">
-            Tag filtern
-          </label>
-          <select
-            id="material-tag"
-            value={tagId}
-            onChange={(e) => setTagId(e.target.value)}
-            className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
-          >
-            <option value="">Alle Tags</option>
-            {(tags ?? []).map((t) => (
-              <option key={t.id} value={t.id}>
-                #{t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      {ansicht === "bestellwesen" ? (
+        <MaterialPage nurBestellwesen />
+      ) : (
+        <>
+          {(data ?? []).length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <FilterChip
+                label="Nur Unterbestand"
+                aktiv={nurUnterbestand}
+                onClick={() => setNurUnterbestand((v) => !v)}
+              />
+              <label className="sr-only" htmlFor="material-lieferant">
+                Lieferant filtern
+              </label>
+              <select
+                id="material-lieferant"
+                value={lieferantId}
+                onChange={(e) => setLieferantId(e.target.value)}
+                className="h-[26px] rounded-[13px] bg-fill px-2.5 text-xs font-medium text-label"
+              >
+                <option value="">Alle Lieferanten</option>
+                {(lieferanten ?? []).map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <label className="sr-only" htmlFor="material-tag">
+                Tag filtern
+              </label>
+              <select
+                id="material-tag"
+                value={tagId}
+                onChange={(e) => setTagId(e.target.value)}
+                className="h-[26px] rounded-[13px] bg-fill px-2.5 text-xs font-medium text-label"
+              >
+                <option value="">Alle Tags</option>
+                {(tags ?? []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    #{t.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setLagerorteZeigen((v) => !v)}
+                aria-expanded={lagerorteZeigen}
+                className="ml-auto text-xs font-medium text-tint-text hover:underline"
+              >
+                Lagerorte verwalten
+              </button>
+            </div>
+          )}
+          {lagerorteZeigen && (
+            <div className="mb-4">
+              <LagerorteVerwaltung
+                lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")}
+              />
+            </div>
+          )}
 
       <ListeMitPanel
-        panelTitel={neu ? "Neues Material" : "Materialdetails"}
+        panelTitel="Materialdetails"
         panel={panel}
         onSchliessen={schliessen}
         liste={
           isLoading ? (
             <SkeletonList count={6} />
           ) : isError ? (
-            <FehlerHinweis
-              text={error instanceof ApiError ? error.message : "Das Material konnte nicht geladen werden."}
-              onNochmal={() => refetch()}
-            />
+            <FehlerZustand fehler={error} was="Das Material" onErneut={() => void refetch()} />
           ) : (data ?? []).length === 0 ? (
             <EmptyState
               icon={Package}
@@ -209,22 +230,29 @@ export function OfficeMaterialPage() {
               spalten={spalten}
               zeilenKey={(m) => m.id}
               gewaehlt={id}
-              onWaehlen={(m) => {
-                setNeu(false);
-                navigate(`/material/${m.id}`);
-              }}
+              onWaehlen={(m) => navigate(`/material/${m.id}`)}
               startSortierung={{ key: "bezeichnung" }}
             />
           )
         }
       />
+        </>
+      )}
+
+      <SeitenPanel offen={neu} onClose={() => setNeu(false)} titel="Neues Material">
+        <NeuesMaterialFormular
+          lagerorte={lagerorte.map((l) => ({ id: l.id, bezeichnung: l.bezeichnung }))}
+          lieferanten={lieferanten ?? []}
+          onAbbrechen={() => setNeu(false)}
+          onAngelegt={() => setNeu(false)}
+        />
+      </SeitenPanel>
     </div>
   );
 }
 
-const FELD =
-  "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
-const LABEL = "mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400";
+const FELD = "field-ap";
+const LABEL = "mb-1 block text-xs font-medium text-label2";
 
 function NeuesMaterialFormular({
   lagerorte,
@@ -273,9 +301,8 @@ function NeuesMaterialFormular({
         e.preventDefault();
         anlegen.mutate();
       }}
-      className="space-y-3"
+      className="space-y-3 p-4"
     >
-      <h2 className="text-base font-bold text-slate-800 dark:text-stone-100">Neues Material</h2>
       <div>
         <label htmlFor="material-bezeichnung" className={LABEL}>
           Bezeichnung *
@@ -342,7 +369,7 @@ function NeuesMaterialFormular({
         </select>
       </div>
       {anlegen.isError && (
-        <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">
+        <p role="alert" className="text-xs text-st-fehlt">
           {anlegen.error instanceof ApiError ? anlegen.error.message : "Anlegen fehlgeschlagen."}
         </p>
       )}
@@ -350,14 +377,14 @@ function NeuesMaterialFormular({
         <button
           type="button"
           onClick={onAbbrechen}
-          className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="btn-ap px-3 py-2 text-xs font-semibold"
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={anlegen.isPending}
-          className="btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          className="btn-ap-primary px-4 py-2 text-xs font-semibold disabled:opacity-50"
         >
           {anlegen.isPending ? "Legt an…" : "Material anlegen"}
         </button>

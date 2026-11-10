@@ -16,14 +16,17 @@ from app.api.deps import (
 )
 from app.core.config import get_settings
 from app.models.anlage import Anlage
+from app.models.auftrag import Auftrag
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.partner import Partner
+from app.models.projekt import Projekt
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_abhaengigkeit import VorgangAbhaengigkeit
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.anlage import AnlageRead
@@ -36,24 +39,32 @@ from app.schemas.vorgang import (
     VorgangRead,
     VorgangUpdate,
 )
+from app.schemas.vorgang_abhaengigkeit import (
+    VorgangAbhaengigkeitCreate,
+    VorgangAbhaengigkeitenListe,
+    VorgangAbhaengigkeitRead,
+)
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
-from app.services.formular_service import offene_pflichtformulare
+from app.services.form_modul_service import offene_pflichtschemas
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.partner_service import partner_hat_gueltige_freistellungsbescheinigung
-from app.services.rechte_service import (
-    darf_vorgang_selbst_uebernehmen,
-    ist_auf_zugewiesene_kunden_beschraenkt,
-)
+from app.services.rechte_service import darf_vorgang_selbst_uebernehmen
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
     create_folge_vorgang,
 )
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import (
+    require_kunde_zugewiesen,
+    require_vorgang_zugriff,
+    vorgang_scope_filter,
+    zuweisbare_user_ids,
+)
 
 
 async def _mit_zugewiesenem_namen(session: AsyncSession, vorgang: Vorgang) -> Vorgang:
@@ -80,6 +91,9 @@ async def list_vorgaenge(
     abrechnungsart: str | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
     parent_vorgang_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    auftrag_id: UUID | None = Query(default=None),
+    partner_id: UUID | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -102,6 +116,12 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.standort_id == standort_id)
     if parent_vorgang_id:
         stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
+    if projekt_id:
+        stmt = stmt.where(Vorgang.projekt_id == projekt_id)
+    if auftrag_id:
+        stmt = stmt.where(Vorgang.auftrag_id == auftrag_id)
+    if partner_id:
+        stmt = stmt.where(Vorgang.partner_id == partner_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -115,10 +135,9 @@ async def list_vorgaenge(
             Vorgang.faelligkeit_am
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
-        stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    scope_klausel = await vorgang_scope_filter(session, auth)
+    if scope_klausel is not None:
+        stmt = stmt.where(scope_klausel)
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -153,13 +172,7 @@ async def _validate_references(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ) and body.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Dieser Kunde ist dir nicht zugewiesen",
-        )
+    await require_kunde_zugewiesen(session, auth, body.kunde_id)
     if body.anlage_id is not None:
         await _validate_anlage_fuer_kunde(session, body.anlage_id, body.kunde_id)
     for weitere_id in body.weitere_anlage_ids:
@@ -197,6 +210,16 @@ async def _validate_references(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Übergeordneter Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if body.projekt_id is not None and await session.get(Projekt, body.projekt_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if body.auftrag_id is not None and await session.get(Auftrag, body.auftrag_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Auftrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
 
 
@@ -241,6 +264,8 @@ async def create_vorgang(
         standort_id=body.standort_id,
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
+        projekt_id=body.projekt_id,
+        auftrag_id=body.auftrag_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         abrechnungsart=body.abrechnungsart,
@@ -285,13 +310,9 @@ async def create_vorgang(
 
 
 async def _require_vorgang_zugriff(
-    session: AsyncSession, auth: AuthContext, vorgang: Vorgang
+    session: AsyncSession, auth: AuthContext, vorgang: Vorgang, aktion: str = "sehen"
 ) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    )
-    if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await require_vorgang_zugriff(session, auth, vorgang, aktion)
 
 
 @router.get(
@@ -311,6 +332,9 @@ async def export_vorgaenge_csv(
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     stmt = select(Vorgang).order_by(Vorgang.created_at.asc())
+    scope_klausel = await vorgang_scope_filter(session, auth)
+    if scope_klausel is not None:
+        stmt = stmt.where(scope_klausel)
     if status_filter:
         stmt = stmt.where(Vorgang.status == status_filter)
     if kunde_id:
@@ -350,6 +374,9 @@ async def export_vorgaenge_csv(
             ]
         )
 
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="vorgaenge", zeilen=len(rows)
+    )
     return csv_response(
         ["Vorgangsnummer", "Titel", "Kunde", "Anlage", "Status", "Abrechnungsart", "Leistungstyp", "Erstellt am", "Abgeschlossen am"],
         rows,
@@ -411,6 +438,7 @@ async def add_vorgang_anlagen(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang, "bearbeiten")
 
     bestehende = await session.execute(
         select(VorgangAnlage.anlage_id).where(VorgangAnlage.vorgang_id == vorgang_id)
@@ -444,8 +472,13 @@ async def add_vorgang_anlagen(
 async def remove_vorgang_anlage(
     vorgang_id: UUID,
     anlage_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang, "bearbeiten")
     zuordnung = await session.get(VorgangAnlage, {"vorgang_id": vorgang_id, "anlage_id": anlage_id})
     if zuordnung is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zuordnung nicht gefunden")
@@ -521,7 +554,7 @@ async def update_vorgang(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
-    await _require_vorgang_zugriff(session, auth, vorgang)
+    await _require_vorgang_zugriff(session, auth, vorgang, "bearbeiten")
 
     changes = body.model_dump(exclude_unset=True)
     if changes and vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
@@ -548,13 +581,7 @@ async def update_vorgang(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
-        if await ist_auf_zugewiesene_kunden_beschraenkt(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
-        ) and neuer_kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Dieser Kunde ist dir nicht zugewiesen",
-            )
+        await require_kunde_zugewiesen(session, auth, neuer_kunde_id)
         # Eine bestehende Anlage-Zuordnung gehoerte zum alten Kunden -- wird
         # die neue Anlage nicht im selben Request mitgegeben, bleibt sie
         # sonst inkonsistent (Anlage eines anderen Kunden) an diesem Vorgang
@@ -616,11 +643,31 @@ async def update_vorgang(
                 detail="Vertrag gehört nicht zum (neuen) Kunden dieses Vorgangs",
             )
 
+    if changes.get("projekt_id") is not None and await session.get(Projekt, changes["projekt_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
+    if changes.get("auftrag_id") is not None and await session.get(Auftrag, changes["auftrag_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Auftrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
     if changes.get("zugewiesener_user_id") is not None:
         if await session.get(User, changes["zugewiesener_user_id"]) is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Nutzer nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        # Unveraenderte Zuweisung (z.B. PATCH mit vollem Formular) bleibt erlaubt.
+        if changes["zugewiesener_user_id"] != vorgang.zugewiesener_user_id and not await zuweisbare_user_ids(
+            session, {changes["zugewiesener_user_id"]}
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
             )
 
     alter_zugewiesener_user_id = vorgang.zugewiesener_user_id
@@ -671,7 +718,7 @@ async def update_vorgang(
 
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen":
-            offene_formulare = await offene_pflichtformulare(session, vorgang)
+            offene_formulare = await offene_pflichtschemas(session, vorgang)
             if offene_formulare:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -783,7 +830,7 @@ async def uebernehmen(
             detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
         )
     if not await darf_vorgang_selbst_uebernehmen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -829,7 +876,8 @@ async def uebernehmen(
     "/{vorgang_id}/partner-zuweisung",
     response_model=VorgangPartnerZuweisungResponse,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
         Depends(require_module("nachunternehmer")),
     ],
 )
@@ -847,6 +895,7 @@ async def vorgang_partner_zuweisen(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang, "bearbeiten")
 
     warnung = False
     if body.partner_id is None:
@@ -874,7 +923,7 @@ async def vorgang_partner_zuweisen(
                 event_type="system",
                 is_system=True,
                 author_user_id=auth.user_id,
-                body=f"Als Teilleistung/Auftrag an Nachunternehmer '{partner.name}' vorgeschlagen",
+                body=f"Als Teilleistung an Nachunternehmer '{partner.name}' vorgeschlagen",
                 payload={"partner_id": str(partner.id)},
             )
         )
@@ -909,6 +958,9 @@ async def delete_vorgang(
     # dieses Vorgangs (siehe app/services/papierkorb_service.py). Bisher gab
     # es fuer einen Vorgang gar keinen Loesch-Endpoint (nur den Status
     # "storniert") -- dieser ist neu und primaer fuer loesch_operativ gedacht.
+    vorgang_vorab = await session.get(Vorgang, vorgang_id)
+    if vorgang_vorab is not None:
+        await _require_vorgang_zugriff(session, auth, vorgang_vorab, "loeschen")
     vorgang = await papierkorb_service.soft_delete(
         session, entity_typ="vorgang", entity_id=vorgang_id, actor_user_id=auth.user_id
     )
@@ -923,3 +975,133 @@ async def delete_vorgang(
         entity_id=vorgang_id,
         payload={"vorgangsnummer": vorgang.vorgangsnummer},
     )
+
+
+async def _wuerde_zyklus_erzeugen(session: AsyncSession, vorgang_id: UUID, blockiert_von_id: UUID) -> bool:
+    # Breitensuche entlang der bestehenden "haengt ab von"-Kanten ab
+    # blockiert_von_id: wird dabei vorgang_id erreicht, wuerde die neue Kante
+    # (vorgang_id haengt ab von blockiert_von_id) einen Zyklus schliessen.
+    besucht: set[UUID] = set()
+    warteschlange = [blockiert_von_id]
+    while warteschlange:
+        aktuell = warteschlange.pop()
+        if aktuell == vorgang_id:
+            return True
+        if aktuell in besucht:
+            continue
+        besucht.add(aktuell)
+        result = await session.execute(
+            select(VorgangAbhaengigkeit.blockiert_von_id).where(VorgangAbhaengigkeit.vorgang_id == aktuell)
+        )
+        warteschlange.extend(result.scalars().all())
+    return False
+
+
+@router.get(
+    "/{vorgang_id}/abhaengigkeiten",
+    response_model=VorgangAbhaengigkeitenListe,
+    dependencies=[Depends(require_recht("vorgaenge", "sehen"))],
+)
+async def list_vorgang_abhaengigkeiten(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangAbhaengigkeitenListe:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    blockiert_von = await session.execute(
+        select(VorgangAbhaengigkeit).where(VorgangAbhaengigkeit.vorgang_id == vorgang_id)
+    )
+    blockiert = await session.execute(
+        select(VorgangAbhaengigkeit).where(VorgangAbhaengigkeit.blockiert_von_id == vorgang_id)
+    )
+    return VorgangAbhaengigkeitenListe(
+        blockiert_von=list(blockiert_von.scalars().all()),
+        blockiert=list(blockiert.scalars().all()),
+    )
+
+
+@router.post(
+    "/{vorgang_id}/abhaengigkeiten",
+    response_model=VorgangAbhaengigkeitRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def add_vorgang_abhaengigkeit(
+    vorgang_id: UUID,
+    body: VorgangAbhaengigkeitCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangAbhaengigkeit:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    if body.blockiert_von_id == vorgang_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ein Vorgang kann sich nicht selbst blockieren")
+    # session.get() laeuft in der RLS-gescopten Session -- ein Vorgang eines
+    # anderen Mandanten liefert None, genau wie bei vertrag_id/anlage_id
+    # weiter oben in dieser Datei.
+    blockierender_vorgang = await session.get(Vorgang, body.blockiert_von_id)
+    if blockierender_vorgang is None or blockierender_vorgang.geloescht_am is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blockierender Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if await _wuerde_zyklus_erzeugen(session, vorgang_id, body.blockiert_von_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Diese Abhängigkeit würde einen Zyklus erzeugen",
+        )
+
+    abhaengigkeit = VorgangAbhaengigkeit(
+        mandant_id=auth.mandant_id,
+        vorgang_id=vorgang_id,
+        blockiert_von_id=body.blockiert_von_id,
+        erstellt_von=auth.user_id,
+    )
+    session.add(abhaengigkeit)
+    try:
+        await session.flush()
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Diese Abhängigkeit besteht bereits")
+    return abhaengigkeit
+
+
+@router.delete(
+    "/{vorgang_id}/abhaengigkeiten/{blockiert_von_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def remove_vorgang_abhaengigkeit(
+    vorgang_id: UUID,
+    blockiert_von_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    result = await session.execute(
+        select(VorgangAbhaengigkeit).where(
+            VorgangAbhaengigkeit.vorgang_id == vorgang_id,
+            VorgangAbhaengigkeit.blockiert_von_id == blockiert_von_id,
+        )
+    )
+    abhaengigkeit = result.scalar_one_or_none()
+    if abhaengigkeit is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abhängigkeit nicht gefunden")
+    await session.delete(abhaengigkeit)
+    await session.flush()

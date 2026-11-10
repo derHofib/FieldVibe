@@ -11,6 +11,7 @@ from app.db.session import system_session
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.user import User
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 
 async def _make_custom_account_typ_ohne_abrechnung(mandant) -> AccountTyp:
@@ -43,6 +44,7 @@ async def _make_custom_user(mandant, account_typ) -> User:
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await session.refresh(user)
         user._plaintext_password = password
         return user

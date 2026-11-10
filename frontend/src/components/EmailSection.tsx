@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { ApiError } from "../api/client";
 import type { EmailLog } from "../types";
+import { FehlerMeldung } from "./Hinweiskasten";
 
 interface EmailSectionProps {
   queryKey: unknown[];
@@ -14,6 +15,13 @@ interface EmailSectionProps {
    * Server setzt dann einen Standardtext. */
   betreffPflicht?: boolean;
   hinweis?: string;
+  /** Verlauf unterhalb des Formulars ausblenden -- fuer Seiten, die die
+   * E-Mails bereits an anderer Stelle anzeigen (Vorgang: gemeinsamer
+   * Verlauf mit den Kommentaren statt einer zweiten Liste hier). */
+  showHistory?: boolean;
+  /** Formular direkt offen anzeigen -- fuer den Sprung von der
+   * "Nachfragen"-Schnellaktion im Feed (Link mit #email-Hash). */
+  defaultOpen?: boolean;
 }
 
 /** Wiederverwendbarer "E-Mail senden"-Block mit Compose-Formular und
@@ -26,9 +34,11 @@ export function EmailSection({
   defaultEmpfaenger,
   betreffPflicht = true,
   hinweis,
+  showHistory = true,
+  defaultOpen = false,
 }: EmailSectionProps) {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(defaultOpen);
   const [empfaenger, setEmpfaenger] = useState(defaultEmpfaenger ?? "");
   const [betreff, setBetreff] = useState("");
   const [inhalt, setInhalt] = useState("");
@@ -58,13 +68,13 @@ export function EmailSection({
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="card-ap p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">E-Mail</h2>
+        <h2 className="text-sm font-semibold text-label2">E-Mail</h2>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             + E-Mail senden
           </button>
@@ -72,41 +82,41 @@ export function EmailSection({
       </div>
 
       {showForm && (
-        <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
-          {hinweis && <p className="text-xs text-slate-500 dark:text-stone-400">{hinweis}</p>}
+        <div className="mb-3 space-y-2 border border-sepstrong p-2">
+          {hinweis && <p className="text-xs text-label2">{hinweis}</p>}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Empfänger
             </label>
             <input
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
             <input
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
             <textarea
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
           </div>
-          {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+          {error && <FehlerMeldung meldung={error} />}
           <div className="flex gap-2">
             <button
               onClick={() => sendMutation.mutate()}
@@ -115,7 +125,7 @@ export function EmailSection({
                 (betreffPflicht && (!betreff.trim() || !inhalt.trim())) ||
                 sendMutation.isPending
               }
-              className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Senden
             </button>
@@ -124,7 +134,7 @@ export function EmailSection({
                 setShowForm(false);
                 setError(null);
               }}
-              className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+              className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
             >
               Abbrechen
             </button>
@@ -132,36 +142,43 @@ export function EmailSection({
         </div>
       )}
 
-      {(emails ?? []).length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine E-Mails versendet.</p>
+      {showHistory && ((emails ?? []).length === 0 ? (
+        <p className="text-sm text-label2">Noch keine E-Mails versendet.</p>
       ) : (
         <div className="space-y-1.5">
           {emails!.map((e) => (
-            <div key={e.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+            <div key={e.id} className="rounded-md bg-fill p-2 text-sm">
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-slate-700 dark:text-stone-300">{e.betreff}</span>
+                <span className="font-medium text-label">{e.betreff}</span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
-                      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                      : "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
+                      ? "bg-st-erledigt-bg text-st-erledigt  "
+                      : e.status === "ausstehend"
+                        ? "bg-st-arbeit-bg text-st-arbeit  "
+                        : "bg-st-fehlt-bg text-st-fehlt  "
                   }`}
                 >
-                  {e.status === "gesendet" ? "Gesendet" : "Fehler"}
+                  {e.status === "gesendet" ? "Gesendet" : e.status === "ausstehend" ? "Wird gesendet" : "Fehler"}
                 </span>
               </div>
-              <div className="text-xs text-slate-400 dark:text-stone-500">
+              <div className="text-xs text-label2">
                 an {e.empfaenger} ·{" "}
                 {new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}
               </div>
+              {e.status === "ausstehend" && e.fehlermeldung && (
+                <div className="mt-0.5 text-xs text-label2">{e.fehlermeldung}</div>
+              )}
               {e.status === "fehler" && e.fehlermeldung && (
-                <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{e.fehlermeldung}</p>
+                <div className="mt-0.5">
+                  <FehlerMeldung meldung={e.fehlermeldung} />
+                </div>
               )}
             </div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }

@@ -146,7 +146,7 @@ def _inhalte(einladung: Einladung, *, absender_name: str, mandant_name: str) -> 
             "wordmark": _WORDMARK_HTML["mitarbeiter"],
             "kicker": "Team-Einladung",
             "message": (
-                "Nach der Registrierung sehen Sie Ihre Aufträge, können Fotos hochladen "
+                "Nach der Registrierung sehen Sie Ihre Vorgänge, können Fotos hochladen "
                 "und mit dem Team chatten – direkt vom Handy."
             ),
             "cta": "Einladung annehmen",
@@ -158,7 +158,7 @@ def _inhalte(einladung: Einladung, *, absender_name: str, mandant_name: str) -> 
             "wordmark": _WORDMARK_HTML["kunde"],
             "kicker": f"Einladung von {mandant_name}",
             "message": (
-                "Dort sehen Sie Angebote, Rechnungen und den Status Ihrer Aufträge – "
+                "Dort sehen Sie Angebote, Rechnungen und den Status Ihrer Vorgänge – "
                 "und können Angebote direkt online annehmen."
             ),
             "cta": "Kundenportal-Zugang einrichten",
@@ -169,7 +169,7 @@ def _inhalte(einladung: Einladung, *, absender_name: str, mandant_name: str) -> 
         "wordmark": _WORDMARK_HTML["partner"],
         "kicker": f"Einladung von {mandant_name}",
         "message": (
-            "Dort sehen Sie zugewiesene Aufträge, können sie annehmen oder ablehnen "
+            "Dort sehen Sie zugewiesene Vorgänge, können sie annehmen oder ablehnen "
             "und den Status direkt aktualisieren."
         ),
         "cta": "Partnerportal-Zugang einrichten",

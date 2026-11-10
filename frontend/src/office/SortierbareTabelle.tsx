@@ -59,8 +59,8 @@ export function SortierbareTabelle<T>({
 
   return (
     <TabellenRahmen>
-      <table className="w-full text-left text-[13px]">
-        <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
+      <table className="w-full border-collapse text-sm">
+        <thead className="border-b border-sepstrong text-xs text-label2">
           <tr>
             {spalten.map((spalte) => {
               const aktiv = sortierung?.key === spalte.key;
@@ -71,13 +71,13 @@ export function SortierbareTabelle<T>({
                   aria-sort={
                     aktiv ? (sortierung?.absteigend ? "descending" : "ascending") : undefined
                   }
-                  className={`px-3 py-2.5 font-semibold ${spalte.align === "rechts" ? "text-right" : ""}`}
+                  className={`px-3 py-2 text-xs font-medium tracking-wide uppercase ${spalte.align === "rechts" ? "text-right" : "text-left"}`}
                 >
                   {spalte.sortWert ? (
                     <button
                       onClick={() => umschalten(spalte.key)}
-                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-800 dark:hover:text-stone-100 ${
-                        aktiv ? "text-slate-800 dark:text-stone-100" : ""
+                      className={`inline-flex items-center gap-1 rounded-sm uppercase hover:text-label ${
+                        aktiv ? "text-label" : ""
                       }`}
                     >
                       {spalte.label}
@@ -88,7 +88,7 @@ export function SortierbareTabelle<T>({
                           <ArrowUp size={12} strokeWidth={2.5} />
                         )
                       ) : (
-                        <ChevronsUpDown size={12} strokeWidth={2} className="opacity-50" />
+                        <ChevronsUpDown size={12} strokeWidth={2} className="text-label3" />
                       )}
                     </button>
                   ) : (
@@ -98,13 +98,13 @@ export function SortierbareTabelle<T>({
               );
             })}
             {zeilenAktionen && (
-              <th scope="col" className="w-10 px-2 py-2.5">
+              <th scope="col" className="w-10 px-2 py-2">
                 <span className="sr-only">Aktionen</span>
               </th>
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-stone-800">
+        <tbody>
           {sortiert.map((zeile) => {
             const key = zeilenKey(zeile);
             const ausgewaehlt = key === gewaehlt;
@@ -113,16 +113,14 @@ export function SortierbareTabelle<T>({
                 key={key}
                 onClick={() => onWaehlen(zeile)}
                 aria-selected={ausgewaehlt}
-                className={`cursor-pointer ${
-                  ausgewaehlt
-                    ? "bg-blue-50/70 dark:bg-blue-500/10"
-                    : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                className={`cursor-pointer border-b border-sep last:border-b-0 ${
+                  ausgewaehlt ? "bg-tintbg" : "hover:bg-fill"
                 }`}
               >
                 {spalten.map((spalte) => (
                   <td
                     key={spalte.key}
-                    className={`px-3 py-2.5 text-slate-600 dark:text-stone-300 ${
+                    className={`px-3 py-2 text-label ${
                       spalte.align === "rechts" ? "text-right tabular-nums" : ""
                     }`}
                   >
@@ -133,7 +131,7 @@ export function SortierbareTabelle<T>({
                           onWaehlen(zeile);
                         }}
                         aria-current={ausgewaehlt ? "true" : undefined}
-                        className="rounded-sm text-left font-semibold text-slate-800 dark:text-stone-100"
+                        className="rounded-sm text-left font-semibold text-label"
                       >
                         {spalte.render(zeile)}
                       </button>
@@ -143,7 +141,7 @@ export function SortierbareTabelle<T>({
                   </td>
                 ))}
                 {zeilenAktionen && (
-                  <td className="px-2 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-2 py-1 text-right" onClick={(e) => e.stopPropagation()}>
                     {zeilenAktionen(zeile)}
                   </td>
                 )}

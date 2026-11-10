@@ -283,3 +283,18 @@ def test_anzeigename_verschachtelter_ordner_nimmt_letztes_segment():
 def test_parse_fetch_flags_erkennt_seen():
     assert mail_sync_service._parse_fetch_flags(rb"1 (FLAGS (\Seen) RFC822 {123}") is True
     assert mail_sync_service._parse_fetch_flags(rb"1 (FLAGS () RFC822 {123}") is False
+
+
+@pytest.mark.asyncio
+async def test_sync_bestehendes_klartext_konto_meldet_umstellung(make_mandant, make_user):
+    konto = await _make_account(make_mandant, make_user)
+    async with system_session() as session:
+        (await session.get(MailAccount, konto.id)).imap_verschluesselung = "keine"
+
+    ergebnis = await mail_sync_service.run_mail_sync([konto.id])
+    assert ergebnis == {"konten_synchronisiert": 0, "fehler": 1}
+    async with system_session() as session:
+        row = await session.get(MailAccount, konto.id)
+        assert row.letzter_sync_fehler == (
+            "Unverschlüsselte Verbindung nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen"
+        )

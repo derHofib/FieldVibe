@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -14,6 +15,7 @@ from app.models.email_log import EmailLog
 from app.models.integration import MandantIntegration
 from app.models.mandant import Mandant
 from app.models.plattform_integration import PlattformIntegration
+from app.services.mail_netz import uebersetze_fehler, verbinde_smtp
 
 
 class EmailNichtKonfiguriert(Exception):
@@ -32,7 +34,7 @@ class _SmtpVerbindung:
     ist_global: bool
 
 
-async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbindung:
+async def _resolve_smtp(session: AsyncSession, mandant_id: UUID | None) -> _SmtpVerbindung:
     """Dreistufiger Fallback, jede Stufe optional:
 
     1. Eigene smtp-Integration des Mandanten (mandant_integrationen) -- hat
@@ -48,14 +50,18 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
     Ohne jede der drei Stufen kaeme keine Mail raus, bevor irgendjemand
     SMTP eingerichtet hat -- deshalb der mehrstufige statt ein rein
     Mandanten-gebundener Fallback."""
-    result = await session.execute(
-        select(MandantIntegration).where(
-            MandantIntegration.mandant_id == mandant_id,
-            MandantIntegration.typ == "smtp",
-            MandantIntegration.aktiv.is_(True),
+    # mandant_id None = Account ohne Mandant (super_admin): es gibt keine
+    # Mandanten-Integration, die Stufe 1 entfaellt.
+    integration = None
+    if mandant_id is not None:
+        result = await session.execute(
+            select(MandantIntegration).where(
+                MandantIntegration.mandant_id == mandant_id,
+                MandantIntegration.typ == "smtp",
+                MandantIntegration.aktiv.is_(True),
+            )
         )
-    )
-    integration = result.scalar_one_or_none()
+        integration = result.scalar_one_or_none()
     if integration is not None:
         config = integration.config
         host = config.get("host")
@@ -104,23 +110,48 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
     raise EmailNichtKonfiguriert()
 
 
-def _send_blocking(*, host: str, port: int, user: str | None, password: str | None, message: EmailMessage) -> None:
-    with smtplib.SMTP(host, port, timeout=10) as smtp:
-        smtp.starttls()
+def _send_blocking(
+    *, host: str, port: int, user: str | None, password: str | None, message: EmailMessage,
+    ist_global: bool = True,
+) -> None:
+    if ist_global:
+        # Plattform-SMTP ist vertrauenswuerdige Admin-Konfiguration (z.B.
+        # MailHog im Docker-Netz) -- bewusst ohne Zielpruefung.
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            smtp.starttls(context=ssl.create_default_context())
+            if user and password:
+                smtp.login(user, password)
+            smtp.send_message(message)
+        return
+
+    # Mandanten-Ziel ist frei waehlbar: SSRF-Pruefung, IP-Pinning, TLS.
+    try:
+        smtp = verbinde_smtp(host, port, "ssl" if port == 465 else "starttls", 10)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
+    try:
         if user and password:
             smtp.login(user, password)
         smtp.send_message(message)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
+    finally:
+        try:
+            smtp.quit()
+        except Exception:
+            pass
 
 
 async def send_email(
     session: AsyncSession,
-    mandant_id: UUID,
+    mandant_id: UUID | None,
     *,
     to: str,
     subject: str,
     body: str,
     html_body: str | None = None,
     attachment: tuple[str, bytes, str] | None = None,
+    weitere_anhaenge: list[tuple[str, bytes, str]] | None = None,
 ) -> None:
     """Verschickt eine E-Mail ueber die smtp-Integration des Mandanten,
     oder -- falls keine hinterlegt ist -- ueber den globalen
@@ -136,7 +167,8 @@ async def send_email(
     (Fallback), der HTML-Teil danach (von Clients bevorzugt, die beides
     koennen; siehe app/services/einladung_service.py). `attachment` ist
     optional (Dateiname, Inhalt, Mimetype z.B. "application/pdf") -- fuer
-    den Versand von Angebot/Rechnung/Bestellung als PDF-Anhang."""
+    den Versand von Angebot/Rechnung/Bestellung als PDF-Anhang. Weitere Anhaenge
+    (z. B. die XRechnung-XML neben dem PDF) gehen in weitere_anhaenge."""
     verbindung = await _resolve_smtp(session, mandant_id)
 
     from_address = verbindung.from_address
@@ -146,7 +178,7 @@ async def send_email(
         # bleiben, fuer die FieldVibe tatsaechlich SPF/DKIM eingerichtet
         # hat, sonst wirkt die Mail wie Spoofing statt wie eine echte
         # Nachricht vom Betrieb.
-        mandant = await session.get(Mandant, mandant_id)
+        mandant = await session.get(Mandant, mandant_id) if mandant_id is not None else None
         if mandant is not None:
             from_address = formataddr((f"{mandant.name} via FieldVibe", verbindung.from_address))
 
@@ -157,8 +189,7 @@ async def send_email(
     message.set_content(body)
     if html_body is not None:
         message.add_alternative(html_body, subtype="html")
-    if attachment is not None:
-        dateiname, inhalt, mimetype = attachment
+    for dateiname, inhalt, mimetype in [*([attachment] if attachment is not None else []), *(weitere_anhaenge or [])]:
         maintype, _, subtype = mimetype.partition("/")
         message.add_attachment(inhalt, maintype=maintype, subtype=subtype or "octet-stream", filename=dateiname)
 
@@ -167,7 +198,7 @@ async def send_email(
     await anyio.to_thread.run_sync(
         lambda: _send_blocking(
             host=verbindung.host, port=verbindung.port, user=verbindung.user,
-            password=verbindung.password, message=message,
+            password=verbindung.password, message=message, ist_global=verbindung.ist_global,
         )
     )
 
@@ -183,6 +214,7 @@ async def send_email_and_log(
     body: str,
     gesendet_von: UUID | None = None,
     attachment: tuple[str, bytes, str] | None = None,
+    weitere_anhaenge: list[tuple[str, bytes, str]] | None = None,
 ) -> EmailLog:
     """Wie send_email, schreibt aber -- egal ob Versand gelingt oder
     fehlschlaegt -- einen EmailLog-Eintrag, damit der Nutzer im Verlauf
@@ -196,7 +228,15 @@ async def send_email_and_log(
     status_wert = "gesendet"
     fehlermeldung: str | None = None
     try:
-        await send_email(session, mandant_id, to=to, subject=subject, body=body, attachment=attachment)
+        await send_email(
+            session,
+            mandant_id,
+            to=to,
+            subject=subject,
+            body=body,
+            attachment=attachment,
+            weitere_anhaenge=weitere_anhaenge,
+        )
     except EmailNichtKonfiguriert:
         status_wert = "fehler"
         fehlermeldung = "Kein SMTP-Postfach für diesen Mandanten hinterlegt (siehe Integrationen)."

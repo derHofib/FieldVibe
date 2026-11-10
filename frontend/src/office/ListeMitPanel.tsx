@@ -35,7 +35,7 @@ export function ListeMitPanel({
                 onClick={onSchliessen}
                 aria-label="Panel schließen"
                 title="Schließen (Esc)"
-                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-stone-500 dark:hover:bg-stone-800"
+                className="rounded-full p-1.5 text-label2 hover:bg-fill hover:text-label"
               >
                 <X size={16} strokeWidth={2} />
               </button>

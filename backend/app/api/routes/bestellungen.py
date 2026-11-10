@@ -28,6 +28,8 @@ from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_bestellnummer
 from app.services.pdf_service import generate_bestellung_pdf
+from app.services.rechnung_service import logo_bytes_laden
+from app.services.zeitplan_service import liefertermin_uebernehmen
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -144,6 +146,7 @@ async def create_bestellung_from_bedarfe(
         bestellnummer=bestellnummer,
         erstellt_von=auth.user_id,
         notiz=body.notiz,
+        liefertermin=body.liefertermin,
     )
     session.add(bestellung)
     await session.flush()
@@ -213,10 +216,26 @@ async def update_bestellung(
         bestellung.lieferant_id = body.lieferant_id
     if body.notiz is not None:
         bestellung.notiz = body.notiz
+    liefertermin_geaendert = "liefertermin" in body.model_fields_set and body.liefertermin != bestellung.liefertermin
+    if "liefertermin" in body.model_fields_set:
+        bestellung.liefertermin = body.liefertermin
+    if body.positionen_preise and body.status != "eingegangen":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="positionen_preise ist nur beim Wareneingang (status='eingegangen') gültig",
+        )
     if body.status is not None:
-        await apply_status_transition(session, bestellung, body.status, erstellt_von=auth.user_id)
+        await apply_status_transition(
+            session,
+            bestellung,
+            body.status,
+            erstellt_von=auth.user_id,
+            positionen_preise=body.positionen_preise,
+        )
 
     await session.flush()
+    if liefertermin_geaendert:
+        await liefertermin_uebernehmen(session, bestellung)
     await session.refresh(bestellung)
     return await to_read_model(session, bestellung)
 
@@ -251,7 +270,9 @@ async def bestellung_pdf(
 
     mandant = await session.get(Mandant, auth.mandant_id)
 
-    pdf_bytes = generate_bestellung_pdf(mandant, bestellung, positionen, lieferant)
+    pdf_bytes = generate_bestellung_pdf(
+        mandant, bestellung, positionen, lieferant, await logo_bytes_laden(mandant)
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -297,7 +318,9 @@ async def send_bestellung_email(
     from app.models.mandant import Mandant
 
     mandant = await session.get(Mandant, auth.mandant_id)
-    pdf_bytes = generate_bestellung_pdf(mandant, bestellung, positionen, lieferant)
+    pdf_bytes = generate_bestellung_pdf(
+        mandant, bestellung, positionen, lieferant, await logo_bytes_laden(mandant)
+    )
     dateiname = f"{bestellung.bestellnummer}.pdf"
 
     log = await send_email_and_log(
