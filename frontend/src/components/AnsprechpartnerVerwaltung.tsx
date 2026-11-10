@@ -1,6 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { AnlegenPanel } from "./AnlegenPanel";
+import { useBestaetigung } from "./ConfirmDialog";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "./FormularFeld";
 import type { Ansprechpartner, Eskalationsstufe } from "../types";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
@@ -16,84 +19,78 @@ function leerFormular(): Omit<Ansprechpartner, "id"> {
 function AnsprechpartnerForm({
   eintrag,
   onSpeichern,
-  onAbbrechen,
   speichernLaeuft,
 }: {
   eintrag: Omit<Ansprechpartner, "id">;
   onSpeichern: (eintrag: Omit<Ansprechpartner, "id">) => void;
-  onAbbrechen: () => void;
   speichernLaeuft: boolean;
 }) {
   const [form, setForm] = useState(eintrag);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
 
   return (
-    <div className="space-y-2 border border-sepstrong p-3">
-      <input
-        autoFocus
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-        placeholder="Name *"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-      />
-      <input
-        value={form.position ?? ""}
-        onChange={(e) => setForm({ ...form, position: e.target.value })}
-        placeholder="Position (z.B. Geschäftsführer, Hausmeister)"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          value={form.telefon ?? ""}
-          onChange={(e) => setForm({ ...form, telefon: e.target.value })}
-          placeholder="Telefon"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-        />
-        <input
-          type="email"
-          value={form.email ?? ""}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder="E-Mail"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-        />
-      </div>
-      <select
-        value={form.eskalationsstufe ?? ""}
-        onChange={(e) =>
-          setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
+    <form
+      noValidate
+      className="space-y-3 p-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!form.name.trim()) {
+          setNameFehler("Bitte einen Namen eingeben.");
+          return;
         }
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-      >
-        <option value="">Keine Eskalationsstufe</option>
-        {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
-          <option key={stufe} value={stufe}>
-            {ESKALATIONSSTUFE_LABEL[stufe]}
-          </option>
-        ))}
-      </select>
+        setNameFehler(null);
+        onSpeichern(form);
+      }}
+    >
+      <Feld label="Name" pflicht fehler={nameFehler}>
+        {(p) => <input {...p} autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={FELD_KLASSE} />}
+      </Feld>
+      <Feld label="Position">
+        {(p) => (
+          <input
+            {...p}
+            value={form.position ?? ""}
+            onChange={(e) => setForm({ ...form, position: e.target.value })}
+            placeholder="z.B. Geschäftsführer, Hausmeister"
+            className={FELD_KLASSE}
+          />
+        )}
+      </Feld>
+      <div className="grid grid-cols-2 gap-3">
+        <Feld label="Telefon">
+          {(p) => <input {...p} value={form.telefon ?? ""} onChange={(e) => setForm({ ...form, telefon: e.target.value })} className={FELD_KLASSE} />}
+        </Feld>
+        <Feld label="E-Mail">
+          {(p) => <input {...p} type="email" value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className={FELD_KLASSE} />}
+        </Feld>
+      </div>
+      <Feld label="Eskalationsstufe">
+        {(p) => (
+          <select
+            {...p}
+            value={form.eskalationsstufe ?? ""}
+            onChange={(e) =>
+              setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
+            }
+            className={FELD_KLASSE}
+          >
+            <option value="">Keine Eskalationsstufe</option>
+            {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
+              <option key={stufe} value={stufe}>
+                {ESKALATIONSSTUFE_LABEL[stufe]}
+              </option>
+            ))}
+          </select>
+        )}
+      </Feld>
       <label className="btn-touch flex items-center gap-2 text-sm text-label">
-        <input
-          type="checkbox"
-          checked={form.operativ}
-          onChange={(e) => setForm({ ...form, operativ: e.target.checked })}
-        />
+        <input type="checkbox" checked={form.operativ} onChange={(e) => setForm({ ...form, operativ: e.target.checked })} />
         Operativer Ansprechpartner (Tagesgeschäft)
       </label>
-      <div className="flex gap-2">
-        <button
-          disabled={!form.name.trim() || speichernLaeuft}
-          onClick={() => onSpeichern(form)}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Speichern
-        </button>
-        <button
-          onClick={onAbbrechen}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </div>
+      <button type="submit" disabled={speichernLaeuft} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+        Speichern
+      </button>
+    </form>
   );
 }
 
@@ -113,6 +110,7 @@ export function AnsprechpartnerVerwaltung({
   kannVerwalten: boolean;
   onSpeichern: (naechsteListe: Ansprechpartner[]) => Promise<unknown>;
 }) {
+  const bestaetigen = useBestaetigung();
   const [neuAnlegen, setNeuAnlegen] = useState(false);
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
 
@@ -125,6 +123,8 @@ export function AnsprechpartnerVerwaltung({
     },
   });
 
+  const bearbeiten = liste.find((a) => a.id === bearbeitenId) ?? null;
+
   function hinzufuegen(eintrag: Omit<Ansprechpartner, "id">) {
     speichernMutation.mutate([...liste, { ...eintrag, id: crypto.randomUUID() }]);
   }
@@ -133,36 +133,28 @@ export function AnsprechpartnerVerwaltung({
     speichernMutation.mutate(liste.map((a) => (a.id === id ? { ...eintrag, id } : a)));
   }
 
-  function entfernen(id: string) {
-    speichernMutation.mutate(liste.filter((a) => a.id !== id));
+  async function entfernen(a: Ansprechpartner) {
+    if (!(await bestaetigen({ titel: `${a.name} als Ansprechpartner entfernen?`, bestaetigenLabel: "Entfernen" }))) return;
+    speichernMutation.mutate(liste.filter((x) => x.id !== a.id));
   }
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Ansprechpartner</h2>
-        {kannVerwalten && !neuAnlegen && (
-          <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-tint ">
+        {kannVerwalten && (
+          <button onClick={() => setNeuAnlegen(true)} className={NEU_BUTTON_KLASSE}>
             + Neuer Ansprechpartner
           </button>
         )}
       </div>
 
-      {liste.length === 0 && !neuAnlegen && (
+      {liste.length === 0 && (
         <p className="text-sm text-label2">Noch keine Ansprechpartner hinterlegt.</p>
       )}
 
       <div className="space-y-2">
-        {liste.map((a) =>
-          bearbeitenId === a.id ? (
-            <AnsprechpartnerForm
-              key={a.id}
-              eintrag={a}
-              onSpeichern={(eintrag) => aktualisieren(a.id, eintrag)}
-              onAbbrechen={() => setBearbeitenId(null)}
-              speichernLaeuft={speichernMutation.isPending}
-            />
-          ) : (
+        {liste.map((a) => (
             <div
               key={a.id}
               className="card-ap p-3"
@@ -200,7 +192,7 @@ export function AnsprechpartnerVerwaltung({
                     Bearbeiten
                   </button>
                   <button
-                    onClick={() => entfernen(a.id)}
+                    onClick={() => void entfernen(a)}
                     disabled={speichernMutation.isPending}
                     className="btn-touch text-xs text-st-fehlt underline disabled:opacity-50 "
                   >
@@ -209,18 +201,22 @@ export function AnsprechpartnerVerwaltung({
                 </div>
               )}
             </div>
-          )
-        )}
+        ))}
+      </div>
 
-        {neuAnlegen && kannVerwalten && (
+      <AnlegenPanel offen={neuAnlegen && kannVerwalten} titel="Neuer Ansprechpartner" onClose={() => setNeuAnlegen(false)}>
+        <AnsprechpartnerForm eintrag={leerFormular()} onSpeichern={hinzufuegen} speichernLaeuft={speichernMutation.isPending} />
+      </AnlegenPanel>
+      {bearbeiten && (
+        <AnlegenPanel offen titel="Ansprechpartner bearbeiten" onClose={() => setBearbeitenId(null)}>
           <AnsprechpartnerForm
-            eintrag={leerFormular()}
-            onSpeichern={hinzufuegen}
-            onAbbrechen={() => setNeuAnlegen(false)}
+            key={bearbeiten.id}
+            eintrag={bearbeiten}
+            onSpeichern={(eintrag) => aktualisieren(bearbeiten.id, eintrag)}
             speichernLaeuft={speichernMutation.isPending}
           />
-        )}
-      </div>
+        </AnlegenPanel>
+      )}
     </div>
   );
 }

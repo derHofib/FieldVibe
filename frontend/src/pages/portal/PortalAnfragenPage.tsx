@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
@@ -41,7 +42,8 @@ function NeueAnfrage() {
   const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [gesendet, setGesendet] = useState(false);
+  const [titelFehler, setTitelFehler] = useState<string | null>(null);
+  const [standortFehler, setStandortFehler] = useState<string | null>(null);
 
   const { data: standorte } = useQuery({
     queryKey: ["portal-standorte"],
@@ -67,7 +69,7 @@ function NeueAnfrage() {
   });
 
   const createMutation = useMutation({
-    meta: { erfolg: "Angelegt" },
+    meta: { erfolg: "Anfrage gesendet" },
     mutationFn: () =>
       kundenportalApi.anfrageAnlegen({
         titel,
@@ -84,8 +86,6 @@ function NeueAnfrage() {
       setStandortId("");
       setAnlageId("");
       setError(null);
-      setGesendet(true);
-      window.setTimeout(() => setGesendet(false), 4000);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anfrage konnte nicht gesendet werden"),
   });
@@ -94,171 +94,176 @@ function NeueAnfrage() {
     e.preventDefault();
     setError(null);
     if (!titel.trim()) {
-      setError("Bitte einen Titel eingeben");
+      setTitelFehler("Bitte einen Titel eingeben.");
       return;
     }
+    setTitelFehler(null);
     createMutation.mutate();
   }
 
-  if (!zeigen) {
-    return (
-      <div className="space-y-2">
-        {gesendet && (
-          <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
-            Ihre Anfrage wurde gesendet.
-          </p>
-        )}
-        <button
-          onClick={() => setZeigen(true)}
-          className="btn-touch w-full rounded-lg btn-ap-primary py-3 text-sm font-medium"
-        >
-          + Neue Vorgangsanfrage stellen
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-3 card-ap p-4"
-    >
-      <p className="text-xs text-label2">
-        Ihre Anfrage wird von uns geprüft und in einen Vorgang übernommen, sobald sie bestätigt ist.
-      </p>
-      <div>
-        <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
-          Titel
-        </label>
-        <input
-          id="portal-anfrage-titel"
-          autoFocus
-          value={titel}
-          onChange={(e) => setTitel(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-      </div>
-      <div>
-        <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
-          Beschreibung
-        </label>
-        <textarea
-          id="portal-anfrage-beschreibung"
-          value={beschreibung}
-          onChange={(e) => setBeschreibung(e.target.value)}
-          rows={3}
-          className="w-full resize-none border border-sep bg-transparent p-2 text-label"
-        />
-      </div>
-      <div>
-        <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
-          Art
-        </label>
-        <select
-          id="portal-anfrage-art"
-          value={leistungstyp}
-          onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        >
-          {LEISTUNGSTYPEN.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-      </div>
+    <>
+      <button onClick={() => setZeigen(true)} className="btn-touch btn-ap-primary w-full rounded-lg py-3 text-sm font-medium">
+        + Neue Anfrage
+      </button>
+      <AnlegenPanel offen={zeigen} titel="Neue Anfrage" onClose={() => setZeigen(false)}>
+        <form onSubmit={handleSubmit} className="space-y-3 p-4">
+          <p className="text-xs text-label2">
+            Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
+          </p>
+          <div>
+            <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
+              Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
+            <input
+              id="portal-anfrage-titel"
+              autoFocus
+              value={titel}
+              onChange={(e) => setTitel(e.target.value)}
+              aria-invalid={!!titelFehler}
+              aria-describedby={titelFehler ? "portal-anfrage-titel-fehler" : undefined}
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            />
+            {titelFehler && (
+              <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                {titelFehler}
+              </p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
+              Beschreibung
+            </label>
+            <textarea
+              id="portal-anfrage-beschreibung"
+              value={beschreibung}
+              onChange={(e) => setBeschreibung(e.target.value)}
+              rows={3}
+              className="w-full resize-none border border-sep bg-transparent p-2 text-label"
+            />
+          </div>
+          <div>
+            <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
+              Art
+            </label>
+            <select
+              id="portal-anfrage-art"
+              value={leistungstyp}
+              onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            >
+              {LEISTUNGSTYPEN.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {(standorte ?? []).length > 0 && (
-        <div>
-          <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
-            Standort (optional)
-          </label>
-          <select
-            id="portal-anfrage-standort"
-            value={standortId}
-            onChange={(e) => {
-              setStandortId(e.target.value);
-              setAnlageId("");
-            }}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-          >
-            <option value="">Kein Standort</option>
-            {standorte?.filter((s) => s.aktiv).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.bezeichnung}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+          {(standorte ?? []).length > 0 && (
+            <div>
+              <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
+                Standort (optional)
+              </label>
+              <select
+                id="portal-anfrage-standort"
+                value={standortId}
+                onChange={(e) => {
+                  setStandortId(e.target.value);
+                  setAnlageId("");
+                }}
+                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              >
+                <option value="">Kein Standort</option>
+                {standorte?.filter((s) => s.aktiv).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.bezeichnung}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-      {!zeigeNeuerStandort ? (
-        <button
-          type="button"
-          onClick={() => setZeigeNeuerStandort(true)}
-          className="btn-touch text-xs font-medium text-tint "
-        >
-          + Neuer Standort
-        </button>
-      ) : (
-        <div className="flex gap-2">
-          <input
-            value={neuerStandortName}
-            onChange={(e) => setNeuerStandortName(e.target.value)}
-            placeholder="Bezeichnung (z.B. Filiale Nord)"
-            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
-          />
+          {!zeigeNeuerStandort ? (
+            <button
+              type="button"
+              onClick={() => setZeigeNeuerStandort(true)}
+              className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+            >
+              + Neuer Standort
+            </button>
+          ) : (
+            <div>
+              <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-sm font-medium text-label">
+                Neuer Standort <span aria-hidden="true" className="text-st-fehlt">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="portal-anfrage-neuer-standort"
+                  value={neuerStandortName}
+                  onChange={(e) => setNeuerStandortName(e.target.value)}
+                  placeholder="z.B. Filiale Nord"
+                  aria-invalid={!!standortFehler}
+                  aria-describedby={standortFehler ? "portal-anfrage-standort-fehler" : undefined}
+                  className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
+                />
+                <button
+                  type="button"
+                  disabled={neuerStandortMutation.isPending}
+                  onClick={() => {
+                    if (!neuerStandortName.trim()) {
+                      setStandortFehler("Bitte eine Bezeichnung eingeben.");
+                      return;
+                    }
+                    setStandortFehler(null);
+                    neuerStandortMutation.mutate();
+                  }}
+                  className="btn-touch btn-ap shrink-0 px-4 py-2 text-sm font-medium"
+                >
+                  Anlegen
+                </button>
+              </div>
+              {standortFehler && (
+                <p id="portal-anfrage-standort-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                  {standortFehler}
+                </p>
+              )}
+            </div>
+          )}
+
+          {anlagenFuerStandort.length > 0 && (
+            <div>
+              <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
+                Anlage (optional)
+              </label>
+              <select
+                id="portal-anfrage-anlage"
+                value={anlageId}
+                onChange={(e) => setAnlageId(e.target.value)}
+                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              >
+                <option value="">Keine Anlage</option>
+                {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bezeichnung}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {error && <p role="alert" className="text-sm text-st-fehlt">{error}</p>}
+
           <button
-            type="button"
-            disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
-            onClick={() => neuerStandortMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+            type="submit"
+            disabled={createMutation.isPending}
+            className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium"
           >
-            Anlegen
+            Anfrage senden
           </button>
-        </div>
-      )}
-
-      {anlagenFuerStandort.length > 0 && (
-        <div>
-          <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
-            Anlage (optional)
-          </label>
-          <select
-            id="portal-anfrage-anlage"
-            value={anlageId}
-            onChange={(e) => setAnlageId(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-          >
-            <option value="">Keine Anlage</option>
-            {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.bezeichnung}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Anfrage senden
-        </button>
-        <button
-          type="button"
-          onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </form>
+        </form>
+      </AnlegenPanel>
+    </>
   );
 }
 
@@ -270,7 +275,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Vorgangsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Anfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (

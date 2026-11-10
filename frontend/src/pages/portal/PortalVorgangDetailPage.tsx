@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { SkeletonCard } from "../../components/Skeleton";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { PortalVorgangEvent, VorgangStatus } from "../../types";
 
@@ -11,13 +12,13 @@ import type { PortalVorgangEvent, VorgangStatus } from "../../types";
 // Kunde ohne App-Vorwissen weiss bei "Wartet auf Kunde" sonst nicht, was
 // von ihm erwartet wird.
 const STATUS_ERKLAERUNG: Record<VorgangStatus, string> = {
-  neu: "Ihr Vorgang ist eingegangen und wird eingeplant.",
-  geplant: "Für Ihren Vorgang ist bereits ein Termin vorgesehen.",
-  in_arbeit: "Der Techniker arbeitet aktuell an diesem Vorgang.",
+  neu: "Ihr Auftrag ist eingegangen und wird eingeplant.",
+  geplant: "Für Ihren Auftrag ist bereits ein Termin vorgesehen.",
+  in_arbeit: "Der Techniker arbeitet aktuell an diesem Auftrag.",
   wartet_kunde: "Wir warten auf eine Rückmeldung von Ihnen — bitte im Verlauf unten nachsehen.",
   abgeschlossen: "Die Arbeiten sind abgeschlossen.",
-  abgerechnet: "Der Vorgang ist abgeschlossen und wurde bereits abgerechnet.",
-  storniert: "Dieser Vorgang wurde storniert.",
+  abgerechnet: "Der Auftrag ist abgeschlossen und wurde bereits abgerechnet.",
+  storniert: "Dieser Auftrag wurde storniert.",
 };
 
 function PortalEventBubble({ event }: { event: PortalVorgangEvent }) {
@@ -55,7 +56,7 @@ export function PortalVorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: vorgang } = useQuery({
+  const { data: vorgang, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-vorgang", id],
     queryFn: () => kundenportalApi.vorgang(id!),
     enabled: !!id,
@@ -66,7 +67,8 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <SkeletonCard />;
+  if (isLoading) return <SkeletonCard />;
+  if (!vorgang) return <FehlerZustand fehler={ladeFehler} was="Der Auftrag" zurueck onErneut={() => void neuLaden()} />;
 
   const eventsChronological = [...(events ?? [])].reverse();
 
@@ -77,7 +79,7 @@ export function PortalVorgangDetailPage() {
       </button>
 
       <div className="card-ap p-4">
-        <div className="text-xs text-label2">Vorgang Nr. {vorgang.vorgangsnummer}</div>
+        <div className="text-xs text-label2">Auftrag Nr. {vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-label">{vorgang.titel}</h1>
         {vorgang.beschreibung && (
           <p className="mt-2 text-sm text-label">{vorgang.beschreibung}</p>

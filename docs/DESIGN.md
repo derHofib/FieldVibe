@@ -221,6 +221,13 @@ kein natives `<select>`. `.field-ap` für Standard-Eingabefelder (siehe
 Bausteine oben); bei Feldern mit eigener Breite (`w-20` etc.) die
 Klassen einzeln setzen statt `.field-ap` (setzt `width: 100%`).
 
+Anlegen: Button `+ Neuer X` (`NEU_BUTTON_KLASSE`) öffnet ein `AnlegenPanel`
+(Sheet mobil, Seitenpanel Office), kein inline aufklappendes Formular. Felder
+über `Feld` (`components/FormularFeld.tsx`): Label per htmlFor, Pflichtstern,
+Feldfehler mit `role="alert"` statt nativer Tooltips (`noValidate`). Der
+Absende-Button ist nur während der Anfrage deaktiviert; fehlende Pflichtfelder
+melden sich beim Absenden am Feld.
+
 ## Freie Inhalte bleiben unangetastet
 
 Whiteboard/Board-Feature (`office/boards/nodes/*`, `pages/feld/boards/*`):

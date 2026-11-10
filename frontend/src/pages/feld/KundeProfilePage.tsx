@@ -16,6 +16,8 @@ import {
   usersApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { PulldownMenu, type PulldownItem } from "../../components/apple/PulldownMenu";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
@@ -377,6 +379,8 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bezeichnungFehler, setBezeichnungFehler] = useState<string | null>(null);
+  const [standortFehler, setStandortFehler] = useState<string | null>(null);
 
   const neuerStandortMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -414,104 +418,97 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
     e.preventDefault();
     setError(null);
     if (!bezeichnung.trim()) {
-      setError("Bitte eine Bezeichnung eingeben");
+      setBezeichnungFehler("Bitte eine Bezeichnung eingeben.");
       return;
     }
+    setBezeichnungFehler(null);
     createMutation.mutate();
   }
 
-  if (!zeigen) {
-    return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
-        + Neue Anlage anlegen
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
-        <input
-          autoFocus
-          value={bezeichnung}
-          onChange={(e) => setBezeichnung(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
-        <input
-          value={anlagentyp}
-          onChange={(e) => setAnlagentyp(e.target.value)}
-          placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-      </div>
-      <div>
-        <div className="mb-1 flex items-center justify-between">
-          <label className="block text-sm font-medium text-label">
-            Standort (optional)
-          </label>
-          <button
-            type="button"
-            onClick={() => setZeigeNeuerStandort((v) => !v)}
-            className="btn-touch text-xs text-tint underline "
-          >
-            {zeigeNeuerStandort ? "Abbrechen" : "+ Neuer Standort"}
+    <>
+      <button onClick={() => setZeigen(true)} className={NEU_BUTTON_KLASSE}>
+        + Neue Anlage
+      </button>
+      <AnlegenPanel offen={zeigen} titel="Neue Anlage" onClose={() => setZeigen(false)}>
+        <form onSubmit={handleSubmit} className="space-y-3 p-4">
+          <Feld label="Bezeichnung" pflicht fehler={bezeichnungFehler}>
+            {(p) => <input {...p} autoFocus value={bezeichnung} onChange={(e) => setBezeichnung(e.target.value)} className={FELD_KLASSE} />}
+          </Feld>
+          <Feld label="Typ (optional)">
+            {(p) => (
+              <input
+                {...p}
+                value={anlagentyp}
+                onChange={(e) => setAnlagentyp(e.target.value)}
+                placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+          {zeigeNeuerStandort ? (
+            <Feld label="Neuer Standort" pflicht fehler={standortFehler}>
+              {(p) => (
+                <div className="flex gap-2">
+                  <input
+                    {...p}
+                    autoFocus
+                    value={neuerStandortName}
+                    onChange={(e) => setNeuerStandortName(e.target.value)}
+                    placeholder="z.B. Filiale Nord"
+                    className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
+                  />
+                  <button
+                    type="button"
+                    disabled={neuerStandortMutation.isPending}
+                    onClick={() => {
+                      if (!neuerStandortName.trim()) {
+                        setStandortFehler("Bitte eine Bezeichnung eingeben.");
+                        return;
+                      }
+                      setStandortFehler(null);
+                      neuerStandortMutation.mutate();
+                    }}
+                    className="btn-touch btn-ap shrink-0 px-4 text-sm font-medium"
+                  >
+                    Anlegen
+                  </button>
+                  <button type="button" onClick={() => setZeigeNeuerStandort(false)} className="btn-touch btn-ap shrink-0 px-4 text-sm font-medium">
+                    Abbrechen
+                  </button>
+                </div>
+              )}
+            </Feld>
+          ) : (
+            <Feld label="Standort (optional)">
+              {(p) => (
+                <div className="space-y-2">
+                  <select {...p} value={standortId} onChange={(e) => setStandortId(e.target.value)} className={FELD_KLASSE}>
+                    <option value="">Kein Standort</option>
+                    {standorte.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.bezeichnung}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setZeigeNeuerStandort(true)} className={NEU_BUTTON_KLASSE}>
+                    + Neuer Standort
+                  </button>
+                </div>
+              )}
+            </Feld>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-st-fehlt">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+            Anlegen
           </button>
-        </div>
-        {zeigeNeuerStandort ? (
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              value={neuerStandortName}
-              onChange={(e) => setNeuerStandortName(e.target.value)}
-              placeholder="Bezeichnung (z.B. Filiale Nord)"
-              className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
-            />
-            <button
-              type="button"
-              disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
-              onClick={() => neuerStandortMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 text-sm font-medium disabled:opacity-50"
-            >
-              Anlegen
-            </button>
-          </div>
-        ) : (
-          <select
-            value={standortId}
-            onChange={(e) => setStandortId(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-          >
-            <option value="">Kein Standort</option>
-            {standorte.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.bezeichnung}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Anlegen
-        </button>
-        <button
-          type="button"
-          onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </form>
+        </form>
+      </AnlegenPanel>
+    </>
   );
 }
 
@@ -523,6 +520,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
   const [plz, setPlz] = useState("");
   const [ort, setOrt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [bezeichnungFehler, setBezeichnungFehler] = useState<string | null>(null);
 
   const createMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -551,67 +549,50 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
     e.preventDefault();
     setError(null);
     if (!bezeichnung.trim()) {
-      setError("Bitte eine Bezeichnung eingeben");
+      setBezeichnungFehler("Bitte eine Bezeichnung eingeben.");
       return;
     }
+    setBezeichnungFehler(null);
     createMutation.mutate();
   }
 
-  if (!zeigen) {
-    return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
-        + Neuen Standort anlegen
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
-      <input
-        autoFocus
-        value={bezeichnung}
-        onChange={(e) => setBezeichnung(e.target.value)}
-        placeholder="Bezeichnung (z.B. Filiale Nord)"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-      />
-      <input
-        value={strasse}
-        onChange={(e) => setStrasse(e.target.value)}
-        placeholder="Straße + Hausnr."
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          value={plz}
-          onChange={(e) => setPlz(e.target.value)}
-          placeholder="PLZ"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-        <input
-          value={ort}
-          onChange={(e) => setOrt(e.target.value)}
-          placeholder="Ort"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-      </div>
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Anlegen
-        </button>
-        <button
-          type="button"
-          onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </form>
+    <>
+      <button onClick={() => setZeigen(true)} className={NEU_BUTTON_KLASSE}>
+        + Neuer Standort
+      </button>
+      <AnlegenPanel offen={zeigen} titel="Neuer Standort" onClose={() => setZeigen(false)}>
+        <form onSubmit={handleSubmit} className="space-y-3 p-4">
+          <Feld label="Bezeichnung" pflicht fehler={bezeichnungFehler}>
+            {(p) => (
+              <input
+                {...p}
+                autoFocus
+                value={bezeichnung}
+                onChange={(e) => setBezeichnung(e.target.value)}
+                placeholder="z.B. Filiale Nord"
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+          <Feld label="Straße und Hausnummer">
+            {(p) => <input {...p} value={strasse} onChange={(e) => setStrasse(e.target.value)} className={FELD_KLASSE} />}
+          </Feld>
+          <div className="grid grid-cols-2 gap-3">
+            <Feld label="PLZ">{(p) => <input {...p} value={plz} onChange={(e) => setPlz(e.target.value)} className={FELD_KLASSE} />}</Feld>
+            <Feld label="Ort">{(p) => <input {...p} value={ort} onChange={(e) => setOrt(e.target.value)} className={FELD_KLASSE} />}</Feld>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-st-fehlt">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+            Anlegen
+          </button>
+        </form>
+      </AnlegenPanel>
+    </>
   );
 }
 
@@ -686,6 +667,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
   const [einzelpreis, setEinzelpreis] = useState("");
   const [istStundensatz, setIstStundensatz] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bezeichnungFehler, setBezeichnungFehler] = useState<string | null>(null);
 
   const createMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -728,81 +710,58 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
     e.preventDefault();
     setError(null);
     if (!bezeichnung.trim()) {
-      setError("Bitte eine Bezeichnung eingeben");
+      setBezeichnungFehler("Bitte eine Bezeichnung eingeben.");
       return;
     }
+    setBezeichnungFehler(null);
     createMutation.mutate();
   }
 
-  if (!zeigen) {
-    return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
-        + Neue Position anlegen
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
-        <input
-          autoFocus
-          value={bezeichnung}
-          onChange={(e) => setBezeichnung(e.target.value)}
-          placeholder="z.B. Stundensatz Monteur, Anfahrtspauschale"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-label">Einheit</label>
-          <input
-            value={einheit}
-            onChange={(e) => setEinheit(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-label">
-            Einzelpreis (€)
+    <>
+      <button onClick={() => setZeigen(true)} className={NEU_BUTTON_KLASSE}>
+        + Neue Position
+      </button>
+      <AnlegenPanel offen={zeigen} titel="Neue Position" onClose={() => setZeigen(false)}>
+        <form onSubmit={handleSubmit} className="space-y-3 p-4">
+          <Feld label="Bezeichnung" pflicht fehler={bezeichnungFehler}>
+            {(p) => (
+              <input
+                {...p}
+                autoFocus
+                value={bezeichnung}
+                onChange={(e) => setBezeichnung(e.target.value)}
+                placeholder="z.B. Stundensatz Monteur, Anfahrtspauschale"
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+          <div className="grid grid-cols-2 gap-3">
+            <Feld label="Einheit">{(p) => <input {...p} value={einheit} onChange={(e) => setEinheit(e.target.value)} className={FELD_KLASSE} />}</Feld>
+            <Feld label="Einzelpreis (€)">
+              {(p) => <input {...p} type="number" step="0.01" value={einzelpreis} onChange={(e) => setEinzelpreis(e.target.value)} className={FELD_KLASSE} />}
+            </Feld>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-label">
+            <input
+              type="checkbox"
+              checked={istStundensatz}
+              onChange={(e) => setIstStundensatz(e.target.checked)}
+              className="h-4 w-4 rounded border-sep "
+            />
+            Als Stundenverrechnungssatz in der Arbeitszeit wählbar
           </label>
-          <input
-            type="number"
-            step="0.01"
-            value={einzelpreis}
-            onChange={(e) => setEinzelpreis(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-          />
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-label">
-        <input
-          type="checkbox"
-          checked={istStundensatz}
-          onChange={(e) => setIstStundensatz(e.target.checked)}
-          className="h-4 w-4 rounded border-sep "
-        />
-        Als Stundenverrechnungssatz in der Zeiterfassung wählbar
-      </label>
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Anlegen
-        </button>
-        <button
-          type="button"
-          onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </form>
+          {error && (
+            <p role="alert" className="text-sm text-st-fehlt">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+            Anlegen
+          </button>
+        </form>
+      </AnlegenPanel>
+    </>
   );
 }
 
@@ -1054,6 +1013,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fehler, setFehler] = useState<{ name?: string; email?: string; passwort?: string }>({});
 
   const createMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -1072,62 +1032,45 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 10) {
-      setError(`Passwort muss mindestens ${MIN_PASSWORT_LAENGE} Zeichen haben`);
-      return;
-    }
+    const f = {
+      name: name.trim() ? undefined : "Bitte einen Namen eingeben.",
+      email: /\S+@\S+\.\S+/.test(email) ? undefined : "Bitte eine gültige E-Mail-Adresse eingeben.",
+      passwort: password.length >= MIN_PASSWORT_LAENGE ? undefined : `Das Passwort braucht mindestens ${MIN_PASSWORT_LAENGE} Zeichen.`,
+    };
+    setFehler(f);
+    if (f.name || f.email || f.passwort) return;
     createMutation.mutate();
   }
 
-  if (!zeigen) {
-    return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
-        + Neuen Zugang anlegen
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Name des Ansprechpartners"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-      />
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="E-Mail"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Passwort (mind. 10 Zeichen)"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
-      />
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
-        >
-          Anlegen
-        </button>
-        <button
-          type="button"
-          onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </form>
+    <>
+      <button onClick={() => setZeigen(true)} className={NEU_BUTTON_KLASSE}>
+        + Neuer Zugang
+      </button>
+      <AnlegenPanel offen={zeigen} titel="Neuer Kundenportal-Zugang" onClose={() => setZeigen(false)}>
+        <form onSubmit={handleSubmit} className="space-y-3 p-4" noValidate>
+          <Feld label="Name des Ansprechpartners" pflicht fehler={fehler.name}>
+            {(p) => <input {...p} autoFocus value={name} onChange={(e) => setName(e.target.value)} className={FELD_KLASSE} />}
+          </Feld>
+          <Feld label="E-Mail" pflicht fehler={fehler.email}>
+            {(p) => <input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={FELD_KLASSE} />}
+          </Feld>
+          <Feld label={`Passwort (mind. ${MIN_PASSWORT_LAENGE} Zeichen)`} pflicht fehler={fehler.passwort}>
+            {(p) => (
+              <input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={FELD_KLASSE} />
+            )}
+          </Feld>
+          {error && (
+            <p role="alert" className="text-sm text-st-fehlt">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+            Anlegen
+          </button>
+        </form>
+      </AnlegenPanel>
+    </>
   );
 }
 
@@ -1201,9 +1144,9 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
       )}
       <button
         onClick={() => navigate(`/dauerauftraege/neu?kunde_id=${kundeId}`)}
-        className="btn-touch mt-2 text-xs text-tint underline "
+        className={`${NEU_BUTTON_KLASSE} mt-2`}
       >
-        + Neuen Dauer-Auftrag anlegen
+        + Neuer Dauerauftrag
       </button>
     </div>
   );
