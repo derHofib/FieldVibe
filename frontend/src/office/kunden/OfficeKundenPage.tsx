@@ -38,7 +38,7 @@ const SPALTEN: Spalte<Kunde>[] = [
       k.typ ? <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
     sortWert: (k) => (k.typ ? TYP_LABEL[k.typ] : ""),
   },
-  { key: "ort", label: "Ort", render: (k) => ORT(k) || "–", sortWert: ORT },
+  { key: "ort", label: "Ort", render: (k) => <span className="whitespace-nowrap">{ORT(k) || "–"}</span>, sortWert: ORT },
   {
     key: "kontakt",
     label: "Ansprechpartner",
@@ -125,7 +125,8 @@ export function OfficeKundenPage() {
           ) : (
             <SortierbareTabelle
               zeilen={gefiltert}
-              spalten={SPALTEN}
+              // Bei offenem Panel ist die Tabelle schmal -- Nebenspalte weglassen statt abschneiden
+              spalten={id ? SPALTEN.filter((sp) => sp.key !== "kontakt") : SPALTEN}
               zeilenKey={(k) => k.id}
               gewaehlt={id}
               onWaehlen={waehlen}
