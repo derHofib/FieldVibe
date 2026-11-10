@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { navKategorienApi, projekteApi, statistikApi } from "../api/endpoints";
 import { useFehlerbericht } from "../bugreport/ui";
@@ -39,6 +39,7 @@ import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
+import { SeitenGrenze } from "../components/ErrorBoundary";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
  * dieselbe Quelle, aus der die Tab-Bar der Handy-App gespeist wird. Damit
@@ -478,7 +479,7 @@ export function OfficeLayout() {
           </header>
 
           <main className="px-5 py-5">
-            <Outlet />
+            <SeitenGrenze />
           </main>
         </div>
       </div>

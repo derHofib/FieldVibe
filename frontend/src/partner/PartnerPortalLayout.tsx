@@ -1,10 +1,11 @@
 import { CalendarRange, ClipboardList, User, type LucideIcon } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import { Logo } from "../components/brand/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { usePartnerAuth } from "../context/PartnerAuthContext";
 import { RechtlicheLinks } from "../components/RechtlicheLinks";
+import { SeitenGrenze } from "../components/ErrorBoundary";
 
 const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/partnerportal/auftraege", label: "Aufträge", icon: ClipboardList },
@@ -50,7 +51,7 @@ export function PartnerPortalLayout() {
         </div>
       </header>
 
-      <Outlet />
+      <SeitenGrenze />
 
       <RechtlicheLinks className="pt-2" />
 
