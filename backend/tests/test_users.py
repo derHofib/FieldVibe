@@ -42,8 +42,7 @@ async def test_einladungsmail_enthaelt_steckbrief_mit_echten_werten(client, make
     account_typ_id = account_typ_resp.json()["id"]
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
         resp = await client.post(
             "/api/users/einladungen",
             headers=auth_headers(token),
@@ -365,7 +364,7 @@ async def test_admin_can_delete_unused_user(client, make_mandant, make_user):
 
 
 @pytest.mark.asyncio
-async def test_user_delete_blocked_when_zeiterfassung_exists(
+async def test_user_delete_anonymizes_when_zeiterfassung_exists(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     from datetime import datetime, timedelta, timezone
@@ -394,7 +393,7 @@ async def test_user_delete_blocked_when_zeiterfassung_exists(
         await session.flush()
 
     resp = await client.delete(f"/api/users/{techniker.id}", headers=auth_headers(token))
-    assert resp.status_code == 409
+    assert resp.status_code == 204
 
 
 @pytest.mark.asyncio

@@ -1,22 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { heuteIso, lokalesDatum } from "./format";
+import { datumZuIso, formatIsoTag, heuteIso, tageZwischen } from "./format";
 
-describe("lokalesDatum", () => {
-  it("nutzt den lokalen Kalendertag, nicht UTC", () => {
-    // 00:30 Ortszeit läge in UTC (Zeitzonen östlich von UTC) noch am Vortag
-    expect(lokalesDatum(new Date(2026, 2, 5, 0, 30))).toBe("2026-03-05");
-    expect(lokalesDatum(new Date(2026, 2, 5, 23, 30))).toBe("2026-03-05");
+afterEach(() => vi.useRealTimers());
+
+describe("datumZuIso / heuteIso", () => {
+  it("nutzt den lokalen Kalendertag, nicht den UTC-Tag", () => {
+    // 00:30 Ortszeit: UTC liegt (je nach Zone) noch auf dem Vortag.
+    expect(datumZuIso(new Date(2026, 9, 19, 0, 30))).toBe("2026-10-19");
+    expect(datumZuIso(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
+  });
+
+  it("rechnet Offsets über Monatsgrenzen", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 31, 12, 0));
+    expect(heuteIso()).toBe("2026-10-31");
+    expect(heuteIso(1)).toBe("2026-11-01");
   });
 });
 
-describe("heuteIso", () => {
-  afterEach(() => vi.useRealTimers());
+describe("tageZwischen", () => {
+  it("zählt Kalendertage auch über die Sommerzeitumstellung", () => {
+    expect(tageZwischen("2026-10-24", "2026-10-26")).toBe(2);
+    expect(tageZwischen("2026-03-28", "2026-03-30")).toBe(2);
+    expect(tageZwischen("2026-10-19", "2026-10-18")).toBe(-1);
+    expect(tageZwischen("2026-10-19", "2026-10-19")).toBe(0);
+  });
+});
 
-  it("liefert nach Mitternacht den heutigen Tag", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 0, 31, 0, 15));
-    expect(heuteIso()).toBe("2026-01-31");
-    expect(heuteIso(1)).toBe("2026-02-01");
+describe("formatIsoTag", () => {
+  it("dreht ISO in deutsche Schreibweise", () => {
+    expect(formatIsoTag("2026-10-19")).toBe("19.10.2026");
   });
 });

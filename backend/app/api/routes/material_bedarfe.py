@@ -17,6 +17,11 @@ from app.schemas.material_bedarf import (
 )
 from app.services import papierkorb_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    require_kunde_zugewiesen,
+    require_kunde_zugriff,
+)
 
 router = APIRouter(
     prefix="/api/material-bedarfe",
@@ -33,8 +38,14 @@ router = APIRouter(
 )
 async def list_material_bedarfe(
     vorgang_id: UUID | None = Query(default=None),
+    # Fuer den Positionen-Tab der Projekt-Detailansicht (siehe
+    # office/projekte/ProjektDetailPanel.tsx) -- MaterialBedarf selbst hat
+    # kein projekt_id, deshalb Filter ueber den verknuepften Vorgang, analog
+    # zu list_termine in app/api/routes/termine.py.
+    projekt_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     zweck: str | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[MaterialBedarfMitDetails]:
     stmt = (
@@ -44,10 +55,19 @@ async def list_material_bedarfe(
     )
     if vorgang_id:
         stmt = stmt.where(MaterialBedarf.vorgang_id == vorgang_id)
+    if projekt_id:
+        stmt = stmt.join(Vorgang, Vorgang.id == MaterialBedarf.vorgang_id).where(
+            Vorgang.projekt_id == projekt_id
+        )
     if status_filter:
         stmt = stmt.where(MaterialBedarf.status == status_filter)
     if zweck:
         stmt = stmt.where(MaterialBedarf.zweck == zweck)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(
+            MaterialBedarf.vorgang_id.in_(select(Vorgang.id).where(Vorgang.kunde_id.in_(erlaubte_kunden)))
+        )
     bedarfe = list((await session.execute(stmt)).scalars().all())
     if not bedarfe:
         return []
@@ -111,6 +131,7 @@ async def create_material_bedarf(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await require_kunde_zugewiesen(session, auth, vorgang.kunde_id)
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -158,6 +179,10 @@ async def delete_material_bedarf(
     bedarf = await session.get(MaterialBedarf, bedarf_id)
     if bedarf is None or bedarf.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Materialbedarf nicht gefunden")
+    vorgang = await session.get(Vorgang, bedarf.vorgang_id)
+    await require_kunde_zugriff(
+        session, auth, vorgang.kunde_id if vorgang else None, "Materialbedarf nicht gefunden"
+    )
     if bedarf.status != "offen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

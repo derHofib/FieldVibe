@@ -13,7 +13,7 @@ import {
 
 /** Gruppiert Zeiterfassungen nach lokalem Kalendertag, mit Tagessumme
  * (ohne Pause/Urlaub/Krankheit, siehe ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT)
- * und aufklappbaren Einzeleintraegen (Von-Bis, Auftragsnummer bzw.
+ * und aufklappbaren Einzeleintraegen (Von-Bis, Vorgangsnummer bzw.
  * Kategorie, Notiz). */
 export function ZeiterfassungTagesliste({
   eintraege,
@@ -54,12 +54,12 @@ export function ZeiterfassungTagesliste({
         );
         const offen = offeneTage.has(tag);
         return (
-          <div key={tag} className="overflow-hidden rounded-md bg-slate-50 dark:bg-stone-800/60">
+          <div key={tag} className="overflow-hidden rounded-md bg-fill">
             <button
               onClick={() => toggle(tag)}
               className="btn-touch flex w-full items-center justify-between px-2 py-2 text-left text-sm"
             >
-              <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-stone-200">
+              <span className="flex items-center gap-1.5 font-medium text-label">
                 {offen ? (
                   <ChevronDown size={15} strokeWidth={2} />
                 ) : (
@@ -71,7 +71,7 @@ export function ZeiterfassungTagesliste({
                   month: "2-digit",
                 })}
               </span>
-              <span className="font-medium text-slate-700 dark:text-stone-200">
+              <span className="font-medium text-label">
                 {formatStundenAlsHHMM(tagessumme)} Std.
               </span>
             </button>
@@ -85,9 +85,9 @@ export function ZeiterfassungTagesliste({
                       key={e.id}
                       onClick={() => e.vorgang_id && onEintragKlick?.(e.vorgang_id)}
                       disabled={!e.vorgang_id}
-                      className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-white px-2 py-1.5 text-left text-sm disabled:cursor-default dark:bg-stone-900"
+                      className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-card px-2 py-1.5 text-left text-sm disabled:cursor-default"
                     >
-                      <span className="min-w-0 truncate text-slate-600 dark:text-stone-300">
+                      <span className="min-w-0 truncate text-label">
                         {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
                         {" · "}
                         <span className="font-medium">
@@ -95,7 +95,7 @@ export function ZeiterfassungTagesliste({
                         </span>
                         {e.taetigkeit && ` · ${e.taetigkeit}`}
                       </span>
-                      <span className="ml-2 shrink-0 font-medium text-slate-700 dark:text-stone-300">
+                      <span className="ml-2 shrink-0 font-medium text-label">
                         {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))} Std.
                       </span>
                     </button>

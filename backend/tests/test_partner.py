@@ -1,13 +1,54 @@
+import uuid
 from datetime import date, timedelta
 
 import pytest
 
 from app.core.security import hash_password
 from app.db.session import system_session
+from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.mandant import Mandant
 from app.models.partner_nachweis import PartnerNachweis
 from app.models.partner_zugang import PartnerZugang
+from app.models.user import User
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
+
+
+async def _make_custom_mit_partner_recht(mandant, *, aktionen: set[str]) -> AccountTyp:
+    """Legt einen Account-Typ mit expliziten "partner"-Rechten an -- die
+    Legacy-Rollen-Fixtures (siehe conftest._LEGACY_RECHTE) kennen den Bereich
+    "partner" nicht, daher hier direkt, analog zu
+    test_formulare.py:_make_custom_mit_formulare_recht."""
+    async with system_session() as session:
+        account_typ = AccountTyp(mandant_id=mandant.id, name=f"Partner-Rolle-{uuid.uuid4().hex[:6]}")
+        session.add(account_typ)
+        await session.flush()
+        for aktion in aktionen:
+            session.add(
+                AccountTypRecht(
+                    account_typ_id=account_typ.id, bereich="partner", aktion=aktion, erlaubt=True
+                )
+            )
+        await session.flush()
+        await session.refresh(account_typ)
+        return account_typ
+
+
+async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
+    async with system_session() as session:
+        user = User(
+            mandant_id=mandant.id,
+            email=f"{uuid.uuid4().hex[:10]}@example.de",
+            password_hash=hash_password(password),
+            role="custom",
+            account_typ_id=account_typ.id,
+            name="Partner-Tester",
+        )
+        session.add(user)
+        await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
+        await session.refresh(user)
+        return user
 
 
 async def _make_zugang(mandant, partner, *, email=None, password="partner-pw-123", aktiv=True, name="Partner-Nutzer"):
@@ -57,10 +98,95 @@ async def test_mandant_admin_kann_partner_anlegen_und_lesen(client, make_mandant
 
 
 @pytest.mark.asyncio
+async def test_partner_create_mit_mehreren_ansprechpartnern(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/partner",
+        headers=auth_headers(token),
+        json={
+            "name": "Elektro Muster GmbH",
+            "gewerk": "Elektroinstallation",
+            "ansprechpartner": [
+                {
+                    "name": "Erika Musterfrau",
+                    "position": "Geschäftsführerin",
+                    "operativ": False,
+                    "eskalationsstufe": 3,
+                },
+                {"name": "Max Meier", "position": "Bauleiter", "operativ": True},
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert len(body["ansprechpartner"]) == 2
+    assert body["ansprechpartner"][0]["name"] == "Erika Musterfrau"
+    assert body["ansprechpartner"][0]["eskalationsstufe"] == 3
+    assert body["ansprechpartner"][1]["operativ"] is True
+    assert "id" in body["ansprechpartner"][0]
+
+
+@pytest.mark.asyncio
+async def test_partner_update_ansprechpartner_liste_persistiert(
+    client, make_mandant, make_user, make_partner
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/partner/{partner.id}",
+        headers=auth_headers(token),
+        json={
+            "ansprechpartner": [
+                {"name": "Hans Meier", "position": "Polier", "operativ": True, "eskalationsstufe": 1}
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["ansprechpartner"]) == 1
+    assert resp.json()["ansprechpartner"][0]["operativ"] is True
+
+    erneut = await client.get(f"/api/partner/{partner.id}", headers=auth_headers(token))
+    assert len(erneut.json()["ansprechpartner"]) == 1
+    assert erneut.json()["ansprechpartner"][0]["name"] == "Hans Meier"
+
+
+@pytest.mark.asyncio
 async def test_techniker_darf_partner_nicht_anlegen(client, make_mandant, make_user):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/partner", headers=auth_headers(token), json={"name": "Sollte nicht gehen"}
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_custom_rolle_mit_partner_recht_darf_anlegen(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_partner_recht(mandant, aktionen={"sehen", "erstellen"})
+    user = await _make_custom_user(mandant, account_typ)
+    token = await login(client, user.email, "hunter2!!")
+
+    resp = await client.post(
+        "/api/partner", headers=auth_headers(token), json={"name": "Jetzt erlaubt"}
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_custom_rolle_ohne_partner_recht_darf_nicht_anlegen(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_partner_recht(mandant, aktionen={"sehen"})
+    user = await _make_custom_user(mandant, account_typ)
+    token = await login(client, user.email, "hunter2!!")
 
     resp = await client.post(
         "/api/partner", headers=auth_headers(token), json={"name": "Sollte nicht gehen"}
@@ -125,6 +251,64 @@ async def test_freistellungsbescheinigung_nachweis_crud_und_ablauf_flag(
     )
     assert gueltig.status_code == 201
     assert gueltig.json()["abgelaufen"] is False
+
+
+@pytest.mark.asyncio
+async def test_nachweis_dokument_s3_key_nicht_direkt_settable(client, make_mandant, make_user, make_partner):
+    """dokument_s3_key darf nur ueber den Upload-Endpoint gesetzt werden --
+    Create/Update ignorieren ein mitgeschicktes dokument_s3_key stillschweigend
+    (Pydantic verwirft unbekannte Felder), siehe Sicherheitsbefund NIEDR-2."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/nachweise",
+        headers=auth_headers(token),
+        json={"typ": "sonstiges", "dokument_s3_key": "partner-nachweise/anderer-mandant/geheim.pdf"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["dokument_s3_key"] is None
+
+
+@pytest.mark.asyncio
+async def test_nachweis_upload_und_url(client, make_mandant, make_user, make_partner):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    nachweis = (
+        await client.post(
+            f"/api/partner/{partner.id}/nachweise",
+            headers=auth_headers(token),
+            json={"typ": "sonstiges"},
+        )
+    ).json()
+    nachweis_id = nachweis["id"]
+
+    upload = await client.post(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/upload",
+        headers=auth_headers(token),
+        files={"file": ("nachweis.pdf", b"%PDF-1.4 fake", "application/pdf")},
+    )
+    assert upload.status_code == 200
+    key = upload.json()["dokument_s3_key"]
+    assert key.startswith(f"mandanten/{mandant.id}/partner-nachweise/{partner.id}/")
+
+    url = await client.get(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/url", headers=auth_headers(token)
+    )
+    assert url.status_code == 200
+    assert url.json()["url"]
+
+    zu_gross = await client.post(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/upload",
+        headers=auth_headers(token),
+        files={"file": ("riesig.bin", b"x" * (15 * 1024 * 1024 + 1), "application/octet-stream")},
+    )
+    assert zu_gross.status_code == 400
 
 
 # --- Vorgang-Zuweisung -------------------------------------------------------
@@ -539,3 +723,153 @@ async def test_partner_kann_kommentar_erst_nach_annahme_schreiben(
     )
     assert nachher.status_code == 201
     assert nachher.json()["body"] == "Bin morgen vor Ort"
+
+
+# --- Einladungs-Status, Kommentarverlauf, Mandantenname -----------------------
+
+
+@pytest.mark.asyncio
+async def test_partner_einladung_liste_und_zugang_status(client, make_mandant, make_user, make_partner):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+    h = auth_headers(token)
+
+    leer = await client.get(f"/api/partner/{partner.id}/einladungen", headers=h)
+    assert leer.status_code == 200 and leer.json() == []
+    assert (await client.get(f"/api/partner/{partner.id}/zugaenge", headers=h)).json() == []
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/einladungen", headers=h, json={"email": "status@partner.example.de"}
+    )
+    assert resp.status_code == 201
+    liste = (await client.get(f"/api/partner/{partner.id}/einladungen", headers=h)).json()
+    assert [e["status"] for e in liste] == ["offen"]
+    assert liste[0]["registrierungslink"]
+
+    reg = await client.post(
+        "/api/partnerportal/auth/registrieren",
+        json={
+            "token": await _extrahiere_token(resp.json()["registrierungslink"]),
+            "name": "Erika",
+            "password": "sicheres-passwort-123",
+        },
+    )
+    assert reg.status_code == 201
+    liste = (await client.get(f"/api/partner/{partner.id}/einladungen", headers=h)).json()
+    assert liste[0]["status"] == "angenommen" and liste[0]["angenommen_am"]
+    zugaenge = (await client.get(f"/api/partner/{partner.id}/zugaenge", headers=h)).json()
+    assert len(zugaenge) == 1 and zugaenge[0]["aktiv"] is True
+    assert zugaenge[0]["email"] == "status@partner.example.de"
+
+
+async def _kommentar_setup(client, make_mandant, make_user, make_kunde, make_vorgang, make_partner):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    partner = await make_partner(mandant=mandant)
+    vorgang = await make_vorgang(
+        mandant=mandant, kunde=kunde, partner_id=partner.id, partner_freigabe_status="angenommen"
+    )
+    await _make_zugang(mandant, partner, email="verlauf@partner.example.de")
+    office = auth_headers(await login(client, admin.email, "pw-123456"))
+    tokens = await _partner_login(client, "verlauf@partner.example.de", "partner-pw-123")
+    return mandant, kunde, partner, vorgang, office, auth_headers(tokens["access_token"])
+
+
+@pytest.mark.asyncio
+async def test_partner_kommentarverlauf_nur_eigene_und_freigegebene(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+):
+    mandant, kunde, partner, vorgang, office, ph = await _kommentar_setup(
+        client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+    )
+    url = f"/api/vorgaenge/{vorgang.id}/events"
+    intern = await client.post(url, headers=office, json={"event_type": "kommentar", "body": "intern!"})
+    assert intern.status_code == 201 and intern.json()["partner_sichtbar"] is False
+    frei = await client.post(
+        url, headers=office, json={"event_type": "kommentar", "body": "an Partner", "partner_sichtbar": True}
+    )
+    assert frei.status_code == 201 and frei.json()["partner_sichtbar"] is True
+    await client.post(url, headers=office, json={"event_type": "system", "body": "kein Kommentar"})
+    eigen = await client.post(
+        f"/api/partnerportal/auftraege/{vorgang.id}/kommentare", headers=ph, json={"body": "vom Partner"}
+    )
+    assert eigen.status_code == 201
+
+    resp = await client.get(f"/api/partnerportal/auftraege/{vorgang.id}/kommentare", headers=ph)
+    assert resp.status_code == 200
+    liste = resp.json()
+    assert [(k["text"], k["autor"]) for k in liste] == [("an Partner", "betrieb"), ("vom Partner", "partner")]
+    assert set(liste[0]) == {"id", "text", "erstellt_am", "autor", "autor_name"}
+    assert liste[0]["autor_name"]
+    assert "@" not in liste[0]["autor_name"]
+
+    # Benachrichtigung an die Disposition (kein zugewiesener User gesetzt)
+    notif = await client.get("/api/notifications", headers=office)
+    assert any(n["typ"] == "partner_kommentar" for n in notif.json())
+
+
+@pytest.mark.asyncio
+async def test_office_partner_sichtbar_nur_fuer_kommentar_mit_partner(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+):
+    mandant, kunde, partner, vorgang, office, _ = await _kommentar_setup(
+        client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+    )
+    ohne_partner = await make_vorgang(mandant=mandant, kunde=kunde)
+    resp = await client.post(
+        f"/api/vorgaenge/{ohne_partner.id}/events",
+        headers=office,
+        json={"event_type": "kommentar", "body": "x", "partner_sichtbar": True},
+    )
+    assert resp.status_code == 400
+    resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events",
+        headers=office,
+        json={"event_type": "system", "body": "x", "partner_sichtbar": True},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_partner_kommentarverlauf_fremder_vorgang_und_mandant_404(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+):
+    mandant, kunde, partner, vorgang, office, ph = await _kommentar_setup(
+        client, make_mandant, make_user, make_kunde, make_vorgang, make_partner
+    )
+    anderer_partner = await make_partner(mandant=mandant)
+    fremd = await make_vorgang(mandant=mandant, kunde=kunde, partner_id=anderer_partner.id)
+    assert (
+        await client.get(f"/api/partnerportal/auftraege/{fremd.id}/kommentare", headers=ph)
+    ).status_code == 404
+
+    mandant2 = await make_mandant()
+    kunde2 = await make_kunde(mandant=mandant2)
+    partner2 = await make_partner(mandant=mandant2)
+    v2 = await make_vorgang(mandant=mandant2, kunde=kunde2, partner_id=partner2.id)
+    assert (
+        await client.get(f"/api/partnerportal/auftraege/{v2.id}/kommentare", headers=ph)
+    ).status_code == 404
+    assert (
+        await client.get(f"/api/partnerportal/auftraege/{uuid.uuid4()}/kommentare", headers=ph)
+    ).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_partner_me_enthaelt_mandantenname(client, make_mandant, make_partner):
+    mandant = await make_mandant()
+    partner = await make_partner(mandant=mandant)
+    await _make_zugang(mandant, partner, email="mandant@partner.example.de")
+    tokens = await _partner_login(client, "mandant@partner.example.de", "partner-pw-123")
+    me = await client.get("/api/partnerportal/auth/me", headers=auth_headers(tokens["access_token"]))
+    assert me.json()["mandant_name"] == mandant.name
+    assert me.json()["mandant_logo_url"] is None
+
+    async with system_session() as session:
+        m = await session.get(Mandant, mandant.id)
+        m.logo_object_key = "logos/test.png"
+    me = await client.get("/api/partnerportal/auth/me", headers=auth_headers(tokens["access_token"]))
+    assert me.json()["mandant_logo_url"].startswith("http")

@@ -6,6 +6,7 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_recht, r
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.user import User
+from app.services.user_anonymisierung_service import nicht_anonymisiert
 from app.schemas.techniker_uebersicht import TechnikerZuweisungUebersicht
 from app.services.zuweisung_service import technik_user_ids
 
@@ -27,7 +28,7 @@ async def uebersicht(
     Zeigt auch Techniker ohne Zuweisungen (leere Kunden-Liste)."""
     techniker_ids = await technik_user_ids(session, auth.mandant_id)
     techniker_result = await session.execute(
-        select(User).where(User.id.in_(techniker_ids)).order_by(User.name)
+        select(User).where(User.id.in_(techniker_ids), nicht_anonymisiert()).order_by(User.name)
     )
     techniker_liste = list(techniker_result.scalars().all())
 

@@ -1,10 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-/** Kleine, geteilte Bausteine der Desktop-Oberflaeche. Bewusst hier gebuendelt
- * statt in components/: sie setzen eine breite Flaeche voraus und waeren in
- * der Handy-App fehl am Platz. Farben/Toene kommen weiterhin aus dem
- * bestehenden System (siehe docs/DESIGN.md). */
+/** Kleine, geteilte Bausteine der Desktop-Oberflaeche (Abschnitt 5, Toolbar/
+ * Werkzeugleiste). Bewusst hier gebuendelt statt in components/apple/: sie
+ * setzen eine breite Flaeche voraus und waeren in der Handy-App fehl am
+ * Platz. Farben/Toene kommen ausschliesslich aus den Apple-Design-Token
+ * (siehe index.css), keine Tailwind-Palettenfarben mehr. */
 
 export function SeitenKopf({
   titel,
@@ -17,13 +18,9 @@ export function SeitenKopf({
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+      <h1 className="ap-heading text-2xl font-semibold text-label">
         {titel}
-        {anzahl !== undefined && (
-          <span className="ml-2 text-sm font-medium text-slate-400 dark:text-stone-500">
-            {anzahl}
-          </span>
-        )}
+        {anzahl !== undefined && <span className="ml-2 text-sm font-medium text-label2">{anzahl}</span>}
       </h1>
       <div className="flex items-center gap-2">{children}</div>
     </div>
@@ -31,7 +28,10 @@ export function SeitenKopf({
 }
 
 /** Umschalter fuer gleichrangige Ansichten (Liste/Kanban/Raster,
- * Rechnungen/Angebote, Uebersicht/Editor). */
+ * Rechnungen/Angebote, Uebersicht/Editor) -- optisch dasselbe Segmented-
+ * Control-Muster wie components/apple/SegmentedControl.tsx, hier aber mit
+ * Symbolen statt nur Text (die Ansichten sind sonst schwer auseinander-
+ * zuhalten) und deshalb als eigene Variante statt geteilter Komponente. */
 export function AnsichtUmschalter<T extends string>({
   wert,
   optionen,
@@ -42,22 +42,25 @@ export function AnsichtUmschalter<T extends string>({
   onWechsel: (wert: T) => void;
 }) {
   return (
-    <div className="flex gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-stone-700 dark:bg-stone-800">
+    <div role="group" aria-label="Ansicht" className="inline-flex rounded-[9px] bg-fill p-0.5">
       {optionen.map((option) => {
         const Icon = option.icon;
         const aktiv = option.wert === wert;
         return (
           <button
             key={option.wert}
+            type="button"
             onClick={() => onWechsel(option.wert)}
             aria-pressed={aktiv}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold ${
-              aktiv
-                ? "bg-white text-slate-800 shadow-xs dark:bg-stone-900 dark:text-stone-100"
-                : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+            title={option.label}
+            className={`flex h-6 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-semibold transition-colors ${
+              // text-label statt text-label2: dasselbe Kontrast-Argument
+              // wie in components/apple/SegmentedControl.tsx (axe-core,
+              // Phase D, < 4.5:1 im dunklen Modus).
+              aktiv ? "bg-thumb text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "text-label"
             }`}
           >
-            <Icon size={13} strokeWidth={2} />
+            <Icon size={13} strokeWidth={2} aria-hidden="true" />
             {option.label}
           </button>
         );
@@ -66,70 +69,54 @@ export function AnsichtUmschalter<T extends string>({
   );
 }
 
-export function FilterChip({
-  label,
-  aktiv,
-  onClick,
+export function Karte({
+  children,
+  className = "",
+  style,
 }: {
-  label: string;
-  aktiv: boolean;
-  onClick: () => void;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
 }) {
   return (
-    <button
-      onClick={onClick}
-      aria-pressed={aktiv}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-        aktiv
-          ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300"
-          : "border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-export function Karte({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900 ${className}`}
-    >
+    <div className={`card-ap ${className}`} style={style}>
       {children}
     </div>
   );
 }
 
 /** Kennzahl-Kachel (Buchhaltung). `ton` faerbt nur den Zusatztext, nicht die
- * Flaeche -- kraeftige Farbflaechen sind laut docs/DESIGN.md bewusst
- * vermieden. */
+ * Flaeche -- kraeftige Farbflaechen sind laut Abschnitt 3 bewusst vermieden,
+ * die Status-Token uebernehmen die Rolle der frueheren rose/emerald-Toene. */
 export function KennzahlKarte({
   label,
   wert,
   zusatz,
   ton = "neutral",
   icon: Icon,
+  wertKlasse = "text-label",
 }: {
   label: string;
   wert: string;
   zusatz?: string;
   ton?: "neutral" | "warnung" | "gut";
   icon?: LucideIcon;
+  wertKlasse?: string;
 }) {
   const zusatzKlasse =
     ton === "warnung"
-      ? "text-rose-600 font-semibold dark:text-rose-300"
+      ? "text-st-fehlt font-semibold"
       : ton === "gut"
-        ? "text-emerald-600 font-semibold dark:text-emerald-300"
-        : "text-slate-400 dark:text-stone-500";
+        ? "text-st-erledigt font-semibold"
+        : "text-label2";
 
   return (
     <Karte className="p-4">
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-stone-400">
-        {Icon && <Icon size={13} strokeWidth={2} />}
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-label2">
+        {Icon && <Icon size={13} strokeWidth={2} aria-hidden="true" />}
         {label}
       </p>
-      <p className="text-xl font-bold tabular-nums text-slate-800 dark:text-stone-100">{wert}</p>
+      <p className={`ap-heading text-2xl font-semibold tabular-nums ${wertKlasse}`}>{wert}</p>
       {zusatz && <p className={`mt-1 text-xs ${zusatzKlasse}`}>{zusatz}</p>}
     </Karte>
   );
@@ -139,7 +126,7 @@ export function KennzahlKarte({
  * Tabelle die ganze Seite seitlich weg. */
 export function TabellenRahmen({ children }: { children: ReactNode }) {
   return (
-    <Karte className="overflow-hidden">
+    <Karte className="overflow-hidden p-0">
       <div className="overflow-x-auto">{children}</div>
     </Karte>
   );

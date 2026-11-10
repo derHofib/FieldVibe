@@ -28,6 +28,14 @@ class Eingangsrechnung(SoftDeleteMixin, TimestampMixin, Base):
             f"kategorie IS NULL OR kategorie IN {EINGANGSRECHNUNG_KATEGORIEN}",
             name="ck_eingangsrechnungen_kategorie_valid",
         ),
+        CheckConstraint(
+            "e_rechnung_syntax IS NULL OR e_rechnung_syntax IN ('cii', 'ubl')",
+            name="ck_eingangsrechnungen_e_rechnung_syntax_valid",
+        ),
+        CheckConstraint(
+            "xml_sha256 IS NULL OR xml_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_eingangsrechnungen_xml_sha256_format",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -70,6 +78,15 @@ class Eingangsrechnung(SoftDeleteMixin, TimestampMixin, Base):
     # aufbewahrt verlangt; die Metadaten um ihn herum bleiben normal
     # korrigierbar, solange status == "offen".
     beleg_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # E-Rechnung (XRechnung/ZUGFeRD): die Original-XML ist der Beleg und wird
+    # byte-identisch archiviert, xml_sha256 sichert sie. Bei einem Hybrid-PDF
+    # ist das PDF zusaetzlich beleg_object_key. Nie neu erzeugen oder aendern.
+    xml_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    xml_sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
+    e_rechnung_syntax: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Punkte, die beim Import auffielen und ein Mensch pruefen soll (mehrere
+    # Steuersaetze, Reverse Charge, Summenabweichung, ...).
+    import_hinweis: Mapped[str | None] = mapped_column(Text, nullable=True)
     notiz: Mapped[str | None] = mapped_column(Text)
     # NULL bedeutet: automatisch per E-Mail-Import angelegt (status "entwurf"),
     # kein Mitarbeiter hat sie erfasst -- siehe email_ingest_service.py.
@@ -80,6 +97,10 @@ class Eingangsrechnung(SoftDeleteMixin, TimestampMixin, Base):
     # -- NULL bei manueller Erfassung ueber das Formular.
     email_absender: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_betreff: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    @property
+    def hat_xml(self) -> bool:
+        return self.xml_object_key is not None
 
 
 class EingangsrechnungPosition(Base):

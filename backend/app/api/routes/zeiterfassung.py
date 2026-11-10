@@ -1,9 +1,9 @@
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,29 +15,54 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.zeit import in_lokal, montag_der_woche, tagesbeginn_utc, tagesende_utc
+from app.models.anlage import Anlage
+from app.models.leistungsverzeichnis import LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.models.zeiterfassung import Zeiterfassung
+from app.models.zeiterfassung import ZEITERFASSUNG_BUCHUNGSSTATUS, Zeiterfassung
+from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.schemas.zeiterfassung import (
+    ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL,
     ZEITERFASSUNG_KATEGORIE_LABEL,
     ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT,
+    ZeiterfassungAenderungRead,
+    ZeiterfassungBuchungStornierenBody,
+    ZeiterfassungIdsBody,
     ZeiterfassungManuellCreate,
     ZeiterfassungRead,
     ZeiterfassungStart,
     ZeiterfassungStatistik,
+    ZeiterfassungStatusSumme,
+    ZeiterfassungStopBody,
+    ZeiterfassungSummenNachStatus,
     ZeiterfassungUpdate,
 )
+from app.services import berechtigung_service, papierkorb_service
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
-from app.services.rechte_service import (
-    darf_fremde_mitarbeiterdaten_einsehen,
-    ist_auf_zugewiesene_kunden_beschraenkt,
-)
+from app.services.rechnung_service import km_gesperrt
+from app.services.rechte_service import darf_zeiten_buchen
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import (
+    darf_fuer_mitarbeiter_handeln,
+    darf_mitarbeiterdaten_einsehen,
+    mitarbeiter_im_handlungsbereich,
+    erlaubte_kunde_ids,
+    erlaubte_user_ids,
+    require_kunde_zugewiesen,
+)
+
+_FLAG = "darf_zeiten_buchen"
+
+
+async def _darf_fuer(session: AsyncSession, auth: AuthContext, techniker_id: UUID) -> bool:
+    return await darf_fuer_mitarbeiter_handeln(session, auth, techniker_id, _FLAG, selbst_erlaubt=True)
+
 
 router = APIRouter(
     prefix="/api/zeiterfassung",
@@ -50,21 +75,30 @@ router = APIRouter(
 
 
 def _montag_dieser_woche(jetzt: datetime) -> datetime:
-    tage_seit_montag = jetzt.weekday()
-    montag_datum = jetzt.date() - timedelta(days=tage_seit_montag)
-    return datetime.combine(montag_datum, time.min, tzinfo=timezone.utc)
+    return tagesbeginn_utc(montag_der_woche(in_lokal(jetzt).date()))
 
 
-def _tagesbeginn(d: date) -> datetime:
-    return datetime.combine(d, time.min, tzinfo=timezone.utc)
+async def _mitarbeiter_scope(session: AsyncSession, auth: AuthContext) -> set[UUID] | None:
+    """Nutzer, deren Zeiten im Scope von mitarbeiterverwaltung.bearbeiten liegen
+    (None = alle). Ohne dieses Recht greift hier keine Nutzer-Einschraenkung: die
+    Zeiten zu einem Vorgang bleiben fuer alle sichtbar, begrenzt nur durch den
+    Kunden-Scope -- das Gate fuer fremde Personen ist darf_mitarbeiterdaten_einsehen."""
+    if not await berechtigung_service.hat_recht(session, auth, "mitarbeiterverwaltung", "bearbeiten"):
+        return None
+    return await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", "bearbeiten")
 
 
-async def _mit_vorgangsnummern(
+async def _mit_vorgang_kontext(
     session: AsyncSession, eintraege: list[Zeiterfassung]
 ) -> list[Zeiterfassung]:
-    """Setzt das transiente ZeiterfassungRead.vorgangsnummer-Feld -- ein
-    einzelner Batch-Lookup statt N+1, siehe gleiches Muster bei
-    VorgangRead.zugewiesener_name in app/api/routes/vorgaenge.py."""
+    """Setzt die transienten ZeiterfassungRead-Felder vorgangsnummer sowie
+    vorgang_kunde_id/_auftrag_id/_projekt_id -- ein einzelner Batch-Lookup
+    statt N+1, siehe gleiches Muster bei VorgangRead.zugewiesener_name in
+    app/api/routes/vorgaenge.py. Die drei zusaetzlichen IDs sind fuer die
+    Seite "Zeiten buchen" (Konzept Abschnitt 7.3): Gruppierung/Filter nach
+    Kunde/Auftrag/Projekt, ohne dass das Frontend fuer jeden Eintrag den
+    Vorgang einzeln nachladen muesste -- kostet hier nichts extra, der
+    Vorgang ist ohnehin schon geladen."""
     vorgang_ids = {e.vorgang_id for e in eintraege if e.vorgang_id is not None}
     vorgaenge_by_id: dict[UUID, Vorgang] = {}
     for vorgang_id in vorgang_ids:
@@ -74,7 +108,48 @@ async def _mit_vorgangsnummern(
     for eintrag in eintraege:
         vorgang = vorgaenge_by_id.get(eintrag.vorgang_id) if eintrag.vorgang_id else None
         eintrag.vorgangsnummer = vorgang.vorgangsnummer if vorgang else None
+        eintrag.vorgang_kunde_id = vorgang.kunde_id if vorgang else None
+        eintrag.vorgang_auftrag_id = vorgang.auftrag_id if vorgang else None
+        eintrag.vorgang_projekt_id = vorgang.projekt_id if vorgang else None
     return eintraege
+
+
+def _jsonbar(wert: object) -> object:
+    """JSONB-Spalten (alter_wert/neuer_wert) akzeptieren kein datetime/UUID/
+    Decimal direkt -- der asyncpg-JSON-Codec kennt nur JSON-native Typen."""
+    if isinstance(wert, datetime):
+        return wert.isoformat()
+    if isinstance(wert, UUID):
+        return str(wert)
+    if isinstance(wert, Decimal):
+        return str(wert)
+    return wert
+
+
+def _protokoll(
+    session: AsyncSession,
+    *,
+    mandant_id: UUID,
+    zeiterfassung_id: UUID,
+    aktion: str,
+    feld: str | None = None,
+    alter_wert: object | None = None,
+    neuer_wert: object | None = None,
+    grund: str | None = None,
+    geaendert_von: UUID | None,
+) -> None:
+    session.add(
+        ZeiterfassungAenderung(
+            mandant_id=mandant_id,
+            zeiterfassung_id=zeiterfassung_id,
+            aktion=aktion,
+            feld=feld,
+            alter_wert=alter_wert,
+            neuer_wert=neuer_wert,
+            grund=grund,
+            geaendert_von=geaendert_von,
+        )
+    )
 
 
 @router.get("", response_model=list[ZeiterfassungRead])
@@ -83,16 +158,44 @@ async def list_zeiterfassung(
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
+    buchungsstatus: str | None = Query(default=None),
+    # Ab hier fuer die Seite "Zeiten buchen" (Konzept Abschnitt 7.3) --
+    # Filter ueber ALLE Vorgaenge statt nur einen.
+    kunde_id: UUID | None = Query(default=None),
+    auftrag_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    laufend: bool | None = Query(default=None),
+    vermerkt_aelter_als_tage: int | None = Query(default=None, ge=0),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Zeiterfassung]:
-    stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.desc())
+    stmt = (
+        select(Zeiterfassung)
+        .where(Zeiterfassung.geloescht_am.is_(None))
+        .order_by(Zeiterfassung.start_at.desc())
+    )
+    if buchungsstatus:
+        stmt = stmt.where(Zeiterfassung.buchungsstatus == buchungsstatus)
     if vorgang_id:
         stmt = stmt.where(Zeiterfassung.vorgang_id == vorgang_id)
     if von:
-        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+        stmt = stmt.where(Zeiterfassung.start_at >= tagesbeginn_utc(von))
     if bis:
-        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+        stmt = stmt.where(Zeiterfassung.start_at < tagesende_utc(bis))
+    if laufend is not None:
+        stmt = stmt.where(Zeiterfassung.ende_at.is_(None) if laufend else Zeiterfassung.ende_at.is_not(None))
+    if vermerkt_aelter_als_tage is not None:
+        grenze = datetime.now(timezone.utc) - timedelta(days=vermerkt_aelter_als_tage)
+        stmt = stmt.where(Zeiterfassung.buchungsstatus == "vermerkt", Zeiterfassung.start_at < grenze)
+    if kunde_id or auftrag_id or projekt_id:
+        vorgang_filter_stmt = select(Vorgang.id)
+        if kunde_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.kunde_id == kunde_id)
+        if auftrag_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.auftrag_id == auftrag_id)
+        if projekt_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.projekt_id == projekt_id)
+        stmt = stmt.where(Zeiterfassung.vorgang_id.in_(vorgang_filter_stmt))
 
     if techniker_id:
         # Ausdruecklich nach einem Techniker gefiltert (z.B. die eigene
@@ -101,25 +204,22 @@ async def list_zeiterfassung(
         # die kunde_id-Einschraenkung unten ist nur fuer den impliziten
         # Fall (kein techniker_id, z.B. Zeiterfassungen zu EINEM Vorgang)
         # gedacht.
-        if techniker_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
-        ):
+        if not await darf_mitarbeiterdaten_einsehen(session, auth, techniker_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
             )
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
-    elif await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
-        stmt = stmt.where(
-            Zeiterfassung.vorgang_id.in_(
-                select(Vorgang.id).where(
-                    Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id))
-                )
+    else:
+        kunden = await erlaubte_kunde_ids(session, auth)
+        if kunden is not None:
+            stmt = stmt.where(
+                Zeiterfassung.vorgang_id.in_(select(Vorgang.id).where(Vorgang.kunde_id.in_(kunden)))
             )
-        )
+        nutzer = await _mitarbeiter_scope(session, auth)
+        if nutzer is not None:
+            stmt = stmt.where(Zeiterfassung.techniker_id.in_(nutzer))
     result = await session.execute(stmt)
-    return await _mit_vorgangsnummern(session, list(result.scalars().all()))
+    return await _mit_vorgang_kontext(session, list(result.scalars().all()))
 
 
 @router.get(
@@ -137,17 +237,30 @@ async def export_zeiterfassung_csv(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
-    stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.asc())
+    stmt = (
+        select(Zeiterfassung)
+        .where(Zeiterfassung.geloescht_am.is_(None))
+        .order_by(Zeiterfassung.start_at.asc())
+    )
     if techniker_id:
+        if not await darf_mitarbeiterdaten_einsehen(session, auth, techniker_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
+            )
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
+    else:
+        nutzer = await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", "bearbeiten")
+        if nutzer is not None:
+            stmt = stmt.where(Zeiterfassung.techniker_id.in_(nutzer))
     if von:
-        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+        stmt = stmt.where(Zeiterfassung.start_at >= tagesbeginn_utc(von))
     if bis:
-        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+        stmt = stmt.where(Zeiterfassung.start_at < tagesende_utc(bis))
     eintraege = list((await session.execute(stmt)).scalars().all())
 
     technikers_by_id: dict[UUID, User | None] = {}
     vorgaenge_by_id: dict[UUID, Vorgang | None] = {}
+    fahrzeuge_by_id: dict[UUID, Anlage | None] = {}
     rows = []
     for e in eintraege:
         if e.techniker_id not in technikers_by_id:
@@ -161,20 +274,31 @@ async def export_zeiterfassung_csv(
         dauer_stunden = (
             (e.ende_at - e.start_at).total_seconds() / 3600 if e.ende_at else None
         )
+        fahrzeug = None
+        if e.fahrzeug_id is not None:
+            if e.fahrzeug_id not in fahrzeuge_by_id:
+                fahrzeuge_by_id[e.fahrzeug_id] = await session.get(Anlage, e.fahrzeug_id)
+            fahrzeug = fahrzeuge_by_id[e.fahrzeug_id]
         rows.append(
             [
-                e.start_at.strftime("%d.%m.%Y"),
+                in_lokal(e.start_at).strftime("%d.%m.%Y"),
                 techniker.name if techniker else "",
                 vorgang.vorgangsnummer if vorgang else "",
-                ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Auftrag"),
+                ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Vorgang"),
                 e.taetigkeit or "",
-                e.start_at.strftime("%H:%M"),
-                e.ende_at.strftime("%H:%M") if e.ende_at else "",
+                in_lokal(e.start_at).strftime("%H:%M"),
+                in_lokal(e.ende_at).strftime("%H:%M") if e.ende_at else "",
                 f"{dauer_stunden:.2f}".replace(".", ",") if dauer_stunden is not None else "",
                 "Ja" if e.abrechenbar else "Nein",
+                f"{e.km:.1f}".replace(".", ",") if e.km is not None else "",
+                fahrzeug.bezeichnung if fahrzeug else "",
+                ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL.get(e.buchungsstatus, e.buchungsstatus),
             ]
         )
 
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="zeiterfassung", zeilen=len(rows)
+    )
     return csv_response(
         [
             "Datum",
@@ -186,6 +310,9 @@ async def export_zeiterfassung_csv(
             "Bis",
             "Dauer (Std.)",
             "Abrechenbar",
+            "km",
+            "Fahrzeug",
+            "Status",
         ],
         rows,
         "Zeiterfassung.csv",
@@ -203,17 +330,16 @@ async def get_statistik(
     session: AsyncSession = Depends(get_db),
 ) -> ZeiterfassungStatistik:
     ziel_id = techniker_id or auth.user_id
-    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
+    if not await darf_mitarbeiterdaten_einsehen(session, auth, ziel_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Statistik einsehbar"
         )
 
     jetzt = datetime.now(timezone.utc)
     wochenstart = _montag_dieser_woche(jetzt)
-    monatsstart = datetime(jetzt.year, jetzt.month, 1, tzinfo=timezone.utc)
-    jahresstart = datetime(jetzt.year, 1, 1, tzinfo=timezone.utc)
+    lokal_heute = in_lokal(jetzt).date()
+    monatsstart = tagesbeginn_utc(lokal_heute.replace(day=1))
+    jahresstart = tagesbeginn_utc(lokal_heute.replace(month=1, day=1))
 
     async def _stunden_seit(start: datetime) -> Decimal:
         result = await session.execute(
@@ -221,6 +347,7 @@ async def get_statistik(
                 Zeiterfassung.techniker_id == ziel_id,
                 Zeiterfassung.start_at >= start,
                 Zeiterfassung.ende_at.isnot(None),
+                Zeiterfassung.geloescht_am.is_(None),
                 # Pause/Urlaub/Krankheit sind keine geleistete Arbeitszeit --
                 # zaehlen bewusst nicht in die Stunden-Summen mit ein.
                 Zeiterfassung.kategorie.notin_(ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT),
@@ -238,6 +365,59 @@ async def get_statistik(
     )
 
 
+_ZEIT_SUMME_LEER = ZeiterfassungStatusSumme(
+    arbeitszeit_stunden=Decimal("0.0"), fahrzeit_stunden=Decimal("0.0"), km=Decimal("0.0")
+)
+
+
+@router.get("/summen", response_model=ZeiterfassungSummenNachStatus)
+async def get_zeit_summen(
+    auftrag_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    session: AsyncSession = Depends(get_db),
+) -> ZeiterfassungSummenNachStatus:
+    """"Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4, docs/konzepte/
+    ZEITERFASSUNG.md Abschnitt 7.4): Summen ueber alle Vorgaenge eines
+    Auftrags bzw. Projekts, je Buchungsstatus. Reine Anzeige -- bearbeitet
+    und gebucht wird weiterhin am Vorgang bzw. auf "Zeiten buchen"."""
+    if (auftrag_id is None) == (projekt_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Genau eines von auftrag_id/projekt_id angeben",
+        )
+    stmt = (
+        select(
+            Zeiterfassung.buchungsstatus,
+            Zeiterfassung.kategorie,
+            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)),
+            func.sum(Zeiterfassung.km),
+        )
+        .join(Vorgang, Vorgang.id == Zeiterfassung.vorgang_id)
+        .where(
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.geloescht_am.is_(None),
+            Zeiterfassung.kategorie.in_(("auftrag", "fahrzeit")),
+        )
+        .group_by(Zeiterfassung.buchungsstatus, Zeiterfassung.kategorie)
+    )
+    stmt = stmt.where(Vorgang.auftrag_id == auftrag_id) if auftrag_id is not None else stmt.where(
+        Vorgang.projekt_id == projekt_id
+    )
+
+    summen = {s: _ZEIT_SUMME_LEER.model_copy() for s in ZEITERFASSUNG_BUCHUNGSSTATUS}
+    for buchungsstatus, kategorie, sekunden, km in (await session.execute(stmt)).all():
+        stunden = (Decimal(str(sekunden or 0)) / Decimal(3600)).quantize(Decimal("0.1"))
+        if kategorie == "auftrag":
+            summen[buchungsstatus].arbeitszeit_stunden += stunden
+        else:
+            summen[buchungsstatus].fahrzeit_stunden += stunden
+        # km kann seit Konzept Abschnitt 11 auch an "auftrag"-Zeilen haengen
+        # (Fahrt direkt an der Arbeitszeit statt als eigener Fahrzeit-
+        # Eintrag), daher unabhaengig von der Kategorie mitgezaehlt.
+        summen[buchungsstatus].km += Decimal(str(km or 0))
+    return ZeiterfassungSummenNachStatus(**summen)
+
+
 @router.get("/wochenzettel-pdf", dependencies=[Depends(require_module("statistik"))])
 async def wochenzettel_pdf(
     woche_start: date = Query(...),
@@ -246,9 +426,7 @@ async def wochenzettel_pdf(
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     ziel_id = techniker_id or auth.user_id
-    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
+    if not await darf_mitarbeiterdaten_einsehen(session, auth, ziel_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigener Wochenzettel abrufbar"
         )
@@ -263,8 +441,9 @@ async def wochenzettel_pdf(
         select(Zeiterfassung)
         .where(
             Zeiterfassung.techniker_id == ziel_id,
-            Zeiterfassung.start_at >= _tagesbeginn(woche_start),
-            Zeiterfassung.start_at < _tagesbeginn(woche_start + timedelta(days=7)),
+            Zeiterfassung.start_at >= tagesbeginn_utc(woche_start),
+            Zeiterfassung.start_at < tagesbeginn_utc(woche_start + timedelta(days=7)),
+            Zeiterfassung.geloescht_am.is_(None),
         )
         .order_by(Zeiterfassung.start_at)
     )
@@ -302,7 +481,7 @@ async def get_laufender_timer(
     )
     eintrag = result.scalar_one_or_none()
     if eintrag is not None:
-        await _mit_vorgangsnummern(session, [eintrag])
+        await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -323,12 +502,7 @@ async def start_timer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
-        )
+    await require_kunde_zugewiesen(session, auth, vorgang.kunde_id)
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -342,6 +516,7 @@ async def start_timer(
         start_at=datetime.now(timezone.utc),
         taetigkeit=body.taetigkeit,
         abrechenbar=body.abrechenbar,
+        quelle="timer",
     )
     session.add(eintrag)
     try:
@@ -361,6 +536,13 @@ async def start_timer(
             payload={"zeiterfassung_id": str(eintrag.id), "taetigkeit": body.taetigkeit},
         )
     )
+    _protokoll(
+        session,
+        mandant_id=auth.mandant_id,
+        zeiterfassung_id=eintrag.id,
+        aktion="angelegt",
+        geaendert_von=auth.user_id,
+    )
     await session.flush()
 
     await event_bus.publish(
@@ -368,27 +550,66 @@ async def start_timer(
         "timer",
         {"vorgang_id": str(body.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": True},
     )
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
 @router.post("/{zeiterfassung_id}/stop", response_model=ZeiterfassungRead)
 async def stop_timer(
     zeiterfassung_id: UUID,
+    body: ZeiterfassungStopBody = ZeiterfassungStopBody(),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Zeiterfassung:
     eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
-    if eintrag is None or eintrag.techniker_id != auth.user_id:
+    if eintrag is None or eintrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
+    ist_fremd = eintrag.techniker_id != auth.user_id
+    if ist_fremd:
+        # "Fremden laufenden Timer beenden" (Konzept 6.2/7.1) -- nur mit dem
+        # Recht "Zeiten buchen", sonst wie gehabt "nicht gefunden" statt
+        # 403, um nicht zu verraten, dass fuer diese ID ein fremder Eintrag
+        # existiert.
+        if not await _darf_fuer(session, auth, eintrag.techniker_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+            )
+        if not body.grund or not body.grund.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Grund ist bei einem fremden Timer Pflicht",
+            )
     if eintrag.ende_at is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Timer läuft nicht mehr"
         )
 
-    eintrag.ende_at = datetime.now(timezone.utc)
+    # "Ende frei waehlbar" (Konzept 7.1) nur beim Beenden eines FREMDEN
+    # Timers -- beim eigenen ist es immer "jetzt", wie bisher.
+    if ist_fremd and body.ende_at is not None:
+        ende = body.ende_at
+    else:
+        ende = datetime.now(timezone.utc)
+    if ende <= eintrag.start_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Ende muss nach dem Start liegen"
+        )
+    _pruefe_zeitpunkt_nicht_in_zukunft(ende, feld="Ende")
+
+    eintrag.ende_at = ende
+    if ist_fremd:
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=eintrag.id,
+            aktion="geaendert",
+            feld="ende_at",
+            neuer_wert=ende.isoformat(),
+            grund=body.grund,
+            geaendert_von=auth.user_id,
+        )
     await session.flush()
     await session.refresh(eintrag)
 
@@ -409,10 +630,100 @@ async def stop_timer(
     await event_bus.publish(
         auth.mandant_id,
         "timer",
-        {"vorgang_id": str(eintrag.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": False},
+        {"vorgang_id": str(eintrag.vorgang_id), "techniker_id": str(eintrag.techniker_id), "laeuft": False},
     )
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
+
+
+async def _lv_position_pruefen(
+    session: AsyncSession, lv_position_id: UUID, vorgang: Vorgang | None
+) -> None:
+    """SVS-Kopplung: der gewaehlte Stundenverrechnungssatz muss ein
+    ist_stundensatz-Eintrag sein und -- falls sein Leistungsverzeichnis
+    ueberhaupt Kunden zugewiesen ist -- zum Kunden des Vorgangs gehoeren,
+    sonst koennte man versehentlich den Satz eines fremden Kunden
+    hinterlegen. Keine Zuweisung heisst "gilt fuer alle Kunden", siehe
+    LeistungsverzeichnisKunde (die Kunden-Zuweisung sitzt am LV, nicht mehr
+    an der einzelnen Position). RLS scopt session.get() bereits auf den
+    eigenen Mandanten."""
+    lv_position = await session.get(LeistungsverzeichnisPosition, lv_position_id)
+    if lv_position is None or lv_position.geloescht_am is not None or not lv_position.ist_stundensatz:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stundenverrechnungssatz nicht gefunden",
+        )
+    if vorgang is not None:
+        zugeordnete_kunden = (
+            await session.execute(
+                select(LeistungsverzeichnisKunde.kunde_id).where(
+                    LeistungsverzeichnisKunde.leistungsverzeichnis_id == lv_position.leistungsverzeichnis_id
+                )
+            )
+        ).scalars().all()
+        if zugeordnete_kunden and vorgang.kunde_id not in zugeordnete_kunden:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Stundenverrechnungssatz gehört nicht zum Kunden dieses Vorgangs",
+            )
+
+
+# Enger als VORGANG_STATUS_GESCHLOSSEN (das zusaetzlich "abgeschlossen"
+# enthaelt): Nachtragen/Bearbeiten von Zeit soll nach Abschluss eines
+# Vorgangs weiterhin moeglich sein (genau der Anwendungsfall "Tätigkeit
+# nachtragen"), nur nicht mehr nach Abrechnung/Stornierung. Der Timer
+# selbst bleibt ueber VORGANG_STATUS_GESCHLOSSEN bei "abgeschlossen" schon
+# gesperrt (siehe start_timer oben).
+_VORGANG_STATUS_ZEIT_GESPERRT = frozenset({"abgerechnet", "storniert"})
+
+_ZUKUNFT_TOLERANZ = timedelta(minutes=2)
+
+
+def _pruefe_zeitpunkt_nicht_in_zukunft(zeitpunkt: datetime | None, *, feld: str = "Start") -> None:
+    # Bei Erfassen/Bearbeiten wird nur der Start geprueft, nicht das Ende:
+    # ein bereits begonnener Eintrag (z.B. "Urlaub ab jetzt, ganzer Tag")
+    # endet legitim erst spaeter am selben Tag -- das Ende darf also in der
+    # (nahen) Zukunft liegen (siehe test_zeiterfassung_manuell.py:
+    # test_manueller_eintrag_ohne_vorgang). Beim Beenden eines fremden
+    # Timers mit frei waehlbarem Ende (Konzept 7.1) rueft dieselbe Funktion
+    # stattdessen das Ende -- daher das parametrisierte feld fuer die
+    # Fehlermeldung.
+    grenze = datetime.now(timezone.utc) + _ZUKUNFT_TOLERANZ
+    if zeitpunkt is not None and zeitpunkt > grenze:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{feld} darf nicht in der Zukunft liegen",
+        )
+
+
+def _pruefe_vorgang_nicht_gesperrt(vorgang: Vorgang) -> None:
+    if vorgang.status in _VORGANG_STATUS_ZEIT_GESPERRT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgerechnet oder storniert und kann nicht mehr bebucht werden",
+        )
+
+
+_FAHRT_FELDER_KATEGORIEN = ("fahrzeit", "auftrag")
+
+
+def _pruefe_fahrt_felder(kategorie: str, km: Decimal | None, fahrzeug_id: UUID | None) -> None:
+    """km/fahrzeug_id sind bei kategorie='fahrzeit' (eigenstaendige Fahrt)
+    UND kategorie='auftrag' (Arbeitszeit mit optionaler Fahrt-Angabe,
+    Konzept Abschnitt 11) sinnvoll -- die Pruefung sitzt hier statt als
+    DB-CHECK, weil sich die Kategorie per PATCH aendern kann (siehe
+    Migration 0085)."""
+    if kategorie not in _FAHRT_FELDER_KATEGORIEN and (km is not None or fahrzeug_id is not None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="km/Fahrzeug sind nur bei Kategorie 'Arbeitszeit' oder 'fahrzeit' erlaubt",
+        )
+
+
+async def _fahrzeug_pruefen(session: AsyncSession, fahrzeug_id: UUID) -> None:
+    anlage = await session.get(Anlage, fahrzeug_id)
+    if anlage is None or anlage.geloescht_am is not None or anlage.objekttyp != "fahrzeug":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fahrzeug nicht gefunden")
 
 
 async def _vorgang_pruefen_fuer_manuellen_eintrag(
@@ -424,12 +735,8 @@ async def _vorgang_pruefen_fuer_manuellen_eintrag(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
-        )
+    await require_kunde_zugewiesen(session, auth, vorgang.kunde_id)
+    _pruefe_vorgang_nicht_gesperrt(vorgang)
     return vorgang
 
 
@@ -451,24 +758,81 @@ async def manuellen_eintrag_anlegen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kategorie 'auftrag' braucht einen Vorgang",
         )
+    ziel_techniker_id = auth.user_id
+    if body.techniker_id is not None and body.techniker_id != auth.user_id:
+        # "Fuer einen anderen nachtragen" (Konzept 6.2) -- nur mit dem Recht
+        # "Zeiten buchen". Der neue Eintrag startet trotzdem als 'vermerkt',
+        # nachtragen ersetzt das Vormerken/Buchen nicht.
+        if not await _darf_fuer(session, auth, body.techniker_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nur mit dem Recht 'Zeiten buchen' für Mitarbeiter in deinem Zuständigkeitsbereich nachtragbar",
+            )
+        ziel_user = await session.get(User, body.techniker_id)
+        if ziel_user is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Techniker nicht gefunden")
+        ziel_techniker_id = body.techniker_id
+
+    vorgang = None
     if body.vorgang_id is not None:
-        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
+        vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
+    if body.lv_position_id is not None:
+        await _lv_position_pruefen(session, body.lv_position_id, vorgang)
+    _pruefe_fahrt_felder(body.kategorie, body.km, body.fahrzeug_id)
+    if body.fahrzeug_id is not None:
+        await _fahrzeug_pruefen(session, body.fahrzeug_id)
 
     eintrag = Zeiterfassung(
         mandant_id=auth.mandant_id,
         vorgang_id=body.vorgang_id,
-        techniker_id=auth.user_id,
+        techniker_id=ziel_techniker_id,
         start_at=body.start_at,
         ende_at=body.ende_at,
         taetigkeit=body.taetigkeit,
         abrechenbar=body.abrechenbar,
         kategorie=body.kategorie,
+        lv_position_id=body.lv_position_id,
+        km=body.km,
+        fahrzeug_id=body.fahrzeug_id,
+        quelle="manuell",
     )
     session.add(eintrag)
     await session.flush()
+    _protokoll(
+        session,
+        mandant_id=auth.mandant_id,
+        zeiterfassung_id=eintrag.id,
+        aktion="angelegt",
+        geaendert_von=auth.user_id,
+    )
+    await session.flush()
     await session.refresh(eintrag)
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
+
+
+# Nur in diesem Status darf ein Eintrag per PATCH/DELETE veraendert werden
+# (Konzept 6.2) -- vorgemerkt muss erst zurueckgezogen, gebucht erst
+# storniert werden, abgerechnet ist endgueltig gesperrt.
+_BUCHUNGSSTATUS_BEARBEITBAR = "vermerkt"
+
+
+async def _pruefe_buchungsstatus_bearbeitbar(session: AsyncSession, eintrag: Zeiterfassung) -> None:
+    # Eine Zeile ist gesperrt, sobald EIN Anteil abgerechnet ist -- der km-
+    # Anteil hat keinen eigenen Buchungsstatus, kommt hier also dazu.
+    if await km_gesperrt(session, eintrag):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Die gefahrenen km sind bereits abgerechnet, der Eintrag ist gesperrt",
+        )
+    if eintrag.buchungsstatus != _BUCHUNGSSTATUS_BEARBEITBAR:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Eintrag ist '{eintrag.buchungsstatus}' und muss dafür erst "
+                "zurückgezogen bzw. storniert werden"
+            ),
+        )
 
 
 @router.patch("/{zeiterfassung_id}", response_model=ZeiterfassungRead)
@@ -479,17 +843,59 @@ async def zeiterfassung_aktualisieren(
     session: AsyncSession = Depends(get_db),
 ) -> Zeiterfassung:
     eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
-    if eintrag is None or eintrag.techniker_id != auth.user_id:
+    if eintrag is None or eintrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
-    if eintrag.ende_at is None:
+
+    ist_fremd = eintrag.techniker_id != auth.user_id
+    if ist_fremd and not await _darf_fuer(session, auth, eintrag.techniker_id):
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ein laufender Timer wird über 'stop' beendet, nicht über diese Route",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
 
-    daten = body.model_dump(exclude_unset=True)
+    daten = body.model_dump(exclude_unset=True, exclude={"grund"})
+
+    if eintrag.ende_at is None:
+        # Laufender Timer: nur die Taetigkeit darf nachgetragen werden
+        # (siehe docs/konzepte/ZEITERFASSUNG.md, Stufe 1) -- Start/Ende
+        # weiterhin ausschliesslich ueber "stop", damit kein Timer per PATCH
+        # unbemerkt "beendet" wird. Ein fremder laufender Timer wird nur
+        # ueber /stop beendet (Stufe 2), nicht hier bearbeitet.
+        if ist_fremd:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ein fremder laufender Timer wird über 'stop' beendet, nicht bearbeitet",
+            )
+        if set(daten) - {"taetigkeit"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ein laufender Timer wird über 'stop' beendet, nicht über diese Route",
+            )
+        if "taetigkeit" in daten and daten["taetigkeit"] != eintrag.taetigkeit:
+            _protokoll(
+                session,
+                mandant_id=auth.mandant_id,
+                zeiterfassung_id=eintrag.id,
+                aktion="geaendert",
+                feld="taetigkeit",
+                alter_wert=eintrag.taetigkeit,
+                neuer_wert=daten["taetigkeit"],
+                geaendert_von=auth.user_id,
+            )
+            eintrag.taetigkeit = daten["taetigkeit"]
+        await session.flush()
+        await session.refresh(eintrag)
+        await _mit_vorgang_kontext(session, [eintrag])
+        return eintrag
+
+    await _pruefe_buchungsstatus_bearbeitbar(session, eintrag)
+    if ist_fremd and (not body.grund or not body.grund.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Grund ist beim Bearbeiten eines fremden Eintrags Pflicht",
+        )
+
     neue_kategorie = daten.get("kategorie", eintrag.kategorie)
     neuer_vorgang_id = daten.get("vorgang_id", eintrag.vorgang_id)
     if neue_kategorie == "auftrag" and neuer_vorgang_id is None:
@@ -497,8 +903,23 @@ async def zeiterfassung_aktualisieren(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kategorie 'auftrag' braucht einen Vorgang",
         )
+    neuer_vorgang = None
     if "vorgang_id" in daten and daten["vorgang_id"] is not None:
-        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+        neuer_vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+    elif eintrag.vorgang_id is not None:
+        bestehender_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        if bestehender_vorgang is not None:
+            _pruefe_vorgang_nicht_gesperrt(bestehender_vorgang)
+    if "lv_position_id" in daten and daten["lv_position_id"] is not None:
+        if neuer_vorgang is None and eintrag.vorgang_id is not None:
+            neuer_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        await _lv_position_pruefen(session, daten["lv_position_id"], neuer_vorgang)
+
+    neue_km = daten.get("km", eintrag.km)
+    neuer_fahrzeug_id = daten.get("fahrzeug_id", eintrag.fahrzeug_id)
+    _pruefe_fahrt_felder(neue_kategorie, neue_km, neuer_fahrzeug_id)
+    if "fahrzeug_id" in daten and daten["fahrzeug_id"] is not None:
+        await _fahrzeug_pruefen(session, daten["fahrzeug_id"])
 
     neuer_start = daten.get("start_at", eintrag.start_at)
     neues_ende = daten.get("ende_at", eintrag.ende_at)
@@ -506,25 +927,325 @@ async def zeiterfassung_aktualisieren(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Ende muss nach dem Start liegen"
         )
+    _pruefe_zeitpunkt_nicht_in_zukunft(neuer_start)
 
     for feld, wert in daten.items():
+        alter_wert = getattr(eintrag, feld)
+        if alter_wert == wert:
+            continue
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=eintrag.id,
+            aktion="geaendert",
+            feld=feld,
+            alter_wert=_jsonbar(alter_wert),
+            neuer_wert=_jsonbar(wert),
+            grund=body.grund if ist_fremd else None,
+            geaendert_von=auth.user_id,
+        )
         setattr(eintrag, feld, wert)
     await session.flush()
     await session.refresh(eintrag)
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
 @router.delete("/{zeiterfassung_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def zeiterfassung_loeschen(
     zeiterfassung_id: UUID,
+    grund: str | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
     eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
-    if eintrag is None or eintrag.techniker_id != auth.user_id:
+    if eintrag is None or eintrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
-    await session.delete(eintrag)
+    ist_fremd = eintrag.techniker_id != auth.user_id
+    if ist_fremd and not await _darf_fuer(session, auth, eintrag.techniker_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+        )
+    if ist_fremd and (not grund or not grund.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Grund ist beim Löschen eines fremden Eintrags Pflicht",
+        )
+    await _pruefe_buchungsstatus_bearbeitbar(session, eintrag)
+    if eintrag.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        if vorgang is not None:
+            _pruefe_vorgang_nicht_gesperrt(vorgang)
+    await papierkorb_service.soft_delete(
+        session, entity_typ="zeiterfassung", entity_id=zeiterfassung_id, actor_user_id=auth.user_id
+    )
+    _protokoll(
+        session,
+        mandant_id=auth.mandant_id,
+        zeiterfassung_id=eintrag.id,
+        aktion="geloescht",
+        grund=grund if ist_fremd else None,
+        geaendert_von=auth.user_id,
+    )
     await session.flush()
+
+
+async def _eintraege_laden(session: AsyncSession, ids: list[UUID]) -> dict[UUID, Zeiterfassung]:
+    if not ids:
+        return {}
+    result = await session.execute(
+        select(Zeiterfassung).where(Zeiterfassung.id.in_(ids), Zeiterfassung.geloescht_am.is_(None))
+    )
+    return {e.id: e for e in result.scalars().all()}
+
+
+async def _vorgang_gesperrt_fuer(session: AsyncSession, eintrag: Zeiterfassung) -> bool:
+    if eintrag.vorgang_id is None:
+        return False
+    vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+    return vorgang is not None and vorgang.status in _VORGANG_STATUS_ZEIT_GESPERRT
+
+
+@router.post("/vormerken", response_model=list[ZeiterfassungRead])
+async def zeiterfassung_vormerken(
+    body: ZeiterfassungIdsBody,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Zeiterfassung]:
+    """vermerkt -> vorgemerkt (Konzept 6.1). Jeder fuer eigene Eintraege,
+    Buchungsberechtigte fuer beliebige. Alles oder nichts: scheitert die
+    Pruefung bei einem Eintrag, wird keiner vorgemerkt."""
+    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+    eintraege = await _eintraege_laden(session, body.ids)
+    fehler: list[str] = []
+    for eid in body.ids:
+        e = eintraege.get(eid)
+        if e is None:
+            fehler.append(f"{eid} (nicht gefunden)")
+        elif e.techniker_id != auth.user_id and not (berechtigt and (bereich is None or e.techniker_id in bereich)):
+            fehler.append(f"{eid} (nicht deine Zeit)")
+        elif e.buchungsstatus != "vermerkt":
+            fehler.append(f"{eid} (Status: {e.buchungsstatus})")
+        elif e.ende_at is None:
+            fehler.append(f"{eid} (Timer läuft noch)")
+        elif not e.taetigkeit or not e.taetigkeit.strip():
+            fehler.append(f"{eid} (Tätigkeit fehlt)")
+        elif e.vorgang_id is None:
+            fehler.append(f"{eid} (ohne Vorgang nicht vormerkbar)")
+        elif await _vorgang_gesperrt_fuer(session, e):
+            fehler.append(f"{eid} (Vorgang gesperrt)")
+    if fehler:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nicht vormerkbar: " + "; ".join(fehler)
+        )
+
+    jetzt = datetime.now(timezone.utc)
+    ergebnis = []
+    for eid in body.ids:
+        e = eintraege[eid]
+        e.buchungsstatus = "vorgemerkt"
+        e.vorgemerkt_von = auth.user_id
+        e.vorgemerkt_am = jetzt
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=e.id,
+            aktion="vorgemerkt",
+            geaendert_von=auth.user_id,
+        )
+        ergebnis.append(e)
+    await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
+    await _mit_vorgang_kontext(session, ergebnis)
+    return ergebnis
+
+
+@router.post("/vormerkung-zurueckziehen", response_model=list[ZeiterfassungRead])
+async def zeiterfassung_vormerkung_zurueckziehen(
+    body: ZeiterfassungIdsBody,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Zeiterfassung]:
+    """vorgemerkt -> vermerkt (Konzept 6.1). Jeder fuer eigene Eintraege,
+    Buchungsberechtigte fuer beliebige."""
+    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+    eintraege = await _eintraege_laden(session, body.ids)
+    fehler: list[str] = []
+    for eid in body.ids:
+        e = eintraege.get(eid)
+        if e is None:
+            fehler.append(f"{eid} (nicht gefunden)")
+        elif e.techniker_id != auth.user_id and not (berechtigt and (bereich is None or e.techniker_id in bereich)):
+            fehler.append(f"{eid} (nicht deine Zeit)")
+        elif e.buchungsstatus != "vorgemerkt":
+            fehler.append(f"{eid} (Status: {e.buchungsstatus})")
+    if fehler:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nicht zurückziehbar: " + "; ".join(fehler),
+        )
+
+    ergebnis = []
+    for eid in body.ids:
+        e = eintraege[eid]
+        e.buchungsstatus = "vermerkt"
+        e.vorgemerkt_von = None
+        e.vorgemerkt_am = None
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=e.id,
+            aktion="vormerkung_zurueckgezogen",
+            geaendert_von=auth.user_id,
+        )
+        ergebnis.append(e)
+    await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
+    await _mit_vorgang_kontext(session, ergebnis)
+    return ergebnis
+
+
+@router.post("/buchen", response_model=list[ZeiterfassungRead])
+async def zeiterfassung_buchen(
+    body: ZeiterfassungIdsBody,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Zeiterfassung]:
+    """vermerkt|vorgemerkt -> gebucht (Konzept 6.1) -- direktes Buchen aus
+    'vermerkt' erspart das Vormerken, auch fuer eigene Eintraege. Nur mit
+    dem Recht 'Zeiten buchen'."""
+    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Recht 'Zeiten buchen' erforderlich"
+        )
+    eintraege = await _eintraege_laden(session, body.ids)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+    fehler: list[str] = []
+    for eid in body.ids:
+        e = eintraege.get(eid)
+        if e is None:
+            fehler.append(f"{eid} (nicht gefunden)")
+        elif bereich is not None and e.techniker_id not in bereich:
+            fehler.append(f"{eid} (außerhalb deines Zuständigkeitsbereichs)")
+        elif e.buchungsstatus not in ("vermerkt", "vorgemerkt"):
+            fehler.append(f"{eid} (Status: {e.buchungsstatus})")
+        elif e.ende_at is None:
+            fehler.append(f"{eid} (Timer läuft noch)")
+        elif not e.taetigkeit or not e.taetigkeit.strip():
+            fehler.append(f"{eid} (Tätigkeit fehlt)")
+        elif e.vorgang_id is None:
+            fehler.append(f"{eid} (ohne Vorgang nicht buchbar)")
+        elif await _vorgang_gesperrt_fuer(session, e):
+            fehler.append(f"{eid} (Vorgang gesperrt)")
+    if fehler:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nicht buchbar: " + "; ".join(fehler)
+        )
+
+    jetzt = datetime.now(timezone.utc)
+    ergebnis = []
+    for eid in body.ids:
+        e = eintraege[eid]
+        e.buchungsstatus = "gebucht"
+        e.gebucht_von = auth.user_id
+        e.gebucht_am = jetzt
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=e.id,
+            aktion="gebucht",
+            geaendert_von=auth.user_id,
+        )
+        ergebnis.append(e)
+    await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
+    await _mit_vorgang_kontext(session, ergebnis)
+    return ergebnis
+
+
+@router.post("/buchung-stornieren", response_model=list[ZeiterfassungRead])
+async def zeiterfassung_buchung_stornieren(
+    body: ZeiterfassungBuchungStornierenBody,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Zeiterfassung]:
+    """gebucht -> vermerkt (Konzept 6.1) -- Grund ist Pflicht. Nur mit dem
+    Recht 'Zeiten buchen', auch fuer selbst gebuchte Eintraege (die sind
+    sonst fuer niemanden mehr aenderbar, siehe Konzept 6.2)."""
+    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Recht 'Zeiten buchen' erforderlich"
+        )
+    if not body.grund.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grund ist Pflicht")
+    eintraege = await _eintraege_laden(session, body.ids)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+    fehler: list[str] = []
+    for eid in body.ids:
+        e = eintraege.get(eid)
+        if e is None:
+            fehler.append(f"{eid} (nicht gefunden)")
+        elif bereich is not None and e.techniker_id not in bereich:
+            fehler.append(f"{eid} (außerhalb deines Zuständigkeitsbereichs)")
+        elif e.buchungsstatus != "gebucht":
+            fehler.append(f"{eid} (Status: {e.buchungsstatus})")
+        elif await km_gesperrt(session, e):
+            fehler.append(f"{eid} (km bereits abgerechnet)")
+    if fehler:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Buchung nicht stornierbar: " + "; ".join(fehler),
+        )
+
+    ergebnis = []
+    for eid in body.ids:
+        e = eintraege[eid]
+        e.buchungsstatus = "vermerkt"
+        e.gebucht_von = None
+        e.gebucht_am = None
+        e.vorgemerkt_von = None
+        e.vorgemerkt_am = None
+        _protokoll(
+            session,
+            mandant_id=auth.mandant_id,
+            zeiterfassung_id=e.id,
+            aktion="buchung_storniert",
+            grund=body.grund,
+            geaendert_von=auth.user_id,
+        )
+        ergebnis.append(e)
+    await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
+    await _mit_vorgang_kontext(session, ergebnis)
+    return ergebnis
+
+
+@router.get("/{zeiterfassung_id}/verlauf", response_model=list[ZeiterfassungAenderungRead])
+async def zeiterfassung_verlauf(
+    zeiterfassung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ZeiterfassungAenderung]:
+    eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
+    if eintrag is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+        )
+    if eintrag.techniker_id != auth.user_id and not await _darf_fuer(session, auth, eintrag.techniker_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+        )
+    result = await session.execute(
+        select(ZeiterfassungAenderung)
+        .where(ZeiterfassungAenderung.zeiterfassung_id == zeiterfassung_id)
+        .order_by(ZeiterfassungAenderung.geaendert_am.desc())
+    )
+    return list(result.scalars().all())

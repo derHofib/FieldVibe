@@ -12,7 +12,7 @@ async def notify_neue_anfrage(
     session: AsyncSession, *, mandant_id: UUID, anfrage: VorgangAnfrage, kunde_name: str
 ) -> None:
     """Benachrichtigt alle disposition-berechtigten Nutzer/Mandanten-Admins
-    des Mandanten ueber eine neu eingegangene Kundenportal-Auftragsanfrage --
+    des Mandanten ueber eine neu eingegangene Kundenportal-Vorgangsanfrage --
     sonst faellt eine solche Anfrage niemandem auf, bis jemand zufaellig die
     Liste oeffnet."""
     empfaenger_ids = list(await dispo_verantwortliche_user_ids(session, mandant_id))
@@ -23,7 +23,7 @@ async def notify_neue_anfrage(
                 mandant_id=mandant_id,
                 user_id=user_id,
                 typ="anfrage",
-                titel=f"Neue Auftragsanfrage von {kunde_name}: {anfrage.titel}",
+                titel=f"Neue Vorgangsanfrage von {kunde_name}: {anfrage.titel}",
                 ref_entity_type="vorgang_anfrage",
                 ref_entity_id=anfrage.id,
             )

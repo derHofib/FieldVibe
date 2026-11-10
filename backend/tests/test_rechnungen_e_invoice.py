@@ -68,9 +68,8 @@ async def test_versand_erzeugt_hybrid_pdf_und_xml_wenn_vollstaendig(
 
 
 @pytest.mark.asyncio
-async def test_versand_faellt_still_auf_normales_pdf_zurueck_wenn_kunde_unvollstaendig(
-    client, make_mandant, make_user, make_kunde
-):
+async def test_versand_scheitert_mit_422_wenn_kunde_unvollstaendig(client, make_mandant, make_user, make_kunde):
+    # Vor Schritt 3 fiel der Versand hier still auf ein normales PDF zurueck.
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(
@@ -81,15 +80,22 @@ async def test_versand_faellt_still_auf_normales_pdf_zurueck_wenn_kunde_unvollst
     token = await login(client, admin.email, "pw-123456")
     await _aktiviere_e_rechnung(client, token)
 
-    rechnung = await _rechnung_versendet(client, token, str(kunde.id))
-    assert rechnung["xml_object_key"] is None
+    angelegt = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "betrag_netto": "300.00", "mwst_satz": "19.00", "leistungsdatum": "2026-08-10"},
+    )
+    rechnung_id = angelegt.json()["id"]
+    versand = await client.patch(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"status": "versendet"}
+    )
+    assert versand.status_code == 422
+    assert "USt-IdNr. des Kunden fehlt" in versand.json()["detail"]
 
-    xml_resp = await client.get(f"/api/rechnungen/{rechnung['id']}/xml", headers=auth_headers(token))
-    assert xml_resp.status_code == 404
-
-    pdf_resp = await client.get(f"/api/rechnungen/{rechnung['id']}/pdf", headers=auth_headers(token))
-    assert pdf_resp.status_code == 200
-    assert pdf_resp.content.startswith(b"%PDF")
+    # Der Entwurf bleibt unveraendert und kann nach Korrektur versendet werden.
+    nachher = await client.get(f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token))
+    assert nachher.json()["status"] == "entwurf"
+    assert nachher.json()["xml_object_key"] is None
 
 
 @pytest.mark.asyncio

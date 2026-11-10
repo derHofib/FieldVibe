@@ -23,6 +23,7 @@ from app.schemas.mail_message import (
     MailNachrichtWeiterleiten,
 )
 from app.services import storage_service
+from app.services.mail_netz import MailVerbindungFehler
 from app.services.mail_send_service import sende_nachricht
 
 router = APIRouter(
@@ -34,6 +35,15 @@ router = APIRouter(
 )
 
 _SEITENGROESSE = 30
+
+
+async def _sende(*args, **kwargs) -> None:
+    # Generische Meldung aus mail_netz statt 500 -- der Nutzer soll sehen,
+    # dass es an Verbindung/Login liegt, ohne Serverdetails zu bekommen.
+    try:
+        await sende_nachricht(*args, **kwargs)
+    except MailVerbindungFehler as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 async def _eigenes_konto(session: AsyncSession, auth: AuthContext, account_id: UUID) -> MailAccount:
@@ -217,7 +227,7 @@ async def senden(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     account = await _eigenes_konto(session, auth, account_id)
-    await sende_nachricht(
+    await _sende(
         account, an=body.an, cc=body.cc, bcc=body.bcc, betreff=body.betreff, text=body.text
     )
 
@@ -235,7 +245,7 @@ async def antworten(
     references = " ".join(
         filter(None, [original.references_header, original.message_id_header])
     ) or None
-    await sende_nachricht(
+    await _sende(
         account,
         an=body.an,
         cc=body.cc,
@@ -261,6 +271,6 @@ async def weiterleiten(
         f"Von: {original.von_name or ''} <{original.von_adresse or ''}>\n"
         f"Betreff: {original.betreff}\n\n{original.body_text or ''}"
     )
-    await sende_nachricht(
+    await _sende(
         account, an=body.an, betreff=betreff, text=f"{body.text}{zitat}"
     )

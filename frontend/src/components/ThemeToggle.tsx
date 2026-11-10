@@ -2,16 +2,20 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "../context/ThemeContext";
 
+/** Desktop-Toolbar-Umschalter (Abschnitt 2.1): ein Klick wechselt zwischen
+ * hell/dunkel. Die volle Drei-Wege-Auswahl (Automatisch/Hell/Dunkel) gibt es
+ * separat in den Einstellungen, siehe AppearancePicker.tsx. */
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { angewandtesTheme, toggleTheme } = useTheme();
 
   return (
     <button
       onClick={toggleTheme}
-      title={theme === "dark" ? "Helles Design" : "Dunkles Design"}
-      className="btn-touch flex items-center justify-center rounded-md px-2 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+      aria-label={angewandtesTheme === "dark" ? "Helles Design" : "Dunkles Design"}
+      title={angewandtesTheme === "dark" ? "Helles Design" : "Dunkles Design"}
+      className="btn-ap-toolbar"
     >
-      {theme === "dark" ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
+      {angewandtesTheme === "dark" ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
     </button>
   );
 }

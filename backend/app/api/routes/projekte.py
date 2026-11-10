@@ -1,0 +1,688 @@
+from datetime import UTC, datetime
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
+
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_recht,
+    require_roles,
+)
+from app.models.anlage import Anlage
+from app.models.kunde import Kunde
+from app.models.projekt import Projekt, ProjektAufgabe, ProjektSpalte
+from app.models.standort import Standort
+from app.models.user import User
+from app.models.vertrag import Vertrag
+from app.models.vorgang import Vorgang
+from app.schemas.projekt import (
+    ProjektAufgabeCreate,
+    ProjektAufgabeMitDetails,
+    ProjektAufgabeRead,
+    ProjektAufgabeUpdate,
+    ProjektCreate,
+    ProjektRead,
+    ProjektSpalteCreate,
+    ProjektSpalteRead,
+    ProjektSpalteUpdate,
+    ProjektUpdate,
+)
+from app.services import berechtigung_service, papierkorb_service
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    erlaubte_user_ids,
+    require_kunde_zugewiesen,
+)
+
+# Basisrechte fuer alles unter /api/projekte (Projekte + Spalten -- reine
+# Kanban-Konfiguration, es gibt hier keine private Variante).
+router = APIRouter(
+    prefix="/api/projekte",
+    tags=["projekte"],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("projekte", "sehen")),
+    ],
+)
+
+# Nur das Rollen-Gate hier -- ob zusaetzlich der Rechte-Bereich "projekte"
+# noetig ist, haengt pro Aufgabe davon ab, ob sie zu einem Projekt gehoert
+# (Kanban, Recht-gepflichtig) oder privat ist (projekt_id NULL, jeder
+# authentifizierte Nutzer darf seine eigenen sehen/bearbeiten/loeschen,
+# siehe _pruefe_zugriff_auf_aufgabe() unten).
+aufgaben_router = APIRouter(
+    prefix="/api/projekt-aufgaben",
+    tags=["projekte"],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
+)
+
+# Ein neues Projekt startet nie ganz leer -- ohne mindestens eine Spalte
+# koennte keine Aufgabe angelegt werden. Rein ein sinnvoller Vorschlag,
+# jede Spalte ist danach frei umbenennbar/loeschbar wie jede andere auch.
+STANDARD_SPALTEN = ("Offen", "In Arbeit", "Review", "Fertig")
+
+# Zeitplan-Schritte erscheinen wie normale Aufgaben im Kanban, Phasen und
+# Meilensteine (keine Spalte) nicht.
+ZEITPLAN_NUR_TYPEN = ("phase", "meilenstein")
+
+
+async def _require_projekt(session: AsyncSession, projekt_id: UUID) -> Projekt:
+    projekt = await session.get(Projekt, projekt_id)
+    if projekt is None or projekt.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projekt nicht gefunden")
+    return projekt
+
+
+async def _require_spalte(session: AsyncSession, projekt_id: UUID, spalte_id: UUID) -> ProjektSpalte:
+    spalte = await session.get(ProjektSpalte, spalte_id)
+    if spalte is None or spalte.projekt_id != projekt_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spalte nicht gefunden")
+    return spalte
+
+
+async def _require_aufgabe(session: AsyncSession, auth: AuthContext, aufgabe_id: UUID) -> ProjektAufgabe:
+    aufgabe = await session.get(ProjektAufgabe, aufgabe_id)
+    # Phasen/Meilensteine gehoeren dem Zeitplan (app/api/routes/zeitplan.py),
+    # nicht der Kanban-/Aufgaben-API.
+    if aufgabe is None or aufgabe.geloescht_am is not None or aufgabe.typ in ZEITPLAN_NUR_TYPEN:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
+    await _pruefe_kundenbezug(session, auth, aufgabe)
+    return aufgabe
+
+
+async def _pruefe_kundenbezug(session: AsyncSession, auth: AuthContext, aufgabe: ProjektAufgabe) -> None:
+    """Gleiche Sichtbarkeitsregel wie in list_aufgaben(): Bezug auf einen nicht
+    zugewiesenen Kunden (direkt, ueber Vorgang oder Anlage) -> 404."""
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is None:
+        return
+    fremd = aufgabe.kunde_id is not None and aufgabe.kunde_id not in erlaubt
+    if not fremd and aufgabe.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, aufgabe.vorgang_id)
+        fremd = vorgang is not None and vorgang.kunde_id not in erlaubt
+    if not fremd and aufgabe.anlage_id is not None:
+        anlage = await session.get(Anlage, aufgabe.anlage_id)
+        fremd = anlage is not None and anlage.kunde_id is not None and anlage.kunde_id not in erlaubt
+    if fremd:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
+
+
+async def _hat_projekte_recht(session: AsyncSession, auth: AuthContext, aktion: str) -> bool:
+    """Gleiche Logik wie require_recht(), aber als Bool statt als Dependency
+    -- gebraucht, weil sich hier erst zur Laufzeit (anhand der Aufgabe)
+    entscheidet, ob das Recht ueberhaupt gefragt ist."""
+    return await berechtigung_service.hat_recht(session, auth, "projekte", aktion)
+
+
+async def _pruefe_zugriff_auf_aufgabe(
+    session: AsyncSession, auth: AuthContext, aufgabe: ProjektAufgabe, aktion: str
+) -> None:
+    """Private Aufgabe (projekt_id NULL): nur Ersteller/Zugewiesener duerfen
+    ran, unabhaengig von jedem Rechte-Bereich. Kanban-Aufgabe: wie bisher
+    ueber den Rechte-Bereich "projekte" geregelt."""
+    if aufgabe.projekt_id is None:
+        if auth.user_id not in (aufgabe.zugewiesen_an, aufgabe.erstellt_von):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+        return
+    if not await _hat_projekte_recht(session, auth, aktion):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+    await _pruefe_aufgaben_scope(session, auth, aufgabe, aktion)
+
+
+async def _pruefe_aufgaben_scope(
+    session: AsyncSession, auth: AuthContext, aufgabe: ProjektAufgabe, aktion: str
+) -> None:
+    """Scope von projekte.<aktion> (zustaendig = zugewiesen_an): ausserhalb des
+    Scopes nur sichtbar, wenn die Aufgabe an einen Kunden des Kunden-Scopes
+    gebunden ist (gleiche Regel wie list_aufgaben) -> sonst 404."""
+    users = await erlaubte_user_ids(session, auth, "projekte", aktion)
+    if users is None or aufgabe.zugewiesen_an in users:
+        return
+    kunden = await erlaubte_kunde_ids(session, auth)
+    if kunden is not None:
+        bezug = {aufgabe.kunde_id}
+        if aufgabe.vorgang_id is not None:
+            vorgang = await session.get(Vorgang, aufgabe.vorgang_id)
+            bezug.add(vorgang.kunde_id if vorgang is not None else None)
+        if aufgabe.anlage_id is not None:
+            anlage = await session.get(Anlage, aufgabe.anlage_id)
+            bezug.add(anlage.kunde_id if anlage is not None else None)
+        if bezug & kunden:
+            return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
+
+
+@router.get("", response_model=list[ProjektRead])
+async def list_projekte(
+    vertrag_id: UUID | None = Query(default=None), session: AsyncSession = Depends(get_db)
+) -> list[Projekt]:
+    stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
+    if vertrag_id:
+        stmt = stmt.where(Projekt.vertrag_id == vertrag_id)
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+@router.post(
+    "",
+    response_model=ProjektRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("projekte", "erstellen")),
+    ],
+)
+async def create_projekt(
+    body: ProjektCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Projekt:
+    if body.vertrag_id is not None and await session.get(Vertrag, body.vertrag_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    projekt = Projekt(
+        mandant_id=auth.mandant_id,
+        name=body.name,
+        beschreibung=body.beschreibung,
+        vertrag_id=body.vertrag_id,
+        erstellt_von=auth.user_id,
+    )
+    session.add(projekt)
+    await session.flush()
+
+    for reihenfolge, name in enumerate(STANDARD_SPALTEN):
+        session.add(
+            ProjektSpalte(
+                mandant_id=auth.mandant_id, projekt_id=projekt.id, name=name, reihenfolge=reihenfolge
+            )
+        )
+
+    await session.flush()
+    await session.refresh(projekt)
+    return projekt
+
+
+@router.get("/{projekt_id}", response_model=ProjektRead)
+async def get_projekt(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> Projekt:
+    return await _require_projekt(session, projekt_id)
+
+
+@router.patch(
+    "/{projekt_id}",
+    response_model=ProjektRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("projekte", "bearbeiten")),
+    ],
+)
+async def update_projekt(
+    projekt_id: UUID,
+    body: ProjektUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> Projekt:
+    projekt = await _require_projekt(session, projekt_id)
+    changes = body.model_dump(exclude_unset=True)
+    if changes.get("vertrag_id") is not None and await session.get(Vertrag, changes["vertrag_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    for feld, wert in changes.items():
+        setattr(projekt, feld, wert)
+    await session.flush()
+    await session.refresh(projekt)
+    return projekt
+
+
+@router.delete(
+    "/{projekt_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("projekte", "loeschen")),
+    ],
+)
+async def delete_projekt(
+    projekt_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    projekt = await papierkorb_service.soft_delete(
+        session, entity_typ="projekt", entity_id=projekt_id, actor_user_id=auth.user_id
+    )
+    if projekt is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projekt nicht gefunden")
+
+
+@router.get("/{projekt_id}/spalten", response_model=list[ProjektSpalteRead])
+async def list_spalten(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> list[ProjektSpalte]:
+    await _require_projekt(session, projekt_id)
+    result = await session.execute(
+        select(ProjektSpalte).where(ProjektSpalte.projekt_id == projekt_id).order_by(ProjektSpalte.reihenfolge)
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{projekt_id}/spalten",
+    response_model=ProjektSpalteRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("projekte", "bearbeiten")),
+    ],
+)
+async def create_spalte(
+    projekt_id: UUID,
+    body: ProjektSpalteCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProjektSpalte:
+    await _require_projekt(session, projekt_id)
+    naechste_reihenfolge = (
+        await session.execute(
+            select(func.coalesce(func.max(ProjektSpalte.reihenfolge), -1) + 1).where(
+                ProjektSpalte.projekt_id == projekt_id
+            )
+        )
+    ).scalar_one()
+    spalte = ProjektSpalte(
+        mandant_id=auth.mandant_id, projekt_id=projekt_id, name=body.name, reihenfolge=naechste_reihenfolge
+    )
+    session.add(spalte)
+    await session.flush()
+    return spalte
+
+
+@router.patch(
+    "/{projekt_id}/spalten/{spalte_id}",
+    response_model=ProjektSpalteRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("projekte", "bearbeiten")),
+    ],
+)
+async def update_spalte(
+    projekt_id: UUID,
+    spalte_id: UUID,
+    body: ProjektSpalteUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> ProjektSpalte:
+    spalte = await _require_spalte(session, projekt_id, spalte_id)
+    for feld, wert in body.model_dump(exclude_unset=True).items():
+        setattr(spalte, feld, wert)
+    await session.flush()
+    return spalte
+
+
+@router.delete(
+    "/{projekt_id}/spalten/{spalte_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("projekte", "bearbeiten")),
+    ],
+)
+async def delete_spalte(
+    projekt_id: UUID,
+    spalte_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    spalte = await _require_spalte(session, projekt_id, spalte_id)
+    anzahl_aufgaben = (
+        await session.execute(
+            select(func.count()).where(
+                ProjektAufgabe.spalte_id == spalte_id, ProjektAufgabe.geloescht_am.is_(None)
+            )
+        )
+    ).scalar_one()
+    if anzahl_aufgaben > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Spalte enthält noch Aufgaben -- erst verschieben oder löschen",
+        )
+    await session.delete(spalte)
+    await session.flush()
+
+
+def _mit_details(zeilen) -> list[ProjektAufgabeMitDetails]:
+    return [
+        ProjektAufgabeMitDetails(
+            **ProjektAufgabeRead.model_validate(aufgabe).model_dump(),
+            zugewiesener_name=zugewiesener_name,
+            vorgang_vorgangsnummer=vorgangsnummer,
+            vorgang_kunde_name=vorgang_kunde_name,
+            anlage_name=anlage_name,
+            kunde_name=kunde_name,
+            standort_name=standort_name,
+            unteraufgaben_gesamt=unteraufgaben_gesamt or 0,
+            unteraufgaben_erledigt=unteraufgaben_erledigt or 0,
+        )
+        for (
+            aufgabe,
+            zugewiesener_name,
+            vorgangsnummer,
+            vorgang_kunde_name,
+            anlage_name,
+            kunde_name,
+            standort_name,
+            unteraufgaben_gesamt,
+            unteraufgaben_erledigt,
+        ) in zeilen
+    ]
+
+
+@aufgaben_router.get("", response_model=list[ProjektAufgabeMitDetails])
+async def list_aufgaben(
+    projekt_id: UUID | None = Query(default=None),
+    vorgang_id: UUID | None = Query(default=None),
+    eltern_aufgabe_id: UUID | None = Query(default=None),
+    mir_zugewiesen: bool = Query(default=False),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ProjektAufgabeMitDetails]:
+    darf_kanban_sehen = await _hat_projekte_recht(session, auth, "sehen")
+    eigene_privaten = and_(
+        ProjektAufgabe.projekt_id.is_(None),
+        or_(ProjektAufgabe.zugewiesen_an == auth.user_id, ProjektAufgabe.erstellt_von == auth.user_id),
+    )
+
+    if eltern_aufgabe_id is not None:
+        eltern = await _require_aufgabe(session, auth, eltern_aufgabe_id)
+        await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
+        bedingung = ProjektAufgabe.eltern_aufgabe_id == eltern_aufgabe_id
+    elif mir_zugewiesen:
+        # "Meine Aufgaben": eigene private Aufgaben, plus -- sofern das
+        # Kanban-Recht besteht -- alle einem zugewiesenen Projekt-Aufgaben,
+        # projektuebergreifend.
+        bedingung = (
+            or_(
+                eigene_privaten,
+                and_(ProjektAufgabe.projekt_id.isnot(None), ProjektAufgabe.zugewiesen_an == auth.user_id),
+            )
+            if darf_kanban_sehen
+            else eigene_privaten
+        )
+    elif projekt_id is not None:
+        if not darf_kanban_sehen:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+        # Unteraufgaben erscheinen nicht als eigene Karte auf dem Board.
+        bedingung = and_(ProjektAufgabe.projekt_id == projekt_id, ProjektAufgabe.eltern_aufgabe_id.is_(None))
+    elif vorgang_id is not None:
+        # Verknuepfte-Aufgaben-Ansicht am Vorgang: Kanban-Aufgaben nur mit
+        # Recht, eigene private Aufgaben immer -- siehe "nur ich sehe diese
+        # Verbindungen, wenn es meine Aufgaben sind".
+        bedingung = and_(
+            ProjektAufgabe.vorgang_id == vorgang_id,
+            eigene_privaten if not darf_kanban_sehen else or_(ProjektAufgabe.projekt_id.isnot(None), eigene_privaten),
+        )
+    else:
+        if not darf_kanban_sehen:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+        bedingung = ProjektAufgabe.projekt_id.isnot(None)
+
+    Kind = aliased(ProjektAufgabe)
+    VorgangKunde = aliased(Kunde)
+    unteraufgaben_gesamt_sq = (
+        select(func.count())
+        .select_from(Kind)
+        .where(Kind.eltern_aufgabe_id == ProjektAufgabe.id, Kind.geloescht_am.is_(None))
+        .correlate(ProjektAufgabe)
+        .scalar_subquery()
+    )
+    unteraufgaben_erledigt_sq = (
+        select(func.count())
+        .select_from(Kind)
+        .where(
+            Kind.eltern_aufgabe_id == ProjektAufgabe.id,
+            Kind.geloescht_am.is_(None),
+            Kind.erledigt_am.isnot(None),
+        )
+        .correlate(ProjektAufgabe)
+        .scalar_subquery()
+    )
+
+    stmt = (
+        select(
+            ProjektAufgabe,
+            User.name,
+            Vorgang.vorgangsnummer,
+            VorgangKunde.name,
+            Anlage.bezeichnung,
+            Kunde.name,
+            Standort.bezeichnung,
+            unteraufgaben_gesamt_sq,
+            unteraufgaben_erledigt_sq,
+        )
+        .outerjoin(User, User.id == ProjektAufgabe.zugewiesen_an)
+        .outerjoin(Vorgang, Vorgang.id == ProjektAufgabe.vorgang_id)
+        .outerjoin(VorgangKunde, VorgangKunde.id == Vorgang.kunde_id)
+        .outerjoin(Anlage, Anlage.id == ProjektAufgabe.anlage_id)
+        .outerjoin(Kunde, Kunde.id == ProjektAufgabe.kunde_id)
+        .outerjoin(Standort, Standort.id == ProjektAufgabe.standort_id)
+        .where(
+            ProjektAufgabe.geloescht_am.is_(None), ProjektAufgabe.typ.notin_(ZEITPLAN_NUR_TYPEN), bedingung
+        )
+        .order_by(ProjektAufgabe.created_at)
+    )
+    # Aufgaben mit Bezug auf einen nicht zugewiesenen Kunden (direkt, ueber
+    # Vorgang oder Anlage) werden ausgeblendet, statt nur die Namensfelder zu
+    # leeren -- sonst blieben Titel/Beschreibung der Aufgabe als Leck.
+    # Aufgaben ganz ohne Kundenbezug bleiben sichtbar.
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(
+            or_(ProjektAufgabe.kunde_id.is_(None), ProjektAufgabe.kunde_id.in_(erlaubte_kunden)),
+            or_(Vorgang.id.is_(None), Vorgang.kunde_id.in_(erlaubte_kunden)),
+            or_(Anlage.id.is_(None), Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(erlaubte_kunden)),
+        )
+    aufgaben_users = await erlaubte_user_ids(session, auth, "projekte", "sehen")
+    if aufgaben_users is not None:
+        kanban_sichtbar = [ProjektAufgabe.zugewiesen_an.in_(aufgaben_users)]
+        if erlaubte_kunden is not None:
+            kanban_sichtbar += [
+                ProjektAufgabe.kunde_id.in_(erlaubte_kunden),
+                Vorgang.kunde_id.in_(erlaubte_kunden),
+                Anlage.kunde_id.in_(erlaubte_kunden),
+            ]
+        stmt = stmt.where(or_(ProjektAufgabe.projekt_id.is_(None), *kanban_sichtbar))
+    result = await session.execute(stmt)
+    return _mit_details(result.all())
+
+
+async def _pruefe_verknuepfungen(
+    session: AsyncSession,
+    auth: AuthContext,
+    *,
+    vorgang_id: UUID | None,
+    anlage_id: UUID | None,
+    kunde_id: UUID | None,
+    standort_id: UUID | None,
+) -> None:
+    vorgang = await session.get(Vorgang, vorgang_id) if vorgang_id is not None else None
+    if vorgang_id is not None and vorgang is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    anlage = await session.get(Anlage, anlage_id) if anlage_id is not None else None
+    if anlage_id is not None and anlage is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if kunde_id is not None and await session.get(Kunde, kunde_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    # Erst nach den Existenzpruefungen: 403 wie in vorgaenge.py, der Kunde
+    # ist dem Nutzer bekannt, er darf nur nichts dafuer erfassen.
+    for bezug_kunde_id in (
+        kunde_id,
+        vorgang.kunde_id if vorgang is not None else None,
+        anlage.kunde_id if anlage is not None else None,
+    ):
+        if bezug_kunde_id is not None:
+            await require_kunde_zugewiesen(session, auth, bezug_kunde_id)
+    if standort_id is not None and await session.get(Standort, standort_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Standort nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
+
+@aufgaben_router.post("", response_model=ProjektAufgabeRead, status_code=status.HTTP_201_CREATED)
+async def create_aufgabe(
+    body: ProjektAufgabeCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProjektAufgabe:
+    if body.eltern_aufgabe_id is not None:
+        eltern = await _require_aufgabe(session, auth, body.eltern_aufgabe_id)
+        await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
+        if eltern.eltern_aufgabe_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Unteraufgaben können nicht verschachtelt werden"
+            )
+        if eltern.projekt_id != body.projekt_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unteraufgabe muss zur selben Aufgabenebene wie die Elternaufgabe gehören",
+            )
+
+    if body.projekt_id is not None:
+        if not await _hat_projekte_recht(session, auth, "erstellen"):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+        await _require_projekt(session, body.projekt_id)
+        # Unteraufgaben brauchen keine eigene Spalte -- sie erscheinen nicht
+        # als eigene Karte auf dem Board (siehe list_aufgaben()).
+        if body.eltern_aufgabe_id is None and body.spalte_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Spalte ist für Projekt-Aufgaben erforderlich"
+            )
+        if body.spalte_id is not None:
+            await _require_spalte(session, body.projekt_id, body.spalte_id)
+
+    await _pruefe_verknuepfungen(
+        session,
+        auth,
+        vorgang_id=body.vorgang_id,
+        anlage_id=body.anlage_id,
+        kunde_id=body.kunde_id,
+        standort_id=body.standort_id,
+    )
+
+    aufgabe = ProjektAufgabe(
+        mandant_id=auth.mandant_id,
+        projekt_id=body.projekt_id,
+        spalte_id=body.spalte_id,
+        eltern_aufgabe_id=body.eltern_aufgabe_id,
+        titel=body.titel,
+        beschreibung=body.beschreibung,
+        faelligkeit_am=body.faelligkeit_am,
+        prioritaet=body.prioritaet,
+        zugewiesen_an=body.zugewiesen_an,
+        vorgang_id=body.vorgang_id,
+        anlage_id=body.anlage_id,
+        kunde_id=body.kunde_id,
+        standort_id=body.standort_id,
+        checkliste=[punkt.model_dump() for punkt in body.checkliste],
+        zusatzfelder=body.zusatzfelder,
+        erstellt_von=auth.user_id,
+    )
+    session.add(aufgabe)
+    await session.flush()
+    return aufgabe
+
+
+@aufgaben_router.get("/{aufgabe_id}", response_model=ProjektAufgabeRead)
+async def get_aufgabe(
+    aufgabe_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProjektAufgabe:
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
+    await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "sehen")
+    return aufgabe
+
+
+@aufgaben_router.patch("/{aufgabe_id}", response_model=ProjektAufgabeRead)
+async def update_aufgabe(
+    aufgabe_id: UUID,
+    body: ProjektAufgabeUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProjektAufgabe:
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
+    await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "bearbeiten")
+    changes = body.model_dump(exclude_unset=True)
+
+    if "spalte_id" in changes and changes["spalte_id"] is not None:
+        if aufgabe.projekt_id is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Private Aufgaben haben keine Spalte")
+        await _require_spalte(session, aufgabe.projekt_id, changes["spalte_id"])
+
+    if "eltern_aufgabe_id" in changes and changes["eltern_aufgabe_id"] is not None:
+        neue_eltern_id = changes["eltern_aufgabe_id"]
+        if neue_eltern_id == aufgabe.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Eine Aufgabe kann nicht ihre eigene Elternaufgabe sein"
+            )
+        eltern = await _require_aufgabe(session, auth, neue_eltern_id)
+        await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
+        if eltern.eltern_aufgabe_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Unteraufgaben können nicht verschachtelt werden"
+            )
+        if eltern.projekt_id != aufgabe.projekt_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unteraufgabe muss zur selben Aufgabenebene wie die Elternaufgabe gehören",
+            )
+
+    await _pruefe_verknuepfungen(
+        session,
+        auth,
+        vorgang_id=changes.get("vorgang_id"),
+        anlage_id=changes.get("anlage_id"),
+        kunde_id=changes.get("kunde_id"),
+        standort_id=changes.get("standort_id"),
+    )
+
+    if "checkliste" in changes and changes["checkliste"] is not None:
+        changes["checkliste"] = [punkt.model_dump() for punkt in body.checkliste]
+    if "erledigt" in changes:
+        erledigt = changes.pop("erledigt")
+        changes["erledigt_am"] = datetime.now(UTC) if erledigt else None
+        # Zeitplan-Schritt: Abhaken im Kanban hält den Fortschrittsbalken synchron.
+        if aufgabe.typ == "schritt":
+            changes["fortschritt"] = 100 if erledigt else (0 if aufgabe.fortschritt == 100 else aufgabe.fortschritt)
+
+    for feld, wert in changes.items():
+        setattr(aufgabe, feld, wert)
+    await session.flush()
+    await session.refresh(aufgabe)
+    return aufgabe
+
+
+@aufgaben_router.delete("/{aufgabe_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_aufgabe(
+    aufgabe_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
+    await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "loeschen")
+    geloescht = await papierkorb_service.soft_delete(
+        session, entity_typ="projekt_aufgabe", entity_id=aufgabe_id, actor_user_id=auth.user_id
+    )
+    if geloescht is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")

@@ -1,4 +1,4 @@
-import type { VorgangStatus } from "../types";
+import type { FeedCard, Kunde, Projekt, VorgangStatus } from "../types";
 import { heuteIso } from "../utils/format";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
@@ -15,27 +15,23 @@ export const STATUS_LABEL: Record<VorgangStatus, string> = {
   storniert: "Storniert",
 };
 
+// "Industry"-Design (siehe docs/DESIGN.md): Rahmen-Tag statt gefuellter
+// Pastell-Pille -- Aufrufer duerfen "rounded-full"/"bg-..." nicht mehr
+// selbst ergaenzen, dieser Wert bringt bereits "border" mit.
 export const STATUS_BADGE: Record<VorgangStatus, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
+  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
+  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
+  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 /** Für Stellen, die den Status nur als String kennen (z. B. Suchtreffer,
  * Auswertungen nach Status) -- unbekannte Werte werden unverändert gezeigt. */
 export function statusLabel(status: string): string {
   return (STATUS_LABEL as Record<string, string>)[status] ?? status;
-}
-
-export function statusBadgeKlasse(status: string): string {
-  return (
-    (STATUS_BADGE as Record<string, string>)[status] ??
-    "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-  );
 }
 
 export const LEISTUNGSTYP_LABEL: Record<string, string> = {
@@ -65,4 +61,77 @@ export function istUeberfaellig(faelligkeitAm: string | null): boolean {
 export function tageSeit(iso: string): number {
   const diff = Date.now() - new Date(iso).getTime();
   return Math.floor(diff / 86_400_000);
+}
+
+/** Gruppierung nach Faelligkeit -- urspruenglich nur im Feed der Feld-App,
+ * jetzt auch von der Office-Vorgaengeliste/dem Raster genutzt (siehe
+ * Design-Vorschlag "Feed neu gedacht"). */
+export type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "ohne_frist";
+
+export const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
+  ueberfaellig: "Überfällig",
+  heute: "Heute fällig",
+  diese_woche: "Diese Woche",
+  ohne_frist: "Ohne Frist",
+};
+
+export const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "ohne_frist"];
+
+export function faelligkeitsGruppe(card: Pick<FeedCard, "faelligkeit_am">): FaelligkeitsGruppe {
+  const iso = card.faelligkeit_am?.slice(0, 10);
+  if (!iso) return "ohne_frist";
+  const heute = heuteIso();
+  if (iso < heute) return "ueberfaellig";
+  if (iso === heute) return "heute";
+  return "diese_woche";
+}
+
+// Karten nach Faelligkeit gruppieren, damit man beim Durchscrollen sofort
+// sieht, was zuerst dran ist, statt jede Karte einzeln nach Datum abzusuchen.
+// Reihenfolge innerhalb einer Gruppe bleibt wie vom Server sortiert.
+export function gruppiereNachFaelligkeit<T extends Pick<FeedCard, "faelligkeit_am">>(
+  cards: T[],
+): { gruppe: FaelligkeitsGruppe; cards: T[] }[] {
+  const buckets = new Map<FaelligkeitsGruppe, T[]>();
+  for (const card of cards) {
+    const gruppe = faelligkeitsGruppe(card);
+    (buckets.get(gruppe) ?? buckets.set(gruppe, []).get(gruppe)!).push(card);
+  }
+  return GRUPPEN_REIHENFOLGE.filter((g) => buckets.has(g)).map((gruppe) => ({ gruppe, cards: buckets.get(gruppe)! }));
+}
+
+// Lesbare Kurzform je aktivem Filter-Schluessel fuer die Chip-Zusammenfassung
+// -- ein unbekannter Schluessel faellt auf "Schluessel: Wert" zurueck statt
+// zu verschwinden, damit ein spaeter ergaenzter Filter nie stillschweigend
+// ohne Chip bleibt. Gemeinsam genutzt vom Feed der Feld-App und der
+// Office-Vorgaengeliste.
+export function filterChipLabel(
+  key: string,
+  value: string,
+  kunden: Kunde[] | undefined,
+  projekte?: Projekt[] | undefined,
+): string {
+  switch (key) {
+    case "status":
+      return `Status: ${value
+        .split(",")
+        .map((s) => STATUS_LABEL[s as VorgangStatus] ?? s)
+        .join(", ")}`;
+    case "kunde_id":
+      return `Kunde: ${kunden?.find((k) => k.id === value)?.name ?? value}`;
+    case "projekt_id":
+      return `Projekt: ${projekte?.find((p) => p.id === value)?.name ?? value}`;
+    case "leistungstyp":
+      return `Typ: ${LEISTUNGSTYP_LABEL[value] ?? value}`;
+    case "faellig_von":
+      return `Fällig ab ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "faellig_bis":
+      return `Fällig bis ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "tag":
+      return `#${value}`;
+    case "sort":
+      return `Sortierung: ${value === "prioritaet" ? "Priorität" : "Aktivität"}`;
+    default:
+      return `${key}: ${value}`;
+  }
 }

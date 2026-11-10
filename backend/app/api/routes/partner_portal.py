@@ -1,24 +1,33 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PartnerAuthContext, get_current_partner, get_partner_db, require_module_partner
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.notification import Notification
+from app.models.partner import Partner
+from app.models.projekt import Projekt, ProjektAufgabe
 from app.models.vorgang import Vorgang
+from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.partner import (
     PartnerAntwort,
+    PartnerKommentarRead,
     PartnerVorgangKommentar,
     PartnerVorgangRead,
     PartnerVorgangStatusUpdate,
+    PartnerZeitplanSchritt,
 )
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.event_bus import event_bus
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 from app.services.partner_service import apply_partner_status_transition
+from app.services.zeitplan_service import VORGANG_ERLEDIGT
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
@@ -46,8 +55,8 @@ async def _require_eigener_vorgang(
     sonst saehe ein Partner die Vorgaenge aller anderen Partner desselben
     Mandanten."""
     vorgang = await session.get(Vorgang, vorgang_id)
-    if vorgang is None or vorgang.partner_id != auth.partner_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auftrag nicht gefunden")
+    if vorgang is None or vorgang.partner_id != auth.partner_id or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
 
 
@@ -72,6 +81,67 @@ async def _to_partner_read(session: AsyncSession, vorgang: Vorgang) -> PartnerVo
     )
 
 
+@router.get("/zeitplan", response_model=list[PartnerZeitplanSchritt])
+async def list_eigene_zeitplan_schritte(
+    auth: PartnerAuthContext = Depends(get_current_partner),
+    session: AsyncSession = Depends(get_partner_db),
+) -> list[PartnerZeitplanSchritt]:
+    """Read-only: die dem Partner zugeordneten Fremdgewerk-Schritte aus den
+    Projekt-Zeitplaenen. Der partner_id-Filter ist hier die eigentliche
+    Zugriffsgrenze (RLS zieht nur den Mandanten), und das Schema gibt
+    bewusst nichts ausser Titel/Projektname/Zeitraum/Stand heraus."""
+    phase = aliased(ProjektAufgabe)
+    grenze = datetime.now(timezone.utc).date() - timedelta(days=30)
+    zeilen = (
+        await session.execute(
+            select(
+                ProjektAufgabe.id,
+                ProjektAufgabe.titel,
+                Projekt.name,
+                phase.titel,
+                ProjektAufgabe.start_am,
+                ProjektAufgabe.ende_am,
+                ProjektAufgabe.fortschritt,
+                ProjektAufgabe.erledigt_am,
+                ProjektAufgabe.vorgang_id,
+                Vorgang.status,
+            )
+            .join(Projekt, Projekt.id == ProjektAufgabe.projekt_id)
+            .outerjoin(
+                phase, (phase.id == ProjektAufgabe.plan_phase_id) & (phase.geloescht_am.is_(None))
+            )
+            .outerjoin(
+                Vorgang, (Vorgang.id == ProjektAufgabe.vorgang_id) & (Vorgang.geloescht_am.is_(None))
+            )
+            .where(
+                ProjektAufgabe.partner_id == auth.partner_id,
+                ProjektAufgabe.typ == "schritt",
+                ProjektAufgabe.geloescht_am.is_(None),
+                Projekt.geloescht_am.is_(None),
+                Projekt.archiviert.is_(False),
+                (ProjektAufgabe.ende_am.is_(None)) | (ProjektAufgabe.ende_am >= grenze),
+            )
+            .order_by(ProjektAufgabe.start_am.asc().nulls_last(), ProjektAufgabe.created_at)
+        )
+    ).all()
+    ergebnis = []
+    for r in zeilen:
+        erledigt = r[9] in VORGANG_ERLEDIGT if r[9] is not None else r[7] is not None
+        ergebnis.append(
+            PartnerZeitplanSchritt(
+                id=r[0],
+                titel=r[1],
+                projekt_name=r[2],
+                phase_titel=r[3],
+                start_am=r[4],
+                ende_am=r[5],
+                fortschritt=100 if r[8] is not None and erledigt else r[6],
+                erledigt=erledigt,
+            )
+        )
+    return ergebnis
+
+
 @router.get("/auftraege", response_model=list[PartnerVorgangRead])
 async def list_eigene_auftraege(
     auth: PartnerAuthContext = Depends(get_current_partner),
@@ -79,7 +149,7 @@ async def list_eigene_auftraege(
 ) -> list[PartnerVorgangRead]:
     result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.partner_id == auth.partner_id)
+        .where(Vorgang.partner_id == auth.partner_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
     )
     return [await _to_partner_read(session, v) for v in result.scalars().all()]
@@ -138,7 +208,7 @@ async def auftrag_status_aendern(
     if vorgang.partner_freigabe_status != "angenommen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Auftrag muss erst angenommen werden",
+            detail="Vorgang muss erst angenommen werden",
         )
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
@@ -172,6 +242,47 @@ async def auftrag_status_aendern(
     return await _to_partner_read(session, vorgang)
 
 
+@router.get("/auftraege/{vorgang_id}/kommentare", response_model=list[PartnerKommentarRead])
+async def list_kommentare(
+    vorgang_id: UUID,
+    auth: PartnerAuthContext = Depends(get_current_partner),
+    session: AsyncSession = Depends(get_partner_db),
+) -> list[PartnerKommentarRead]:
+    """Nur eigene Partner-Kommentare und im Office ausdruecklich freigegebene
+    (partner_sichtbar) -- alles andere im Verlauf ist intern. Bewusst kein
+    VorgangEventRead: autor_name statt User-ID, keine Payloads."""
+    vorgang = await _require_eigener_vorgang(session, auth, vorgang_id)
+    zeilen = (
+        await session.execute(
+            select(VorgangEvent, User.name)
+            .outerjoin(User, User.id == VorgangEvent.author_user_id)
+            .where(
+                VorgangEvent.vorgang_id == vorgang.id,
+                VorgangEvent.event_type == "kommentar",
+                VorgangEvent.partner_sichtbar.is_(True),
+                VorgangEvent.body.is_not(None),
+                # Kommentare eines frueher zugewiesenen anderen Partners
+                # bleiben ausgeblendet.
+                (VorgangEvent.author_user_id.is_not(None))
+                | (VorgangEvent.payload["partner_id"].astext == str(auth.partner_id)),
+            )
+            .order_by(VorgangEvent.id.asc())
+        )
+    ).all()
+    return [
+        PartnerKommentarRead(
+            id=e.id,
+            text=e.body or "",
+            erstellt_am=e.created_at,
+            autor="betrieb" if e.author_user_id is not None else "partner",
+            autor_name=(user_name or "Ihr Ansprechpartner")
+            if e.author_user_id is not None
+            else "Sie",
+        )
+        for e, user_name in zeilen
+    ]
+
+
 @router.post("/auftraege/{vorgang_id}/kommentare", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED)
 async def kommentar_erstellen(
     vorgang_id: UUID,
@@ -183,7 +294,7 @@ async def kommentar_erstellen(
     if vorgang.partner_freigabe_status != "angenommen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Auftrag muss erst angenommen werden",
+            detail="Vorgang muss erst angenommen werden",
         )
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
@@ -197,12 +308,35 @@ async def kommentar_erstellen(
         event_type="kommentar",
         author_user_id=None,
         body=body.body,
+        partner_sichtbar=True,
         payload={"partner_id": str(auth.partner_id), "partner_zugang_id": str(auth.zugang_id)},
     )
     session.add(event)
     vorgang.last_activity_at = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(event)
+
+    empfaenger = (
+        {vorgang.zugewiesener_user_id}
+        if vorgang.zugewiesener_user_id is not None
+        else await dispo_verantwortliche_user_ids(session, vorgang.mandant_id)
+    )
+    partner = await session.get(Partner, auth.partner_id)
+    for user_id in empfaenger:
+        session.add(
+            Notification(
+                mandant_id=vorgang.mandant_id,
+                user_id=user_id,
+                typ="partner_kommentar",
+                titel=(
+                    f"Neuer Kommentar von {partner.name if partner else 'Partner'} "
+                    f"zu {vorgang.vorgangsnummer}: {vorgang.titel}"
+                ),
+                ref_entity_type="vorgang",
+                ref_entity_id=vorgang.id,
+            )
+        )
+    await session.flush()
     await event_bus.publish(
         vorgang.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
     )

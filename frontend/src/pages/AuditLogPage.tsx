@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 export function AuditLogPage() {
   const { isImpersonating } = useAuth();
@@ -20,7 +21,7 @@ export function AuditLogPage() {
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
-  const { data: entries, isLoading } = useQuery({
+  const { data: entries, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["audit-log", { mandantId, aktion, von, bis }],
     queryFn: () =>
       auditLogApi.list({
@@ -36,15 +37,15 @@ export function AuditLogPage() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Audit-Log</h2>
+      <h2 className="mb-4 text-lg font-bold text-label">Audit-Log</h2>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+          <label className="mb-1 block text-sm font-medium text-label">Mandant</label>
           <select
             value={mandantId}
             onChange={(e) => setMandantId(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Alle</option>
             {mandanten?.map((m) => (
@@ -55,30 +56,30 @@ export function AuditLogPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Aktion</label>
+          <label className="mb-1 block text-sm font-medium text-label">Aktion</label>
           <input
             value={aktion}
             onChange={(e) => setAktion(e.target.value)}
             placeholder="z.B. login_als_mandant"
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Von</label>
+          <label className="mb-1 block text-sm font-medium text-label">Von</label>
           <input
             type="date"
             value={von}
             onChange={(e) => setVon(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bis</label>
+          <label className="mb-1 block text-sm font-medium text-label">Bis</label>
           <input
             type="date"
             value={bis}
             onChange={(e) => setBis(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         {(mandantId || aktion || von || bis) && (
@@ -89,7 +90,7 @@ export function AuditLogPage() {
               setVon("");
               setBis("");
             }}
-            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-label2 hover:bg-fill"
           >
             Filter zurücksetzen
           </button>
@@ -97,10 +98,12 @@ export function AuditLogPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+        <p className="text-label2">Lädt…</p>
+      ) : ladeFehler && !entries ? (
+        <FehlerZustand fehler={ladeFehler} was="Das Protokoll" onErneut={() => void neuLaden()} />
       ) : (
-        <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-          <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+        <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
+          <thead className="bg-fill text-sm text-label ">
             <tr>
               <th className="px-4 py-3">Zeitpunkt</th>
               <th className="px-4 py-3">Mandant</th>
@@ -109,20 +112,20 @@ export function AuditLogPage() {
               <th className="px-4 py-3">Details</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+          <tbody className="divide-y divide-sep text-sm ">
             {entries?.map((e) => (
               <tr key={e.id}>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="whitespace-nowrap px-4 py-3 text-label2">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </td>
-                <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 text-label2">
                   {e.mandant_id ? mandantNameById.get(e.mandant_id) ?? "–" : "–"}
                 </td>
-                <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{e.aktion}</td>
-                <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 font-medium text-label">{e.aktion}</td>
+                <td className="px-4 py-3 text-label2">
                   {e.entity_type ? `${e.entity_type} · ${e.entity_id?.slice(0, 8)}` : "–"}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 font-mono text-xs text-label2">
                   {JSON.stringify(e.payload)}
                 </td>
               </tr>

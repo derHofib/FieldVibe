@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Entfernt eine FieldVibe-Installation vollstaendig: alle Container, die
 # Docker-Volumes (Postgres-Datenbank UND MinIO-Fotos!), die gebauten
-# Docker-Images und den taeglichen Backup-Cron-Eintrag aus scripts/deploy.sh.
+# Docker-Images und die Backup-Cron-Eintraege (taeglich + woechentliche
+# Pruefung) aus scripts/deploy.sh.
 # Macht KEINE Sicherung vorher -- dafuer ist scripts/backup.sh da, nicht
 # dieses Skript. Vorhandene Backups in BACKUP_DIR bleiben standardmaessig
 # unangetastet.
@@ -62,7 +63,7 @@ echo "  - Alle laufenden FieldVibe-Container"
 echo "  - Die Postgres-Datenbank (alle Mandanten, Kunden, Vorgänge, Rechnungen, ...)"
 echo "  - Alle in MinIO gespeicherten Fotos"
 [[ $KEEP_IMAGES -eq 0 ]] && echo "  - Die gebauten Docker-Images (Backend/Frontend)"
-echo "  - Der tägliche Backup-Cron-Eintrag"
+echo "  - Die Backup-Cron-Einträge (täglich und wöchentliche Prüfung)"
 [[ $PURGE_BACKUPS -eq 1 ]] && echo "  - ZUSÄTZLICH: alle vorhandenen Backups in $BACKUP_DIR_VAL"
 [[ $REMOVE_REPO -eq 1 ]] && echo "  - ZUSÄTZLICH: das komplette Repo-Verzeichnis $REPO_DIR (inkl. .env mit allen Secrets)"
 echo
@@ -83,17 +84,18 @@ DOWN_ARGS=(down --volumes --remove-orphans)
 "${COMPOSE[@]}" "${DOWN_ARGS[@]}" \
   || warn "docker compose down meldete einen Fehler -- prüfe manuell mit 'docker ps -a' und 'docker volume ls'."
 
-log "Entferne Backup-Cron-Eintrag..."
-if crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
-  crontab -l 2>/dev/null | grep -vF "${REPO_DIR}/scripts/backup.sh" | crontab -
-  echo "Cron-Eintrag entfernt."
+log "Entferne Backup-Cron-Einträge (Backup und wöchentliche Prüfung)..."
+if crontab -l 2>/dev/null | grep -qF -e "${REPO_DIR}/scripts/backup.sh" -e "${REPO_DIR}/scripts/backup-pruefen.sh"; then
+  crontab -l 2>/dev/null | grep -vF -e "${REPO_DIR}/scripts/backup.sh" -e "${REPO_DIR}/scripts/backup-pruefen.sh" | crontab -
+  echo "Cron-Einträge entfernt."
 else
   echo "Kein passender Cron-Eintrag gefunden, nichts zu tun."
 fi
 
 if [[ $PURGE_BACKUPS -eq 1 && -d "$BACKUP_DIR_VAL" ]]; then
   log "Lösche Backups in $BACKUP_DIR_VAL..."
-  rm -rf "${BACKUP_DIR_VAL:?}"/*
+  # find statt "rm -rf dir/*": erfasst auch versteckte Dateien (Sperre, Staging).
+  find "${BACKUP_DIR_VAL:?}" -mindepth 1 -delete
 fi
 
 log "Fertig. Container, Volumes$([[ $KEEP_IMAGES -eq 0 ]] && echo ", Images") und der Backup-Cron sind entfernt."

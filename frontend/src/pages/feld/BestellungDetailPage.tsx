@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileText } from "lucide-react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { bestellungenApi, lieferantenApi } from "../../api/endpoints";
@@ -8,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -26,23 +28,42 @@ export function BestellungDetailPage() {
     mutationFn: () => bestellungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
-      navigate("/geschaeft");
+      navigate("/material");
     },
   });
 
-  const { data: bestellung } = useQuery({
+  const { data: bestellung, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["bestellung", id],
     queryFn: () => bestellungenApi.get(id!),
     enabled: !!id,
   });
   const { data: lieferanten } = useQuery({ queryKey: ["lieferanten"], queryFn: () => lieferantenApi.list() });
 
+  // Preis-Korrektur beim Wareneingang: der bisherige einzelpreis war nur die
+  // Planung zum Bestellzeitpunkt (siehe BestellungPosition-Docstring im
+  // Backend) -- hier kann er auf den tatsaechlich bezahlten Preis
+  // angepasst werden, bevor der Wareneingang gebucht wird.
+  const [wareneingangOffen, setWareneingangOffen] = useState(false);
+  const [preise, setPreise] = useState<Record<string, string>>({});
+
   const statusMutation = useMutation({
-    mutationFn: (status: BestellungStatus) => bestellungenApi.update(id!, { status }),
+    mutationFn: (vars: { status: BestellungStatus; positionen_preise?: Record<string, string> }) =>
+      bestellungenApi.update(id!, vars),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellung", id] });
       queryClient.invalidateQueries({ queryKey: ["material"] });
       queryClient.invalidateQueries({ queryKey: ["material-bedarfe"] });
+      setWareneingangOffen(false);
+    },
+  });
+
+  // Liefertermin wirkt auf verknuepfte Zeitplan-Meilensteine (Lieferung).
+  const lieferterminMutation = useMutation({
+    mutationFn: (liefertermin: string | null) => bestellungenApi.update(id!, { liefertermin }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bestellung", id] });
+      queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
+      queryClient.invalidateQueries({ queryKey: ["projekt-zeitplan"] });
     },
   });
 
@@ -56,7 +77,9 @@ export function BestellungDetailPage() {
     onSuccess: openPdfBlob,
   });
 
-  if (!bestellung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (ladeFehler && !bestellung) return <FehlerZustand fehler={ladeFehler} was="Die Bestellung" zurueck onErneut={() => void neuLaden()} className="py-6" />;
+  if (!bestellung) return <p className="text-center text-label2">Lädt…</p>;
+
 
   const lieferant = lieferanten?.find((l) => l.id === bestellung.lieferant_id);
   const gesamtRichtwert = bestellung.positionen.reduce(
@@ -64,10 +87,19 @@ export function BestellungDetailPage() {
     0,
   );
 
+  const wareneingangOeffnen = () => {
+    const initial: Record<string, string> = {};
+    bestellung.positionen.forEach((p) => {
+      initial[p.id] = p.einzelpreis;
+    });
+    setPreise(initial);
+    setWareneingangOffen(true);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -78,29 +110,40 @@ export function BestellungDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Bestellung löschen
           </button>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-stone-500">{bestellung.bestellnummer}</div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+            <div className="text-xs text-label2">{bestellung.bestellnummer}</div>
+            <h1 className="text-lg font-bold text-label">
               {lieferant?.name ?? "Kein Lieferant hinterlegt"}
             </h1>
           </div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
             {STATUS_LABEL[bestellung.status]}
           </span>
         </div>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm text-label2">
+          Liefertermin
+          <input
+            type="date"
+            value={bestellung.liefertermin ?? ""}
+            onChange={(e) => lieferterminMutation.mutate(e.target.value || null)}
+            disabled={lieferterminMutation.isPending}
+            aria-label="Liefertermin"
+            className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-sm text-label disabled:opacity-50"
+          />
+        </label>
         {bestellung.notiz && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{bestellung.notiz}</p>
+          <p className="mt-2 text-sm text-label">{bestellung.notiz}</p>
         )}
-        <div className="mt-3 text-right text-sm text-slate-500 dark:text-stone-400">
+        <div className="mt-3 text-right text-sm text-label2">
           Richtwert gesamt: {gesamtRichtwert.toFixed(2)} EUR
         </div>
 
@@ -108,35 +151,35 @@ export function BestellungDetailPage() {
           <button
             onClick={() => csvMutation.mutate()}
             disabled={csvMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={14} strokeWidth={2} /> CSV
           </button>
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             <FileText size={14} strokeWidth={2} /> PDF
           </button>
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
         <div className="space-y-1.5">
           {bestellung.positionen.map((p) => (
             <div
               key={p.id}
-              className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+              className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
             >
               <div>
-                <div className="text-slate-700 dark:text-stone-300">{p.beschreibung}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-label">{p.beschreibung}</div>
+                <div className="text-xs text-label2">
                   {p.menge} {p.einheit} × {p.einzelpreis} EUR (Richtwert)
                 </div>
               </div>
-              <div className="font-medium text-slate-700 dark:text-stone-300">
+              <div className="font-medium text-label">
                 {(Number(p.menge) * Number(p.einzelpreis)).toFixed(2)} EUR
               </div>
             </div>
@@ -153,35 +196,89 @@ export function BestellungDetailPage() {
         hinweis="Die Bestellung wird als PDF-Anhang mitgesendet."
       />
 
-      {bestellung.status === "entwurf" && (
+      {wareneingangOffen && (
+        <div className="card-ap p-4">
+          <h2 className="mb-1 text-sm font-semibold text-label2">
+            Wareneingang -- Preise prüfen
+          </h2>
+          <p className="mb-3 text-xs text-label2">
+            Der bisherige Preis war nur ein Richtwert zum Bestellzeitpunkt. Bei Abweichung hier
+            den tatsächlich bezahlten Preis eintragen.
+          </p>
+          <div className="space-y-1.5">
+            {bestellung.positionen.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-3 border border-sepstrong p-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-label">{p.beschreibung}</div>
+                  <div className="text-xs text-label2">
+                    {p.menge} {p.einheit}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={preise[p.id] ?? p.einzelpreis}
+                    onChange={(e) => setPreise((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                    className="w-20 rounded-md border border-sep px-2 py-1 text-right text-sm dark:bg-stone-900 "
+                  />
+                  <span className="text-xs text-label2">EUR</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => setWareneingangOffen(false)}
+              disabled={statusMutation.isPending}
+              className="btn-touch flex-1 rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            >
+              Abbrechen
+            </button>
+            <button
+              onClick={() => statusMutation.mutate({ status: "eingegangen", positionen_preise: preise })}
+              disabled={statusMutation.isPending}
+              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Wareneingang jetzt buchen
+            </button>
+          </div>
+        </div>
+      )}
+      {!wareneingangOffen && bestellung.status === "entwurf" && (
         <div className="flex gap-2">
           <button
-            onClick={() => statusMutation.mutate("bestellt")}
+            onClick={() => statusMutation.mutate({ status: "bestellt" })}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Als bestellt markieren
           </button>
           <button
-            onClick={() => statusMutation.mutate("eingegangen")}
+            onClick={wareneingangOeffnen}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             Wareneingang buchen
           </button>
         </div>
       )}
-      {bestellung.status === "bestellt" && (
+      {!wareneingangOffen && bestellung.status === "bestellt" && (
         <button
-          onClick={() => statusMutation.mutate("eingegangen")}
+          onClick={wareneingangOeffnen}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Wareneingang buchen
         </button>
       )}
       {bestellung.status === "eingegangen" && (
-        <p className="text-center text-sm text-slate-400 dark:text-stone-500">
+        <p className="text-center text-sm text-label2">
           Wareneingang gebucht -- Bestand wurde entsprechend erhöht.
         </p>
       )}

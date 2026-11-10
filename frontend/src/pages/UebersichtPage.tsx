@@ -22,8 +22,8 @@ function SystemStatus() {
     <div
       className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
         ok
-          ? "bg-green-50 text-green-800 dark:bg-green-500/10 dark:text-green-300"
-          : "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300"
+          ? "bg-st-erledigt-bg text-st-erledigt  "
+          : "bg-st-fehlt-bg text-st-fehlt  "
       }`}
     >
       <span className="flex items-center gap-1.5 font-medium">
@@ -50,9 +50,9 @@ function SystemStatus() {
 // >90% kritisch -- dieselbe Einteilung fuer alle drei Metriken, damit die
 // Kacheln auf den ersten Blick vergleichbar sind.
 function ampelFarbe(percent: number): { bar: string; text: string; spark: string } {
-  if (percent >= 90) return { bar: "bg-red-500", text: "text-red-600 dark:text-red-400", spark: "#ef4444" };
-  if (percent >= 70) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", spark: "#f59e0b" };
-  return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", spark: "#10b981" };
+  if (percent >= 90) return { bar: "bg-st-fehlt-dot", text: "text-st-fehlt ", spark: "#ef4444" };
+  if (percent >= 70) return { bar: "bg-st-arbeit-dot", text: "text-st-arbeit ", spark: "#f59e0b" };
+  return { bar: "bg-st-erledigt-dot", text: "text-st-erledigt ", spark: "#10b981" };
 }
 
 function ResourceRow({
@@ -70,17 +70,17 @@ function ResourceRow({
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium text-slate-700 dark:text-stone-200">{label}</span>
+        <span className="text-sm font-medium text-label">{label}</span>
         <span className={`text-sm font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
       </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-fill">
         <div
           className={`h-full rounded-full transition-all ${farbe.bar}`}
           style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <span className="text-xs text-slate-500 dark:text-stone-400">{detail}</span>
+        <span className="text-xs text-label2">{detail}</span>
         <Sparkline values={verlauf} color={farbe.spark} />
       </div>
     </div>
@@ -108,8 +108,8 @@ function ServerAuslastung() {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold text-slate-800 dark:text-stone-100">Server-Auslastung</h2>
-      <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-xs sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <h2 className="mb-3 text-lg font-bold text-label">Server-Auslastung</h2>
+      <div className="grid grid-cols-1 gap-5 rounded-lg bg-card p-4 shadow-xs sm:grid-cols-3 dark:shadow-none dark:ring-1 ">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
           label="RAM"
@@ -130,12 +130,12 @@ function ServerAuslastung() {
 
 function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-stone-400">
+    <div className="card-ap p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-label2">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-stone-100">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-slate-500 dark:text-stone-400">{sub}</div>}
+      <div className="mt-1 text-2xl font-bold text-label">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-label2">{sub}</div>}
     </div>
   );
 }
@@ -149,7 +149,7 @@ export function UebersichtPage() {
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: letzteEintraege } = useQuery({
     queryKey: ["audit-log", { limit: 5 }],
     queryFn: () => auditLogApi.list({ limit: 5 }),
@@ -185,27 +185,27 @@ export function UebersichtPage() {
 
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-stone-100">Letzte Aktivität</h2>
+          <h2 className="text-lg font-bold text-label">Letzte Aktivität</h2>
           <Link
             to="/audit-log"
-            className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
+            className="text-sm font-medium text-tint-text hover:underline"
           >
             Gesamtes Audit-Log →
           </Link>
         </div>
         {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-slate-100 rounded-lg bg-white text-sm shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <ul className="divide-y divide-sep rounded-lg bg-card text-sm shadow-xs dark:shadow-none dark:ring-1 ">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-slate-800 dark:text-stone-100">{e.aktion}</span>
-                <span className="text-slate-500 dark:text-stone-400">
+                <span className="font-medium text-label">{e.aktion}</span>
+                <span className="text-label2">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500 dark:text-stone-400">Noch keine Einträge.</p>
+          <p className="text-sm text-label2">Noch keine Einträge.</p>
         )}
       </section>
     </div>

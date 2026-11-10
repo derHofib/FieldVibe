@@ -67,7 +67,7 @@ async def apply_partner_status_transition(
         vorgang.partner_ablehnung_grund = ablehnung_grund
 
     if neuer_status == "angenommen":
-        body = "Nachunternehmer hat den Auftrag angenommen"
+        body = "Nachunternehmer hat den Vorgang angenommen"
     else:
         body = "Nachunternehmer hat abgelehnt"
         if ablehnung_grund:

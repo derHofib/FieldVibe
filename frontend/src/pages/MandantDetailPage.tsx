@@ -6,6 +6,7 @@ import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -30,10 +31,12 @@ const MODUL_LABEL: Record<MandantModul, string> = {
   abrechnung: "Mängel/Angebote/Rechnungen",
   kundenportal: "Kundenportal",
   dauerauftrag: "Dauer-Aufträge",
-  statistik: "Statistik/Insights + Export",
+  zeiterfassung: "Zeiterfassung (eigene Arbeitszeit erfassen & einsehen)",
+  statistik: "Auswertung & Export (Kennzahlen, Zeiterfassung-Auswertung, CSV/PDF)",
   fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
   highlights: "Highlights (Story-Feature)",
   karten: "Kartenansicht (Mapbox)",
+  nachunternehmer: "Partner-/Nachunternehmer-Verwaltung",
   postfach: "Postfach (persönlicher E-Mail-Client)",
 };
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
@@ -44,7 +47,7 @@ export function MandantDetailPage() {
   const queryClient = useQueryClient();
   const { startImpersonation, isImpersonating } = useAuth();
 
-  const { data: mandant, isLoading } = useQuery({
+  const { data: mandant, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["mandanten", id],
     queryFn: () => mandantenApi.get(id!),
     // super_admin-only endpoint: siehe MandantenPage fuer den Impersonation-
@@ -108,69 +111,70 @@ export function MandantDetailPage() {
     moduleMutation.mutate(naechste);
   }
 
-  if (isLoading) return <p className="text-slate-500 dark:text-stone-400">Lädt…</p>;
-  if (!mandant) return <p className="text-slate-500 dark:text-stone-400">Mandant nicht gefunden.</p>;
+  if (ladeFehler && !mandant) return <FehlerZustand fehler={ladeFehler} was="Der Mandant" zurueck onErneut={() => void neuLaden()} className="py-6" />;
+  if (isLoading) return <p className="text-label2">Lädt…</p>;
+  if (!mandant) return <p className="text-label2">Mandant nicht gefunden.</p>;
 
   return (
     <div className="max-w-2xl space-y-8">
-      <Link to="/mandanten" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
+      <Link to="/mandanten" className="text-sm font-medium text-tint-text hover:underline">
         ← Zurück zu Mandanten
       </Link>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Stammdaten</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Stammdaten</h2>
         <form onSubmit={handleSaveStammdaten} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+            <label className="mb-1 block text-sm font-medium text-label">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Slug (Subdomain)
             </label>
             <input
               disabled
               value={mandant.slug}
               title="Der Slug ist mit dem Kundenportal-Link verknüpft und kann nachträglich nicht geändert werden."
-              className="btn-touch w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-slate-500 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-500"
+              className="btn-touch w-full rounded-md border border-sep bg-slate-100 px-3 py-2 text-label2 dark:bg-stone-950"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-label">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div className="flex items-center gap-3">
             <button
               type="submit"
               disabled={stammdatenMutation.isPending}
-              className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+              className="btn-touch btn-ap-primary"
             >
               Speichern
             </button>
             {gespeichertHinweis && (
-              <span className="text-sm text-green-700 dark:text-green-400">✓ Gespeichert</span>
+              <span className="text-sm text-st-erledigt ">✓ Gespeichert</span>
             )}
           </div>
-          {formError && <p className="text-sm text-red-700 dark:text-red-400">{formError}</p>}
+          {formError && <p className="text-sm text-st-fehlt ">{formError}</p>}
         </form>
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Status</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Status</h2>
         <select
           value={mandant.status}
           disabled={statusMutation.isPending}
           onChange={(e) => handleStatusChange(e.target.value as MandantStatus)}
-          className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
@@ -182,7 +186,7 @@ export function MandantDetailPage() {
           <button
             disabled={isImpersonating || mandant.status !== "aktiv"}
             onClick={() => startImpersonation(mandant.id)}
-            className="btn-touch rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-400 disabled:opacity-40"
+            className="btn-touch rounded-md bg-st-arbeit-dot px-3 py-2 text-xs font-semibold text-st-arbeit hover:bg-st-arbeit-dot disabled:opacity-40"
             title="Support-Zugriff: Login als Mandant"
           >
             Login als Mandant
@@ -191,14 +195,14 @@ export function MandantDetailPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Module</h2>
-        <p className="mb-2 text-xs text-slate-400 dark:text-stone-500">
+        <h2 className="mb-4 text-lg font-bold text-label">Module</h2>
+        <p className="mb-2 text-xs text-label2">
           "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
           abwählbar.
         </p>
-        <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-stone-800">
+        <div className="space-y-1.5 rounded-md bg-fill p-3">
           {ALLE_MODULE.map((modul) => (
-            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-label">
               <input
                 type="checkbox"
                 checked={!mandant.deaktivierte_module.includes(modul)}
@@ -213,7 +217,7 @@ export function MandantDetailPage() {
 
       <button
         onClick={() => navigate("/mandanten")}
-        className="btn-touch text-sm font-medium text-slate-500 hover:underline dark:text-stone-400"
+        className="btn-touch text-sm font-medium text-label2 hover:underline "
       >
         ← Zurück zu Mandanten
       </button>

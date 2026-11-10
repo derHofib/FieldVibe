@@ -60,18 +60,18 @@ export function SearchPage() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Kunde, Anlage, Vorgangsnummer, #Tag…"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
 
       {!q && tags && tags.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Tags</h2>
+          <h2 className="mb-2 text-sm font-semibold text-label2">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <button
                 key={tag.id}
                 onClick={() => setQ(`#${tag.label}`)}
-                className="btn-touch rounded-full bg-white px-3 py-1.5 text-sm text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="btn-touch rounded-full bg-card px-3 py-1.5 text-sm text-label shadow-xs dark:shadow-none dark:ring-1 "
               >
                 #{tag.label}
               </button>
@@ -89,15 +89,15 @@ export function SearchPage() {
               <button
                 key={`${hit.kategorie}-${hit.id}`}
                 onClick={() => navigate(hitPath(hit))}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
               >
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{hit.titel}</div>
+                  <div className="text-sm font-medium text-label">{hit.titel}</div>
                   {hit.subtitel && (
-                    <div className="text-xs text-slate-400 dark:text-stone-500">{subtitelLabel(hit)}</div>
+                    <div className="text-xs text-label2">{subtitelLabel(hit)}</div>
                   )}
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-stone-800 dark:text-stone-400">
+                <span className="border border-sep px-2 py-0.5 text-xs text-label">
                   {KATEGORIE_LABEL[hit.kategorie]}
                 </span>
               </button>

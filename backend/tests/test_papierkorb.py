@@ -79,7 +79,7 @@ async def test_loesch_operativ_cannot_create_or_promote_into_papierkorb_role(
             json={
                 "mandant_id": None if rolle == "super_admin" else str(mandant.id),
                 "email": f"{rolle}-neu@example.de",
-                "password": "pw-123456",
+                "password": "pw-1234567",
                 "role": rolle,
                 "name": "Sollte nicht gehen",
             },
@@ -107,7 +107,7 @@ async def test_mandant_admin_cannot_create_papierkorb_accounts(client, make_mand
             json={
                 "mandant_id": str(mandant.id),
                 "email": f"{rolle}@example.de",
-                "password": "pw-123456",
+                "password": "pw-1234567",
                 "role": rolle,
                 "name": "Papierkorb-User",
             },
@@ -144,7 +144,7 @@ async def test_super_admin_can_create_papierkorb_accounts(client, make_mandant, 
         json={
             "mandant_id": str(mandant.id),
             "email": "loeschen@example.de",
-            "password": "pw-123456",
+            "password": "pw-1234567",
             "role": "loesch_operativ",
             "name": "Loesch Operativ",
         },
@@ -167,7 +167,7 @@ async def test_hoechstens_ein_aktiver_loesch_operativ_pro_mandant(
         json={
             "mandant_id": str(mandant.id),
             "email": "zweiter@example.de",
-            "password": "pw-123456",
+            "password": "pw-1234567",
             "role": "loesch_operativ",
             "name": "Zweiter Loesch Operativ",
         },
@@ -182,7 +182,7 @@ async def test_hoechstens_ein_aktiver_loesch_operativ_pro_mandant(
         json={
             "mandant_id": str(anderer_mandant.id),
             "email": "dritter@example.de",
-            "password": "pw-123456",
+            "password": "pw-1234567",
             "role": "loesch_operativ",
             "name": "Dritter Loesch Operativ",
         },
@@ -399,8 +399,8 @@ async def test_kunde_mit_events_zeiterfassung_highlight_und_portal_zugang_kann_e
 async def test_kunde_mit_versendeter_rechnung_kann_nicht_endgueltig_geloescht_werden(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
-    # §147 AO/§257 HGB verlangt 10 Jahre Aufbewahrung fuer ausgestellte
-    # Rechnungen -- das DSGVO-Loeschrecht (Art. 17 Abs. 3 lit. b) nimmt genau
+    # §147 AO/§257 HGB/§14b UStG verlangen 8 Jahre Aufbewahrung (seit BEG IV, vorher 10)
+    # fuer ausgestellte Rechnungen -- das DSGVO-Loeschrecht (Art. 17 Abs. 3 lit. b) nimmt genau
     # diesen Fall ausdruecklich aus, das endgueltige Loeschen muss also
     # verweigert werden, auch wenn der ganze Kunde geloescht werden soll.
     mandant = await make_mandant()
