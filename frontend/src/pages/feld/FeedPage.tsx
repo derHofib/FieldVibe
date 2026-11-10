@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { Inbox, List, Map as MapIcon, Repeat, Search, Star } from "lucide-react";
-import { Suspense, lazy, useCallback, useState } from "react";
+import { Inbox, List, Map as MapIcon, Plus, Repeat, ScanLine, Search, Star, TriangleAlert, Users } from "lucide-react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { kundenApi, storiesApi } from "../../api/endpoints";
+import { anlagenApi, kundenApi, storiesApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
+import { QrScanner } from "../../components/QrScanner";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
@@ -201,9 +202,18 @@ function FeedCardView({ card }: { card: FeedCard }) {
 
 const LEER_FILTER: Record<string, string> = {};
 
+// Erledigte Vorgänge (abgeschlossen/abgerechnet/storniert) verdrängen sonst
+// die offenen aus dem oberen Feed-Bereich; sie bleiben per Umschalter oder
+// explizitem Status-Filter erreichbar.
+const OFFENE_STATUS = "neu,geplant,in_arbeit,wartet_kunde";
+
 export function FeedPage() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
+  const kannErstellen = hatRecht("vorgaenge", "erstellen");
+  const [zeigeScanner, setZeigeScanner] = useState(false);
+  const [scanFehler, setScanFehler] = useState<string | null>(null);
+  const [erledigteZeigen, setErledigteZeigen] = useState(false);
   const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
   const [zeigeFilter, setZeigeFilter] = useState(false);
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
@@ -230,8 +240,24 @@ export function FeedPage() {
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useVorgangsListe(filter);
+  const wirksamerFilter = useMemo(
+    () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS }),
+    [filter, erledigteZeigen],
+  );
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
+    useVorgangsListe(wirksamerFilter);
+
+  async function handleScan(code: string) {
+    setZeigeScanner(false);
+    setScanFehler(null);
+    try {
+      const anlage = await anlagenApi.byQrCode(code);
+      navigate(`/anlagen/${anlage.id}`);
+    } catch {
+      setScanFehler(`Keine Anlage mit dem Code "${code}" gefunden.`);
+    }
+  }
 
   // Die Liste zeigt bewusst nur Seite fuer Seite ("Mehr laden"), aber die
   // Kartenansicht braucht alle zum aktuellen Filter passenden Vorgaenge auf
@@ -249,8 +275,75 @@ export function FeedPage() {
     .map((c) => ({ id: c.id, lng: c.geo_lng as number, lat: c.geo_lat as number, farbe: STATUS_HEX[c.status] }));
   const ohneKoordinatenAnzahl = cards.length - punkte.length;
 
+  const keinKundeZugewiesen =
+    !!currentUser?.nur_zugewiesene_kunden && kunden !== undefined && kunden.length === 0;
+
+  const leerZustand = keinKundeZugewiesen ? (
+    <EmptyState
+      icon={Users}
+      text="Dir sind noch keine Kunden zugewiesen. Sobald das Büro dir Kunden zuweist, erscheinen hier deren Vorgänge."
+    />
+  ) : aktiveFilterAnzahl > 0 ? (
+    <div className="flex flex-col items-center">
+      <EmptyState icon={Inbox} text="Keine Vorgänge zu diesem Filter." />
+      <button
+        onClick={() => setFilter(LEER_FILTER)}
+        className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+      >
+        Filter zurücksetzen
+      </button>
+    </div>
+  ) : !erledigteZeigen ? (
+    <div className="flex flex-col items-center">
+      <EmptyState icon={Inbox} text="Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet." />
+      <button
+        onClick={() => setErledigteZeigen(true)}
+        className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+      >
+        Erledigte anzeigen
+      </button>
+    </div>
+  ) : (
+    <EmptyState icon={Inbox} text="Noch keine Vorgänge angelegt." />
+  );
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Vorgänge</h1>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => navigate("/suche")}
+            aria-label="Suchen"
+            className="btn-touch flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          >
+            <Search size={18} strokeWidth={2} />
+          </button>
+          <button
+            onClick={() => setZeigeScanner(true)}
+            aria-label="QR-Code scannen"
+            className="btn-touch flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          >
+            <ScanLine size={18} strokeWidth={2} />
+          </button>
+          {kannErstellen && (
+            <button
+              onClick={() => navigate("/neu")}
+              className="btn-touch btn-clay flex items-center gap-1.5 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-4 text-sm font-semibold text-white"
+            >
+              <Plus size={16} strokeWidth={2.5} /> Neuer Vorgang
+            </button>
+          )}
+        </div>
+      </div>
+
+      {zeigeScanner && <QrScanner onScan={handleScan} onClose={() => setZeigeScanner(false)} />}
+      {scanFehler && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {scanFehler}
+        </p>
+      )}
+
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
@@ -296,6 +389,21 @@ export function FeedPage() {
             </button>
           </div>
         </div>
+
+        {!filter.status && (
+          <button
+            type="button"
+            aria-pressed={erledigteZeigen}
+            onClick={() => setErledigteZeigen((v) => !v)}
+            className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
+              erledigteZeigen
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            }`}
+          >
+            Erledigte anzeigen
+          </button>
+        )}
 
         {zeigeFilter && (
           <div className="space-y-2">
@@ -409,11 +517,21 @@ export function FeedPage() {
         </button>
       </div>
 
-      {ansicht === "karte" ? (
+      {isError ? (
+        <div className="flex flex-col items-center">
+          <EmptyState icon={TriangleAlert} text="Vorgänge konnten nicht geladen werden." />
+          <button
+            onClick={() => refetch()}
+            className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          >
+            Erneut versuchen
+          </button>
+        </div>
+      ) : ansicht === "karte" ? (
         isLoading ? (
           <div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />
         ) : punkte.length === 0 ? (
-          <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
+          cards.length === 0 ? leerZustand : <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
         ) : (
           <>
             <Suspense
@@ -440,7 +558,7 @@ export function FeedPage() {
           {isLoading ? (
             <SkeletonList count={4} />
           ) : cards.length === 0 ? (
-            <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
+            leerZustand
           ) : (
             <div className="space-y-3">
               {cards.map((card) => (
