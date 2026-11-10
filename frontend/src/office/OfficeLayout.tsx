@@ -46,6 +46,21 @@ export function OfficeLayout() {
     document.title = aktiveSeite ? `${aktiveSeite.label} – FieldVibe` : "FieldVibe";
   }, [aktiveSeite]);
 
+  // "/" und Strg/Cmd+K öffnen die Suche -- "/" nur außerhalb von Eingabefeldern
+  useEffect(() => {
+    const beiTaste = (e: KeyboardEvent) => {
+      const ziel = e.target as HTMLElement | null;
+      const tippt =
+        ziel?.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(ziel?.tagName ?? "");
+      const kuerzel = (e.key === "k" && (e.ctrlKey || e.metaKey)) || (e.key === "/" && !tippt && !e.ctrlKey && !e.metaKey && !e.altKey);
+      if (!kuerzel) return;
+      e.preventDefault();
+      navigate("/suche");
+    };
+    document.addEventListener("keydown", beiTaste);
+    return () => document.removeEventListener("keydown", beiTaste);
+  }, [navigate]);
+
   const zurMobilenAnsicht = () => {
     const ziel = mobileUrl();
     if (!ziel) return;
@@ -57,7 +72,7 @@ export function OfficeLayout() {
 
   return (
     <div
-      className="min-h-screen bg-slate-100 dark:bg-stone-950"
+      className="office-shell min-h-screen bg-slate-100 dark:bg-stone-950"
       style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}
     >
       <ImpersonationBanner />
@@ -116,7 +131,7 @@ export function OfficeLayout() {
                 <Clock size={13} strokeWidth={2.25} /> {outboxCount}
               </span>
             )}
-            <Tooltip text="Suche">
+            <Tooltip text="Suche (/ oder Strg+K)">
               <button
                 onClick={() => navigate("/suche")}
                 aria-label="Suche"

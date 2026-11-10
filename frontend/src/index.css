@@ -189,3 +189,11 @@ body {
     -5px -5px 12px rgba(255, 255, 255, 0.035),
     6px 8px 16px rgba(0, 0, 0, 0.55);
 }
+
+/* Sichtbarer Tastaturfokus in der Office-Ansicht. Tailwinds Preflight lässt
+   den Browser-Ring zwar stehen, viele Eingabefelder nehmen ihn aber mit
+   focus:outline-hidden weg -- und auf dunklen Flächen ist er kaum zu sehen. */
+.office-shell :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-cyan-500);
+  outline-offset: 2px;
+}

@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { termineApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
+import { useEscapeSchliesst } from "../../hooks/useEscapeSchliesst";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
@@ -515,6 +516,8 @@ function TerminBearbeitenPanel({
   const [pause, setPause] = useState(termin.pause_minuten?.toString() ?? "");
   const [notiz, setNotiz] = useState(termin.notiz ?? "");
 
+  useEscapeSchliesst(onClose);
+
   const speichern = () => {
     onSave({
       titel,
@@ -537,6 +540,7 @@ function TerminBearbeitenPanel({
           <h2 className="text-sm font-bold text-slate-800 dark:text-stone-100">Termin bearbeiten</h2>
           <button
             onClick={onClose}
+            aria-label="Schließen"
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
           >
             <X size={16} />
