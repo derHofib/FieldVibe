@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -26,7 +28,7 @@ export function DauerauftragDetailPage() {
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
   const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);
   const [ausgewaehlteAnlageIds, setAusgewaehlteAnlageIds] = useState<string[]>([]);
-  const [neueFaelligkeit, setNeueFaelligkeit] = useState(new Date().toISOString().slice(0, 10));
+  const [neueFaelligkeit, setNeueFaelligkeit] = useState(heuteIso());
 
   const { data: dauerauftrag, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftrag", id],
@@ -198,7 +200,7 @@ export function DauerauftragDetailPage() {
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-label2">
-              Anlagen im Buendel ({dauerauftrag.anzahl_ziele})
+              Anlagen im Bündel ({dauerauftrag.anzahl_ziele})
             </h2>
             {kannVerwalten && !anlagenBearbeiten && (
               <button
@@ -335,7 +337,7 @@ export function DauerauftragDetailPage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

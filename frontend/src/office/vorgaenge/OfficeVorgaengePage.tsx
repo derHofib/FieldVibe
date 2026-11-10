@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Table2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -43,12 +44,6 @@ function gespeicherteAnsicht(): Ansicht {
     // privater Modus -- dann eben jedes Mal die Standardansicht
   }
   return "liste";
-}
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
 }
 
 const LEER_FILTER: Record<string, string> = {};

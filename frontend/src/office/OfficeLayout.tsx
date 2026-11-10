@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../utils/format";
 import {
   Bug,
   CalendarDays,
@@ -56,12 +57,6 @@ function geladeneEingeklappteKategorien(): Record<string, boolean> {
   } catch {
     return {};
   }
-}
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
 }
 
 const ROLLE_LABEL: Record<string, string> = {

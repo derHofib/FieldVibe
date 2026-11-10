@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, Inbox, Repeat } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -371,7 +372,7 @@ export function StandortDetailPage() {
                   STATUS_BADGE[status] ?? "border border-sep text-label"
                 }`}
               >
-                {anzahl}× {status}
+                {anzahl}× {statusLabel(status)}
               </span>
             ))}
           </div>
@@ -440,7 +441,7 @@ export function StandortDetailPage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

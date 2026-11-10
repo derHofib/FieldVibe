@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
 import { Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -260,7 +261,7 @@ export function KundenPage() {
               </div>
               {k.typ && (
                 <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
-                  {k.typ}
+                  {kundeTypLabel(k.typ)}
                 </span>
               )}
             </button>
