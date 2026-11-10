@@ -157,6 +157,25 @@ async def test_feed_shows_last_event_preview(
 
 
 @pytest.mark.asyncio
+async def test_feed_vorschau_nennt_konkreten_statuswechsel(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token), json={"status": "geplant"}
+    )
+    assert resp.status_code == 200
+
+    card = (await client.get("/api/feed", headers=auth_headers(token))).json()["items"][0]
+    assert card["letztes_event_vorschau"] == "Status: Neu → Geplant"
+
+
+@pytest.mark.asyncio
 async def test_feed_filtert_nach_mehreren_status(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):

@@ -73,11 +73,32 @@ def _decode_cursor(cursor: str) -> tuple[datetime, int, UUID]:
         ) from exc
 
 
+_STATUS_PREVIEW_LABEL = {
+    "neu": "Neu",
+    "geplant": "Geplant",
+    "in_arbeit": "In Arbeit",
+    "wartet_kunde": "Wartet auf Kunde",
+    "abgeschlossen": "Abgeschlossen",
+    "abgerechnet": "Abgerechnet",
+    "storniert": "Storniert",
+}
+
+
 def _preview_text(event: VorgangEvent | None) -> str | None:
     if event is None:
         return None
     if event.body:
         return event.body[:140]
+    if event.event_type == "status_change":
+        # Konkreter Wechsel statt der Pauschale "Status geändert", sonst
+        # sehen fast alle Karten gleich aus. Alte Events ohne von/nach
+        # fallen auf den generischen Text zurück.
+        von = _STATUS_PREVIEW_LABEL.get(event.payload.get("von"))
+        nach = _STATUS_PREVIEW_LABEL.get(event.payload.get("nach"))
+        if nach and von:
+            return f"Status: {von} → {nach}"
+        if nach:
+            return f"Status: {nach}"
     return _EVENT_TYPE_PREVIEW.get(event.event_type, event.event_type)
 
 
