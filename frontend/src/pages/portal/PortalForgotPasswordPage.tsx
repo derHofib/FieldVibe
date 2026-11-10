@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { kundenportalAuthApi } from "../../api/endpoints";
 import { Starfield } from "../../components/Starfield";
 
 export function PortalForgotPasswordPage() {
+  const uid = useId();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -39,8 +40,8 @@ export function PortalForgotPasswordPage() {
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
+            <input id={`${uid}-0`}
               type="email"
               required
               value={email}

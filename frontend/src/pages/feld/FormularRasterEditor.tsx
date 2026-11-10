@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Rnd } from "react-rnd";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
@@ -304,6 +304,7 @@ function FeldForm({
   onCancel: () => void;
   isPending: boolean;
 }) {
+  const uid = useId();
   const [values, setValues] = useState<FeldFormValues>(leereWerte(initial));
 
   function set<K extends keyof FeldFormValues>(key: K, value: FeldFormValues[K]) {
@@ -324,8 +325,8 @@ function FeldForm({
       className="space-y-3 rounded-lg bg-cyan-50/60 p-3 dark:bg-cyan-500/5 dark:ring-1 dark:ring-cyan-500/20"
     >
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Feldtyp</label>
-        <select
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Feldtyp</label>
+        <select id={`${uid}-0`}
           value={values.feld_typ}
           onChange={(e) => set("feld_typ", e.target.value as FormularfeldTyp)}
           className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -338,10 +339,10 @@ function FeldForm({
         </select>
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
           {values.feld_typ === "abschnitt" ? "Überschrift" : "Frage / Label"}
         </label>
-        <input
+        <input id={`${uid}-1`}
           value={values.label}
           onChange={(e) => set("label", e.target.value)}
           autoFocus
@@ -352,10 +353,10 @@ function FeldForm({
 
       {values.feld_typ !== "abschnitt" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
             Hilfetext (optional)
           </label>
-          <input
+          <input id={`${uid}-2`}
             value={values.hilfetext}
             onChange={(e) => set("hilfetext", e.target.value)}
             placeholder="Erklärung, die der Techniker beim Ausfüllen sieht"
@@ -366,10 +367,10 @@ function FeldForm({
 
       {(values.feld_typ === "dropdown" || values.feld_typ === "mehrfachauswahl") && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
             Auswahlmöglichkeiten (eine je Zeile)
           </label>
-          <textarea
+          <textarea id={`${uid}-3`}
             value={values.werte}
             onChange={(e) => set("werte", e.target.value)}
             rows={3}
@@ -382,8 +383,8 @@ function FeldForm({
       {values.feld_typ === "bewertung" && (
         <div className="flex gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Skala von</label>
-            <input
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Skala von</label>
+            <input id={`${uid}-4`}
               type="number"
               value={values.min}
               onChange={(e) => set("min", e.target.value)}
@@ -391,8 +392,8 @@ function FeldForm({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">bis</label>
-            <input
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">bis</label>
+            <input id={`${uid}-5`}
               type="number"
               value={values.max}
               onChange={(e) => set("max", e.target.value)}
@@ -404,10 +405,10 @@ function FeldForm({
 
       {datenquelleErlaubt && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
             Automatisch befüllen aus (optional)
           </label>
-          <select
+          <select id={`${uid}-6`}
             value={values.datenquelle}
             onChange={(e) => set("datenquelle", e.target.value as FormularfeldDatenquelle | "")}
             className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

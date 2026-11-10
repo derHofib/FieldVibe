@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star, UserCheck } from "lucide-react";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -240,6 +240,7 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const toast = useToast();
   const { id: idParam } = useParams<{ id: string }>();
@@ -865,8 +866,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         {editingZuordnung && (
           <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
-              <select
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
+              <select id={`${uid}-0`}
                 value={editKundeId}
                 onChange={(e) => {
                   setEditKundeId(e.target.value);
@@ -882,10 +883,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                 Anlage (optional)
               </label>
-              <select
+              <select id={`${uid}-1`}
                 value={editAnlageId}
                 onChange={(e) => setEditAnlageId(e.target.value)}
                 className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -1093,8 +1094,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-slate-500 dark:text-stone-400">Status:</label>
-          <select
+          <label htmlFor={`${uid}-2`} className="text-sm text-slate-500 dark:text-stone-400">Status:</label>
+          <select id={`${uid}-2`}
             value={vorgang.status}
             onChange={(e) => {
               const status = e.target.value as VorgangStatus;

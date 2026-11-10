@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import { Starfield } from "../components/Starfield";
 
 export function LoginPage() {
+  const uid = useId();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -47,8 +48,8 @@ export function LoginPage() {
           </div>
         )}
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
+        <input id={`${uid}-0`}
           type="email"
           required
           value={email}
@@ -56,8 +57,8 @@ export function LoginPage() {
           className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
         />
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
-        <input
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
+        <input id={`${uid}-1`}
           type="password"
           required
           value={password}

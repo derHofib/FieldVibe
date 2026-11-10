@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, Inbox, Paperclip } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -27,6 +27,7 @@ const KATEGORIE_LABEL: Record<EingangsrechnungKategorie, string> = {
 };
 
 function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingangsrechnung }) {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -100,8 +101,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
 
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
-            <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
+            <select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
               <option value="">Name manuell eintragen…</option>
               {(lieferanten ?? []).map((l) => (
                 <option key={l.id} value={l.id}>
@@ -119,8 +120,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             />
           )}
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsnummer</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsnummer</label>
+            <input id={`${uid}-1`}
               value={rechnungsnummer}
               onChange={(e) => setRechnungsnummer(e.target.value)}
               placeholder="Rechnungsnummer (vom Aussteller)"
@@ -129,8 +130,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsdatum</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsdatum</label>
+              <input id={`${uid}-2`}
                 type="date"
                 value={rechnungsdatum}
                 onChange={(e) => setRechnungsdatum(e.target.value)}
@@ -138,8 +139,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Betrag netto</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Betrag netto</label>
+              <input id={`${uid}-3`}
                 type="number"
                 step="0.01"
                 value={betragNetto}
@@ -149,8 +150,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Kategorie</label>
-            <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Kategorie</label>
+            <select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ApiError } from "../api/client";
 import type { EmailLog } from "../types";
@@ -27,6 +27,7 @@ export function EmailSection({
   betreffPflicht = true,
   hinweis,
 }: EmailSectionProps) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [empfaenger, setEmpfaenger] = useState(defaultEmpfaenger ?? "");
@@ -76,10 +77,10 @@ export function EmailSection({
         <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
           {hinweis && <p className="text-xs text-slate-500 dark:text-stone-400">{hinweis}</p>}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Empfänger
             </label>
-            <input
+            <input id={`${uid}-0`}
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
@@ -87,20 +88,20 @@ export function EmailSection({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
-            <input
+            <input id={`${uid}-1`}
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
               className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
-            <textarea
+            <textarea id={`${uid}-2`}
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, Inbox, MapPin, Repeat } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { type FormEvent, useId, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -488,6 +488,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
 }
 
 function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Standort[] }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
@@ -550,8 +551,8 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   return (
     <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
+        <input id={`${uid}-0`}
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
@@ -559,8 +560,8 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
-        <input
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+        <input id={`${uid}-1`}
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { type FormEvent, useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, anlagenFeldDefinitionenApi } from "../../api/endpoints";
@@ -13,6 +13,7 @@ const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
 };
 
 export function AnlagenFelderPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [anlagentyp, setAnlagentyp] = useState("");
@@ -97,8 +98,8 @@ export function AnlagenFelderPage() {
         className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlagentyp</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlagentyp</label>
+          <input id={`${uid}-0`}
             list="bekannte-anlagentypen"
             value={anlagentyp}
             onChange={(e) => setAnlagentyp(e.target.value)}

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -6,6 +6,7 @@ import { kundenportalAuthApi } from "../../api/endpoints";
 import { Starfield } from "../../components/Starfield";
 
 export function PortalResetPasswordPage() {
+  const uid = useId();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const navigate = useNavigate();
@@ -59,8 +60,8 @@ export function PortalResetPasswordPage() {
                 {error}
               </div>
             )}
-            <label className="mb-1 block text-sm font-medium text-slate-300">Neues Passwort</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">Neues Passwort</label>
+            <input id={`${uid}-0`}
               type="password"
               required
               minLength={10}

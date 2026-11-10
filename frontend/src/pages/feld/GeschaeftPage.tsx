@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Package, Receipt, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -338,6 +338,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
 }
 
 export function GeschaeftPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
@@ -665,8 +666,8 @@ export function GeschaeftPage() {
       {showForm && tab === "kunden" && (
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
+            <input id={`${uid}-0`}
               autoFocus
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
@@ -675,10 +676,10 @@ export function GeschaeftPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Kundennummer (optional)
               </label>
-              <input
+              <input id={`${uid}-1`}
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
@@ -686,8 +687,8 @@ export function GeschaeftPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Typ</label>
-              <select
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Typ</label>
+              <select id={`${uid}-2`}
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -702,8 +703,8 @@ export function GeschaeftPage() {
           </div>
           {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">USt-IdNr.</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">USt-IdNr.</label>
+              <input id={`${uid}-3`}
                 value={neuerKunde.ustIdnr}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
                 placeholder="DE123456789"
@@ -712,8 +713,8 @@ export function GeschaeftPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
-            <input
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
+            <input id={`${uid}-4`}
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -721,16 +722,16 @@ export function GeschaeftPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
-              <input
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
+              <input id={`${uid}-5`}
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
-              <input
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
+              <input id={`${uid}-6`}
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -738,8 +739,8 @@ export function GeschaeftPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
-            <textarea
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
+            <textarea id={`${uid}-7`}
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
@@ -762,8 +763,8 @@ export function GeschaeftPage() {
       {showForm && tab !== "material" && tab !== "kunden" && (
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
-            <select
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
+            <select id={`${uid}-8`}
               value={kundeId}
               onChange={(e) => setKundeId(e.target.value)}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -779,10 +780,10 @@ export function GeschaeftPage() {
           {tab === "rechnungen" && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+                <label htmlFor={`${uid}-9`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                   Betrag netto (EUR)
                 </label>
-                <input
+                <input id={`${uid}-9`}
                   type="number"
                   step="0.01"
                   min="0"
@@ -792,10 +793,10 @@ export function GeschaeftPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+                <label htmlFor={`${uid}-10`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                   Leistungsdatum (optional)
                 </label>
-                <input
+                <input id={`${uid}-10`}
                   type="date"
                   value={leistungsdatum}
                   onChange={(e) => setLeistungsdatum(e.target.value)}
@@ -832,18 +833,18 @@ export function GeschaeftPage() {
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
-              <input
+              <label htmlFor={`${uid}-11`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
+              <input id={`${uid}-11`}
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+              <label htmlFor={`${uid}-12`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Einzelpreis (EUR, optional)
               </label>
-              <input
+              <input id={`${uid}-12`}
                 type="number"
                 step="0.01"
                 value={materialForm.einzelpreis}
@@ -852,8 +853,8 @@ export function GeschaeftPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Anfangsbestand</label>
-              <input
+              <label htmlFor={`${uid}-13`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Anfangsbestand</label>
+              <input id={`${uid}-13`}
                 type="number"
                 step="0.01"
                 value={materialForm.menge}
@@ -862,8 +863,8 @@ export function GeschaeftPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
-              <input
+              <label htmlFor={`${uid}-14`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
+              <input id={`${uid}-14`}
                 type="number"
                 step="0.01"
                 value={materialForm.mindestbestand}
@@ -872,10 +873,10 @@ export function GeschaeftPage() {
               />
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+              <label htmlFor={`${uid}-15`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Standard-Lieferant (optional)
               </label>
-              <select
+              <select id={`${uid}-15`}
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -889,10 +890,10 @@ export function GeschaeftPage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+              <label htmlFor={`${uid}-16`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Lagerort für Anfangsbestand
               </label>
-              <select
+              <select id={`${uid}-16`}
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

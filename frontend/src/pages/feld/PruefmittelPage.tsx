@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
@@ -34,6 +34,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
@@ -113,10 +114,10 @@ export function PruefmittelPage() {
       {showForm && (
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Bezeichnung
             </label>
-            <input
+            <input id={`${uid}-0`}
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -124,20 +125,20 @@ export function PruefmittelPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Seriennummer
             </label>
-            <input
+            <input id={`${uid}-1`}
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Zugewiesen an
             </label>
-            <select
+            <select id={`${uid}-2`}
               value={form.zugewiesenAn}
               onChange={(e) => setForm({ ...form, zugewiesenAn: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -151,10 +152,10 @@ export function PruefmittelPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Kalibrierintervall (Monate)
             </label>
-            <input
+            <input id={`${uid}-3`}
               type="number"
               min={1}
               value={form.intervallMonate}

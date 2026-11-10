@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { authApi } from "../api/endpoints";
@@ -7,6 +7,7 @@ import { Starfield } from "../components/Starfield";
 import { useAuth } from "../context/AuthContext";
 
 export function RegistrierenPage() {
+  const uid = useId();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const { loginMitToken } = useAuth();
@@ -53,16 +54,16 @@ export function RegistrierenPage() {
             </div>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-slate-300">Name</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">Name</label>
+          <input id={`${uid}-0`}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
           />
 
-          <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
-          <input
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
+          <input id={`${uid}-1`}
             type="password"
             required
             minLength={8}

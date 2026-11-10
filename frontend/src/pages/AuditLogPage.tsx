@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 
 export function AuditLogPage() {
+  const uid = useId();
   const { isImpersonating } = useAuth();
   const [mandantId, setMandantId] = useState("");
   const [aktion, setAktion] = useState("");
@@ -40,8 +41,8 @@ export function AuditLogPage() {
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
-          <select
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+          <select id={`${uid}-0`}
             value={mandantId}
             onChange={(e) => setMandantId(e.target.value)}
             className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -55,8 +56,8 @@ export function AuditLogPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Aktion</label>
-          <input
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Aktion</label>
+          <input id={`${uid}-1`}
             value={aktion}
             onChange={(e) => setAktion(e.target.value)}
             placeholder="z.B. login_als_mandant"
@@ -64,8 +65,8 @@ export function AuditLogPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Von</label>
-          <input
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Von</label>
+          <input id={`${uid}-2`}
             type="date"
             value={von}
             onChange={(e) => setVon(e.target.value)}
@@ -73,8 +74,8 @@ export function AuditLogPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bis</label>
-          <input
+          <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bis</label>
+          <input id={`${uid}-3`}
             type="date"
             value={bis}
             onChange={(e) => setBis(e.target.value)}

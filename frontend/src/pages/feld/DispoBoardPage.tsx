@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
@@ -56,6 +56,7 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
+  const uid = useId();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -218,8 +219,8 @@ export function DispoBoardPage() {
       {showForm && form && (
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
-            <select
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
+            <select id={`${uid}-0`}
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -233,8 +234,8 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
-            <select
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+            <select id={`${uid}-1`}
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -247,8 +248,8 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+            <input id={`${uid}-2`}
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -257,8 +258,8 @@ export function DispoBoardPage() {
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+              <input id={`${uid}-3`}
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
@@ -266,8 +267,8 @@ export function DispoBoardPage() {
               />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
-              <input
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+              <input id={`${uid}-4`}
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}

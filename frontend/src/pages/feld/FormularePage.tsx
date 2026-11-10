@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Plus } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -8,6 +8,7 @@ import { formulareApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 
 export function FormularePage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formularOffen, setFormularOffen] = useState(false);
@@ -60,8 +61,8 @@ export function FormularePage() {
           className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Name</label>
+            <input id={`${uid}-0`}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z.B. Wartungsprotokoll Heizung"
@@ -70,10 +71,10 @@ export function FormularePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
               Beschreibung (optional)
             </label>
-            <input
+            <input id={`${uid}-1`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               placeholder="Kurze Erklärung, wofür dieses Formular gedacht ist"

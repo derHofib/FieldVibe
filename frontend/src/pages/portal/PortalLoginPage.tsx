@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalAuthApi } from "../../api/endpoints";
@@ -8,6 +8,7 @@ import { Starfield } from "../../components/Starfield";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 
 export function PortalLoginPage() {
+  const uid = useId();
   const { login } = useKundenAuth();
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
@@ -77,8 +78,8 @@ export function PortalLoginPage() {
           </div>
         )}
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
+        <input id={`${uid}-0`}
           type="email"
           required
           value={email}
@@ -86,8 +87,8 @@ export function PortalLoginPage() {
           className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
         />
 
-        <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
-        <input
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
+        <input id={`${uid}-1`}
           type="password"
           required
           value={password}

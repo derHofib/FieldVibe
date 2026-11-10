@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
@@ -42,6 +42,7 @@ const PRIORITAET_OPTIONEN = [
 ];
 
 export function NewVorgangPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -256,8 +257,8 @@ export function NewVorgangPage() {
         className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
-          <select
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
+          <select id={`${uid}-0`}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
@@ -287,8 +288,8 @@ export function NewVorgangPage() {
         {showNewKunde && (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
-              <input
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <input id={`${uid}-1`}
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
@@ -296,8 +297,8 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
-              <select
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <select id={`${uid}-2`}
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
                 className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -336,10 +337,10 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Standort (optional)
             </label>
-            <select
+            <select id={`${uid}-3`}
               value={standortId}
               onChange={(e) => setStandortId(e.target.value)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -386,8 +387,8 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlage (optional)</label>
-            <select
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlage (optional)</label>
+            <select id={`${uid}-4`}
               value={anlage?.id ?? ""}
               onChange={(e) =>
                 setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
@@ -416,8 +417,8 @@ export function NewVorgangPage() {
         {showNewAnlage && (
           <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
-              <input
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
+              <input id={`${uid}-5`}
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
@@ -425,8 +426,8 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
-              <input
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <input id={`${uid}-6`}
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
@@ -458,8 +459,8 @@ export function NewVorgangPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
-          <input
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+          <input id={`${uid}-7`}
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -468,8 +469,8 @@ export function NewVorgangPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
-          <textarea
+          <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
+          <textarea id={`${uid}-8`}
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
@@ -508,8 +509,8 @@ export function NewVorgangPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
-            <select
+            <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
+            <select id={`${uid}-9`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -522,8 +523,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
-            <select
+            <label htmlFor={`${uid}-10`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
+            <select id={`${uid}-10`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -536,8 +537,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Priorität</label>
-            <select
+            <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Priorität</label>
+            <select id={`${uid}-11`}
               value={prioritaet}
               onChange={(e) => setPrioritaet(Number(e.target.value))}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

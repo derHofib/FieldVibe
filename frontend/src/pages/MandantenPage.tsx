@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -20,6 +20,7 @@ const STATUS_BADGE: Record<MandantStatus, string> = {
 };
 
 export function MandantenPage() {
+  const uid = useId();
   const queryClient = useQueryClient();
   const { isImpersonating } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
@@ -60,8 +61,8 @@ export function MandantenPage() {
         <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+            <input id={`${uid}-0`}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -69,10 +70,10 @@ export function MandantenPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Slug (Subdomain)
             </label>
-            <input
+            <input id={`${uid}-1`}
               required
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               value={slug}
@@ -81,8 +82,8 @@ export function MandantenPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
+            <input id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
               className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

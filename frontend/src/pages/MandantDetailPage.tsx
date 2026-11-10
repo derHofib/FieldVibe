@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -40,6 +40,7 @@ const MODUL_LABEL: Record<MandantModul, string> = {
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
 
 export function MandantDetailPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -129,8 +130,8 @@ export function MandantDetailPage() {
         <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Stammdaten</h2>
         <form onSubmit={handleSaveStammdaten} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+            <input id={`${uid}-0`}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -138,10 +139,10 @@ export function MandantDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Slug (Subdomain)
             </label>
-            <input
+            <input id={`${uid}-1`}
               disabled
               value={mandant.slug}
               title="Der Slug ist mit dem Kundenportal-Link verknuepft und kann nachtraeglich nicht geaendert werden."
@@ -149,8 +150,8 @@ export function MandantDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
+            <input id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

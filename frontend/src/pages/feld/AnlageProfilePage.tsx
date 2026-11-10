@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Inbox, Repeat } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -144,6 +144,7 @@ function AdresseBearbeiten({
 const FELD_TYP_INPUT: Record<string, string> = { text: "text", zahl: "number", datum: "date" };
 
 function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; kannVerwalten: boolean }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [bearbeiten, setBearbeiten] = useState(false);
   const [form, setForm] = useState({
@@ -270,8 +271,8 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
           </p>
           {felder!.map((f) => (
             <div key={f.id}>
-              <label className="mb-0.5 block text-xs text-slate-500 dark:text-stone-400">{f.feld_name}</label>
-              <input
+              <label htmlFor={`${uid}-f${f.id}`} className="mb-0.5 block text-xs text-slate-500 dark:text-stone-400">{f.feld_name}</label>
+              <input id={`${uid}-f${f.id}`}
                 type={FELD_TYP_INPUT[f.feld_typ]}
                 value={zusatzwerte[f.feld_name] ?? ""}
                 onChange={(e) => setZusatzwerte({ ...zusatzwerte, [f.feld_name]: e.target.value })}
@@ -339,6 +340,7 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
 }
 
 export function AnlageProfilePage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -574,8 +576,8 @@ export function AnlageProfilePage() {
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500 dark:text-stone-400">Intervall</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="text-xs text-slate-500 dark:text-stone-400">Intervall</label>
+              <input id={`${uid}-0`}
                 type="number"
                 min={1}
                 value={intervallWert}
@@ -671,8 +673,8 @@ export function AnlageProfilePage() {
                   Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 dark:text-stone-400">Intervall (Tage)</label>
-                  <input
+                  <label htmlFor={`${uid}-1`} className="text-xs text-slate-500 dark:text-stone-400">Intervall (Tage)</label>
+                  <input id={`${uid}-1`}
                     type="number"
                     min={1}
                     value={inventurIntervallTage}

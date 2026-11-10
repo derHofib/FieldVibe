@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
@@ -24,6 +24,7 @@ const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
 ];
 
 export function DauerauftragNeuPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vorausgewaehlterKundeId = searchParams.get("kunde_id") ?? "";
@@ -104,8 +105,8 @@ export function DauerauftragNeuPage() {
         className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
-          <select
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
+          <select id={`${uid}-0`}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
@@ -159,8 +160,8 @@ export function DauerauftragNeuPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
-          <input
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+          <input id={`${uid}-1`}
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -170,8 +171,8 @@ export function DauerauftragNeuPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
-          <textarea
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
+          <textarea id={`${uid}-2`}
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
@@ -181,8 +182,8 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
-            <select
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
+            <select id={`${uid}-3`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -195,8 +196,8 @@ export function DauerauftragNeuPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
-            <select
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
+            <select id={`${uid}-4`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
               className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -212,10 +213,10 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Intervall (Tage)
             </label>
-            <input
+            <input id={`${uid}-5`}
               type="number"
               min={1}
               required
@@ -225,10 +226,10 @@ export function DauerauftragNeuPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Erste Fälligkeit
             </label>
-            <input
+            <input id={`${uid}-6`}
               type="date"
               required
               value={naechsteFaelligkeit}
@@ -239,10 +240,10 @@ export function DauerauftragNeuPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
             Wann wird die nächste Fälligkeit berechnet?
           </label>
-          <select
+          <select id={`${uid}-7`}
             value={modus}
             onChange={(e) => setModus(e.target.value as DauerauftragModus)}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -261,10 +262,10 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Toleranz zu früh (Tage)
             </label>
-            <input
+            <input id={`${uid}-8`}
               type="number"
               min={0}
               value={toleranzFrueh}
@@ -274,10 +275,10 @@ export function DauerauftragNeuPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Toleranz zu spät (Tage)
             </label>
-            <input
+            <input id={`${uid}-9`}
               type="number"
               min={0}
               value={toleranzSpaet}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
@@ -25,6 +25,7 @@ const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
 ];
 
 function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigeAnnehmen, setZeigeAnnehmen] = useState(false);
   const [zeigeAblehnen, setZeigeAblehnen] = useState(false);
@@ -116,8 +117,8 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 
           {zeigeAnnehmen && (
             <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
-              <label className="block text-xs font-medium text-slate-500 dark:text-stone-400">Abrechnungsart</label>
-              <select
+              <label htmlFor={`${uid}-0`} className="block text-xs font-medium text-slate-500 dark:text-stone-400">Abrechnungsart</label>
+              <select id={`${uid}-0`}
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
                 className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

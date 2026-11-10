@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -52,6 +52,7 @@ function LinkKopierenButton({ link }: { link: string }) {
 }
 
 export function UsersPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -185,8 +186,8 @@ export function UsersPage() {
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <input id={`${uid}-0`}
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -195,8 +196,8 @@ export function UsersPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">E-Mail</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">E-Mail</label>
+            <input id={`${uid}-1`}
               type="email"
               required
               value={email}
@@ -206,8 +207,8 @@ export function UsersPage() {
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Passwort</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Passwort</label>
+              <input id={`${uid}-2`}
                 type="password"
                 required
                 minLength={8}
@@ -218,8 +219,8 @@ export function UsersPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Rolle</label>
-            <select
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Rolle</label>
+            <select id={`${uid}-3`}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
               className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -265,8 +266,8 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
-              <select
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+              <select id={`${uid}-4`}
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}

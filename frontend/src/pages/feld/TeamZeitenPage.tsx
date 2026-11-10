@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 
 export function TeamZeitenPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const { hatRecht } = useAuth();
   const darf = hatRecht("mitarbeiterverwaltung", "bearbeiten");
@@ -50,10 +51,10 @@ export function TeamZeitenPage() {
       <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Team-Zeiten</h1>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
           Techniker
         </label>
-        <select
+        <select id={`${uid}-0`}
           value={technikerId}
           onChange={(e) => setTechnikerId(e.target.value)}
           className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"

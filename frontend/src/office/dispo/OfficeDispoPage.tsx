@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
@@ -511,6 +511,7 @@ function TerminBearbeitenPanel({
   onDelete: () => void;
   onZumVorgang: () => void;
 }) {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const [titel, setTitel] = useState(termin.titel);
   const [technikerId, setTechnikerId] = useState(termin.techniker_id);
@@ -556,8 +557,8 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+          <input id={`${uid}-0`}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -565,8 +566,8 @@ function TerminBearbeitenPanel({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
-          <select
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+          <select id={`${uid}-1`}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -581,8 +582,8 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+            <input id={`${uid}-2`}
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
@@ -590,8 +591,8 @@ function TerminBearbeitenPanel({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
-            <input
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+            <input id={`${uid}-3`}
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
@@ -602,10 +603,10 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-4`} className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
-            <input
+            <input id={`${uid}-4`}
               type="number"
               min={0}
               value={fahrzeit}
@@ -615,10 +616,10 @@ function TerminBearbeitenPanel({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-5`} className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
-            <input
+            <input id={`${uid}-5`}
               type="number"
               min={0}
               value={pause}
@@ -630,8 +631,8 @@ function TerminBearbeitenPanel({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Notiz</label>
-          <textarea
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Notiz</label>
+          <textarea id={`${uid}-6`}
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}

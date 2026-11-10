@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
@@ -17,6 +17,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function DauerauftragDetailPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -263,10 +264,10 @@ export function DauerauftragDetailPage() {
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-stone-300">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-700 dark:text-stone-300">
                   Fälligkeit für neu hinzugefügte Anlagen
                 </label>
-                <input
+                <input id={`${uid}-0`}
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}

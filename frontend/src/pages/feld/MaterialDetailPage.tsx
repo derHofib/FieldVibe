@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 export function MaterialDetailPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -148,8 +149,8 @@ export function MaterialDetailPage() {
       <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
         <div>
-          <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Bezeichnung</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Bezeichnung</label>
+          <input id={`${uid}-0`}
             value={form.bezeichnung}
             onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -157,16 +158,16 @@ export function MaterialDetailPage() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
+            <input id={`${uid}-1`}
               value={form.einheit}
               onChange={(e) => setForm({ ...form, einheit: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
+            <input id={`${uid}-2`}
               type="number"
               step="0.01"
               value={form.mindestbestand}
@@ -175,8 +176,8 @@ export function MaterialDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Artikelnummer</label>
-            <input
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Artikelnummer</label>
+            <input id={`${uid}-3`}
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="z.B. 5SY4116-7"
@@ -184,10 +185,10 @@ export function MaterialDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
               Einkaufspreis (EUR, Richtwert)
             </label>
-            <input
+            <input id={`${uid}-4`}
               type="number"
               step="0.01"
               value={form.einzelpreis}
@@ -196,8 +197,8 @@ export function MaterialDetailPage() {
             />
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
-            <select
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
+            <select id={`${uid}-5`}
               value={form.lieferant_id}
               onChange={(e) => setForm({ ...form, lieferant_id: e.target.value })}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -211,10 +212,10 @@ export function MaterialDetailPage() {
             </select>
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
               Bestell-Link (Lieferanten-/Produktseite)
             </label>
-            <input
+            <input id={`${uid}-6`}
               type="url"
               value={form.bestell_url}
               onChange={(e) => setForm({ ...form, bestell_url: e.target.value })}

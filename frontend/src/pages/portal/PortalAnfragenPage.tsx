@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquareText } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
@@ -30,6 +30,7 @@ const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
 };
 
 function NeueAnfrage() {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [titel, setTitel] = useState("");
@@ -116,8 +117,8 @@ function NeueAnfrage() {
         Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
       </p>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+        <input id={`${uid}-0`}
           autoFocus
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
@@ -125,8 +126,8 @@ function NeueAnfrage() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
-        <textarea
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
+        <textarea id={`${uid}-1`}
           value={beschreibung}
           onChange={(e) => setBeschreibung(e.target.value)}
           rows={3}
@@ -134,8 +135,8 @@ function NeueAnfrage() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Art</label>
-        <select
+        <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Art</label>
+        <select id={`${uid}-2`}
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
           className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
@@ -150,10 +151,10 @@ function NeueAnfrage() {
 
       {(standorte ?? []).length > 0 && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
             Standort (optional)
           </label>
-          <select
+          <select id={`${uid}-3`}
             value={standortId}
             onChange={(e) => {
               setStandortId(e.target.value);
@@ -200,10 +201,10 @@ function NeueAnfrage() {
 
       {anlagenFuerStandort.length > 0 && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
             Anlage (optional)
           </label>
-          <select
+          <select id={`${uid}-4`}
             value={anlageId}
             onChange={(e) => setAnlageId(e.target.value)}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"

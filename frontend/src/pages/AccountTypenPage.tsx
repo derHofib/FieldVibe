@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -101,6 +101,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
 }
 
 export function AccountTypenPage() {
+  const uid = useId();
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { data: typen, isLoading } = useQuery({
@@ -176,8 +177,8 @@ export function AccountTypenPage() {
         <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-stone-100">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+            <input id={`${uid}-0`}
               required
               placeholder="z.B. Techniker"
               value={name}
@@ -186,10 +187,10 @@ export function AccountTypenPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Icon (optional)
             </label>
-            <input
+            <input id={`${uid}-1`}
               placeholder="🔧"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
