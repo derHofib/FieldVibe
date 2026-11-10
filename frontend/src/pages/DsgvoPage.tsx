@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { FehlerZustand } from "../components/FehlerZustand";
+import { SkeletonList } from "../components/Skeleton";
 import { dsgvoApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { DsgvoDokument, DsgvoDokumentTyp } from "../types";
@@ -121,7 +123,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
 }
 
 export function DsgvoPage() {
-  const { data: dokumente } = useQuery({
+  const { data: dokumente, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dsgvo-dokumente"],
     queryFn: dsgvoApi.list,
   });
@@ -135,11 +137,17 @@ export function DsgvoPage() {
         Löschkonzept, TOM-Dokument, Meldeprozess, Verarbeitungsverzeichnis). Erlaubt sind PDF, Word
         (.doc/.docx) oder Bilddateien (max. 10 MB).
       </p>
+      {isLoading ? (
+        <SkeletonList count={4} />
+      ) : ladeFehler && !dokumente ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Dokumente" onErneut={() => void neuLaden()} />
+      ) : (
       <div className="space-y-3">
         {ALLE_TYPEN.map((typ) => (
           <DokumentKarte key={typ} typ={typ} dokument={dokumentByTyp.get(typ)} />
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import { auditLabel } from "../utils/auditLabel";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 
@@ -123,9 +124,9 @@ export function AuditLogPage() {
                 <td className="px-4 py-3 text-label2">
                   {e.mandant_id ? mandantNameById.get(e.mandant_id) ?? "–" : "–"}
                 </td>
-                <td className="px-4 py-3 font-medium text-label">{e.aktion}</td>
+                <td className="px-4 py-3 font-medium text-label">{auditLabel(e.aktion)}</td>
                 <td className="px-4 py-3 text-label2">
-                  {e.entity_type ? `${e.entity_type} · ${e.entity_id?.slice(0, 8)}` : "–"}
+                  {e.entity_type ? `${auditLabel(e.entity_type)} · ${e.entity_id?.slice(0, 8)}` : "–"}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-label2">
                   {JSON.stringify(e.payload)}

@@ -1,20 +1,121 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState, type ChangeEvent } from "react";
 
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
+import { AnlegenPanel } from "../components/AnlegenPanel";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { useBestaetigung } from "../components/ConfirmDialog";
 import { DetailSkeleton } from "../components/Skeleton";
 
+interface SmtpWerte {
+  host: string;
+  port: string;
+  user: string;
+  fromAddress: string;
+  secret: string;
+}
+
+/** Felder der globalen SMTP-Konfiguration; für Anlegen (Panel) und Bearbeiten gleich. */
+function SmtpFelder({
+  werte,
+  onChange,
+  hatSecret = false,
+  hostFehler,
+  absenderFehler,
+}: {
+  werte: SmtpWerte;
+  onChange: (neu: SmtpWerte) => void;
+  hatSecret?: boolean;
+  hostFehler?: string;
+  absenderFehler?: string;
+}) {
+  const uid = useId();
+  const set = (k: keyof SmtpWerte) => (e: ChangeEvent<HTMLInputElement>) => onChange({ ...werte, [k]: e.target.value });
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor={`${uid}-host`} className="mb-1 block text-sm font-medium text-label">
+            Host <span aria-hidden="true" className="text-st-fehlt">*</span>
+          </label>
+          <input
+            id={`${uid}-host`}
+            value={werte.host}
+            onChange={set("host")}
+            aria-invalid={!!hostFehler}
+            aria-describedby={hostFehler ? `${uid}-host-fehler` : undefined}
+            className="field-ap"
+          />
+          {hostFehler && (
+            <p id={`${uid}-host-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              {hostFehler}
+            </p>
+          )}
+        </div>
+        <div>
+          <label htmlFor={`${uid}-port`} className="mb-1 block text-sm font-medium text-label">
+            Port
+          </label>
+          <input id={`${uid}-port`} inputMode="numeric" value={werte.port} onChange={set("port")} className="field-ap" />
+        </div>
+        <div>
+          <label htmlFor={`${uid}-user`} className="mb-1 block text-sm font-medium text-label">
+            Benutzername
+          </label>
+          <input id={`${uid}-user`} value={werte.user} onChange={set("user")} className="field-ap" />
+        </div>
+        <div>
+          <label htmlFor={`${uid}-absender`} className="mb-1 block text-sm font-medium text-label">
+            Absenderadresse <span aria-hidden="true" className="text-st-fehlt">*</span>
+          </label>
+          <input
+            id={`${uid}-absender`}
+            type="email"
+            value={werte.fromAddress}
+            onChange={set("fromAddress")}
+            placeholder="account@fieldvibe.de"
+            aria-invalid={!!absenderFehler}
+            aria-describedby={absenderFehler ? `${uid}-absender-fehler` : undefined}
+            className="field-ap"
+          />
+          {absenderFehler && (
+            <p id={`${uid}-absender-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              {absenderFehler}
+            </p>
+          )}
+        </div>
+      </div>
+      <div>
+        <label htmlFor={`${uid}-secret`} className="mb-1 block text-sm font-medium text-label">
+          Passwort
+        </label>
+        <input
+          id={`${uid}-secret`}
+          type="password"
+          autoComplete="new-password"
+          value={werte.secret}
+          onChange={set("secret")}
+          placeholder={hatSecret ? "Gesetzt, zum Ändern neu eingeben" : undefined}
+          className="field-ap"
+        />
+      </div>
+    </div>
+  );
+}
+
+const LEERE_WERTE: SmtpWerte = { host: "", port: "587", user: "", fromAddress: "account@fieldvibe.de", secret: "" };
+
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
-  const [host, setHost] = useState(String(integration.config.host ?? ""));
-  const [port, setPort] = useState(String(integration.config.port ?? "587"));
-  const [user, setUser] = useState(String(integration.config.user ?? ""));
-  const [fromAddress, setFromAddress] = useState(String(integration.config.from_address ?? ""));
-  const [secret, setSecret] = useState("");
+  const [werte, setWerte] = useState<SmtpWerte>({
+    host: String(integration.config.host ?? ""),
+    port: String(integration.config.port ?? "587"),
+    user: String(integration.config.user ?? ""),
+    fromAddress: String(integration.config.from_address ?? ""),
+    secret: "",
+  });
 
   const updateMutation = useMutation({
     meta: { erfolg: "Gespeichert" },
@@ -44,46 +145,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          value={host}
-          onChange={(e) => setHost(e.target.value)}
-          placeholder="Host"
-          className="field-ap"
-        />
-        <input
-          value={port}
-          onChange={(e) => setPort(e.target.value)}
-          placeholder="Port"
-          className="field-ap"
-        />
-        <input
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          placeholder="Benutzername"
-          className="field-ap"
-        />
-        <input
-          value={fromAddress}
-          onChange={(e) => setFromAddress(e.target.value)}
-          placeholder="Absender-Adresse (z.B. account@fieldvibe.de)"
-          className="field-ap"
-        />
-      </div>
-      <input
-        type="password"
-        value={secret}
-        onChange={(e) => setSecret(e.target.value)}
-        placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="field-ap"
-      />
+      <SmtpFelder werte={werte} onChange={setWerte} hatSecret={integration.hat_secret} />
 
       <div className="flex gap-2">
         <button
           onClick={() =>
             updateMutation.mutate({
-              config: { host, port: Number(port) || port, user, from_address: fromAddress },
-              ...(secret ? { secret } : {}),
+              config: { host: werte.host, port: Number(werte.port) || werte.port, user: werte.user, from_address: werte.fromAddress },
+              ...(werte.secret ? { secret: werte.secret } : {}),
             })
           }
           disabled={updateMutation.isPending}
@@ -115,11 +184,8 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
 export function EinstellungenPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState("587");
-  const [user, setUser] = useState("");
-  const [fromAddress, setFromAddress] = useState("account@fieldvibe.de");
-  const [secret, setSecret] = useState("");
+  const [neu, setNeu] = useState<SmtpWerte>(LEERE_WERTE);
+  const [fehler, setFehler] = useState<{ host?: string; absender?: string }>({});
 
   const { data: integrationen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["plattform-integrationen"],
@@ -131,16 +197,12 @@ export function EinstellungenPage() {
     mutationFn: () =>
       plattformIntegrationenApi.create({
         typ: "smtp",
-        config: { host, port: Number(port) || port, user, from_address: fromAddress },
-        secret: secret || undefined,
+        config: { host: neu.host, port: Number(neu.port) || neu.port, user: neu.user, from_address: neu.fromAddress },
+        secret: neu.secret || undefined,
       }),
     onSuccess: () => {
       setShowForm(false);
-      setHost("");
-      setPort("587");
-      setUser("");
-      setFromAddress("account@fieldvibe.de");
-      setSecret("");
+      setNeu(LEERE_WERTE);
       queryClient.invalidateQueries({ queryKey: ["plattform-integrationen"] });
     },
   });
@@ -169,57 +231,31 @@ export function EinstellungenPage() {
 
       {smtp ? (
         <SmtpZeile integration={smtp} />
-      ) : showForm ? (
-        <div className="space-y-2 card-ap p-4">
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              placeholder="Host"
-              className="field-ap"
-            />
-            <input
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-              placeholder="Port"
-              className="field-ap"
-            />
-            <input
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              placeholder="Benutzername"
-              className="field-ap"
-            />
-            <input
-              value={fromAddress}
-              onChange={(e) => setFromAddress(e.target.value)}
-              placeholder="Absender-Adresse"
-              className="field-ap"
-            />
-          </div>
-          <input
-            type="password"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            placeholder="Passwort"
-            className="field-ap"
-          />
+      ) : (
+        <button onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4 py-2 text-sm font-medium">
+          + Globales SMTP einrichten
+        </button>
+      )}
+
+      <AnlegenPanel offen={showForm} titel="Globales SMTP einrichten" onClose={() => setShowForm(false)}>
+        <div className="space-y-4 p-4">
+          <SmtpFelder werte={neu} onChange={setNeu} hostFehler={fehler.host} absenderFehler={fehler.absender} />
           <button
-            disabled={!host || !fromAddress || createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-            className="btn-touch btn-ap-primary w-full py-1.5 text-sm disabled:opacity-50"
+            disabled={createMutation.isPending}
+            onClick={() => {
+              const f = {
+                host: neu.host.trim() ? undefined : "Bitte einen Host eingeben.",
+                absender: neu.fromAddress.trim() ? undefined : "Bitte eine Absenderadresse eingeben.",
+              };
+              setFehler(f);
+              if (!f.host && !f.absender) createMutation.mutate();
+            }}
+            className="btn-touch btn-ap-primary w-full py-1.5 text-sm"
           >
             SMTP einrichten
           </button>
         </div>
-      ) : (
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-touch btn-ap w-full py-2.5 text-sm"
-        >
-          + Globales SMTP einrichten
-        </button>
-      )}
+      </AnlegenPanel>
     </div>
   );
 }
