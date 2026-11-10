@@ -3,6 +3,7 @@ import { Loader2, Send, X } from "lucide-react";
 import { useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
+import { useEscapeSchliesst } from "../../hooks/useEscapeSchliesst";
 
 export type ComposeModus =
   | { art: "neu"; accountId: string }
@@ -34,6 +35,8 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   const [betreff, setBetreff] = useState(modus.art !== "neu" ? modus.betreff : "");
   const [text, setText] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
+  // Ein angefangener Entwurf soll nicht versehentlich per Escape verloren gehen
+  useEscapeSchliesst(onAbbrechen, text.trim() === "");
 
   const senden = useMutation({
     meta: { erfolg: "Gesendet" },

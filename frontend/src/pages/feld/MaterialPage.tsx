@@ -10,6 +10,7 @@ import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
+import { filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
@@ -30,11 +31,7 @@ const OBJEKTTYP_LABEL: Record<AnlagenObjekttyp, string> = {
   baustelle: "Baustelle",
 };
 
-function istUnterbestand(m: Material): boolean {
-  return Number(m.bestand_gesamt) <= Number(m.mindestbestand);
-}
-
-function MaterialZeile({
+export function MaterialZeile({
   material,
   lagerorte,
   lieferantName,
@@ -234,7 +231,7 @@ function MaterialZeile({
   );
 }
 
-function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
+export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -319,7 +316,9 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
 /** Eigenstaendige Material-/Lagerverwaltung -- vormals die Tabs "material"
  * und "bestellwesen" in der aufgeteilten GeschaeftPage. Kunden haben ihre
  * eigene Seite (KundenPage), Rechnungen/Angebote ihre bestehenden. */
-export function MaterialPage() {
+/** `nurBestellwesen`: Office-Materialseite (office/material) zeigt die Liste
+ * selbst und bettet hier nur den Bestellwesen-Tab ein. */
+export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: boolean } = {}) {
   const uid = useId();
   const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
@@ -328,7 +327,7 @@ export function MaterialPage() {
 
   const materialAktiv = istModulAktiv(currentUser, "material");
 
-  const [tab, setTab] = useState<MaterialTab>("material");
+  const [tab, setTab] = useState<MaterialTab>(nurBestellwesen ? "bestellwesen" : "material");
   const [showForm, setShowForm] = useState(false);
   const [materialForm, setMaterialForm] = useState({
     bezeichnung: "",
@@ -369,17 +368,11 @@ export function MaterialPage() {
     queryFn: tagsApi.list,
     enabled: materialAktiv,
   });
-  const materialGefiltert = (material ?? []).filter((m) => {
-    if (matFilterLieferantId && m.lieferant_id !== matFilterLieferantId) return false;
-    if (matFilterTagId && !m.tag_ids.includes(matFilterTagId)) return false;
-    if (matFilterUnterbestand && !istUnterbestand(m)) return false;
-    if (matSuche.trim()) {
-      const q = matSuche.trim().toLowerCase();
-      const treffer =
-        m.bezeichnung.toLowerCase().includes(q) || (m.artikelnummer ?? "").toLowerCase().includes(q);
-      if (!treffer) return false;
-    }
-    return true;
+  const materialGefiltert = filtereMaterial(material ?? [], {
+    lieferantId: matFilterLieferantId,
+    tagId: matFilterTagId,
+    nurUnterbestand: matFilterUnterbestand,
+    suche: matSuche,
   });
 
   const { data: offeneBedarfe } = useQuery({
@@ -483,9 +476,9 @@ export function MaterialPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Material</h1>
+      {!nurBestellwesen && <h1 className="text-lg font-bold text-label">Material</h1>}
 
-      <div className="flex gap-2 overflow-x-auto card-ap p-1">
+      <div className={`${nurBestellwesen ? "hidden" : "flex"} gap-2 overflow-x-auto card-ap p-1`}>
         {(["material", "bestellwesen"] as const).map((t) => (
           <button
             key={t}

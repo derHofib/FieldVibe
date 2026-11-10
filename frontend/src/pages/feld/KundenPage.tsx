@@ -12,6 +12,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
+import { filtereKunden } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
@@ -51,11 +52,7 @@ export function KundenPage() {
     queryFn: () => kundenApi.list(),
     enabled: kannSehen,
   });
-  const kundenGefiltert = (kunden ?? []).filter((k) => {
-    if (!kundenSuche.trim()) return true;
-    const q = kundenSuche.trim().toLowerCase();
-    return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
-  });
+  const kundenGefiltert = filtereKunden(kunden ?? [], kundenSuche);
 
   const createKundeMutation = useMutation({
     meta: { erfolg: "Angelegt" },

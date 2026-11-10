@@ -1212,9 +1212,15 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 type KundeTab = "uebersicht" | "vorgaenge" | "anlagen" | "kommunikation";
 const KUNDE_TABS: KundeTab[] = ["uebersicht", "vorgaenge", "anlagen", "kommunikation"];
 
-export function KundeProfilePage() {
+/** `id`/`eingebettet` nur für das Detailpanel der Office-Kundenliste
+ * (office/kunden): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
+export function KundeProfilePage({
+  id: idProp,
+  eingebettet = false,
+}: { id?: string; eingebettet?: boolean } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const bestaetigen = useBestaetigung();
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
@@ -1273,9 +1279,11 @@ export function KundeProfilePage() {
     if (kundeLoading || !kunde) return <DetailSkeleton />;
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
-          ← Zurück
-        </button>
+        {!eingebettet && (
+          <button onClick={() => navigate(-1)} className="text-sm text-label2">
+            ← Zurück
+          </button>
+        )}
         <div className="card-ap p-4">
           <div className="text-xs text-label2">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
@@ -1320,9 +1328,11 @@ export function KundeProfilePage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
-        ← Zurück
-      </button>
+      {!eingebettet && (
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+          ← Zurück
+        </button>
+      )}
 
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">

@@ -8,10 +8,16 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 
-export function MaterialDetailPage() {
+/** `id`/`eingebettet` nur für das Detailpanel der Office-Materialliste
+ * (office/material): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
+export function MaterialDetailPage({
+  id: idProp,
+  eingebettet = false,
+}: { id?: string; eingebettet?: boolean } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const uid = useId();
   const bestaetigen = useBestaetigung();
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
@@ -113,9 +119,13 @@ export function MaterialDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
-          ← Zurück
-        </button>
+        {eingebettet ? (
+          <span />
+        ) : (
+          <button onClick={() => navigate(-1)} className="text-sm text-label2">
+            ← Zurück
+          </button>
+        )}
         {kannLoeschen && (
           <button
             onClick={async () => {
