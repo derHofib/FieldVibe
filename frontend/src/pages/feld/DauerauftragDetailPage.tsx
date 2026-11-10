@@ -187,7 +187,7 @@ export function DauerauftragDetailPage() {
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">
-              Anlagen im Buendel ({dauerauftrag.anzahl_ziele})
+              Anlagen im Bündel ({dauerauftrag.anzahl_ziele})
             </h2>
             {kannVerwalten && !anlagenBearbeiten && (
               <button

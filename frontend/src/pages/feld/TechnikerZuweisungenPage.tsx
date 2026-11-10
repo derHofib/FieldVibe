@@ -50,7 +50,7 @@ export function TechnikerZuweisungenPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Techniker-Zuweisungen</h1>
       <p className="text-sm text-slate-500 dark:text-stone-400">
-        Welcher Techniker betreut welche Kunden und faehrt welches Fahrzeug. Kunden zuweisen/ändern
+        Welcher Techniker betreut welche Kunden und fährt welches Fahrzeug. Kunden zuweisen/ändern
         geht über das Kunden-Profil, das Fahrzeug direkt hier.
       </p>
 

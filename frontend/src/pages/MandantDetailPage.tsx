@@ -136,7 +136,7 @@ export function MandantDetailPage() {
             <input
               disabled
               value={mandant.slug}
-              title="Der Slug ist mit dem Kundenportal-Link verknuepft und kann nachtraeglich nicht geaendert werden."
+              title="Der Slug ist mit dem Kundenportal-Link verknüpft und kann nachträglich nicht geändert werden."
               className="btn-touch w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-slate-500 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-500"
             />
           </div>
