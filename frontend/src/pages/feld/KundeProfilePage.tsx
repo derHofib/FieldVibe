@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, Inbox, MapPin, Repeat } from "lucide-react";
+import { Boxes, Download, Inbox, MapPin, MoreHorizontal, Repeat, Trash2 } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   anlagenApi,
@@ -12,8 +12,10 @@ import {
   usersApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { TabLeiste } from "../../components/TabLeiste";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { downloadBlob } from "../../utils/download";
@@ -1099,11 +1101,18 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
   );
 }
 
+type KundeTab = "uebersicht" | "vorgaenge" | "anlagen" | "kommunikation";
+const KUNDE_TABS: KundeTab[] = ["uebersicht", "vorgaenge", "anlagen", "kommunikation"];
+
 export function KundeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
   const [anlageFilter, setAnlageFilter] = useState("");
+  // Aktiver Tab im Query-Parameter, damit Reload/Deep-Link denselben Tab zeigen.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: KundeTab = KUNDE_TABS.includes(tabParam as KundeTab) ? (tabParam as KundeTab) : "uebersicht";
 
   const kundenverwaltungAktiv = istModulAktiv(currentUser, "kundenverwaltung");
 
@@ -1168,6 +1177,8 @@ export function KundeProfilePage() {
   if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
+  const kannLoeschen = hatRecht("kunden", "loeschen");
+  const zeigePortal = kannVerwalten && istModulAktiv(currentUser, "kundenportal");
 
   return (
     <div className="space-y-4">
@@ -1182,31 +1193,46 @@ export function KundeProfilePage() {
             <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.name}</h1>
             {profil.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{profil.typ}</span>}
           </div>
-          {kannVerwalten && (
-            <div className="flex shrink-0 gap-2">
-              <button
-                onClick={() => datenexportMutation.mutate()}
-                disabled={datenexportMutation.isPending}
-                title="Alle personenbezogenen Daten zu diesem Kunden herunterladen (Art. 15/20 DSGVO)"
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-              >
-                Datenexport
-              </button>
-              <button
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                    )
-                  ) {
-                    deleteMutation.mutate();
-                  }
-                }}
-                className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-              >
-                Löschen
-              </button>
-            </div>
+          {(kannVerwalten || kannLoeschen) && (
+            <AktionsMenue
+              label="Weitere Aktionen"
+              eintraege={[
+                ...(kannVerwalten
+                  ? [
+                      {
+                        label: "Datenexport (DSGVO)",
+                        icon: Download,
+                        disabled: datenexportMutation.isPending,
+                        onClick: () => datenexportMutation.mutate(),
+                      },
+                    ]
+                  : []),
+                ...(kannLoeschen
+                  ? [
+                      "trenner" as const,
+                      {
+                        label: "Kunde löschen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        onClick: () => {
+                          if (
+                            window.confirm(
+                              `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
+                            )
+                          ) {
+                            deleteMutation.mutate();
+                          }
+                        },
+                      },
+                    ]
+                  : []),
+              ]}
+              ausloeser={() => (
+                <span className="btn-touch flex items-center justify-center text-slate-500 dark:text-stone-400">
+                  <MoreHorizontal size={20} strokeWidth={2} />
+                </span>
+              )}
+            />
           )}
         </div>
         {deleteError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
@@ -1221,6 +1247,20 @@ export function KundeProfilePage() {
         )}
       </div>
 
+      <TabLeiste
+        label="Kundenprofil"
+        aktiv={tab}
+        onChange={(key) => setSearchParams(key === "uebersicht" ? {} : { tab: key }, { replace: true })}
+        tabs={[
+          { key: "uebersicht", label: "Übersicht" },
+          { key: "vorgaenge", label: "Vorgänge", anzahl: profil.vorgaenge.length },
+          { key: "anlagen", label: "Anlagen", anzahl: profil.anlagen.length },
+          { key: "kommunikation", label: "Kontakt" },
+        ]}
+      />
+
+      {tab === "uebersicht" && (
+      <>
       <Stammdaten
         kundeId={id!}
         adresse={profil.adresse}
@@ -1230,6 +1270,12 @@ export function KundeProfilePage() {
         kannVerwalten={kannVerwalten}
       />
 
+      {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
+      </>
+      )}
+
+      {tab === "kommunikation" && (
+      <>
       <AnsprechpartnerVerwaltung kundeId={id!} liste={profil.ansprechpartner} kannVerwalten={kannVerwalten} />
 
       {kannVerwalten && (
@@ -1247,16 +1293,18 @@ export function KundeProfilePage() {
         />
       )}
 
-      {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
-
-      <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
-
-      {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
+      {zeigePortal && (
         <>
           <KundenPortalLinkUndLogo kunde={profil} />
           <PortalZugaengeVerwaltung kundeId={id!} />
         </>
       )}
+      </>
+      )}
+
+      {tab === "anlagen" && (
+      <>
+      <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Anlagen</h2>
@@ -1292,6 +1340,11 @@ export function KundeProfilePage() {
         )}
       </div>
 
+      </>
+      )}
+
+      {tab === "vorgaenge" && (
+      <>
       {kannVerwalten && <DauerauftraegeUebersicht kundeId={id!} />}
 
       <div>
@@ -1345,6 +1398,8 @@ export function KundeProfilePage() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
