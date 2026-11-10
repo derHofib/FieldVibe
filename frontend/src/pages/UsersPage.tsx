@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ban, Send, Trash2, UserCheck, UserX } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { AktionsMenue } from "../components/AktionsMenue";
 import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
@@ -300,13 +302,14 @@ export function UsersPage() {
       {einladungen && einladungen.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Offene Einladungen</h2>
+          <div className="overflow-x-auto">
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
                 <th className="px-4 py-3">Rolle</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Aktion</th>
+                <th className="px-4 py-3 text-right">Aktion</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
@@ -328,30 +331,32 @@ export function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
                         {e.registrierungslink && <LinkKopierenButton link={e.registrierungslink} />}
-                        <button
-                          onClick={() => resendMutation.mutate(e.id)}
-                          className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-                        >
-                          Erneut senden
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Einladung an ${e.email} widerrufen?`)) {
-                              revokeMutation.mutate(e.id);
-                            }
-                          }}
-                          className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                        >
-                          Widerrufen
-                        </button>
+                        <AktionsMenue
+                          label={`Aktionen für Einladung an ${e.email}`}
+                          eintraege={[
+                            { label: "Erneut senden", icon: Send, onClick: () => resendMutation.mutate(e.id) },
+                            "trenner",
+                            {
+                              label: "Widerrufen",
+                              icon: Ban,
+                              destruktiv: true,
+                              onClick: () => {
+                                if (window.confirm(`Einladung an ${e.email} widerrufen?`)) {
+                                  revokeMutation.mutate(e.id);
+                                }
+                              },
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
+          </div>
         </section>
       )}
 
@@ -361,6 +366,7 @@ export function UsersPage() {
         {isLoading ? (
           <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
@@ -369,7 +375,7 @@ export function UsersPage() {
                 <th className="px-4 py-3">Rolle</th>
                 {isSuperAdmin && <th className="px-4 py-3">Mandant</th>}
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Aktion</th>
+                <th className="px-4 py-3 text-right">Aktion</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
@@ -397,34 +403,41 @@ export function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() =>
-                          toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
-                        }
-                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-                      >
-                        {u.aktiv ? "Deaktivieren" : "Aktivieren"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
-                            setDeleteError(null);
-                            deleteMutation.mutate(u.id);
-                          }
-                        }}
-                        disabled={u.id === currentUser?.id}
-                        title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
-                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                      >
-                        Löschen
-                      </button>
+                    <div className="flex justify-end">
+                      <AktionsMenue
+                        label={`Aktionen für ${u.name}`}
+                        eintraege={[
+                          {
+                            label: u.aktiv ? "Deaktivieren" : "Aktivieren",
+                            icon: u.aktiv ? UserX : UserCheck,
+                            onClick: () => toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv }),
+                          },
+                          // Den eigenen Account kann das Backend nicht löschen -- dann gar nicht anbieten
+                          ...(u.id === currentUser?.id
+                            ? []
+                            : [
+                                "trenner" as const,
+                                {
+                                  label: "Löschen",
+                                  icon: Trash2,
+                                  destruktiv: true,
+                                  onClick: () => {
+                                    if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                                      setDeleteError(null);
+                                      deleteMutation.mutate(u.id);
+                                    }
+                                  },
+                                },
+                              ]),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>
