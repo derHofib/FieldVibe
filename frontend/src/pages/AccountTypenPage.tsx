@@ -16,7 +16,7 @@ const BEREICHE: RechteBereich[] = [
   "mitarbeiterverwaltung",
 ];
 const BEREICH_LABEL: Record<RechteBereich, string> = {
-  vorgaenge: "Aufträge",
+  vorgaenge: "Vorgänge",
   kunden: "Kunden & Anlagen",
   material: "Material",
   dispo: "Dispo/Termine",
@@ -207,7 +207,7 @@ export function AccountTypenPage() {
               checked={darfSelbstUebernehmen}
               onChange={(e) => setDarfSelbstUebernehmen(e.target.checked)}
             />
-            Darf Aufträge selbst übernehmen
+            Darf Vorgänge selbst übernehmen
           </label>
           <button
             type="submit"
@@ -283,7 +283,7 @@ export function AccountTypenPage() {
                         })
                       }
                     />
-                    Darf Aufträge selbst übernehmen ("Ticket übernehmen"-Button)
+                    Darf Vorgänge selbst übernehmen ("Vorgang übernehmen"-Button)
                   </label>
                   <RechteMatrixEditor accountTypId={typ.id} />
                 </>

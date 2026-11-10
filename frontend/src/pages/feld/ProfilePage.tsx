@@ -68,7 +68,7 @@ export function ProfilePage() {
           className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Timer size={16} strokeWidth={2} className="text-cyan-500" />{" "}
-          {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+          {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Arbeitszeit"}
         </button>
       )}
 

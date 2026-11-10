@@ -193,7 +193,7 @@ export function MandantDetailPage() {
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Module</h2>
         <p className="mb-2 text-xs text-slate-400 dark:text-stone-500">
-          "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
+          "Vorgänge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
           abwählbar.
         </p>
         <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-stone-800">

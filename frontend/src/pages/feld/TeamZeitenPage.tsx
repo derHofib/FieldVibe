@@ -96,7 +96,7 @@ export function TeamZeitenPage() {
           </div>
 
           {(wochenEintraege ?? []).length === 0 ? (
-            <EmptyState icon={Clock} text="Keine Zeiterfassungen in dieser Woche." />
+            <EmptyState icon={Clock} text="Keine Arbeitszeiten in dieser Woche." />
           ) : (
             <ZeiterfassungTagesliste
               eintraege={wochenEintraege!}

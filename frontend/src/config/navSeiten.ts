@@ -61,7 +61,7 @@ export interface NavSeite {
 export const NAV_SEITEN: NavSeite[] = [
   {
     key: "feed",
-    label: "Feed",
+    label: "Vorgänge",
     icon: Rss,
     tone: "sky",
     route: "/feed",
@@ -89,7 +89,7 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "geschaeft",
-    label: "Geschäft",
+    label: "Kunden & Material",
     icon: Briefcase,
     tone: "emerald",
     route: "/geschaeft",
@@ -101,7 +101,7 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "zeiterfassung",
-    label: "Zeiterfassung",
+    label: "Arbeitszeit",
     icon: Timer,
     tone: "cyan",
     route: "/statistik",

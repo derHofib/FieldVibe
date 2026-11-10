@@ -593,7 +593,7 @@ export function GeschaeftPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Geschäft</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Kunden & Material</h1>
         {istModulAktiv(currentUser, "kundenportal") && (
           <button
             onClick={() => navigate("/anfragen")}

@@ -1127,7 +1127,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             }}
             className="btn-touch rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 dark:border-stone-700 dark:text-stone-300"
           >
-            + Folge-Auftrag
+            + Folge-Vorgang
           </button>
         </div>
 
@@ -1160,7 +1160,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 className="btn-touch btn-clay flex items-center gap-1 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <UserCheck size={13} strokeWidth={2} />
-                {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
+                {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Vorgang übernehmen"}
               </button>
             )}
           </div>
@@ -1210,7 +1210,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         {showFolgeAuftragDialog && (
           <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
             <p className="text-sm text-slate-600 dark:text-stone-300">
-              Folge-Auftrag anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
+              Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
               Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
             </p>
             <select
@@ -1259,7 +1259,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {folgeAuftraege && folgeAuftraege.length > 0 && (
           <div className="mt-2 space-y-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Folge-Aufträge:</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Folge-Vorgänge:</span>
             {folgeAuftraege.map((fa) => (
               <button
                 key={fa.id}

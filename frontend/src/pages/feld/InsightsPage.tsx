@@ -140,7 +140,7 @@ export function InsightsPage() {
             disabled={zeiterfassungExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
-            <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Arbeitszeit (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
