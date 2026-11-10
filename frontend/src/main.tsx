@@ -5,6 +5,8 @@ import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 
 import { App } from "./App";
+import { BestaetigungProvider } from "./components/ConfirmDialog";
+import { ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
@@ -42,9 +44,13 @@ if (!wirdUmgeleitet) {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider>
-            <AuthProvider>
-              <App istOffice={istOffice} />
-            </AuthProvider>
+            <ToastProvider>
+              <BestaetigungProvider>
+                <AuthProvider>
+                  <App istOffice={istOffice} />
+                </AuthProvider>
+              </BestaetigungProvider>
+            </ToastProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
