@@ -404,7 +404,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/form-schemas",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("formulare", "sehen"),
+    // Backend: /api/form-schemas = mandant_admin|custom plus formulare.sehen.
+    sichtbar: ({ currentUser, hatRecht }) => istAdminOderCustom(currentUser) && hatRecht("formulare", "sehen"),
   },
   {
     key: "integrationen",

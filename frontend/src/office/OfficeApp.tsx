@@ -44,6 +44,7 @@ import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
+import { RouteGuard } from "../components/RouteGuard";
 import { OfficeLayout } from "./OfficeLayout";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
@@ -73,141 +74,137 @@ import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
  * Migrationsplan), also keine Breite noetig, die eine eigene Desktop-Seite
  * rechtfertigen wuerde. */
 export function OfficeApp() {
-  const { currentUser, hatRecht } = useAuth();
-  const hatFehlerberichtRecht = hatRecht("fehlerberichte", "sehen");
-  const hatOrganigrammRecht = hatRecht("organigramm", "sehen");
+  const { currentUser } = useAuth();
   const startseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/vorgaenge";
 
   return (
     <Routes>
       <Route element={<OfficeLayout />}>
-        {/* Eigenstaendige Desktop-Ansichten */}
-        <Route path="/vorgaenge" element={<OfficeVorgaengePage />} />
-        <Route path="/dispo" element={<OfficeDispoPage />} />
-        <Route path="/rechnungen" element={<OfficeRechnungenPage />} />
-        <Route path="/angebote" element={<OfficeRechnungenPage />} />
-        <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
-        <Route path="/postfach" element={<OfficePostfachPage />} />
-        <Route path="/boards" element={<OfficeBoardsPage />} />
-        <Route path="/boards/:id" element={<OfficeBoardPage />} />
-        <Route path="/projekte" element={<OfficeProjektePage />} />
-        <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
-        <Route path="/auftraege" element={<OfficeAuftraegePage />} />
-        <Route path="/datenimport" element={<OfficeDatenimportPage />} />
-        <Route path="/protokoll" element={<OfficeProtokollPage />} />
-        <Route path="/einstellungen/export" element={<OfficeExportPage />} />
-        {hatOrganigrammRecht && <Route path="/organigramm" element={<OrganigrammPage />} />}
-        {hatFehlerberichtRecht && (
-          <>
-            <Route path="/fehlerberichte" element={<OfficeFehlerberichtePage />} />
-            <Route path="/fehlerberichte/:id" element={<OfficeFehlerberichtDetailPage />} />
-          </>
-        )}
-        {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
-            Desktop-Breite statt der schmalen Inspektor-Spalte, deshalb
-            bewusst NICHT in <SchmaleSpalte> unten. layout="dicht" fuer
-            echte Tabs, breit fuer die staendig sichtbare Verlauf-Spalte
-            (siehe VorgangDetailPage.tsx, verlaufSpalteBreit). */}
-        <Route
-          path="/vorgaenge/:id/vollbild"
-          element={
-            <div className="mx-auto max-w-[1400px]">
-              <VorgangDetailPage layout="dicht" breit />
-            </div>
-          }
-        />
+        <Route element={<RouteGuard oberflaeche="office" />}>
+          {/* Eigenstaendige Desktop-Ansichten */}
+          <Route path="/vorgaenge" element={<OfficeVorgaengePage />} />
+          <Route path="/dispo" element={<OfficeDispoPage />} />
+          <Route path="/rechnungen" element={<OfficeRechnungenPage />} />
+          <Route path="/angebote" element={<OfficeRechnungenPage />} />
+          <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
+          <Route path="/postfach" element={<OfficePostfachPage />} />
+          <Route path="/boards" element={<OfficeBoardsPage />} />
+          <Route path="/boards/:id" element={<OfficeBoardPage />} />
+          <Route path="/projekte" element={<OfficeProjektePage />} />
+          <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
+          <Route path="/auftraege" element={<OfficeAuftraegePage />} />
+          <Route path="/datenimport" element={<OfficeDatenimportPage />} />
+          <Route path="/protokoll" element={<OfficeProtokollPage />} />
+          <Route path="/einstellungen/export" element={<OfficeExportPage />} />
+          <Route path="/organigramm" element={<OrganigrammPage />} />
+          <Route path="/fehlerberichte" element={<OfficeFehlerberichtePage />} />
+          <Route path="/fehlerberichte/:id" element={<OfficeFehlerberichtDetailPage />} />
+          {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
+              Desktop-Breite statt der schmalen Inspektor-Spalte, deshalb
+              bewusst NICHT in <SchmaleSpalte> unten. layout="dicht" fuer
+              echte Tabs, breit fuer die staendig sichtbare Verlauf-Spalte
+              (siehe VorgangDetailPage.tsx, verlaufSpalteBreit). */}
+          <Route
+            path="/vorgaenge/:id/vollbild"
+            element={
+              <div className="mx-auto max-w-[1400px]">
+                <VorgangDetailPage layout="dicht" breit />
+              </div>
+            }
+          />
 
-        {/* Leistungsverzeichnis nutzt die Desktop-Breite (Tabelle, Seitenspalte)
-            statt der schmalen Lesespalte; layout="dicht" schaltet die
-            Feld-App-Seiten darauf um, ohne die Feld-App zu veraendern. */}
-        <Route
-          path="/leistungsverzeichnis"
-          element={
-            <div className="mx-auto max-w-[1400px]">
-              <LeistungsverzeichnisPage layout="dicht" />
-            </div>
-          }
-        />
-        <Route
-          path="/leistungsverzeichnis/:id"
-          element={
-            <div className="mx-auto max-w-[1400px]">
-              <LeistungsverzeichnisDetailPage layout="dicht" />
-            </div>
-          }
-        />
+          {/* Leistungsverzeichnis nutzt die Desktop-Breite (Tabelle, Seitenspalte)
+              statt der schmalen Lesespalte; layout="dicht" schaltet die
+              Feld-App-Seiten darauf um, ohne die Feld-App zu veraendern. */}
+          <Route
+            path="/leistungsverzeichnis"
+            element={
+              <div className="mx-auto max-w-[1400px]">
+                <LeistungsverzeichnisPage layout="dicht" />
+              </div>
+            }
+          />
+          <Route
+            path="/leistungsverzeichnis/:id"
+            element={
+              <div className="mx-auto max-w-[1400px]">
+                <LeistungsverzeichnisDetailPage layout="dicht" />
+              </div>
+            }
+          />
 
-        {/* Monatsliste mit allen Kalendertagen braucht die Desktop-Breite;
-            die Feld-App behaelt ihre Wochenansicht (StatistikPage). */}
-        <Route
-          path="/statistik"
-          element={
-            <div className="mx-auto max-w-[1400px]">
-              <OfficeArbeitszeitPage />
-            </div>
-          }
-        />
+          {/* Monatsliste mit allen Kalendertagen braucht die Desktop-Breite;
+              die Feld-App behaelt ihre Wochenansicht (StatistikPage). */}
+          <Route
+            path="/statistik"
+            element={
+              <div className="mx-auto max-w-[1400px]">
+                <OfficeArbeitszeitPage />
+              </div>
+            }
+          />
 
-        {/* Rechte-Matrix je Account-Typ braucht die Desktop-Breite (Bereich x 9 Aktionen). */}
-        <Route
-          path="/account-typen"
-          element={
-            <div className="mx-auto max-w-[1400px]">
-              <AccountTypenPage />
-            </div>
-          }
-        />
+          {/* Rechte-Matrix je Account-Typ braucht die Desktop-Breite (Bereich x 9 Aktionen). */}
+          <Route
+            path="/account-typen"
+            element={
+              <div className="mx-auto max-w-[1400px]">
+                <AccountTypenPage />
+              </div>
+            }
+          />
 
-        {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
-        <Route element={<SchmaleSpalte />}>
-        <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
-        <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
-        <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
-        <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
-        <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
-        <Route path="/neu" element={<NewVorgangPage />} />
-        <Route path="/suche" element={<SearchPage />} />
-        <Route path="/benachrichtigungen" element={<NotificationsPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/kunden/:id" element={<KundeProfilePage />} />
-        <Route path="/partner/:id" element={<PartnerProfilePage />} />
-        <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
-        <Route path="/standorte/:id" element={<StandortDetailPage />} />
-        <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
-        <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
-        <Route path="/form-schemas" element={<FormSchemasPage />} />
-        <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
-        <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
-        <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
-        <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-        <Route path="/pruefmittel" element={<PruefmittelPage />} />
-        <Route path="/kunden" element={<KundenPage />} />
-        <Route path="/partner" element={<PartnerPage />} />
-        <Route path="/material" element={<MaterialPage />} />
-        <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
-        <Route path="/anfragen" element={<AnfragenPage />} />
-        <Route path="/angebote/:id" element={<AngebotDetailPage />} />
-        <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
-        <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
-        <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
-        <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
-        <Route path="/material/:id" element={<MaterialDetailPage />} />
-        <Route path="/highlights" element={<HighlightsPage />} />
-        <Route path="/insights" element={<InsightsPage />} />
-        <Route path="/integrationen" element={<IntegrationenPage />} />
-        <Route path="/accounts" element={<UsersPage />} />
-        <Route path="/einstellungen" element={<SettingsPage />} />
-        <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
-        <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
-        <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
-        <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
-        <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
-        <Route path="/team-zeiten" element={<TeamZeitenPage />} />
-        <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
-        <Route path="/papierkorb" element={<PapierkorbPage />} />
+          {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
+          <Route element={<SchmaleSpalte />}>
+          <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
+          <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
+          <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
+          <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
+          <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
+          <Route path="/neu" element={<NewVorgangPage />} />
+          <Route path="/suche" element={<SearchPage />} />
+          <Route path="/benachrichtigungen" element={<NotificationsPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/kunden/:id" element={<KundeProfilePage />} />
+          <Route path="/partner/:id" element={<PartnerProfilePage />} />
+          <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+          <Route path="/standorte/:id" element={<StandortDetailPage />} />
+          <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
+          <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
+          <Route path="/form-schemas" element={<FormSchemasPage />} />
+          <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
+          <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
+          <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
+          <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
+          <Route path="/pruefmittel" element={<PruefmittelPage />} />
+          <Route path="/kunden" element={<KundenPage />} />
+          <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/material" element={<MaterialPage />} />
+          <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
+          <Route path="/anfragen" element={<AnfragenPage />} />
+          <Route path="/angebote/:id" element={<AngebotDetailPage />} />
+          <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+          <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
+          <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
+          <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
+          <Route path="/material/:id" element={<MaterialDetailPage />} />
+          <Route path="/highlights" element={<HighlightsPage />} />
+          <Route path="/insights" element={<InsightsPage />} />
+          <Route path="/integrationen" element={<IntegrationenPage />} />
+          <Route path="/accounts" element={<UsersPage />} />
+          <Route path="/einstellungen" element={<SettingsPage />} />
+          <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
+          <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
+          <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
+          <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
+          <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+          <Route path="/team-zeiten" element={<TeamZeitenPage />} />
+          <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
+          <Route path="/papierkorb" element={<PapierkorbPage />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to={startseite} replace />} />
         </Route>
-
-        <Route path="*" element={<Navigate to={startseite} replace />} />
       </Route>
     </Routes>
   );
