@@ -24,6 +24,7 @@ export function PartnerPage() {
   const kannSehen = istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen");
 
   const [showForm, setShowForm] = useState(false);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
   const [neuerPartner, setNeuerPartner] = useState({
     name: "",
@@ -99,14 +100,22 @@ export function PartnerPage() {
         <div className="space-y-3 p-4">
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
-              Firmenname *
+              Firmenname <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input id={`${uid}-0`}
               autoFocus
+              required
+              aria-invalid={!!nameFehler}
+              aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerPartner.name}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, name: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
+            {nameFehler && (
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {nameFehler}
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">
@@ -176,8 +185,15 @@ export function PartnerPage() {
             anschließend auf der Partner-Detailseite hinterlegt werden.
           </p>
           <button
-            disabled={!neuerPartner.name.trim() || createMutation.isPending}
-            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending}
+            onClick={() => {
+              if (!neuerPartner.name.trim()) {
+                setNameFehler("Bitte einen Firmennamen eingeben.");
+                return;
+              }
+              setNameFehler(null);
+              createMutation.mutate();
+            }}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen

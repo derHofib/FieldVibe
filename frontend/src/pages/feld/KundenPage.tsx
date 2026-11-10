@@ -28,6 +28,7 @@ export function KundenPage() {
   const kannSehen = istModulAktiv(currentUser, "kundenverwaltung") && hatRecht("kunden", "sehen");
 
   const [showForm, setShowForm] = useState(false);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [kundeFehler, setKundeFehler] = useState<string | null>(null);
   const [kundenSuche, setKundenSuche] = useState("");
   const [neuerKunde, setNeuerKunde] = useState({
@@ -121,13 +122,23 @@ export function KundenPage() {
       <AnlegenPanel offen={showForm} titel="Neuer Kunde" onClose={() => setShowForm(false)}>
         <div className="space-y-3 p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Name *</label>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+              Name <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
             <input id={`${uid}-0`}
               autoFocus
+              required
+              aria-invalid={!!nameFehler}
+              aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
+            {nameFehler && (
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {nameFehler}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -222,8 +233,14 @@ export function KundenPage() {
           </p>
           {kundeFehler && <p className="text-sm text-st-fehlt ">{kundeFehler}</p>}
           <button
-            disabled={!neuerKunde.name.trim() || leitwegIdFehler(neuerKunde.leitwegId) !== null || createKundeMutation.isPending}
-            onClick={() => createKundeMutation.mutate()}
+            disabled={createKundeMutation.isPending}
+            onClick={() => {
+              const leitwegFehler = leitwegIdFehler(neuerKunde.leitwegId);
+              setNameFehler(neuerKunde.name.trim() ? null : "Bitte einen Namen eingeben.");
+              setKundeFehler(leitwegFehler);
+              if (!neuerKunde.name.trim() || leitwegFehler !== null) return;
+              createKundeMutation.mutate();
+            }}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen

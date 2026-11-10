@@ -43,6 +43,7 @@ function AngeboteListe() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [kundeId, setKundeId] = useState("");
+  const [kundeFehler, setKundeFehler] = useState<string | null>(null);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: angebote, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
@@ -66,17 +67,33 @@ function AngeboteListe() {
       <AnlegenPanel offen={showForm} titel="Neues Angebot" onClose={() => setShowForm(false)}>
         <div className="space-y-3 p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+              Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
             <SearchableSelect id={`${uid}-0`}
               value={kundeId}
-              onChange={setKundeId}
+              onChange={(v) => {
+                setKundeId(v);
+                setKundeFehler(null);
+              }}
               placeholder="Kunde wählen…"
               options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
             />
+            {kundeFehler && (
+              <p role="alert" className="mt-1 text-xs text-st-fehlt">
+                {kundeFehler}
+              </p>
+            )}
           </div>
           <button
-            disabled={!kundeId || erstellen.isPending}
-            onClick={() => erstellen.mutate()}
+            disabled={erstellen.isPending}
+            onClick={() => {
+              if (!kundeId) {
+                setKundeFehler("Bitte einen Kunden auswählen.");
+                return;
+              }
+              erstellen.mutate();
+            }}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Angebot anlegen
