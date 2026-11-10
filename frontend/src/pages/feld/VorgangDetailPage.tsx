@@ -3573,7 +3573,7 @@ export function VorgangDetailPage({
             ))}
         </div>
       ) : (
-        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
+        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-sm [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
           {ANCHOR_ABSCHNITTE.map((a) => {
             // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
             // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
@@ -3585,7 +3585,7 @@ export function VorgangDetailPage({
                 key={a.ziel}
                 type="button"
                 onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
-                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
               >
                 {a.label}
               </button>
@@ -3593,7 +3593,7 @@ export function VorgangDetailPage({
               <a
                 key={a.ziel}
                 href={`#${a.ziel}`}
-                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
               >
                 {a.label}
               </a>
