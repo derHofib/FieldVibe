@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso } from "../../utils/format";
 import { AlertTriangle } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +28,7 @@ function addDays(d: Date, n: number): Date {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 function formatDayLabel(d: Date): string {
@@ -57,7 +58,7 @@ interface NeuerTerminForm {
 
 export function DispoBoardPage() {
   const uid = useId();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -69,7 +70,7 @@ export function DispoBoardPage() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 7);
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker fuer einen
   // Termin eingeplant werden, seit die vier festen Rollen entfallen sind.

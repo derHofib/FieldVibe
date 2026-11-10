@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../utils/format";
 import { type FormEvent, useId, useState } from "react";
 
 import { ApiError } from "../api/client";
@@ -18,7 +19,7 @@ const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
 ];
 
 function heuteAlsInput(): string {
-  return new Date().toISOString().slice(0, 10);
+  return heuteIso();
 }
 
 /** Datum + lokale Uhrzeit (aus <input type="time">) zu einem UTC-ISO-String --

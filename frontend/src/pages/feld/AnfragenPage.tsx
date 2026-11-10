@@ -5,6 +5,7 @@ import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../a
 import { ApiError } from "../../api/client";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useAuth } from "../../context/AuthContext";
 import { SkeletonList } from "../../components/Skeleton";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
@@ -33,7 +34,8 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   const [ablehnungsgrund, setAblehnungsgrund] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const { data: kunde } = useQuery({ queryKey: ["kunde", anfrage.kunde_id], queryFn: () => kundenApi.get(anfrage.kunde_id) });
+  const { hatRecht } = useAuth();
+  const { data: kunde } = useQuery({ queryKey: ["kunde", anfrage.kunde_id], queryFn: () => kundenApi.get(anfrage.kunde_id), enabled: hatRecht("kunden", "sehen") });
   const { data: anlage } = useQuery({
     queryKey: ["anlage", anfrage.anlage_id],
     queryFn: () => anlagenApi.get(anfrage.anlage_id!),

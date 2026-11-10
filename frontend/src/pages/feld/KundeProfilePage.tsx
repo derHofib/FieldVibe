@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, ClipboardList, Inbox, MapPin, Repeat } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -1268,7 +1270,7 @@ export function KundeProfilePage() {
         <div className="card-ap p-4">
           <div className="text-xs text-label2">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
-          {kunde.typ && <span className="text-sm text-label2">{kunde.typ}</span>}
+          {kunde.typ && <span className="text-sm text-label2">{kundeTypLabel(kunde.typ)}</span>}
         </div>
       </div>
     );
@@ -1291,7 +1293,7 @@ export function KundeProfilePage() {
           <div>
             <div className="text-xs text-label2">{profil.kundennummer}</div>
             <h1 className="text-lg font-bold text-label">{profil.name}</h1>
-            {profil.typ && <span className="text-sm text-label2">{profil.typ}</span>}
+            {profil.typ && <span className="text-sm text-label2">{kundeTypLabel(profil.typ)}</span>}
           </div>
           {kannVerwalten && (
             <div className="flex shrink-0 gap-2">
@@ -1460,7 +1462,7 @@ export function KundeProfilePage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

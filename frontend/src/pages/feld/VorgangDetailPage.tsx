@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso, heuteIso } from "../../utils/format";
 import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -424,7 +425,7 @@ function addTage(d: Date, n: number): Date {
 }
 
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
@@ -722,7 +723,7 @@ export function VorgangDetailPage({
     queryFn: () => getOutboxItems(id!),
     enabled: !!id,
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: laufenderTimer } = useQuery({
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,
@@ -858,7 +859,7 @@ export function VorgangDetailPage({
     },
   });
 
-  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list(), enabled: hatRecht("material", "sehen") });
   const { data: alleAnlagenFuerLager } = useQuery({
     queryKey: ["lagerorte"],
     queryFn: () => anlagenApi.list(),
@@ -2379,7 +2380,7 @@ export function VorgangDetailPage({
       >
       <div className="card-ap p-4">
         <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-        <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
+        <h1 className="font-heading text-lg font-semibold text-label">{vorgang.titel}</h1>
         {parentVorgang && (
           <button
             onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
@@ -3526,14 +3527,14 @@ export function VorgangDetailPage({
           {vorgang.faelligkeit_am && (
             <span
               className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
-                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+                vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                   ? "border-st-fehlt text-st-fehlt"
                   : "border-sep text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
-              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+              {vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
               !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                 ? `${Math.round(
                     (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /

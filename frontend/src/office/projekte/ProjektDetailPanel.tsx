@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso } from "../../utils/format";
 import { KanbanSquare } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +38,7 @@ function addTage(d: Date, n: number): Date {
   return date;
 }
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen" | "zeitplan"; label: string }[] = [

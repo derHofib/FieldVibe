@@ -352,7 +352,7 @@ function AlleAntraege() {
 
 function AnspruchAbschnitt() {
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [userId, setUserId] = useState(currentUser?.id ?? "");
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [tage, setTage] = useState("");
@@ -360,7 +360,7 @@ function AnspruchAbschnitt() {
   const [verfall, setVerfall] = useState("");
   const [meldung, setMeldung] = useState<{ fehler: boolean; text: string } | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: konto, isLoading } = useQuery({
     queryKey: ["abwesenheiten", "konto", userId, jahr],
     queryFn: () => abwesenheitenApi.konto({ user_id: userId, jahr }),

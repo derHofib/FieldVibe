@@ -120,13 +120,14 @@ function LvPositionFelder({
   const uid = useId();
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
   const istNeu = position === null;
   const istUnterpunkt = !!(position?.eltern_position_id ?? elternPositionId);
 
   const { data: mandantEinstellungen } = useQuery({
     queryKey: ["mandant-einstellungen"],
     queryFn: mandantEinstellungenApi.get,
-    enabled: istNeu,
+    enabled: istNeu && currentUser?.role === "mandant_admin",
   });
 
   // Unterpositionen nur fuer bereits bestehende Hauptpunkte relevant --

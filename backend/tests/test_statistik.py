@@ -57,3 +57,32 @@ async def test_vorgang_kennzahlen(client, make_mandant, make_user, make_kunde, m
     assert gefiltert_body["offene_vorgaenge_gesamt"] == 0
     assert gefiltert_body["abgeschlossene_vorgaenge_zeitraum"] == 1
     assert gefiltert_body["durchschnittliche_durchlaufzeit_tage"] == pytest.approx(4.0, abs=0.1)
+
+
+@pytest.mark.asyncio
+async def test_durchlaufzeit_ignoriert_abschluss_vor_anlage(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    jetzt = datetime.now(timezone.utc)
+
+    await make_vorgang(
+        mandant=mandant,
+        kunde=kunde,
+        status="abgeschlossen",
+        created_at=(jetzt - timedelta(days=2)).replace(tzinfo=None),
+        abgeschlossen_am=jetzt,
+    )
+    # Inkonsistenter Datensatz: Abschluss liegt vor der Anlage.
+    await make_vorgang(
+        mandant=mandant,
+        kunde=kunde,
+        status="abgeschlossen",
+        created_at=jetzt.replace(tzinfo=None),
+        abgeschlossen_am=jetzt - timedelta(days=10),
+    )
+
+    body = (await client.get("/api/statistik/vorgang-kennzahlen", headers=auth_headers(token))).json()
+    assert body["abgeschlossene_vorgaenge_zeitraum"] == 2
+    assert body["durchschnittliche_durchlaufzeit_tage"] == pytest.approx(2.0, abs=0.1)

@@ -51,6 +51,7 @@ import {
   type Zoom,
   type ZiehArt,
 } from "./zeitplanLogik";
+import { useAuth } from "../../../context/AuthContext";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
 
 const ZOOM_OPTIONEN: { wert: Zoom; label: string }[] = [
@@ -149,7 +150,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     isLoading,
     error,
   } = useQuery({ queryKey, queryFn: () => zeitplanApi.get(projektId, basisplanId), placeholderData: keepPreviousData });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { hatRecht } = useAuth();
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: basisplaene } = useQuery({ queryKey: ["projekt-basisplaene", projektId], queryFn: () => zeitplanApi.basisplaene(projektId) });
 
   const [zoom, setZoom] = useState<Zoom>("tag");

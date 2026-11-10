@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { Inbox, Repeat } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -38,11 +40,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
+  const heute = heuteIso();
   if (datum < heute) return "text-st-fehlt ";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  if (datum <= heuteIso(7)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -392,7 +392,7 @@ export function AnlageProfilePage() {
   const markiereGeprueftMutation = useMutation({
     mutationFn: (pruefzyklusId: string) =>
       pruefzyklenApi.update(pruefzyklusId, {
-        letzte_pruefung_am: new Date().toISOString().slice(0, 10),
+        letzte_pruefung_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
@@ -407,7 +407,7 @@ export function AnlageProfilePage() {
   const inventurDurchgefuehrtMutation = useMutation({
     mutationFn: () =>
       inventurzyklenApi.update(inventurzyklus!.id, {
-        letzte_inventur_am: new Date().toISOString().slice(0, 10),
+        letzte_inventur_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
@@ -508,7 +508,7 @@ export function AnlageProfilePage() {
                 STATUS_BADGE[status] ?? "border border-sep text-label"
               }`}
             >
-              {anzahl}× {status}
+              {anzahl}× {statusLabel(status)}
             </span>
           ))}
         </div>
@@ -549,7 +549,7 @@ export function AnlageProfilePage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

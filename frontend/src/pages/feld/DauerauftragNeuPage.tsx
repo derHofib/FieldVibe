@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -37,7 +38,7 @@ export function DauerauftragNeuPage() {
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("wartungsvertrag");
   const [intervallTage, setIntervallTage] = useState("7");
   const [naechsteFaelligkeit, setNaechsteFaelligkeit] = useState(
-    new Date().toISOString().slice(0, 10)
+    heuteIso()
   );
   const [modus, setModus] = useState<DauerauftragModus>("rollierend");
   const [toleranzFrueh, setToleranzFrueh] = useState("");
@@ -131,7 +132,7 @@ export function DauerauftragNeuPage() {
             </label>
             <p className="mb-1 text-xs text-label2">
               Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
-              ausgewählt: ein Buendel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
+              ausgewählt: ein Bündel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
               anlegt -- statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
             </p>
             {!anlagenListe || anlagenListe.length === 0 ? (

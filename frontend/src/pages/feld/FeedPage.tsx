@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, Star, UserPlus, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -36,12 +37,6 @@ const LEISTUNGSTYP_LABEL: Record<string, string> = {
   beratung: "Beratung",
   planung: "Planung",
 };
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
 
 // Ampel-Symbol der Story-Kacheln -- kein Vorgangs-Status, sondern eine
 // eigene Dringlichkeits-Ampel (siehe stories-Endpoint), deshalb ueber die
@@ -281,7 +276,7 @@ export function FeedPage() {
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
 
   function setField(key: string, value: string) {
     setFilter((f) => {
