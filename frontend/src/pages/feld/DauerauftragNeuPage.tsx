@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -36,7 +37,7 @@ export function DauerauftragNeuPage() {
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("wartungsvertrag");
   const [intervallTage, setIntervallTage] = useState("7");
   const [naechsteFaelligkeit, setNaechsteFaelligkeit] = useState(
-    new Date().toISOString().slice(0, 10)
+    heuteIso()
   );
   const [modus, setModus] = useState<DauerauftragModus>("rollierend");
   const [toleranzFrueh, setToleranzFrueh] = useState("");

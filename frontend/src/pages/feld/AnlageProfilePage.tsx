@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Inbox, Repeat } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -35,11 +36,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
+  const heute = heuteIso();
   if (datum < heute) return "text-red-600 dark:text-red-400";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
+  if (datum <= heuteIso(7)) return "text-amber-600 dark:text-amber-400";
   return "text-slate-500 dark:text-stone-400";
 }
 
@@ -383,7 +382,7 @@ export function AnlageProfilePage() {
   const markiereGeprueftMutation = useMutation({
     mutationFn: (pruefzyklusId: string) =>
       pruefzyklenApi.update(pruefzyklusId, {
-        letzte_pruefung_am: new Date().toISOString().slice(0, 10),
+        letzte_pruefung_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
@@ -397,7 +396,7 @@ export function AnlageProfilePage() {
   const inventurDurchgefuehrtMutation = useMutation({
     mutationFn: () =>
       inventurzyklenApi.update(inventurzyklus!.id, {
-        letzte_inventur_am: new Date().toISOString().slice(0, 10),
+        letzte_inventur_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Inbox, List, Map as MapIcon, Repeat, Search, Star } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { CSSProperties } from "react";
@@ -52,12 +53,6 @@ const LEISTUNGSTYP_LABEL: Record<string, string> = {
   beratung: "Beratung",
   planung: "Planung",
 };
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",

@@ -1,4 +1,5 @@
 import type { VorgangStatus } from "../types";
+import { heuteIso } from "../utils/format";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
  * Feld-App (pages/feld/FeedPage.tsx) und Desktop-Oberflaeche (office/). Zwei
@@ -45,7 +46,7 @@ export const KANBAN_SPALTEN: VorgangStatus[] = [
 
 export function istUeberfaellig(faelligkeitAm: string | null): boolean {
   if (!faelligkeitAm) return false;
-  return faelligkeitAm < new Date().toISOString().slice(0, 10);
+  return faelligkeitAm < heuteIso();
 }
 
 export function tageSeit(iso: string): number {

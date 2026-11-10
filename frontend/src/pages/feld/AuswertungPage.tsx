@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { heuteIso, lokalesDatum } from "../../utils/format";
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -10,7 +11,7 @@ import { istModulAktiv } from "../../utils/module";
 
 function ersterTagDesMonats(): string {
   const heute = new Date();
-  return new Date(heute.getFullYear(), heute.getMonth(), 1).toISOString().slice(0, 10);
+  return lokalesDatum(new Date(heute.getFullYear(), heute.getMonth(), 1));
 }
 
 export function AuswertungPage() {
@@ -20,7 +21,7 @@ export function AuswertungPage() {
   const kannSehen = hatRecht("abrechnung", "sehen");
 
   const [von, setVon] = useState(ersterTagDesMonats());
-  const [bis, setBis] = useState(new Date().toISOString().slice(0, 10));
+  const [bis, setBis] = useState(heuteIso());
 
   const { data: bericht, isFetching, refetch } = useQuery({
     queryKey: ["ust-va", von, bis],

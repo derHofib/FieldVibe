@@ -1,4 +1,5 @@
 import type { ZeiterfassungKategorie } from "../types";
+import { lokalesDatum } from "./format";
 
 // Muss mit ZEITERFASSUNG_KATEGORIE_LABEL in backend/app/schemas/zeiterfassung.py
 // uebereinstimmen ("auftrag" hat bewusst kein Label -- dort steht die
@@ -48,5 +49,5 @@ export function montagDerWoche(datum: Date): Date {
 }
 
 export function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return lokalesDatum(d);
 }

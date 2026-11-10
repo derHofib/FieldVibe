@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -13,11 +14,9 @@ const STATUS_LABEL: Record<PruefmittelStatus, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
+  const heute = heuteIso();
   if (datum < heute) return "text-red-600 dark:text-red-400";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
+  if (datum <= heuteIso(7)) return "text-amber-600 dark:text-amber-400";
   return "text-slate-500 dark:text-stone-400";
 }
 
@@ -84,7 +83,7 @@ export function PruefmittelPage() {
   const markiereKalibriert = (mittel: Pruefmittel) => {
     updateMutation.mutate({
       id: mittel.id,
-      body: { letzte_kalibrierung_am: new Date().toISOString().slice(0, 10) },
+      body: { letzte_kalibrierung_am: heuteIso() },
     });
   };
 

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { lokalesDatum } from "../../utils/format";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -27,7 +28,7 @@ function addDays(d: Date, n: number): Date {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return lokalesDatum(d);
 }
 
 function formatDayLabel(d: Date): string {

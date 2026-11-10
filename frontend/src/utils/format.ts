@@ -15,10 +15,18 @@ export function formatDatum(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString("de-DE");
 }
 
+// Lokaler Kalendertag als YYYY-MM-DD. toISOString() wuerde in UTC rechnen und
+// zwischen 0 und 1/2 Uhr Ortszeit den Vortag liefern.
+export function lokalesDatum(datum: Date): string {
+  const monat = String(datum.getMonth() + 1).padStart(2, "0");
+  const tag = String(datum.getDate()).padStart(2, "0");
+  return `${datum.getFullYear()}-${monat}-${tag}`;
+}
+
 // Fuer Filterleisten: heutiges Datum (oder +offsetTage) als YYYY-MM-DD,
 // wie es <input type="date"> und die Backend-Query-Parameter erwarten.
 export function heuteIso(offsetTage = 0): string {
   const datum = new Date();
   datum.setDate(datum.getDate() + offsetTage);
-  return datum.toISOString().slice(0, 10);
+  return lokalesDatum(datum);
 }
