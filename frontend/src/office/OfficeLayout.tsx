@@ -1,6 +1,7 @@
 import { Clock, LogOut, Search, Settings, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -10,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
+import { aktiverNavKey, fuerOffice } from "./navAktiv";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
  * dieselbe Quelle, aus der die Bottom-Nav der Handy-App gespeist wird. Damit
@@ -21,7 +23,9 @@ export function OfficeLayout() {
   const navigate = useNavigate();
   const { outboxCount, isOnline } = useAppLiveDaten();
 
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  const { pathname } = useLocation();
+
+  const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht));
   // null = keine Auswahl gespeichert -> unveraendertes Verhalten (alles zeigen)
   const eigeneAuswahl = currentUser?.office_nav_items?.items;
   const angezeigt = eigeneAuswahl
@@ -31,6 +35,13 @@ export function OfficeLayout() {
     kategorie,
     seiten: angezeigt.filter((seite) => seite.kategorie === kategorie),
   })).filter((gruppe) => gruppe.seiten.length > 0);
+
+  // Aus dem Pfad statt aus State, damit Reload und Deep-Links stimmen.
+  const aktiverKey = aktiverNavKey(pathname, angezeigt);
+  const aktiveSeite = angezeigt.find((seite) => seite.key === aktiverKey);
+  useEffect(() => {
+    document.title = aktiveSeite ? `${aktiveSeite.label} – FieldVibe` : "FieldVibe";
+  }, [aktiveSeite]);
 
   const zurMobilenAnsicht = () => {
     const ziel = mobileUrl();
@@ -68,26 +79,24 @@ export function OfficeLayout() {
                 <p className="px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
                   {gruppe.kategorie}
                 </p>
-                {gruppe.seiten.map((seite) => (
-                  <NavLink
-                    key={seite.key}
-                    to={seite.route}
-                    className={({ isActive }) =>
-                      `mb-0.5 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] font-medium ${
+                {gruppe.seiten.map((seite) => {
+                  const isActive = seite.key === aktiverKey;
+                  return (
+                    <Link
+                      key={seite.key}
+                      to={seite.route}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`mb-0.5 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] font-medium ${
                         isActive
                           ? "bg-slate-100 font-semibold text-slate-900 dark:bg-stone-800 dark:text-stone-100"
                           : "text-slate-500 hover:bg-slate-50 dark:text-stone-400 dark:hover:bg-stone-800/60"
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
-                        {seite.label}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                      }`}
+                    >
+                      <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
+                      {seite.label}
+                    </Link>
+                  );
+                })}
               </div>
             ))}
           </nav>
