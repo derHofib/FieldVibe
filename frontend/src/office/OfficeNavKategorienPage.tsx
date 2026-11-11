@@ -7,6 +7,7 @@ import { navKategorienApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import { IconBadge } from "../components/IconBadge";
 import { NAV_KATEGORIE_REIHENFOLGE, NAV_SEITEN } from "../config/navSeiten";
+import { Select } from "../components/apple/Select";
 import type { NavKategorienRead } from "../types";
 
 interface LokaleKategorie {
@@ -201,7 +202,7 @@ export function OfficeNavKategorienPage() {
               <span className="min-w-0 flex-1 truncate font-medium text-label">
                 {seite.label}
               </span>
-              <select
+              <Select className="w-auto" groesse="kompakt"
                 value={zuordnungen[seite.key] ?? OHNE_KATEGORIE}
                 onChange={(e) =>
                   setZuordnungen((bisher) => {
@@ -213,7 +214,6 @@ export function OfficeNavKategorienPage() {
                     return { ...bisher, [seite.key]: wert };
                   })
                 }
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value={OHNE_KATEGORIE}>Nicht zugeordnet</option>
                 {kategorien.map((k) => (
@@ -221,7 +221,7 @@ export function OfficeNavKategorienPage() {
                     {k.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           ))}
         </div>

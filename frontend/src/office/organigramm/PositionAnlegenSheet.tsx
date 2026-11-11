@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Sheet } from "../../components/apple/Sheet";
 import type { AccountTyp } from "../../types";
 import type { OrgEinheit, Position, PositionCreate } from "../../types/organigramm";
+import { Select } from "../../components/apple/Select";
 import { ANLEGE_MODUS_TITEL, neuePositionBody, type AnlegeModus } from "./darstellung";
 
 export function PositionAnlegenSheet({
@@ -80,28 +81,28 @@ export function PositionAnlegenSheet({
           <label htmlFor="pos-einheit" className="mb-1 block text-sm font-medium text-label">
             Organisationseinheit (optional)
           </label>
-          <select id="pos-einheit" value={einheit} onChange={(e) => setEinheit(e.target.value)} className="field-ap">
+          <Select id="pos-einheit" value={einheit} onChange={(e) => setEinheit(e.target.value)}>
             <option value="">Keine</option>
             {orgEinheiten.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {darfRechteVerwalten && (
           <div>
             <label htmlFor="pos-typ" className="mb-1 block text-sm font-medium text-label">
               Account-Typ (optional)
             </label>
-            <select id="pos-typ" value={typ} onChange={(e) => setTyp(e.target.value)} className="field-ap">
+            <Select id="pos-typ" value={typ} onChange={(e) => setTyp(e.target.value)}>
               <option value="">Keiner</option>
               {accountTypen.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
         <div>

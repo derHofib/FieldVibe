@@ -37,6 +37,7 @@ import { OrganigrammDruck, OrganigrammListe } from "./OrganigrammListe";
 import { PositionAnlegenSheet } from "./PositionAnlegenSheet";
 import { PositionKontextMenue } from "./PositionKontextMenue";
 import { PositionPanel, type PanelTab } from "./PositionPanel";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Ansicht = "diagramm" | "liste";
@@ -262,10 +263,9 @@ export function OrganigrammPage() {
         ))}
         <label className="flex items-center gap-1.5 text-xs text-label2">
           Einheit
-          <select
+          <Select className="w-auto" groesse="kompakt"
             value={filter.orgEinheitId}
             onChange={(e) => setFilter((f) => ({ ...f, orgEinheitId: e.target.value }))}
-            className="field-ap !min-h-[28px] !w-auto !py-0 !text-[13px]"
           >
             <option value="alle">Alle</option>
             {(orgEinheiten ?? []).map((o) => (
@@ -273,7 +273,7 @@ export function OrganigrammPage() {
                 {o.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {aktiv && (
           <button type="button" className="text-xs font-medium text-tint-text hover:underline" onClick={() => setFilter(KEIN_FILTER)}>

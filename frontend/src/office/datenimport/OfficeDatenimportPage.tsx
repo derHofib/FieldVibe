@@ -38,6 +38,7 @@ import type {
   ImportModus,
   ZeilenStatus,
 } from "./typen";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_KLASSE: Record<ZeilenStatus, string> = {
@@ -270,9 +271,8 @@ export function OfficeDatenimportPage() {
               <label htmlFor="import-blatt" className="mb-1 block text-sm font-semibold text-label">
                 Tabellenblatt
               </label>
-              <select
+              <Select
                 id="import-blatt"
-                className="field-ap"
                 value={analyse.blatt ?? ""}
                 onChange={(e) => analyseMutation.mutate(e.target.value)}
               >
@@ -281,7 +281,7 @@ export function OfficeDatenimportPage() {
                     {b}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
           <Hinweiskasten ton="info">
@@ -321,9 +321,8 @@ export function OfficeDatenimportPage() {
                         {feld.hinweis && <p className="text-xs font-normal text-label2">{feld.hinweis}</p>}
                       </th>
                       <td className="px-3 py-2">
-                        <select
+                        <Select className="w-full max-w-xs" groesse="kompakt"
                           id={`feld-${feld.key}`}
-                          className="field-ap w-full max-w-xs"
                           value={spalte ?? ""}
                           onChange={(e) =>
                             setMapping((m) => spalteZuweisen(m, feld.key, e.target.value === "" ? null : Number(e.target.value)))
@@ -335,7 +334,7 @@ export function OfficeDatenimportPage() {
                               {s.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                         {vorschlag?.sicherheit === "vermutet" && spalte === vorschlag.spalte && (
                           <p className="mt-1 text-xs text-label2">Vermutete Zuordnung – bitte prüfen</p>
                         )}
@@ -358,9 +357,9 @@ export function OfficeDatenimportPage() {
                   <label htmlFor={`dublette-${art.key}`} className="mb-1 block text-xs text-label2">
                     {art.label}
                   </label>
-                  <select
+                  <Select
+                    className="w-full"
                     id={`dublette-${art.key}`}
-                    className="field-ap w-full"
                     value={aktionen[art.key] ?? art.standard}
                     onChange={(e) => setAktionen((a) => ({ ...a, [art.key]: e.target.value as DublettenAktion }))}
                   >
@@ -369,7 +368,7 @@ export function OfficeDatenimportPage() {
                         {AKTION_LABEL[a]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               ))}
             </div>

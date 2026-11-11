@@ -7,6 +7,7 @@ import { protokollApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { downloadBlob } from "../../utils/download";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import {
   AKTEUR_LABEL,
   aktionLabel,
@@ -146,9 +147,8 @@ export function OfficeProtokollPage() {
             <label htmlFor="pf-aktion" className="mb-1 block text-xs font-semibold text-label2">
               Aktion
             </label>
-            <select
+            <Select groesse="kompakt"
               id="pf-aktion"
-              className="field-ap"
               value={filter.aktion ?? ""}
               onChange={(e) => filterSetzen({ ...filter, aktion: e.target.value })}
             >
@@ -158,15 +158,14 @@ export function OfficeProtokollPage() {
                   {aktionLabel(a)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor="pf-akteur" className="mb-1 block text-xs font-semibold text-label2">
               Akteur
             </label>
-            <select
+            <Select groesse="kompakt"
               id="pf-akteur"
-              className="field-ap"
               value={filter.akteur_typ ?? ""}
               onChange={(e) => filterSetzen({ ...filter, akteur_typ: e.target.value })}
             >
@@ -176,7 +175,7 @@ export function OfficeProtokollPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <button
             type="button"

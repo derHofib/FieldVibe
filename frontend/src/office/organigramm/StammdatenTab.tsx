@@ -7,6 +7,7 @@ import { Switch } from "../../components/apple/Switch";
 import type { AccountTyp } from "../../types";
 import type { OrgEinheit, PositionDetail, PositionTyp } from "../../types/organigramm";
 import { verstaendlicherFehler } from "./darstellung";
+import { Select } from "../../components/apple/Select";
 import { formAusPosition, updateAusFormular, type StammdatenForm } from "./stammdaten";
 
 function Feld({ id, label, hinweis, children }: { id: string; label: string; hinweis?: string; children: ReactNode }) {
@@ -115,14 +116,14 @@ export function StammdatenTab({
         </div>
 
         <Feld id="sd-einheit" label="Organisationseinheit">
-          <select id="sd-einheit" value={form.orgEinheitId} onChange={(e) => set("orgEinheitId", e.target.value)} className="field-ap">
+          <Select id="sd-einheit" value={form.orgEinheitId} onChange={(e) => set("orgEinheitId", e.target.value)}>
             <option value="">Keine</option>
             {orgEinheiten.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Feld>
 
         <Feld
@@ -130,12 +131,11 @@ export function StammdatenTab({
           label="Account-Typ (Rechte-Vorlage)"
           hinweis={darfRechteVerwalten ? undefined : "Ändern erfordert das Recht „Rechte verwalten“."}
         >
-          <select
+          <Select
             id="sd-typ"
             value={form.accountTypId}
             onChange={(e) => set("accountTypId", e.target.value)}
             disabled={!darfRechteVerwalten}
-            className="field-ap"
           >
             <option value="">Keiner</option>
             {accountTypen.map((t) => (
@@ -143,7 +143,7 @@ export function StammdatenTab({
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Feld>
 
         <div className="flex items-center justify-between gap-3">
