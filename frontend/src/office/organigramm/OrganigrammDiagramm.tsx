@@ -176,8 +176,11 @@ function Flaeche(props: OrganigrammDiagrammProps) {
 
   return (
     <DiagrammKontext.Provider value={kontextWert}>
-      <div className="h-full w-full" style={FLOW_STIL}>
+      <div className="h-full w-full">
         <ReactFlow<PositionKnotenTyp>
+          // Am Flow-Element selbst: die Klasse .react-flow.light der Bibliothek setzt die Variablen dort
+          // erneut und würde sie vom umgebenden div überschreiben (Minimap/Buttons blieben im Dunkelmodus hell).
+          style={FLOW_STIL}
           nodes={nodes}
           edges={flowKanten}
           onNodesChange={onNodesChange}
