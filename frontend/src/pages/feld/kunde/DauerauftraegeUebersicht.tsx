@@ -15,7 +15,7 @@ export function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-label2">Dauer-Aufträge</h2>
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Dauer-Aufträge</h2>
       {!dauerauftraege || dauerauftraege.length === 0 ? (
         <EmptyState icon={Repeat} text="Keine Dauer-Aufträge." className="py-4" />
       ) : (
@@ -27,21 +27,21 @@ export function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
               className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
-                <div className="text-sm font-medium text-label">
+                <div className="text-fliess font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 border border-sep px-2 py-0.5 text-xs font-normal text-label">
+                    <span className="ml-2 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-label2">
+                <div className="text-sekundaer text-label2">
                   alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="border border-sep px-2 py-1 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label">
                   pausiert
                 </span>
               )}

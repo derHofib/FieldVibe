@@ -34,10 +34,10 @@ function KommentarBlase({ kommentar }: { kommentar: PartnerKommentar }) {
           eigene ? "bg-tintbg text-label" : "bg-cell text-label"
         }`}
       >
-        <p className="text-[12px] font-semibold text-label2">{kommentar.autor_name}</p>
-        <p className="text-[15px] whitespace-pre-wrap">{kommentar.text}</p>
+        <p className="text-sekundaer font-semibold text-label2">{kommentar.autor_name}</p>
+        <p className="text-fliess whitespace-pre-wrap">{kommentar.text}</p>
       </div>
-      <p className="px-1 pt-0.5 text-[11px] text-label3">
+      <p className="px-1 pt-0.5 text-meta text-label3">
         {new Date(kommentar.erstellt_am).toLocaleString("de-DE", {
           day: "2-digit",
           month: "2-digit",
@@ -115,7 +115,7 @@ export function PartnerAuftragDetailPage() {
   });
 
   const zurueck = (
-    <Link to="/partnerportal/auftraege" className="btn-touch flex items-center gap-0.5 px-3 text-[17px] text-tint-text">
+    <Link to="/partnerportal/auftraege" className="btn-touch flex items-center gap-0.5 px-3 text-zeile text-tint-text">
       <ChevronLeft size={20} aria-hidden="true" /> Aufträge
     </Link>
   );
@@ -148,22 +148,22 @@ export function PartnerAuftragDetailPage() {
     <main className="mx-auto max-w-2xl px-3 py-4 pb-10">
       {zurueck}
       <div className="px-5 pt-2">
-        <p className="text-[13px] text-label2">{auftrag.vorgangsnummer}</p>
-        <h1 className="ap-heading text-[26px] leading-tight font-bold text-label">{auftrag.titel}</h1>
+        <p className="text-sekundaer text-label2">{auftrag.vorgangsnummer}</p>
+        <h1 className="ap-heading text-titel-mobil leading-tight font-bold text-label">{auftrag.titel}</h1>
         <div className="mt-2">
           <StatusPille status={pille.status} label={pille.label} />
         </div>
       </div>
 
       {fehler && (
-        <p role="alert" className="mx-4 mt-4 rounded-[var(--radius-ap-input)] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <p role="alert" className="mx-4 mt-4 rounded-[var(--radius-ap-input)] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
 
       {auftrag.partner_freigabe_status === "vorgeschlagen" && (
         <div className="mx-4 mt-4 rounded-[var(--radius-ap-card)] bg-cell p-4">
-          <p className="mb-3 text-[15px] text-label">Wollen Sie diesen Auftrag übernehmen?</p>
+          <p className="mb-3 text-fliess text-label">Wollen Sie diesen Auftrag übernehmen?</p>
           <div className="flex gap-2">
             <button
               onClick={() => antwort.mutate({ status: "angenommen" })}
@@ -184,7 +184,7 @@ export function PartnerAuftragDetailPage() {
       )}
 
       {auftrag.partner_freigabe_status === "abgelehnt" && (
-        <p className="mx-4 mt-4 rounded-[var(--radius-ap-card)] bg-cell p-4 text-[15px] text-label2">
+        <p className="mx-4 mt-4 rounded-[var(--radius-ap-card)] bg-cell p-4 text-fliess text-label2">
           Sie haben diesen Auftrag abgelehnt
           {auftrag.partner_ablehnung_grund ? `: ${auftrag.partner_ablehnung_grund}` : "."}
         </p>
@@ -207,7 +207,7 @@ export function PartnerAuftragDetailPage() {
       {auftrag.beschreibung && (
         <>
           <AbschnittskopfB titel="Beschreibung" />
-          <p className="mx-4 rounded-[var(--radius-ap-card)] bg-cell p-4 text-[15px] whitespace-pre-wrap text-label">
+          <p className="mx-4 rounded-[var(--radius-ap-card)] bg-cell p-4 text-fliess whitespace-pre-wrap text-label">
             {auftrag.beschreibung}
           </p>
         </>
@@ -287,13 +287,13 @@ export function PartnerAuftragDetailPage() {
         onClose={() => setAblehnenOffen(false)}
         titel="Auftrag ablehnen"
         links={
-          <button onClick={() => setAblehnenOffen(false)} className="btn-touch text-[17px] text-tint-text">
+          <button onClick={() => setAblehnenOffen(false)} className="btn-touch text-zeile text-tint-text">
             Abbrechen
           </button>
         }
       >
         <div className="p-4">
-          <label htmlFor="partner-ablehnung-grund" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="partner-ablehnung-grund" className="mb-1 block text-fliess font-medium text-label">
             Grund (optional)
           </label>
           <textarea
@@ -318,13 +318,13 @@ export function PartnerAuftragDetailPage() {
         onClose={() => setAbschliessenOffen(false)}
         titel="Auftrag abschließen"
         links={
-          <button onClick={() => setAbschliessenOffen(false)} className="btn-touch text-[17px] text-tint-text">
+          <button onClick={() => setAbschliessenOffen(false)} className="btn-touch text-zeile text-tint-text">
             Abbrechen
           </button>
         }
       >
         <div className="p-4">
-          <p className="mb-4 text-[15px] text-label2">
+          <p className="mb-4 text-fliess text-label2">
             Nach dem Abschließen können Sie den Status nicht mehr ändern und keine Kommentare mehr senden.
           </p>
           <button

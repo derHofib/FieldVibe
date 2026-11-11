@@ -69,7 +69,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-sep px-4 py-2.5 ">
-        <p className="text-sm font-semibold text-label">{titel}</p>
+        <p className="text-fliess font-semibold text-label">{titel}</p>
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"
@@ -84,14 +84,14 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           value={an}
           onChange={(e) => setAn(e.target.value)}
           placeholder="An (mehrere durch Komma trennen)"
-          className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+          className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
         />
         {modus.art !== "weiterleiten" && (
           <input
             value={cc}
             onChange={(e) => setCc(e.target.value)}
             placeholder="Cc (optional)"
-            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -99,7 +99,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={bcc}
             onChange={(e) => setBcc(e.target.value)}
             placeholder="Bcc (optional)"
-            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -107,7 +107,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={betreff}
             onChange={(e) => setBetreff(e.target.value)}
             placeholder="Betreff"
-            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         )}
         <textarea
@@ -115,10 +115,10 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           onChange={(e) => setText(e.target.value)}
           placeholder="Nachricht…"
           rows={12}
-          className="w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+          className="w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
         />
         {fehler && (
-          <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
+          <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-sekundaer font-medium text-st-fehlt ">
             {fehler}
           </p>
         )}
@@ -131,7 +131,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             senden.mutate();
           }}
           disabled={!parseAdressen(an).length || (modus.art === "neu" && !betreff.trim()) || senden.isPending}
-          className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
+          className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-sekundaer"
         >
           {senden.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.25} />}
           Senden

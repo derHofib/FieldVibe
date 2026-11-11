@@ -49,7 +49,7 @@ export function SeitenPanel({ onClose, title, children, breit = false, versatzRe
         }`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4">
-          <h2 className="min-w-0 truncate text-base font-bold text-label">{title}</h2>
+          <h2 className="min-w-0 truncate text-zeile font-bold text-label">{title}</h2>
           <button
             onClick={onClose}
             className="btn-touch btn-ap-toolbar shrink-0"

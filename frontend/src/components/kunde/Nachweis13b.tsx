@@ -30,11 +30,11 @@ export function Nachweis13bFeld({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs text-label2">
+      <label htmlFor={id} className="mb-1 block text-sekundaer text-label2">
         § 13b: Nachweis USt 1 TG gültig bis
       </label>
       <input id={id} type="date" value={wert} onChange={(e) => onChange(e.target.value)} className="field-ap" />
-      <p className="mt-1 text-xs text-label2">
+      <p className="mt-1 text-sekundaer text-label2">
         Bescheinigung des Leistungsempfängers nach § 13b Abs. 2 Nr. 4 UStG – nur für Reverse-Charge-Rechnungen nötig
       </p>
       <div className="mt-1.5">

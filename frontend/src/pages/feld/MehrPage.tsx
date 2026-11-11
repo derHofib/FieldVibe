@@ -49,8 +49,8 @@ export function MehrPage() {
           <GroupedListRow onClick={() => navigate("/profil")} navigierbar last>
             <Monogramm name={currentUser?.name ?? "?"} groesse={36} />
             <div className="min-w-0">
-              <p className="truncate text-[17px] font-semibold text-label">{currentUser?.name}</p>
-              <p className="truncate text-[13px] text-label2">{currentUser?.email}</p>
+              <p className="truncate text-zeile font-semibold text-label">{currentUser?.name}</p>
+              <p className="truncate text-sekundaer text-label2">{currentUser?.email}</p>
             </div>
           </GroupedListRow>
         </GroupedList>
@@ -69,9 +69,9 @@ export function MehrPage() {
                   last={i === gruppe.seiten.length - 1}
                 >
                   <seite.icon size={20} strokeWidth={2} className="shrink-0 text-tint" />
-                  <span className="flex-1 text-[17px] text-label">{seite.label}</span>
+                  <span className="flex-1 text-zeile text-label">{seite.label}</span>
                   {seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl && (
-                    <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1.5 text-[12px] font-bold text-white">
+                    <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1.5 text-meta font-bold text-white">
                       {vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl}
                     </span>
                   )}
@@ -92,33 +92,33 @@ export function MehrPage() {
         <GroupedList>
           <GroupedListRow onClick={() => navigate("/suche")} navigierbar>
             <Search size={20} strokeWidth={2} className="shrink-0 text-tint" />
-            <span className="flex-1 text-[17px] text-label">Suche</span>
+            <span className="flex-1 text-zeile text-label">Suche</span>
           </GroupedListRow>
           <GroupedListRow onClick={() => navigate("/profil")} navigierbar>
             <User size={20} strokeWidth={2} className="shrink-0 text-tint" />
-            <span className="flex-1 text-[17px] text-label">Profil</span>
+            <span className="flex-1 text-zeile text-label">Profil</span>
           </GroupedListRow>
           {kannVerwaltungSehen && (
             <GroupedListRow onClick={() => navigate("/einstellungen")} navigierbar>
               <Settings size={20} strokeWidth={2} className="shrink-0 text-tint" />
-              <span className="flex-1 text-[17px] text-label">Verwaltung</span>
+              <span className="flex-1 text-zeile text-label">Verwaltung</span>
             </GroupedListRow>
           )}
           {fehlerbericht.verfuegbar && (
             <GroupedListRow onClick={() => fehlerbericht.aufnahmemodusStarten()} navigierbar>
               <Bug size={20} strokeWidth={2} className="shrink-0 text-tint" />
-              <span className="flex-1 text-[17px] text-label">Fehler melden</span>
+              <span className="flex-1 text-zeile text-label">Fehler melden</span>
             </GroupedListRow>
           )}
           {fehlerbericht.verfuegbar && (
             <GroupedListRow onClick={() => fehlerbericht.aufnahmemodusStarten({ art: "idee" })} navigierbar>
               <Lightbulb size={20} strokeWidth={2} className="shrink-0 text-tint" />
-              <span className="flex-1 text-[17px] text-label">Idee einreichen</span>
+              <span className="flex-1 text-zeile text-label">Idee einreichen</span>
             </GroupedListRow>
           )}
           <GroupedListRow onClick={logout} last>
             <LogOut size={20} strokeWidth={2} className="shrink-0 text-st-fehlt" />
-            <span className="flex-1 text-[17px] text-st-fehlt">Abmelden</span>
+            <span className="flex-1 text-zeile text-st-fehlt">Abmelden</span>
           </GroupedListRow>
         </GroupedList>
       </div>

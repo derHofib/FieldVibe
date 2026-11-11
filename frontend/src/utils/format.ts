@@ -47,3 +47,20 @@ export function formatIsoTag(iso: string): string {
   const [j, m, t] = iso.split("-");
   return `${t}.${m}.${j}`;
 }
+
+// "vor 2 Std." fuer Meta-Zeilen; `jetzt` injizierbar, damit Tests stabil bleiben.
+export function relativeZeit(iso: string, jetzt: number = Date.now()): string {
+  const min = Math.floor((jetzt - new Date(iso).getTime()) / 60_000);
+  if (min < 60) return min <= 1 ? "gerade eben" : `vor ${min} Min.`;
+  const std = Math.floor(min / 60);
+  if (std < 24) return `vor ${std} Std.`;
+  const tage = Math.floor(std / 24);
+  return tage === 1 ? "vor 1 Tag" : `vor ${tage} Tagen`;
+}
+
+// Die Feed-Vorschau liefert bei Statuswechseln "Status: Neu → Geplant" bzw. bei
+// Altdaten ohne von/nach nur "Status geändert". Letzteres sagt nichts und entfaellt.
+export function statusMetaZeile(vorschau: string | null, zeitIso: string, jetzt: number = Date.now()): string | null {
+  if (!vorschau || !vorschau.startsWith("Status: ")) return null;
+  return `${vorschau.replace("Status: ", "Status → ").replace(/^Status → .* → /, "Status → ")} · ${relativeZeit(zeitIso, jetzt)}`;
+}

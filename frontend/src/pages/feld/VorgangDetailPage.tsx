@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -95,11 +95,15 @@ export function VorgangDetailPage({
   // eine feste zweite Spalte fuer den Verlauf (immer sichtbar statt Tab,
   // siehe verlaufSpalteBreit unten), in der schmalen Spalte nicht.
   breit = false,
+  // Nur "dicht": zusaetzliche Aktionen in der Kopfzeile (Office-Panel:
+  // "Ganze Seite"), damit Zurueck, Aktionen und Menue eine Zeile teilen.
+  kopfAktionen,
 }: {
   id?: string;
   layout?: "kompakt" | "dicht";
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
   breit?: boolean;
+  kopfAktionen?: ReactNode;
 } = {}) {
   const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
@@ -111,6 +115,26 @@ export function VorgangDetailPage({
   // werden die Abschnitte zu echten Tabs (ein Panel sichtbar) statt der
   // mobilen Anker-Scroll-Liste (alle Abschnitte untereinander).
   const [desktopTab, setDesktopTab] = useState(ANCHOR_ABSCHNITTE[0].ziel);
+  const [aktiverAnker, setAktiverAnker] = useState(ANCHOR_ABSCHNITTE[0].ziel);
+  const tabNavRef = useRef<HTMLElement>(null);
+  const [tabNavRand, setTabNavRand] = useState({ links: false, rechts: false });
+  const tabNavRandAktualisieren = () => {
+    const el = tabNavRef.current;
+    if (!el) return;
+    const links = el.scrollLeft > 2;
+    const rechts = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+    setTabNavRand((alt) => (alt.links === links && alt.rechts === rechts ? alt : { links, rechts }));
+  };
+  // Weicher Auslauf nur dort, wo noch Tabs verdeckt sind.
+  const tabNavMaske = `linear-gradient(to right, ${tabNavRand.links ? "transparent, black 28px" : "black, black 28px"}, ${
+    tabNavRand.rechts ? "black calc(100% - 28px), transparent" : "black calc(100% - 28px), black"
+  })`;
+  // Aktiver Tab soll beim Mount/Wechsel nie hinter dem Rand verschwinden; kein Effekt, solange die Leiste (Ladezustand) fehlt.
+  useEffect(() => {
+    const el = tabNavRef.current;
+    el?.querySelector<HTMLElement>("[data-aktiv]")?.scrollIntoView?.({ inline: "center", block: "nearest" });
+    tabNavRandAktualisieren();
+  });
   const istAktiverTab = (ziel: string) => layout !== "dicht" || desktopTab === ziel;
   const tabPanelProps = (ziel: string) =>
     layout === "dicht" ? { role: "tabpanel" as const, "aria-labelledby": `tab-${ziel}` } : {};
@@ -882,7 +906,7 @@ export function VorgangDetailPage({
   if (vorgangIstFehler) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         <EmptyState
@@ -991,6 +1015,12 @@ export function VorgangDetailPage({
           : !VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status)
             ? { label: "Zeit erfassen", onClick: () => navigate(`/vorgaenge/${id}/zeit`) }
             : null;
+
+  // Klebende Leiste nur im Feld-App-Layout der Hauptseite; dann ersetzt sie
+  // den gleichlautenden Button in der Übersichts-Karte (UebersichtAbschnitt).
+  const primaerAktionKlebt = layout !== "dicht" && ansicht === "voll" && !!primaerAktion;
+  const uebernehmenKlebt =
+    primaerAktionKlebt && !vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status);
 
   // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
   // Abschnitt 6.1/6.2) -- eine Zeile ist auswaehlbar, wenn sie zu einem der
@@ -1234,6 +1264,8 @@ export function VorgangDetailPage({
         currentUser={currentUser}
         bestaetigen={bestaetigen}
         uebernehmenMutation={uebernehmenMutation}
+        uebernehmenKlebt={uebernehmenKlebt}
+        primaerAktionKlebt={primaerAktionKlebt}
         showWartetKundeDialog={showWartetKundeDialog}
         mandantEinstellungen={mandantEinstellungen}
         wiedervorlageTage={wiedervorlageTage}
@@ -1310,19 +1342,19 @@ export function VorgangDetailPage({
 
       {(verknuepfteAufgaben ?? []).length > 0 && (
         <div className="scroll-mt-4 card-ap p-3">
-          <h2 className="font-heading mb-2 text-sm font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
+          <h2 className="font-heading mb-2 text-fliess font-semibold text-label">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
           <div className="space-y-1.5">
             {verknuepfteAufgaben!.map((a) => (
-              <div key={a.id} className="border border-sepstrong p-2 text-sm">
+              <div key={a.id} className="rounded-[var(--radius-ap-md)] bg-fill p-2 text-fliess">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-label">{a.titel}</p>
-                  <span className="shrink-0 border border-sep px-2 py-0.5 text-xs font-medium text-label">
+                  <span className="shrink-0 rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-meta font-medium text-label">
                     {a.prioritaet}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-label2">
+                <div className="mt-1 flex items-center justify-between text-sekundaer text-label2">
                   <span>
                     {a.checkliste.length > 0
                       ? `${a.checkliste.filter((p) => p.erledigt).length}/${a.checkliste.length} erledigt`
@@ -1380,13 +1412,13 @@ export function VorgangDetailPage({
   if (ansicht === "zeit" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{arbeitszeitInhalt}</div>
 
@@ -1405,7 +1437,7 @@ export function VorgangDetailPage({
           onClose={() => setNachStoppenEintrag(null)}
           titel="Was hast du gemacht?"
           links={
-            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
+            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-zeile text-tint">
               Später
             </button>
           }
@@ -1414,7 +1446,7 @@ export function VorgangDetailPage({
               type="button"
               onClick={() => nachStoppenTaetigkeitMutation.mutate()}
               disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-              className="text-[17px] font-semibold text-tint disabled:opacity-40"
+              className="text-zeile font-semibold text-tint disabled:opacity-40"
             >
               Fertig
             </button>
@@ -1437,13 +1469,13 @@ export function VorgangDetailPage({
   if (ansicht === "verlauf" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{verlaufInhalt}</div>
       </div>
@@ -1453,13 +1485,13 @@ export function VorgangDetailPage({
   if (ansicht === "positionen" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{positionenInhalt}</div>
       </div>
@@ -1467,11 +1499,21 @@ export function VorgangDetailPage({
   }
 
   return (
-    <div className={`space-y-4 ${layout !== "dicht" && primaerAktion ? "pb-20" : ""}`}>
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+    <div
+      className="space-y-4"
+      // Leiste (44px) + Abstand zur Bottom-Nav + Safe-Area + Luft, damit die letzte Karte nie darunter liegt.
+      style={
+        primaerAktionKlebt
+          ? { paddingBottom: "calc(44px + var(--klebe-abstand) + env(safe-area-inset-bottom, 0px) + 1.5rem)" }
+          : undefined
+      }
+    >
+      <div className={`flex items-center justify-between ${layout === "dicht" ? "gap-2 border-b-[0.5px] border-sep pb-2" : ""}`}>
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
+        <div className="flex items-center gap-2">
+        {layout === "dicht" && kopfAktionen}
         {kannLoeschen && (
           <PulldownMenu
             ariaLabel="Weitere Aktionen"
@@ -1503,14 +1545,15 @@ export function VorgangDetailPage({
             )}
           />
         )}
+        </div>
       </div>
 
       {aktionsFehler && (
-        <div className="flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ap-md)] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
           </span>
-          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
+          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-sekundaer underline">
             Ausblenden
           </button>
         </div>
@@ -1522,17 +1565,17 @@ export function VorgangDetailPage({
       {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
         <div className="flex flex-wrap gap-1.5">
           {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
+            <span className="flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-medium text-label">
               <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
             </span>
           )}
           {vorgang.faelligkeit_am && (
             <span
-              className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-sekundaer font-medium ${
                 vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                  ? "border-st-fehlt text-st-fehlt"
-                  : "border-sep text-label"
+                  ? "bg-st-fehlt-bg text-st-fehlt"
+                  : "bg-fill text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
@@ -1546,8 +1589,8 @@ export function VorgangDetailPage({
             </span>
           )}
           {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="flex items-center gap-1.5 border border-dashed border-st-arbeit px-2.5 py-1 text-xs font-medium text-st-arbeit">
-              <UserPlus size={13} strokeWidth={1.5} /> Nicht zugewiesen
+            <span className="inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-semibold text-label">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-label3" aria-hidden="true" /> Nicht zugewiesen
             </span>
           )}
         </div>
@@ -1562,7 +1605,7 @@ export function VorgangDetailPage({
         <div
           role="tablist"
           aria-label="Vorgangs-Abschnitte"
-          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
+          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-fliess"
         >
           {ANCHOR_ABSCHNITTE
             // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite
@@ -1588,7 +1631,13 @@ export function VorgangDetailPage({
             ))}
         </div>
       ) : (
-        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-sm [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
+        <nav
+          ref={tabNavRef}
+          aria-label="Vorgangs-Abschnitte"
+          onScroll={tabNavRandAktualisieren}
+          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
+          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
+        >
           {ANCHOR_ABSCHNITTE.map((a) => {
             // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
             // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
@@ -1608,7 +1657,12 @@ export function VorgangDetailPage({
               <a
                 key={a.ziel}
                 href={`#${a.ziel}`}
-                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
+                onClick={() => setAktiverAnker(a.ziel)}
+                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
+                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
+                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
+                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
+                }`}
               >
                 {a.label}
               </a>
@@ -1623,7 +1677,7 @@ export function VorgangDetailPage({
        * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
       {layout === "dicht" && (
         <div className="card-ap mb-3 space-y-2.5 p-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm lg:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-fliess lg:grid-cols-4">
             {[
               ["Status", STATUS_LABEL[vorgang.status]],
               ["Priorität", String(vorgang.prioritaet)],
@@ -1637,7 +1691,7 @@ export function VorgangDetailPage({
               ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
             ].map(([label, wert]) => (
               <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
-                <dt className="text-xs text-label2">{label}</dt>
+                <dt className="text-sekundaer text-label2">{label}</dt>
                 <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
               </div>
             ))}
@@ -1656,19 +1710,19 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Zeit</span>
-            <span className="text-sm font-semibold text-label">
+            <span className="text-meta text-label2">Zeit</span>
+            <span className="text-fliess font-semibold text-label">
               {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
             </span>
           </button>
           <a
             href="#abschnitt-termine"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Nächster Termin</span>
-            <span className="text-sm font-semibold text-label">
+            <span className="text-meta text-label2">Nächster Termin</span>
+            <span className="text-fliess font-semibold text-label">
               {naechsterTermin
                 ? new Date(naechsterTermin.start_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
                 : "—"}
@@ -1676,28 +1730,28 @@ export function VorgangDetailPage({
           </a>
           <a
             href="#abschnitt-maengel"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Mängel</span>
-            <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
+            <span className="text-meta text-label2">Mängel</span>
+            <span className={`text-fliess font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
               {offeneMaengelAnzahl} offen
             </span>
           </a>
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Positionen</span>
-            <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
+            <span className="text-meta text-label2">Positionen</span>
+            <span className="text-fliess font-semibold text-label">{positionenAnzahl}</span>
           </button>
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Verlauf</span>
-            <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
+            <span className="text-meta text-label2">Verlauf</span>
+            <span className="text-fliess font-semibold text-label">{verlaufEintraege.length} Einträge</span>
           </button>
         </div>
       )}
@@ -1732,7 +1786,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => setNachStoppenEintrag(null)}
-            className="text-[17px] text-tint"
+            className="text-zeile text-tint"
           >
             Später
           </button>
@@ -1742,7 +1796,7 @@ export function VorgangDetailPage({
             type="button"
             onClick={() => nachStoppenTaetigkeitMutation.mutate()}
             disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-            className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            className="text-zeile font-semibold text-tint disabled:opacity-40"
           >
             Fertig
           </button>
@@ -1759,13 +1813,17 @@ export function VorgangDetailPage({
         </div>
       </Sheet>
 
-      {layout !== "dicht" && ansicht === "voll" && primaerAktion && (
-        <div className="fixed inset-x-0 z-30 flex justify-center px-3" style={{ bottom: "var(--klebe-abstand)" }}>
+      {primaerAktionKlebt && primaerAktion && (
+        // Verlauf unterlegt die Leiste, damit durchscrollender Text nicht mit dem Button kollidiert.
+        <div
+          className="pointer-events-none fixed inset-x-0 z-30 flex justify-center bg-gradient-to-t from-gbg via-gbg/90 to-transparent px-3 pt-6 pb-2"
+          style={{ bottom: "calc(var(--klebe-abstand) - 0.5rem)" }}
+        >
           <button
             type="button"
             onClick={primaerAktion.onClick}
             disabled={primaerAktion.disabled}
-            className="btn-touch btn-ap-primary w-full max-w-md disabled:opacity-50"
+            className="btn-touch btn-ap-primary pointer-events-auto w-full max-w-md disabled:opacity-50"
           >
             {primaerAktion.label}
           </button>

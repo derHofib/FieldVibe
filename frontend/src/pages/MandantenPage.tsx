@@ -19,9 +19,9 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "border border-st-erledigt text-st-erledigt ",
-  pausiert: "border border-st-arbeit text-st-arbeit ",
-  gekuendigt: "border border-st-fehlt text-st-fehlt ",
+  aktiv: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  pausiert: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  gekuendigt: "border rounded-[var(--radius-ap-pill)] border-st-fehlt text-st-fehlt ",
 };
 
 // Entspricht dem Backend-Muster für Mandanten-Slugs (Subdomain).
@@ -77,8 +77,8 @@ export function MandantenPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-label">Mandanten</h2>
-        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap px-4 py-2 text-sm font-medium">
+        <h2 className="text-zeile font-bold text-label">Mandanten</h2>
+        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap-primary px-4">
           + Neuer Mandant
         </button>
       </div>
@@ -86,7 +86,7 @@ export function MandantenPage() {
       <AnlegenPanel offen={zeigeNeu} titel="Neuer Mandant" onClose={() => setZeigeNeu(false)}>
         <form onSubmit={handleCreate} className="space-y-3 p-4" noValidate>
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
               Name <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input
@@ -96,16 +96,16 @@ export function MandantenPage() {
               onChange={(e) => setName(e.target.value)}
               aria-invalid={!!feldFehler.name}
               aria-describedby={feldFehler.name ? `${uid}-name-fehler` : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {feldFehler.name && (
-              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {feldFehler.name}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">
               Slug (Subdomain) <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input
@@ -114,27 +114,27 @@ export function MandantenPage() {
               onChange={(e) => setSlug(e.target.value)}
               aria-invalid={!!feldFehler.slug}
               aria-describedby={feldFehler.slug ? `${uid}-slug-fehler` : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {feldFehler.slug && (
-              <p id={`${uid}-slug-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p id={`${uid}-slug-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {feldFehler.slug}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">
               Branche
             </label>
             <input
               id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {formError && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {formError}
             </p>
           )}
@@ -153,7 +153,7 @@ export function MandantenPage() {
           <EmptyState icon={Building2} text="Noch keine Mandanten angelegt." />
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
-            <thead className="bg-fill text-sm text-label ">
+            <thead className="bg-fill text-fliess text-label ">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Slug</th>
@@ -162,21 +162,21 @@ export function MandantenPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sep text-sm ">
+            <tbody className="divide-y divide-sep text-fliess ">
               {mandanten?.map((m) => (
                 <tr key={m.id}>
                   <td className="px-4 py-3 font-medium text-label">{m.name}</td>
                   <td className="px-4 py-3 text-label2">{m.slug}</td>
                   <td className="px-4 py-3 text-label2">{m.branche ?? "–"}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}>
+                    <span className={`px-3 py-1 text-sekundaer font-semibold ${STATUS_BADGE[m.status]}`}>
                       {STATUS_LABEL[m.status]}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <Link
                       to={`/mandanten/${m.id}`}
-                      className="btn-touch rounded-md bg-fill px-3 py-2 text-xs font-semibold text-label hover:bg-fill2"
+                      className="btn-touch rounded-md bg-fill px-3 py-2 text-sekundaer font-semibold text-label hover:bg-fill2"
                     >
                       Bearbeiten →
                     </Link>

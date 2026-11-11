@@ -6,6 +6,7 @@ import { mailApi } from "../../api/endpoints";
 import { SeitenKopf } from "../OfficeUi";
 import { MailClient } from "./MailClient";
 import { MailKontoFormular } from "./MailKontoFormular";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = { art: "client" } | { art: "konto-neu" } | { art: "konto-bearbeiten" };
@@ -60,17 +61,16 @@ export function OfficePostfachPage() {
     <div>
       <SeitenKopf titel="Postfach">
         {accounts.length > 1 && (
-          <select
+          <Select className="w-auto" groesse="kompakt"
             value={aktivesKonto.id}
             onChange={(e) => setAktivesKontoId(e.target.value)}
-            className="rounded-lg border border-sep bg-white px-2.5 py-1.5 text-xs text-label dark:bg-stone-800 "
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <button
           onClick={() => setAnsicht({ art: "konto-bearbeiten" })}
@@ -89,7 +89,7 @@ export function OfficePostfachPage() {
       </SeitenKopf>
 
       {aktivesKonto.letzter_sync_fehler && (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-st-arbeit-bg px-3 py-2 text-xs font-medium text-st-arbeit ">
+        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-st-arbeit-bg px-3 py-2 text-sekundaer font-medium text-st-arbeit ">
           <Mail size={13} strokeWidth={2} /> Letzter Abgleich fehlgeschlagen: {aktivesKonto.letzter_sync_fehler}
         </p>
       )}

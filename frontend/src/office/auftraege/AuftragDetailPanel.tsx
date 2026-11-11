@@ -11,6 +11,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 import { Layers } from "lucide-react";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
@@ -63,7 +64,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
     <SeitenPanel offen titel={aktuell?.titel ?? auftrag.titel} onClose={onClose}>
       <div className="space-y-5 p-4">
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Titel</label>
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Titel</label>
           <input id={`${uid}-0`}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -73,50 +74,49 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Status</label>
-          <select id={`${uid}-1`}
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label3">Status</label>
+          <Select id={`${uid}-1`}
             value={aktuell?.status ?? auftrag.status}
             onChange={(e) => aktualisieren.mutate({ status: e.target.value as AuftragStatus })}
-            className="field-ap"
           >
             {AUFTRAG_STATUS_OPTIONEN.map((s) => (
               <option key={s} value={s}>
                 {AUFTRAG_STATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Projekt</label>
+          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold text-label3">Projekt</label>
           <SearchableSelect id={`${uid}-2`}
             value={aktuell?.projekt_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ projekt_id: v || null })}
             placeholder="Kein Projekt"
             options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
           />
-          {projektName && <p className="mt-1 text-xs text-label2">{projektName}</p>}
+          {projektName && <p className="mt-1 text-sekundaer text-label2">{projektName}</p>}
         </div>
 
         <div>
-          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Kunde</label>
+          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold text-label3">Kunde</label>
           <SearchableSelect id={`${uid}-3`}
             value={aktuell?.kunde_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ kunde_id: v || null })}
             placeholder="Kein Kunde"
             options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
           />
-          {kundeName && <p className="mt-1 text-xs text-label2">{kundeName}</p>}
+          {kundeName && <p className="mt-1 text-sekundaer text-label2">{kundeName}</p>}
         </div>
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label className="block text-meta font-bold text-label3">
               Vorgänge ({vorgaenge?.length ?? 0})
             </label>
             <button
               onClick={() => navigate(`/neu?auftrag_id=${auftrag.id}`)}
-              className="text-xs font-medium text-tint hover:underline"
+              className="text-sekundaer font-medium text-tint hover:underline"
             >
               + Neuer Vorgang
             </button>
@@ -129,12 +129,12 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
                 <button
                   key={v.id}
                   onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
-                  className="flex w-full items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
+                  className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sekundaer hover:bg-fill"
                 >
                   <span className="min-w-0 flex-1 truncate text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </span>
-                  <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE[v.status]}`}>
+                  <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${STATUS_BADGE[v.status]}`}>
                     {STATUS_LABEL[v.status]}
                   </span>
                 </button>
@@ -153,7 +153,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
               }
             }}
             disabled={loeschen.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt"
+            className="btn-touch text-sekundaer font-medium text-st-fehlt"
           >
             Auftrag löschen
           </button>

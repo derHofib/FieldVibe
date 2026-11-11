@@ -7,6 +7,7 @@ import { Sheet } from "../../components/apple/Sheet";
 import { useAuth } from "../../context/AuthContext";
 import type { AbwesenheitArt } from "../../types";
 import { ABWESENHEIT_ARTEN, ABWESENHEIT_ART_LABEL } from "../../utils/abwesenheit";
+import { Select } from "../../components/apple/Select";
 import { toDateInput } from "../../utils/zeiterfassung";
 
 const FORM_ID = "abwesenheit-formular";
@@ -74,7 +75,7 @@ export function AbwesenheitSheet({
       onClose={onClose}
       titel="Abwesenheit beantragen"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }
@@ -83,7 +84,7 @@ export function AbwesenheitSheet({
           type="submit"
           form={FORM_ID}
           disabled={anlegen.isPending}
-          className="text-[17px] font-semibold text-tint-text disabled:opacity-50"
+          className="text-zeile font-semibold text-tint-text disabled:opacity-50"
         >
           Senden
         </button>
@@ -91,30 +92,30 @@ export function AbwesenheitSheet({
     >
       <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-3 p-4">
         {darfVerwalten && (
-          <label className="block text-xs font-medium text-label2">
+          <label className="block text-sekundaer font-medium text-label2">
             Mitarbeiter
-            <select className="field-ap mt-1" value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <Select className="mt-1 w-full" value={userId} onChange={(e) => setUserId(e.target.value)}>
               {(users ?? []).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
               {!users && currentUser && <option value={currentUser.id}>{currentUser.name}</option>}
-            </select>
+            </Select>
           </label>
         )}
-        <label className="block text-xs font-medium text-label2">
+        <label className="block text-sekundaer font-medium text-label2">
           Art
-          <select className="field-ap mt-1" value={art} onChange={(e) => setArt(e.target.value as AbwesenheitArt)}>
+          <Select className="mt-1 w-full" value={art} onChange={(e) => setArt(e.target.value as AbwesenheitArt)}>
             {ABWESENHEIT_ARTEN.map((a) => (
               <option key={a} value={a}>
                 {ABWESENHEIT_ART_LABEL[a]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-xs font-medium text-label2">
+          <label className="block text-sekundaer font-medium text-label2">
             Von
             <input
               type="date"
@@ -127,7 +128,7 @@ export function AbwesenheitSheet({
               }}
             />
           </label>
-          <label className="block text-xs font-medium text-label2">
+          <label className="block text-sekundaer font-medium text-label2">
             Bis
             <input
               type="date"
@@ -139,7 +140,7 @@ export function AbwesenheitSheet({
             />
           </label>
         </div>
-        <div className="space-y-1.5 text-sm text-label">
+        <div className="space-y-1.5 text-fliess text-label">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={halbVon} onChange={(e) => setHalbVon(e.target.checked)} />
             {eintagig ? "Nur halber Tag" : "Erster Tag nur halb"}
@@ -151,7 +152,7 @@ export function AbwesenheitSheet({
             </label>
           )}
         </div>
-        <label className="block text-xs font-medium text-label2">
+        <label className="block text-sekundaer font-medium text-label2">
           Notiz (optional)
           <textarea
             rows={3}
@@ -162,11 +163,11 @@ export function AbwesenheitSheet({
           />
         </label>
         {fehler && (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {fehler}
           </p>
         )}
-        <p className="text-xs text-label2">
+        <p className="text-meta text-label2">
           {darfVerwalten
             ? "Urlaub und Freizeitausgleich werden direkt genehmigt."
             : art === "krankheit"

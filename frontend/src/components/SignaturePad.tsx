@@ -70,12 +70,12 @@ export function SignaturePad({ onSave, onCancel, isSaving = false }: SignaturePa
   }
 
   return (
-    <div className="space-y-2 border border-sepstrong p-2">
+    <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <input
         value={unterzeichnerName}
         onChange={(e) => setUnterzeichnerName(e.target.value)}
         placeholder="Name des Unterzeichners"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
       />
       <canvas
         ref={(node) => {
@@ -98,20 +98,20 @@ export function SignaturePad({ onSave, onCancel, isSaving = false }: SignaturePa
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="h-40 w-full touch-none border border-sep bg-white"
+        className="h-40 w-full touch-none border rounded-[var(--radius-ap-md)] border-sep bg-white"
       />
       <div className="flex gap-2">
-        <button onClick={leeren} className="btn-touch btn-ap flex-1 py-1.5 text-sm">
+        <button onClick={leeren} className="btn-touch btn-ap flex-1 py-1.5 text-sekundaer">
           Löschen
         </button>
         <button
           onClick={speichern}
           disabled={!hatUnterschrift || !unterzeichnerName.trim() || isSaving}
-          className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm disabled:opacity-50"
+          className="btn-touch btn-ap-primary flex-1 py-1.5 text-sekundaer disabled:opacity-50"
         >
           Speichern
         </button>
-        <button onClick={onCancel} className="btn-touch flex-1 text-sm text-label2 hover:text-label">
+        <button onClick={onCancel} className="btn-touch flex-1 text-sekundaer text-label2 hover:text-label">
           Abbrechen
         </button>
       </div>

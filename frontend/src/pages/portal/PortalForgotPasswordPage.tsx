@@ -27,21 +27,21 @@ export function PortalForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
-        <h1 className="mb-1 font-heading text-xl font-semibold uppercase tracking-wide text-label">
+        <h1 className="mb-1 font-heading text-titel-mobil font-semibold text-label">
           Passwort vergessen
         </h1>
-        <p className="mb-6 text-sm text-label2">
+        <p className="mb-6 text-sekundaer text-label2">
           Wir senden Ihnen einen Link zum Zurücksetzen, falls die Adresse bekannt ist.
         </p>
 
         {done ? (
-          <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
+          <p className="border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-fliess text-st-erledigt ">
             Falls ein Konto mit dieser E-Mail existiert, wurde eine Nachricht mit
             weiteren Schritten verschickt.
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label htmlFor="portal-forgot-email" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-forgot-email" className="mb-1 block text-fliess font-medium text-label">
               E-Mail
             </label>
             <input
@@ -62,7 +62,7 @@ export function PortalForgotPasswordPage() {
           </form>
         )}
 
-        <Link to="/portal/login" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+        <Link to="/portal/login" className="mt-4 block text-center text-sekundaer text-label2 hover:text-label">
           Zurück zur Anmeldung
         </Link>
       </Blueprint>

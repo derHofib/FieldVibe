@@ -13,6 +13,7 @@ import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -96,18 +97,18 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const inputClass =
-    "w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+    "w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
-      <div className="flex items-start gap-1.5 rounded-lg bg-st-arbeit-bg px-4 py-3 text-sm text-st-arbeit ">
+      <div className="flex items-start gap-1.5 rounded-lg bg-st-arbeit-bg px-4 py-3 text-fliess text-st-arbeit ">
         <Inbox size={15} strokeWidth={2} className="mt-0.5 shrink-0" />
         Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
-        {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
+        {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} – bitte Angaben gegen den
         Beleg prüfen und bestätigen.
       </div>
       <ImportHinweise hinweis={eingangsrechnung.import_hinweis} />
@@ -117,21 +118,21 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           {belegUrl?.url ? (
             <iframe title="Beleg" src={belegUrl.url} className="h-[70vh] w-full rounded-md" />
           ) : (
-            <p className="p-4 text-sm text-label2">Kein Beleg vorhanden.</p>
+            <p className="p-4 text-sekundaer text-label2">Kein Beleg vorhanden.</p>
           )}
         </div>
 
         <div className="space-y-3 card-ap p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Lieferant</label>
-            <select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer text-label2">Lieferant</label>
+            <Select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)}>
               <option value="">Name manuell eintragen…</option>
               {(lieferanten ?? []).map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {!lieferantId && (
             <input
@@ -142,7 +143,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             />
           )}
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">Rechnungsnummer</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-meta text-label2">Rechnungsnummer</label>
             <input id={`${uid}-1`}
               value={rechnungsnummer}
               onChange={(e) => setRechnungsnummer(e.target.value)}
@@ -152,7 +153,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Rechnungsdatum</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-meta text-label2">Rechnungsdatum</label>
               <input id={`${uid}-2`}
                 type="date"
                 value={rechnungsdatum}
@@ -161,7 +162,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Betrag netto</label>
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer text-label2">Betrag netto</label>
               <input id={`${uid}-3`}
                 type="number"
                 step="0.01"
@@ -172,24 +173,24 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             </div>
           </div>
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">Kategorie</label>
-            <select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer text-label2">Kategorie</label>
+            <Select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)}>
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
-          {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
+          {fehler && <p className="text-sekundaer text-st-fehlt ">{fehler}</p>}
 
           <div className="flex gap-2 pt-2">
             <button
               disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
               onClick={() => bestaetigenMutation.mutate()}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-ap-primary px-3 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-ap-primary px-3 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
@@ -200,7 +201,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
                 }
               }}
               disabled={verwerfenMutation.isPending}
-              className="btn-touch rounded-md bg-fill px-3 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 "
+              className="btn-touch rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
             >
               Verwerfen
             </button>
@@ -310,7 +311,7 @@ export function EingangsrechnungDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
@@ -321,7 +322,7 @@ export function EingangsrechnungDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Löschen
           </button>
@@ -333,14 +334,14 @@ export function EingangsrechnungDetailPage() {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">
+            <div className="text-meta text-label2">
               {eingangsrechnung.rechnungsnummer_lieferant}
             </div>
-            <h1 className="text-lg font-bold text-label">
+            <h1 className="text-titel-mobil font-bold text-label">
               {eingangsrechnung.lieferant_name}
             </h1>
           </div>
-          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+          <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-semibold text-label">
             {STATUS_LABEL[eingangsrechnung.status]}
           </span>
         </div>
@@ -349,36 +350,36 @@ export function EingangsrechnungDetailPage() {
             <StatusPille status="neu" label={`E-Rechnung · ${syntaxLabel}`} />
           </div>
         )}
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-meta text-label2">
           Rechnungsdatum {new Date(eingangsrechnung.rechnungsdatum).toLocaleDateString("de-DE")}
         </p>
         {eingangsrechnung.faellig_am && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-meta text-label2">
             Fällig am {new Date(eingangsrechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
         {eingangsrechnung.kategorie && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-sekundaer text-label2">
             Kategorie: {KATEGORIE_LABEL[eingangsrechnung.kategorie]}
           </p>
         )}
         {eingangsrechnung.notiz && (
-          <p className="mt-2 whitespace-pre-line text-sm text-label">{eingangsrechnung.notiz}</p>
+          <p className="mt-2 whitespace-pre-line text-fliess text-label">{eingangsrechnung.notiz}</p>
         )}
         {eingangsrechnung.skonto_prozent && eingangsrechnung.skonto_frist && (
-          <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-400">
+          <p className="mt-1 text-sekundaer font-medium text-cyan-700 dark:text-cyan-400">
             Skonto {eingangsrechnung.skonto_prozent}% bis {new Date(eingangsrechnung.skonto_frist).toLocaleDateString("de-DE")}
             {" "}(Ersparnis {eingangsrechnung.skonto_betrag} EUR)
           </p>
         )}
 
-        <div className="mt-3 text-right text-sm">
+        <div className="mt-3 text-right text-fliess">
           <div className="text-label2">Netto: {eingangsrechnung.betrag_netto} EUR</div>
           <div className="font-semibold text-label">
             Brutto: {eingangsrechnung.betrag_brutto} EUR
           </div>
           {Number(eingangsrechnung.bezahlter_betrag) > 0 && (
-            <div className="text-xs text-label2">
+            <div className="text-sekundaer text-label2">
               Bezahlt: {eingangsrechnung.bezahlter_betrag} EUR · Offen: {eingangsrechnung.offener_betrag} EUR
             </div>
           )}
@@ -386,17 +387,17 @@ export function EingangsrechnungDetailPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">Beleg</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Beleg</h2>
         {eingangsrechnung.hat_xml && (
           <div className="mb-3 space-y-1.5">
             <button
               onClick={() => xmlAnzeigenMutation.mutate()}
               disabled={xmlAnzeigenMutation.isPending}
-              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50"
+              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50"
             >
               <FileCode size={14} strokeWidth={2} aria-hidden="true" /> Original-XML herunterladen
             </button>
-            <p className="text-xs text-label2">
+            <p className="text-sekundaer text-label2">
               Die XML ist der Beleg und wird unverändert aufbewahrt.
               {eingangsrechnung.xml_sha256 && (
                 <>
@@ -412,7 +413,7 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => belegAnzeigenMutation.mutate()}
               disabled={belegAnzeigenMutation.isPending}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               <FileText size={14} strokeWidth={2} /> Beleg anzeigen
             </button>
@@ -420,7 +421,7 @@ export function EingangsrechnungDetailPage() {
               <button
                 onClick={() => belegRemoveMutation.mutate()}
                 disabled={belegRemoveMutation.isPending}
-                className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
+                className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
               >
                 Entfernen
               </button>
@@ -441,7 +442,7 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={belegUploadMutation.isPending}
-              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               <Paperclip size={14} strokeWidth={2} /> Beleg hochladen
             </button>
@@ -451,11 +452,11 @@ export function EingangsrechnungDetailPage() {
 
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-label2">Positionen</h2>
+          <h2 className="text-fliess font-semibold text-label2">Positionen</h2>
           {eingangsrechnung.status === "offen" && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint "
+              className="btn-touch text-sekundaer font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Position"}
             </button>
@@ -463,12 +464,12 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -477,13 +478,13 @@ export function EingangsrechnungDetailPage() {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 type="number"
@@ -491,13 +492,13 @@ export function EingangsrechnungDetailPage() {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -505,19 +506,19 @@ export function EingangsrechnungDetailPage() {
         )}
 
         {eingangsrechnung.positionen.length === 0 ? (
-          <p className="text-sm text-label2">
-            Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
+          <p className="text-sekundaer text-label2">
+            Keine eigenen Positionen – Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
           <div className="space-y-1.5">
             {eingangsrechnung.positionen.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess"
               >
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
-                  <div className="text-xs text-label2">
+                  <div className="text-sekundaer text-label2">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
@@ -530,7 +531,7 @@ export function EingangsrechnungDetailPage() {
 
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
+          <h2 className="text-fliess font-semibold text-label2">Zahlungen</h2>
           {/* Gutschriften (negativer Betrag) lassen keine Zahlung zu -- das Backend lehnt sie ab. */}
           {eingangsrechnung.status === "offen" && Number(eingangsrechnung.offener_betrag) > 0 && (
             <button
@@ -538,7 +539,7 @@ export function EingangsrechnungDetailPage() {
                 setZahlungBetrag(eingangsrechnung.offener_betrag);
                 setShowZahlungForm((v) => !v);
               }}
-              className="btn-touch text-xs font-medium text-tint "
+              className="btn-touch text-sekundaer font-medium text-tint "
             >
               {showZahlungForm ? "Abbrechen" : "+ Zahlung"}
             </button>
@@ -546,24 +547,24 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showZahlungForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <input
               type="number"
               step="0.01"
               value={zahlungBetrag}
               onChange={(e) => setZahlungBetrag(e.target.value)}
               placeholder="Betrag"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             {addZahlungMutation.isError && (
-              <p className="text-xs text-st-fehlt ">
+              <p className="text-sekundaer text-st-fehlt ">
                 Zahlung übersteigt den offenen Betrag oder ist ungültig.
               </p>
             )}
             <button
               disabled={!zahlungBetrag || addZahlungMutation.isPending}
               onClick={() => addZahlungMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Zahlung erfassen
             </button>
@@ -571,13 +572,13 @@ export function EingangsrechnungDetailPage() {
         )}
 
         {eingangsrechnung.zahlungen.length === 0 ? (
-          <p className="text-sm text-label2">Noch keine Zahlung erfasst.</p>
+          <p className="text-sekundaer text-label2">Noch keine Zahlung erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {eingangsrechnung.zahlungen.map((z) => (
               <div
                 key={z.id}
-                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess"
               >
                 <span className="text-label2">
                   {new Date(z.datum).toLocaleDateString("de-DE")}
@@ -595,7 +596,7 @@ export function EingangsrechnungDetailPage() {
             if (await bestaetigen({ titel: "Diese Eingangsrechnung stornieren?", bestaetigenLabel: "Stornieren" })) statusMutation.mutate("storniert");
           }}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           Stornieren
         </button>

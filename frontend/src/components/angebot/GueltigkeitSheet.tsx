@@ -54,7 +54,7 @@ export function GueltigkeitSheet({
       onClose={onClose}
       titel="Gültigkeit verlängern"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint">
+        <button type="button" onClick={onClose} className="text-zeile text-tint">
           Abbrechen
         </button>
       }
@@ -63,7 +63,7 @@ export function GueltigkeitSheet({
           type="submit"
           form={FORM_ID}
           disabled={speichern.isPending}
-          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+          className="text-zeile font-semibold text-tint disabled:opacity-40"
         >
           Speichern
         </button>
@@ -72,7 +72,7 @@ export function GueltigkeitSheet({
       <form id={FORM_ID} onSubmit={absenden} className="space-y-4 p-4">
         {fehler && <FehlerMeldung meldung={fehler} alsKasten />}
         <div>
-          <label htmlFor="angebot-gueltig-bis" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="angebot-gueltig-bis" className="mb-1 block text-sekundaer font-medium text-label2">
             Gültig bis
           </label>
           <input

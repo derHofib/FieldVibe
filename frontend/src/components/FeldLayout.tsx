@@ -37,12 +37,12 @@ export function FeldLayout() {
     <div className="min-h-screen bg-gbg text-label" style={{ paddingBottom: "calc(61px + env(safe-area-inset-bottom))" }}>
       <ImpersonationBanner />
       {!isOnline && (
-        <div className="bg-st-arbeit-bg px-4 py-1.5 text-center text-[13px] font-medium text-st-arbeit">
+        <div className="bg-st-arbeit-bg px-4 py-1.5 text-center text-sekundaer font-medium text-st-arbeit">
           Offline – Änderungen werden gespeichert und später synchronisiert
         </div>
       )}
       {isOnline && outboxCount > 0 && (
-        <div className="flex items-center justify-center gap-1.5 bg-st-arbeit-bg px-4 py-1.5 text-center text-[13px] font-medium text-st-arbeit">
+        <div className="flex items-center justify-center gap-1.5 bg-st-arbeit-bg px-4 py-1.5 text-center text-sekundaer font-medium text-st-arbeit">
           <Clock size={13} strokeWidth={2} aria-hidden="true" />
           {outboxCount} noch nicht synchronisiert
         </div>

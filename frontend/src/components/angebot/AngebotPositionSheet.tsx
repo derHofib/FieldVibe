@@ -101,7 +101,7 @@ export function AngebotPositionSheet({
       onClose={onClose}
       titel="Position bearbeiten"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint">
+        <button type="button" onClick={onClose} className="text-zeile text-tint">
           Abbrechen
         </button>
       }
@@ -110,7 +110,7 @@ export function AngebotPositionSheet({
           type="submit"
           form={FORM_ID}
           disabled={speichern.isPending || loeschen.isPending}
-          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+          className="text-zeile font-semibold text-tint disabled:opacity-40"
         >
           Speichern
         </button>
@@ -131,7 +131,7 @@ export function AngebotPositionSheet({
         />
 
         <div>
-          <label htmlFor="angebot-pos-artikelnummer" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="angebot-pos-artikelnummer" className="mb-1 block text-sekundaer font-medium text-label2">
             Art-Nr. <span className="font-normal text-label3">(optional)</span>
           </label>
           <input
@@ -146,7 +146,7 @@ export function AngebotPositionSheet({
         )}
 
         <div>
-          <label htmlFor="angebot-pos-beschreibung" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="angebot-pos-beschreibung" className="mb-1 block text-sekundaer font-medium text-label2">
             Beschreibung
           </label>
           <input
@@ -160,7 +160,7 @@ export function AngebotPositionSheet({
         {!istTitel && (
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label htmlFor="angebot-pos-menge" className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor="angebot-pos-menge" className="mb-1 block text-sekundaer font-medium text-label2">
               Menge
             </label>
             <input
@@ -175,7 +175,7 @@ export function AngebotPositionSheet({
             />
           </div>
           <div>
-            <label htmlFor="angebot-pos-einheit" className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor="angebot-pos-einheit" className="mb-1 block text-sekundaer font-medium text-label2">
               Einheit
             </label>
             <input
@@ -189,7 +189,7 @@ export function AngebotPositionSheet({
             <div className="col-span-3 grid grid-cols-2 gap-3">
               {([["lohn", "Lohn (€)"], ["material", "Material (€)"]] as const).map(([feld, label]) => (
                 <div key={feld}>
-                  <label htmlFor={`angebot-pos-${feld}`} className="mb-1 block text-xs font-medium text-label2">
+                  <label htmlFor={`angebot-pos-${feld}`} className="mb-1 block text-sekundaer font-medium text-label2">
                     {label}
                   </label>
                   <input
@@ -207,7 +207,7 @@ export function AngebotPositionSheet({
             </div>
           ) : (
           <div>
-            <label htmlFor="angebot-pos-preis" className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor="angebot-pos-preis" className="mb-1 block text-sekundaer font-medium text-label2">
               Preis (€)
             </label>
             <input
@@ -231,7 +231,7 @@ export function AngebotPositionSheet({
               <button
                 type="button"
                 onClick={() => setLoeschenBestaetigen(false)}
-                className="btn-touch btn-ap flex-1 text-sm"
+                className="btn-touch btn-ap flex-1 text-sekundaer"
               >
                 Behalten
               </button>
@@ -239,7 +239,7 @@ export function AngebotPositionSheet({
                 type="button"
                 onClick={() => loeschen.mutate()}
                 disabled={loeschen.isPending}
-                className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-3 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
               >
                 Position endgültig löschen
               </button>
@@ -248,7 +248,7 @@ export function AngebotPositionSheet({
             <button
               type="button"
               onClick={() => setLoeschenBestaetigen(true)}
-              className="btn-touch w-full text-center text-[17px] text-st-fehlt"
+              className="btn-touch w-full text-center text-zeile text-st-fehlt"
             >
               Position löschen
             </button>

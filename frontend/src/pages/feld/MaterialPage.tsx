@@ -16,6 +16,7 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { Select } from "../../components/apple/Select";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -84,11 +85,11 @@ export function MaterialZeile({
           onClick={() => navigate(`/material/${material.id}`)}
           className="btn-touch text-left"
         >
-          <div className="text-sm font-medium text-label underline-offset-2 hover:underline ">
+          <div className="text-fliess font-medium text-label underline-offset-2 hover:underline ">
             {material.bezeichnung}
           </div>
           <div
-            className={`text-xs ${
+            className={`text-meta ${
               istUnterbestand(material)
                 ? "font-semibold text-st-fehlt "
                 : "text-label2"
@@ -97,22 +98,22 @@ export function MaterialZeile({
             Gesamt: {material.bestand_gesamt} {material.einheit} (Mindestbestand {material.mindestbestand})
           </div>
           {material.artikelnummer && (
-            <div className="text-xs text-label2">Art.-Nr. {material.artikelnummer}</div>
+            <div className="text-meta text-label2">Art.-Nr. {material.artikelnummer}</div>
           )}
           {material.einzelpreis && (
-            <div className="text-xs text-label2">
+            <div className="text-sekundaer text-label2">
               {material.einzelpreis} EUR/Einheit{lieferantName ? ` · ${lieferantName}` : ""}
             </div>
           )}
           {!material.einzelpreis && lieferantName && (
-            <div className="text-xs text-label2">{lieferantName}</div>
+            <div className="text-sekundaer text-label2">{lieferantName}</div>
           )}
           {tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {tags.map((t) => (
                 <span
                   key={t.id}
-                  className="border border-sep px-1.5 py-0.5 text-xs text-label"
+                  className="border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-meta text-label"
                 >
                   #{t.label}
                 </span>
@@ -123,7 +124,7 @@ export function MaterialZeile({
         {lagerorte.length > 1 && (
           <button
             onClick={() => setZeigeUmlagern((v) => !v)}
-            className="btn-touch text-xs font-medium text-tint "
+            className="btn-touch text-sekundaer font-medium text-tint "
           >
             {zeigeUmlagern ? "Abbrechen" : "Umlagern"}
           </button>
@@ -132,7 +133,7 @@ export function MaterialZeile({
 
       <div className="mt-2 space-y-1 border-t border-sep pt-2 ">
         {material.bestaende.map((b) => (
-          <div key={b.lager_id} className="flex items-center justify-between text-xs">
+          <div key={b.lager_id} className="flex items-center justify-between text-sekundaer">
             <span className="text-label">{b.lager_bezeichnung}</span>
             {editingLagerId === b.lager_id ? (
               <span className="flex items-center gap-1">
@@ -173,12 +174,13 @@ export function MaterialZeile({
       </div>
 
       {zeigeUmlagern && (
-        <div className="mt-2 space-y-2 border border-sepstrong p-2">
+        <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <div className="grid grid-cols-2 gap-2">
-            <select
+            <Select
+              className="w-auto"
               value={umlagernVon}
               onChange={(e) => setUmlagernVon(e.target.value)}
-              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              groesse="kompakt"
             >
               <option value="">Von…</option>
               {lagerorte.map((l) => (
@@ -186,11 +188,12 @@ export function MaterialZeile({
                   {l.bezeichnung}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
+              className="w-auto"
               value={umlagernNach}
               onChange={(e) => setUmlagernNach(e.target.value)}
-              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              groesse="kompakt"
             >
               <option value="">Nach…</option>
               {lagerorte.map((l) => (
@@ -198,7 +201,7 @@ export function MaterialZeile({
                   {l.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex gap-2">
             <input
@@ -207,20 +210,20 @@ export function MaterialZeile({
               placeholder="Menge"
               value={umlagernMenge}
               onChange={(e) => setUmlagernMenge(e.target.value)}
-              className="flex-1 border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-sekundaer text-label"
             />
             <button
               disabled={
                 !umlagernVon || !umlagernNach || umlagernVon === umlagernNach || !umlagernMenge || umlagernMutation.isPending
               }
               onClick={() => umlagernMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1 text-xs font-medium disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1 text-sekundaer font-medium disabled:opacity-50"
             >
               Umlagern
             </button>
           </div>
           {umlagernMutation.isError && (
-            <p className="text-xs text-st-fehlt ">
+            <p className="text-sekundaer text-st-fehlt ">
               {umlagernMutation.error instanceof ApiError
                 ? umlagernMutation.error.message
                 : "Verbindung fehlgeschlagen — bitte erneut versuchen."}
@@ -252,27 +255,27 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   return (
     <div className="card-ap p-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
+        <h2 className="text-fliess font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch text-xs font-medium text-tint "
+          className="btn-touch text-sekundaer font-medium text-tint "
         >
           + Neuer Eintrag
         </button>
       </div>
 
       {lagerorte.length === 0 ? (
-        <p className="mt-2 text-sm text-label2">Noch keine weiteren Lagerorte.</p>
+        <p className="mt-2 text-sekundaer text-label2">Noch keine weiteren Lagerorte.</p>
       ) : (
         <div className="mt-2 space-y-1">
           {lagerorte.map((l) => (
             <button
               key={l.id}
               onClick={() => navigate(`/anlagen/${l.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sekundaer"
             >
               <span className="text-label">{l.bezeichnung}</span>
-              <span className="border border-sep px-2 py-0.5 text-xs text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                 {OBJEKTTYP_LABEL[l.objekttyp]}
               </span>
             </button>
@@ -286,25 +289,24 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder="Bezeichnung (z.B. Transporter VW)"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
-          <select
+          <Select
             value={objekttyp}
             onChange={(e) => setObjekttyp(e.target.value as AnlagenObjekttyp)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             <option value="fahrzeug">Fahrzeug</option>
             <option value="lager">Lager</option>
             <option value="baustelle">Baustelle</option>
-          </select>
-          <p className="text-xs text-label2">
-            Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material -- keine Kunde-
+          </Select>
+          <p className="text-sekundaer text-label2">
+            Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material – keine Kunde-
             Zuordnung nötig.
           </p>
           <button
             disabled={!bezeichnung || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -478,7 +480,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
 
   return (
     <div className="space-y-4">
-      {!nurBestellwesen && <h1 className="text-lg font-bold text-label">Material</h1>}
+      {!nurBestellwesen && <h1 className="text-titel-mobil font-bold text-label">Material</h1>}
 
       <div className={`${nurBestellwesen ? "hidden" : "flex"} gap-2 overflow-x-auto card-ap p-1`}>
         {(["material", "bestellwesen"] as const).map((t) => (
@@ -488,7 +490,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
               setTab(t);
               setShowForm(false);
             }}
-            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
+            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sekundaer font-medium capitalize ${
               tab === t
                 ? "btn-ap-primary text-white"
                 : "text-label"
@@ -502,7 +504,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
       {tab === "material" && (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+          className="btn-touch btn-ap-primary px-4"
         >
           + Neues Material
         </button>
@@ -514,19 +516,19 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
             placeholder="Bezeichnung"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Einheit</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer text-label2">Einheit</label>
               <input id={`${uid}-0`}
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer text-label2">
                 Einzelpreis (EUR, optional)
               </label>
               <input id={`${uid}-1`}
@@ -534,37 +536,36 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 step="0.01"
                 value={materialForm.einzelpreis}
                 onChange={(e) => setMaterialForm({ ...materialForm, einzelpreis: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Anfangsbestand</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-meta text-label2">Anfangsbestand</label>
               <input id={`${uid}-2`}
                 type="number"
                 step="0.01"
                 value={materialForm.menge}
                 onChange={(e) => setMaterialForm({ ...materialForm, menge: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Mindestbestand</label>
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-meta text-label2">Mindestbestand</label>
               <input id={`${uid}-3`}
                 type="number"
                 step="0.01"
                 value={materialForm.mindestbestand}
                 onChange={(e) => setMaterialForm({ ...materialForm, mindestbestand: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div className="col-span-2">
-              <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-meta text-label2">
                 Standard-Lieferant (optional)
               </label>
-              <select id={`${uid}-4`}
+              <Select id={`${uid}-4`}
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Kein Lieferant hinterlegt</option>
                 {(lieferanten ?? []).map((l) => (
@@ -572,16 +573,15 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                     {l.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="col-span-2">
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-meta text-label2">
                 Lagerort für Anfangsbestand
               </label>
-              <select id={`${uid}-5`}
+              <Select id={`${uid}-5`}
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Zentrallager (Standard)</option>
                 {lagerorte
@@ -591,13 +591,13 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.bezeichnung}
                     </option>
                   ))}
-              </select>
+              </Select>
             </div>
           </div>
           <button
             disabled={!materialForm.bezeichnung || createMaterialMutation.isPending}
             onClick={() => createMaterialMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -614,13 +614,14 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
                 placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <div className="grid grid-cols-2 gap-2">
-                <select
+                <Select
+                  className="w-auto"
                   value={matFilterLieferantId}
                   onChange={(e) => setMatFilterLieferantId(e.target.value)}
-                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+                  groesse="kompakt"
                 >
                   <option value="">Alle Lieferanten</option>
                   {(lieferanten ?? []).map((l) => (
@@ -628,11 +629,12 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.name}
                     </option>
                   ))}
-                </select>
-                <select
+                </Select>
+                <Select
+                  className="w-auto"
                   value={matFilterTagId}
                   onChange={(e) => setMatFilterTagId(e.target.value)}
-                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+                  groesse="kompakt"
                 >
                   <option value="">Alle Tags</option>
                   {(materialTags ?? []).map((t) => (
@@ -640,9 +642,9 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       #{t.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
-              <label className="flex items-center gap-1.5 text-xs text-label">
+              <label className="flex items-center gap-1.5 text-sekundaer text-label">
                 <input
                   type="checkbox"
                   checked={matFilterUnterbestand}
@@ -661,7 +663,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
           ) : (material ?? []).length === 0 ? (
             <EmptyState icon={Package} text="Kein Material erfasst." />
           ) : materialGefiltert.length === 0 ? (
-            <p className="text-center text-sm text-label2">Kein Material entspricht dem Filter.</p>
+            <p className="text-center text-sekundaer text-label2">Kein Material entspricht dem Filter.</p>
           ) : (
             materialGefiltert.map((m) => (
               <MaterialZeile
@@ -680,7 +682,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
         <div className="space-y-4">
           <div className="card-ap p-3">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-label2">Lieferanten</h2>
+              <h2 className="text-fliess font-semibold text-label2">Lieferanten</h2>
               <button onClick={() => setShowLieferantForm(true)} className={NEU_BUTTON_KLASSE}>
                 + Neuer Lieferant
               </button>
@@ -705,23 +707,23 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 <Feld label="E-Mail (optional)">
                   {(p) => <input {...p} type="email" value={lieferantEmail} onChange={(e) => setLieferantEmail(e.target.value)} className={FELD_KLASSE} />}
                 </Feld>
-                <button type="submit" disabled={createLieferantMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+                <button type="submit" disabled={createLieferantMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
                   Anlegen
                 </button>
               </form>
             </AnlegenPanel>
             {(lieferanten ?? []).length === 0 ? (
-              <p className="text-sm text-label2">Noch keine Lieferanten angelegt.</p>
+              <p className="text-sekundaer text-label2">Noch keine Lieferanten angelegt.</p>
             ) : (
               <div className="space-y-1">
                 {lieferanten!.map((l) => (
                   <div
                     key={l.id}
-                    className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-sm"
+                    className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-fliess"
                   >
                     <div>
                       <span className="text-label">{l.name}</span>
-                      {l.email && <span className="ml-2 text-xs text-label2">{l.email}</span>}
+                      {l.email && <span className="ml-2 text-sekundaer text-label2">{l.email}</span>}
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
@@ -731,7 +733,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                           }
                         }}
                         disabled={deleteLieferantMutation.isPending}
-                        className="btn-touch text-xs font-medium text-st-fehlt disabled:opacity-50 "
+                        className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
                       >
                         Löschen
                       </button>
@@ -743,11 +745,11 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
           </div>
 
           <div className="card-ap p-3">
-            <h2 className="mb-2 text-sm font-semibold text-label2">Offene Materialbedarfe</h2>
+            <h2 className="mb-2 text-fliess font-semibold text-label2">Offene Materialbedarfe</h2>
             <div className="mb-2 flex gap-2 rounded-md bg-fill p-1">
               <button
                 onClick={() => setBedarfZweck("bestellung")}
-                className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
+                className={`btn-touch flex-1 rounded-md py-1.5 text-sekundaer font-medium ${
                   bedarfZweck === "bestellung"
                     ? "bg-white text-label shadow-xs dark:bg-stone-700 "
                     : "text-label2"
@@ -757,7 +759,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
               </button>
               <button
                 onClick={() => setBedarfZweck("angebot")}
-                className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
+                className={`btn-touch flex-1 rounded-md py-1.5 text-sekundaer font-medium ${
                   bedarfZweck === "angebot"
                     ? "bg-white text-label shadow-xs dark:bg-stone-700 "
                     : "text-label2"
@@ -768,13 +770,13 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
             </div>
 
             {(offeneBedarfe ?? []).length === 0 ? (
-              <p className="text-sm text-label2">Keine offenen Materialbedarfe.</p>
+              <p className="text-sekundaer text-label2">Keine offenen Materialbedarfe.</p>
             ) : (
               <div className="space-y-1">
                 {offeneBedarfe!.map((b) => (
                   <label
                     key={b.id}
-                    className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5 text-sm"
+                    className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5 text-fliess"
                   >
                     <input
                       type="checkbox"
@@ -784,7 +786,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                     />
                     <span className="flex-1 text-label">
                       {b.menge} {b.material_einheit} {b.material_bezeichnung}
-                      <span className="ml-1.5 text-xs text-label2">
+                      <span className="ml-1.5 text-meta text-label2">
                         {b.vorgang_vorgangsnummer} · {b.kunde_name}
                       </span>
                     </span>
@@ -795,10 +797,9 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
 
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "bestellung" && (
               <div className="mt-2 space-y-2 border-t border-sep pt-2 ">
-                <select
+                <Select
                   value={bestellLieferantId}
                   onChange={(e) => setBestellLieferantId(e.target.value)}
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferanten ?? []).map((l) => (
@@ -806,20 +807,20 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.name}
                     </option>
                   ))}
-                </select>
-                <label className="flex items-center justify-between gap-2 text-sm text-label2">
+                </Select>
+                <label className="flex items-center justify-between gap-2 text-sekundaer text-label2">
                   Liefertermin (optional)
                   <input
                     type="date"
                     value={bestellLiefertermin}
                     onChange={(e) => setBestellLiefertermin(e.target.value)}
-                    className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-sm text-label"
+                    className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-zeile text-label"
                   />
                 </label>
                 <button
                   disabled={bestellungErstellenMutation.isPending}
                   onClick={() => bestellungErstellenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
                 >
                   Bestellung aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -830,7 +831,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
                 >
                   Angebot aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -839,22 +840,22 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
           </div>
 
           <div className="card-ap p-3">
-            <h2 className="mb-2 text-sm font-semibold text-label2">Bestellungen</h2>
+            <h2 className="mb-2 text-fliess font-semibold text-label2">Bestellungen</h2>
             {(bestellungen ?? []).length === 0 ? (
-              <p className="text-sm text-label2">Noch keine Bestellungen vorhanden.</p>
+              <p className="text-sekundaer text-label2">Noch keine Bestellungen vorhanden.</p>
             ) : (
               <div className="space-y-1">
                 {bestellungen!.map((b) => (
                   <button
                     key={b.id}
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
-                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
+                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sekundaer"
                   >
                     <span className="min-w-0 text-label">
                       {b.bestellnummer}
-                      {b.liefertermin && <span className="ml-1.5 text-xs text-label2">Lieferung {formatDatum(b.liefertermin)}</span>}
+                      {b.liefertermin && <span className="ml-1.5 text-meta text-label2">Lieferung {formatDatum(b.liefertermin)}</span>}
                     </span>
-                    <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                    <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>
                   </button>

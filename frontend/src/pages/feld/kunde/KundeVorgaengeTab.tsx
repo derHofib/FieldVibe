@@ -5,15 +5,16 @@ import { DauerauftraegeUebersicht } from "./DauerauftraegeUebersicht";
 import { Inbox, Repeat } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
+import { Select } from "../../../components/apple/Select";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-tint text-tint ",
-  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border border-st-wartet text-st-wartet",
-  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-sep text-label ",
-  storniert: "border border-sep text-label2",
+  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
+  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
 };
 
 export function KundeVorgaengeTab({
@@ -41,12 +42,13 @@ export function KundeVorgaengeTab({
 
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-label2">Vorgänge</h2>
+        <h2 className="text-fliess font-semibold text-label2">Vorgänge</h2>
         {profil.anlagen.length > 0 && (
-          <select
+          <Select
+            className="w-auto"
             value={anlageFilter}
             onChange={(e) => setAnlageFilter(e.target.value)}
-            className="btn-touch border border-sep bg-transparent px-2 py-1 text-xs text-label"
+            groesse="kompakt"
           >
             <option value="">Alle Anlagen</option>
             {profil.anlagen.map((a) => (
@@ -54,7 +56,7 @@ export function KundeVorgaengeTab({
                 {a.bezeichnung}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
       {sichtbareVorgaenge.length === 0 ? (
@@ -70,7 +72,7 @@ export function KundeVorgaengeTab({
               }`}
             >
               <div>
-                <div className="text-xs text-label2">
+                <div className="text-meta text-label2">
                   {v.vorgangsnummer}
                   {v.anlage_id && anlageNameById.get(v.anlage_id) && ` · ${anlageNameById.get(v.anlage_id)}`}
                   {v.dauerauftrag_id && (
@@ -80,9 +82,9 @@ export function KundeVorgaengeTab({
                     </>
                   )}
                 </div>
-                <div className="text-sm font-medium text-label">{v.titel}</div>
+                <div className="text-fliess font-medium text-label">{v.titel}</div>
               </div>
-              <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+              <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
                 {statusLabel(v.status)}
               </span>
             </button>

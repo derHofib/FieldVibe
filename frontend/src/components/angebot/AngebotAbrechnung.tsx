@@ -62,10 +62,10 @@ export function AngebotAbrechnung({
 
   return (
     <div className="card-ap space-y-3 p-4" data-testid="angebot-abrechnung">
-      <h2 className="text-sm font-semibold text-label2">Abrechnung</h2>
+      <h2 className="text-fliess font-semibold text-label2">Abrechnung</h2>
 
       <div>
-        <div className="mb-1 flex justify-between text-xs text-label2">
+        <div className="mb-1 flex justify-between text-sekundaer text-label2">
           <span>Abgerechnet {formatEuro(abgerechnet)}</span>
           <span>Rest {formatEuro(rest)}</span>
         </div>
@@ -79,7 +79,7 @@ export function AngebotAbrechnung({
         >
           <div className="h-full rounded-full bg-tint-solid" style={{ width: `${prozent}%` }} />
         </div>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           {Math.round(prozent)} % von {formatEuro(angebot.gesamt_netto)} netto
         </p>
       </div>
@@ -90,10 +90,10 @@ export function AngebotAbrechnung({
             <li key={a.rechnung_id}>
               <Link
                 to={`/rechnungen/${a.rechnung_id}`}
-                className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm"
+                className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sekundaer"
               >
                 <span className="min-w-0">
-                  <span className="block text-xs text-label2">Abschlag</span>
+                  <span className="block text-sekundaer text-label2">Abschlag</span>
                   <span className="block truncate font-medium text-label">{a.rechnungsnummer}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
@@ -110,12 +110,12 @@ export function AngebotAbrechnung({
       )}
 
       {hatSchluss && (
-        <Link to={`/rechnungen/${angebot.schlussrechnung_id}`} className="btn-touch inline-block text-sm font-medium text-tint-text">
+        <Link to={`/rechnungen/${angebot.schlussrechnung_id}`} className="btn-touch inline-block text-sekundaer font-medium text-tint-text">
           Zur Schlussrechnung →
         </Link>
       )}
       {hatRechnung && (
-        <Link to={`/rechnungen/${angebot.rechnung_id}`} className="btn-touch inline-block text-sm font-medium text-tint-text">
+        <Link to={`/rechnungen/${angebot.rechnung_id}`} className="btn-touch inline-block text-sekundaer font-medium text-tint-text">
           Zur Rechnung →
         </Link>
       )}
@@ -139,7 +139,7 @@ export function AngebotAbrechnung({
               type="button"
               onClick={() => setAbschlagOffen(true)}
               disabled={erstellen.isPending}
-              className="btn-touch btn-ap flex-1 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch btn-ap flex-1 px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               Abschlag erstellen
             </button>
@@ -149,7 +149,7 @@ export function AngebotAbrechnung({
               type="button"
               onClick={() => starten("schluss")}
               disabled={erstellen.isPending || entwurfsAbschlaege.length > 0}
-              className="btn-touch btn-ap btn-ap-primary flex-1 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch btn-ap btn-ap-primary flex-1 px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               Schlussrechnung erstellen
             </button>
@@ -158,7 +158,7 @@ export function AngebotAbrechnung({
               type="button"
               onClick={() => starten("rechnung")}
               disabled={erstellen.isPending}
-              className="btn-touch btn-ap btn-ap-primary flex-1 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch btn-ap btn-ap-primary flex-1 px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               Rechnung erstellen
             </button>

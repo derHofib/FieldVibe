@@ -7,6 +7,7 @@ import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { SkeletonList } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -67,19 +68,19 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
     <div className="card-ap p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-label2">
+          <div className="text-meta text-label2">
             {kunde?.name ?? "…"}
             {standort && ` · ${standort.bezeichnung}`}
             {anlage && ` · ${anlage.bezeichnung}`}
           </div>
-          <div className="text-sm font-medium text-label">{anfrage.titel}</div>
-          <span className="mt-1 inline-block border border-sep px-2 py-0.5 text-xs text-label">
+          <div className="text-fliess font-medium text-label">{anfrage.titel}</div>
+          <span className="mt-1 inline-block border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
             {LEISTUNGSTYP_LABEL[anfrage.leistungstyp]}
           </span>
         </div>
         {anfrage.status !== "offen" && (
           <span
-            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+            className={`rounded-full px-2 py-1 text-meta font-semibold ${
               anfrage.status === "angenommen"
                 ? "bg-st-erledigt-bg text-st-erledigt  "
                 : "bg-fill2 text-label "
@@ -90,27 +91,27 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
         )}
       </div>
       {anfrage.beschreibung && (
-        <p className="mt-2 text-sm text-label">{anfrage.beschreibung}</p>
+        <p className="mt-2 text-fliess text-label">{anfrage.beschreibung}</p>
       )}
       {anfrage.ablehnungsgrund && (
-        <p className="mt-2 text-xs text-label2">Grund: {anfrage.ablehnungsgrund}</p>
+        <p className="mt-2 text-sekundaer text-label2">Grund: {anfrage.ablehnungsgrund}</p>
       )}
 
       {anfrage.status === "offen" && (
         <div className="mt-3 space-y-2">
-          {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+          {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
 
           {!zeigeAnnehmen && !zeigeAblehnen && (
             <div className="flex gap-2">
               <button
                 onClick={() => setZeigeAnnehmen(true)}
-                className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium"
+                className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium"
               >
                 Annehmen
               </button>
               <button
                 onClick={() => setZeigeAblehnen(true)}
-                className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
+                className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
               >
                 Ablehnen
               </button>
@@ -118,30 +119,29 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAnnehmen && (
-            <div className="space-y-2 border border-sepstrong p-3">
-              <label htmlFor={`${uid}-0`} className="block text-xs font-medium text-label2">Abrechnungsart</label>
-              <select id={`${uid}-0`}
+            <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
+              <label htmlFor={`${uid}-0`} className="block text-sekundaer font-medium text-label2">Abrechnungsart</label>
+              <Select id={`${uid}-0`}
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
               >
                 {ABRECHNUNGSARTEN.map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <div className="flex gap-2">
                 <button
                   onClick={() => annehmenMutation.mutate()}
                   disabled={annehmenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
                 >
                   Vorgang anlegen
                 </button>
                 <button
                   onClick={() => setZeigeAnnehmen(false)}
-                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
                 >
                   Abbrechen
                 </button>
@@ -150,25 +150,25 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAblehnen && (
-            <div className="space-y-2 border border-sepstrong p-3">
+            <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
               <textarea
                 value={ablehnungsgrund}
                 onChange={(e) => setAblehnungsgrund(e.target.value)}
                 placeholder="Grund (optional, für interne Notiz)"
                 rows={2}
-                className="w-full border border-sep bg-transparent p-2 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-zeile text-label"
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => ablehnenMutation.mutate()}
                   disabled={ablehnenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md bg-st-fehlt-dot py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md bg-st-fehlt-dot py-2 text-sekundaer font-medium text-white disabled:opacity-50"
                 >
                   Ablehnen bestätigen
                 </button>
                 <button
                   onClick={() => setZeigeAblehnen(false)}
-                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
                 >
                   Abbrechen
                 </button>
@@ -191,13 +191,13 @@ export function AnfragenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Vorgangsanfragen</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Vorgangsanfragen</h1>
       <div className="flex gap-2 card-ap p-1">
         {(["offen", "alle"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setStatusFilter(f)}
-            className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
+            className={`btn-touch flex-1 rounded-md py-2 text-sekundaer font-medium capitalize ${
               statusFilter === f
                 ? "btn-ap-primary text-white"
                 : "text-label"
@@ -213,7 +213,7 @@ export function AnfragenPage() {
       ) : ladeFehler && !anfragen ? (
         <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
-        <p className="text-center text-sm text-label2">Keine Anfragen vorhanden.</p>
+        <p className="text-center text-sekundaer text-label2">Keine Anfragen vorhanden.</p>
       ) : (
         <div className="space-y-2">
           {anfragen.map((a) => (

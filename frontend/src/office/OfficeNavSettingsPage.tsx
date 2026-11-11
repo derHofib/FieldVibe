@@ -8,6 +8,7 @@ import { IconBadge } from "../components/IconBadge";
 import { useAuth } from "../context/AuthContext";
 import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten } from "../config/navSeiten";
 import type { OfficeNavPraeferenz } from "../types";
+import { SeitenKopf } from "./OfficeUi";
 
 export function OfficeNavSettingsPage() {
   const navigate = useNavigate();
@@ -69,18 +70,16 @@ export function OfficeNavSettingsPage() {
   })).filter((gruppe) => gruppe.seiten.length > 0);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-label2"
+          className="mb-1 text-sekundaer text-label2"
         >
           ‹ Zurück
         </button>
-        <h1 className="mt-1 text-lg font-bold text-label">
-          Seitenleiste anpassen
-        </h1>
-        <p className="mt-1 text-sm text-label2">
+        <SeitenKopf titel="Seitenleiste anpassen" />
+        <p className="-mt-2 text-sekundaer text-label2">
           Wähle, welche Bereiche in deiner Office-Seitenleiste erscheinen sollen. Die Auswahl
           gilt nur für dich und ändert nichts an deinen eigentlichen Rechten.
         </p>
@@ -88,7 +87,7 @@ export function OfficeNavSettingsPage() {
 
       {gruppen.map(({ kategorie, seiten }) => (
         <section key={kategorie} className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+          <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
             {kategorie}
           </h2>
           <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
@@ -123,7 +122,7 @@ export function OfficeNavSettingsPage() {
         </button>
         <button
           onClick={zuruecksetzen}
-          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sm font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
+          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sekundaer font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
         >
           <RotateCcw size={16} /> Alle anzeigen
         </button>

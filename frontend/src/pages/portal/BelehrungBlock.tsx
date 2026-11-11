@@ -20,7 +20,7 @@ export function BelehrungBlock({
 
   return (
     <section aria-labelledby={titelId} className="card-ap space-y-3 p-4">
-      <h2 id={titelId} className="text-sm font-semibold text-label">
+      <h2 id={titelId} className="text-fliess font-semibold text-label">
         Widerrufsbelehrung
       </h2>
       {belehrung.ist_platzhalter && (
@@ -29,10 +29,10 @@ export function BelehrungBlock({
         </Hinweiskasten>
       )}
       <details open={offen} className="group">
-        <summary className="btn-touch cursor-pointer text-sm font-medium text-tint-text">
+        <summary className="btn-touch cursor-pointer text-sekundaer font-medium text-tint-text">
           Text der Widerrufsbelehrung (Stand {belehrung.version})
         </summary>
-        <div className="mt-2 space-y-2 text-sm text-label">
+        <div className="mt-2 space-y-2 text-fliess text-label">
           {absaetze(belehrung.text).map((absatz, i) => (
             <p key={i} className="whitespace-pre-line">
               {absatz}
@@ -44,7 +44,7 @@ export function BelehrungBlock({
         <button
           type="button"
           onClick={() => ladeTextdatei("Muster-Widerrufsformular.txt", daten.widerrufsformular_text!)}
-          className="btn-touch btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium"
+          className="btn-touch btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-medium"
         >
           <Download size={14} strokeWidth={2} aria-hidden="true" />
           Muster-Widerrufsformular herunterladen

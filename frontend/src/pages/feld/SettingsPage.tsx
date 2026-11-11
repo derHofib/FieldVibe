@@ -40,7 +40,7 @@ function SettingsLink({
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
         <span className="block font-medium text-label">{label}</span>
-        <span className="block text-xs text-label2">{beschreibung}</span>
+        <span className="block text-sekundaer text-label2">{beschreibung}</span>
       </span>
       <span className="text-label2">›</span>
     </button>
@@ -56,14 +56,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-label">Einstellungen</h1>
-        <p className="mt-1 text-sm text-label2">
+        <h1 className="text-titel-mobil font-bold text-label">Einstellungen</h1>
+        <p className="mt-1 text-sekundaer text-label2">
           Verwaltung für {currentUser?.mandant_name ?? "diesen Mandanten"}.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+        <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
           Team
         </h2>
         {/* Custom-Rollen duerfen die Seite oeffnen, das Backend sperrt aber /api/users und
@@ -117,7 +117,7 @@ export function SettingsPage() {
 
       {zeigeBetrieb && (
         <section className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+          <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
             Betrieb
           </h2>
           {hatRecht("kunden", "sehen") && (
@@ -152,7 +152,7 @@ export function SettingsPage() {
 
       {istAdminRolle(currentUser) && (
         <section className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+          <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
             Unternehmen
           </h2>
           {istAdminRolle(currentUser) && (

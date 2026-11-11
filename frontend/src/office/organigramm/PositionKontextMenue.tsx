@@ -132,7 +132,7 @@ export function PositionKontextMenue({
               }`}
             >
               <Icon size={15} strokeWidth={2} className="shrink-0" aria-hidden="true" />
-              <span className="flex-1 text-[13px]">{KONTEXT_AKTION_LABEL[aktion]}</span>
+              <span className="flex-1 text-sekundaer">{KONTEXT_AKTION_LABEL[aktion]}</span>
             </button>
           </div>
         );

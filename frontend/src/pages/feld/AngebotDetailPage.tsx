@@ -50,15 +50,15 @@ function PositionInhalt({ p }: { p: AngebotPosition }) {
     <>
       <div className="text-label">
         {p.positionstyp === "arbeitszeit" && (
-          <span className="mr-1.5 border border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
+          <span className="mr-1.5 border rounded-[var(--radius-ap-pill)] border-st-arbeit px-1.5 py-0.5 text-meta text-st-arbeit ">
             {POSITIONSTYP_LABEL.arbeitszeit}
           </span>
         )}
-        {p.ordnungszahl && <span className="mr-1.5 text-xs text-label2">{p.ordnungszahl}</span>}
-        {p.artikelnummer && <span className="mr-1.5 text-xs text-label2">{p.artikelnummer}</span>}
+        {p.ordnungszahl && <span className="mr-1.5 text-meta text-label2">{p.ordnungszahl}</span>}
+        {p.artikelnummer && <span className="mr-1.5 text-meta text-label2">{p.artikelnummer}</span>}
         {p.beschreibung}
       </div>
-      <div className="text-xs text-label2">
+      <div className="text-sekundaer text-label2">
         {p.menge} {p.einheit} × {p.einzelpreis} EUR
         {p.einzelpreis_lohn !== null && p.einzelpreis_material !== null && (
           <> (Lohn {p.einzelpreis_lohn} · Material {p.einzelpreis_material})</>
@@ -199,7 +199,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   if (angebotIstFehler) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         <EmptyState
@@ -225,7 +225,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -236,7 +236,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Angebot löschen
           </button>
@@ -246,8 +246,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">{angebot.angebotsnummer}</div>
-            <h1 className="text-lg font-bold text-label">{kunde?.name ?? "…"}</h1>
+            <div className="text-meta text-label2">{angebot.angebotsnummer}</div>
+            <h1 className="text-titel-mobil font-bold text-label">{kunde?.name ?? "…"}</h1>
           </div>
           <div className="flex flex-wrap justify-end gap-1.5">
             <StatusPille status={ANGEBOT_STATUS_TOKEN[angebot.status]} label={ANGEBOT_STATUS_LABEL[angebot.status]} />
@@ -255,7 +255,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         </div>
         {angebot.gueltig_bis && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-sekundaer text-label2">
             Gültig bis {formatIsoTag(angebot.gueltig_bis)}
             {ablauf.art === "laeuft_bald_ab" && (
               <span className="font-medium text-st-arbeit"> · {ablaufText(ablauf)}</span>
@@ -271,14 +271,14 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           </p>
         )}
         {!angebot.gueltig_bis && (istEntwurf || angebot.status === "versendet") && (
-          <button type="button" onClick={() => setGueltigkeitOffen(true)} className="mt-1 text-xs font-medium text-tint">
+          <button type="button" onClick={() => setGueltigkeitOffen(true)} className="mt-1 text-sekundaer font-medium text-tint">
             Gültigkeit festlegen
           </button>
         )}
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           <FileText size={14} strokeWidth={2} /> PDF anzeigen
         </button>
@@ -293,7 +293,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             type="button"
             onClick={() => setGueltigkeitOffen(true)}
-            className="btn-touch mt-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label"
+            className="btn-touch mt-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label"
           >
             Gültigkeit verlängern
           </button>
@@ -302,18 +302,18 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
 
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-label2">Positionen</h2>
+          <h2 className="text-fliess font-semibold text-label2">Positionen</h2>
           {istEntwurf && (
             <div className="flex gap-3">
               <button
                 onClick={() => setTitelText((t) => (t === null ? "" : null))}
-                className="btn-touch text-xs font-medium text-tint "
+                className="btn-touch text-sekundaer font-medium text-tint "
               >
                 {titelText === null ? "+ Titel" : "Abbrechen"}
               </button>
               <button
                 onClick={() => setShowForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-tint "
+                className="btn-touch text-sekundaer font-medium text-tint "
               >
                 {showForm ? "Abbrechen" : "+ Position"}
               </button>
@@ -328,12 +328,12 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               onChange={(e) => setTitelText(e.target.value)}
               placeholder="Titel, z. B. Elektro Erdgeschoss"
               aria-label="Titel"
-              className="min-w-0 flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <button
               disabled={!titelText.trim() || addTitelMutation.isPending}
               onClick={() => addTitelMutation.mutate(1)}
-              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -341,11 +341,11 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <button
               type="button"
               onClick={() => setLvOffen(true)}
-              className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-tint"
+              className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-tint"
             >
               Aus Leistungsverzeichnis übernehmen…
             </button>
@@ -355,7 +355,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                   key={typ}
                   type="button"
                   onClick={() => setForm({ ...form, positionstyp: typ })}
-                  className={`btn-touch rounded-md px-3 py-1.5 text-xs font-medium ${
+                  className={`btn-touch rounded-md px-3 py-1.5 text-sekundaer font-medium ${
                     form.positionstyp === typ
                       ? "bg-tint-solid text-white"
                       : "bg-white text-label ring-1 ring-sep dark:bg-stone-800 "
@@ -369,13 +369,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="Art-Nr. (optional)"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -384,13 +384,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 type="number"
@@ -398,13 +398,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -412,13 +412,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {angebot.positionen.length === 0 ? (
-          <p className="text-sm text-label2">Noch keine Positionen.</p>
+          <p className="text-sekundaer text-label2">Noch keine Positionen.</p>
         ) : (
           <div className="space-y-1.5">
             {angebot.positionen.map((p, index) => (
               <div
                 key={p.id}
-                className={`flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm ${
+                className={`flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sekundaer ${
                   p.zeilentyp === "titel" ? "mt-2 font-semibold" : p.ordnungszahl?.includes(".") ? "ml-3" : ""
                 }`}
               >
@@ -466,10 +466,10 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         )}
         {istEntwurf && angebot.positionen.length > 0 && (
-          <p className="mt-1.5 text-xs text-label3">Position antippen zum Bearbeiten oder Löschen.</p>
+          <p className="mt-1.5 text-meta text-label3">Position antippen zum Bearbeiten oder Löschen.</p>
         )}
 
-        <div className="mt-3 space-y-2 border-t border-sep pt-2 text-sm ">
+        <div className="mt-3 space-y-2 border-t border-sep pt-2 text-fliess ">
           {kleinunternehmer ? (
             <Hinweiskasten ton="info">Kleinunternehmer – steuerbefreit nach § 19 UStG</Hinweiskasten>
           ) : istEntwurf ? (
@@ -491,7 +491,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           )}
           <div className="text-right">
             {Number(angebot.summe_lohn) > 0 && Number(angebot.summe_material) > 0 && (
-              <div className="text-xs text-label3">
+              <div className="text-meta text-label3">
                 davon Lohn {angebot.summe_lohn} EUR · Material {angebot.summe_material} EUR
               </div>
             )}
@@ -526,7 +526,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         <button
           onClick={() => statusMutation.mutate("versendet")}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           An Kunden senden
         </button>
@@ -536,21 +536,21 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("angenommen")}
             disabled={statusMutation.isPending || angebot.ist_abgelaufen}
-            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
           >
             Angenommen
           </button>
           <button
             onClick={() => statusMutation.mutate("abgelehnt")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-4 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
           >
             Abgelehnt
           </button>
         </div>
       )}
       {angebot.status === "angenommen" && (
-        <div className="space-y-1 text-center text-sm">
+        <div className="space-y-1 text-center text-fliess">
           {angebot.auftrag_vorgang_id ? (
             <>
               <p className="text-st-erledigt ">Angebot angenommen.</p>

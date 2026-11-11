@@ -54,15 +54,15 @@ function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: 
       <span className="min-w-0 flex-1">
         {vorgang ? (
           <>
-            <span className="block truncate text-sm font-bold text-label">{vorgang.titel}</span>
-            <span className="block text-xs text-label2">{vorgang.vorgangsnummer}</span>
+            <span className="block truncate text-fliess font-bold text-label">{vorgang.titel}</span>
+            <span className="block text-meta text-label2">{vorgang.vorgangsnummer}</span>
           </>
         ) : (
-          <span className="text-sm text-label2">Lädt…</span>
+          <span className="text-sekundaer text-label2">Lädt…</span>
         )}
       </span>
       {vorgang && (
-        <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}>
+        <span className={`shrink-0 px-2 py-0.5 text-meta font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}>
           {STATUS_LABEL[vorgang.status]}
         </span>
       )}
@@ -187,7 +187,7 @@ export function BoardMobilePage() {
   const offenerNode = offeneNotizId ? nodes.find((n) => n.id === offeneNotizId) : null;
 
   if (!board) {
-    return <p className="py-8 text-center text-sm text-label2">Lädt…</p>;
+    return <p className="py-8 text-center text-sekundaer text-label2">Lädt…</p>;
   }
 
   return (
@@ -196,7 +196,7 @@ export function BoardMobilePage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate("/boards")}
-            className="btn-touch -ml-1 flex items-center gap-0.5 text-sm font-medium text-label2"
+            className="btn-touch -ml-1 flex items-center gap-0.5 text-sekundaer font-medium text-label2"
           >
             <ChevronLeft size={16} strokeWidth={2.25} /> Boards
           </button>
@@ -212,8 +212,8 @@ export function BoardMobilePage() {
           </button>
         </div>
         <div className="mt-0.5 flex items-baseline gap-2">
-          <h1 className="truncate text-lg font-bold text-label">{board.name}</h1>
-          <span className="shrink-0 text-xs text-label2">
+          <h1 className="truncate text-titel-mobil font-bold text-label">{board.name}</h1>
+          <span className="shrink-0 text-sekundaer text-label2">
             {speichern.isPending ? "Speichert…" : "Gespeichert"}
           </span>
         </div>
@@ -222,7 +222,7 @@ export function BoardMobilePage() {
       <div className="inline-flex border border-sep">
         <button
           onClick={() => setAnsicht("liste")}
-          className={`btn-touch px-4 py-1.5 text-xs font-semibold ${
+          className={`btn-touch px-4 py-1.5 text-sekundaer font-semibold ${
             ansicht === "liste" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
           }`}
         >
@@ -230,7 +230,7 @@ export function BoardMobilePage() {
         </button>
         <button
           onClick={() => setAnsicht("canvas")}
-          className={`btn-touch border-l border-sep px-4 py-1.5 text-xs font-semibold ${
+          className={`btn-touch border-l border-sep px-4 py-1.5 text-sekundaer font-semibold ${
             ansicht === "canvas" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
           }`}
         >
@@ -240,7 +240,7 @@ export function BoardMobilePage() {
 
       {ansicht === "liste" ? (
         notizen.length === 0 ? (
-          <p className="py-8 text-center text-sm text-label2">
+          <p className="py-8 text-center text-sekundaer text-label2">
             Noch keine Notizen auf diesem Board.
           </p>
         ) : (
@@ -259,7 +259,7 @@ export function BoardMobilePage() {
                   className={`btn-touch flex w-full items-start gap-3 rounded-xl p-3 text-left shadow-xs ${FARB_KLASSEN[daten.farbe]}`}
                 >
                   <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${FARB_PUNKT[daten.farbe]}`} />
-                  <span className="min-w-0 flex-1 text-sm font-medium">
+                  <span className="min-w-0 flex-1 text-fliess font-medium">
                     {daten.text || <span className="opacity-60">(leer)</span>}
                   </span>
                 </button>
@@ -270,7 +270,7 @@ export function BoardMobilePage() {
       ) : (
         <div className="relative h-[calc(100dvh-280px)] min-h-[320px] overflow-hidden rounded-xl border border-sep">
           <Suspense
-            fallback={<div className="flex h-full items-center justify-center text-sm text-label2">Lädt…</div>}
+            fallback={<div className="flex h-full items-center justify-center text-sekundaer text-label2">Lädt…</div>}
           >
             <BoardCanvasAnsicht nodes={nodes} edges={edges} onNodeTap={nodeTippen} />
           </Suspense>
@@ -285,7 +285,7 @@ export function BoardMobilePage() {
         <span className="flex h-9 w-9 items-center justify-center bg-tint-solid text-white">
           <Plus size={18} strokeWidth={1.5} />
         </span>
-        <span className="flex items-center gap-1.5 text-sm font-bold text-label">
+        <span className="flex items-center gap-1.5 text-fliess font-bold text-label">
           <StickyNote size={14} strokeWidth={2} /> Notiz
         </span>
       </button>

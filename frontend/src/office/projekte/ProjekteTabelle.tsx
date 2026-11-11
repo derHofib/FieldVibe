@@ -20,11 +20,11 @@ const SPALTEN = [
     header: "Status",
     cell: (info) =>
       info.getValue() ? (
-        <span className="rounded-[var(--radius-ap-pill)] border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-400 dark:border-stone-700 dark:text-stone-500">
+        <span className="rounded-[var(--radius-ap-pill)] border border-slate-300 px-2 py-0.5 text-meta font-semibold text-slate-400 dark:border-stone-700 dark:text-stone-500">
           Archiviert
         </span>
       ) : (
-        <span className="rounded-[var(--radius-ap-pill)] border border-blue-400 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:border-blue-600 dark:text-blue-300">
+        <span className="rounded-[var(--radius-ap-pill)] border border-blue-400 px-2 py-0.5 text-meta font-semibold text-blue-700 dark:border-blue-600 dark:text-blue-300">
           Aktiv
         </span>
       ),
@@ -60,7 +60,7 @@ export function ProjekteTabelle({
 
   return (
     <Karte className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-fliess">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b border-sepstrong">
@@ -70,7 +70,7 @@ export function ProjekteTabelle({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
+                    className="cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}

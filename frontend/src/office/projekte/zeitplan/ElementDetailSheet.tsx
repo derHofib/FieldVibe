@@ -20,7 +20,7 @@ const BESTELLUNG_STATUS_LABEL = { entwurf: "Entwurf", bestellt: "Bestellt", eing
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="px-1 text-[13px] font-semibold tracking-wide text-label2 uppercase">{titel}</h3>
+      <h3 className="px-1 text-sekundaer font-semibold text-label2">{titel}</h3>
       {children}
     </section>
   );
@@ -57,7 +57,7 @@ function LoesenKnopf({ onClick, label, disabled }: { onClick: () => void; label:
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex h-8 shrink-0 items-center gap-1 rounded-[8px] px-2 text-[13px] font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50"
+      className="flex h-8 shrink-0 items-center gap-1 rounded-[8px] px-2 text-sekundaer font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50"
     >
       <Unlink size={14} strokeWidth={2} aria-hidden="true" />
       {label}
@@ -92,7 +92,7 @@ function VorgangVerknuepfung({
       <div className="space-y-2">
         <div className="card-ap flex items-center gap-2 p-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] text-label">
+            <p className="truncate text-fliess text-label">
               <span className="font-semibold tabular-nums">{v.vorgangsnummer}</span> · {v.titel}
             </p>
             <div className="mt-1 flex items-center gap-2">
@@ -100,7 +100,7 @@ function VorgangVerknuepfung({
               <Link
                 to={`/vorgaenge/${v.id}/vollbild`}
                 onClick={onClose}
-                className="inline-flex items-center gap-1 text-[13px] font-medium text-tint-text hover:underline"
+                className="inline-flex items-center gap-1 text-sekundaer font-medium text-tint-text hover:underline"
               >
                 Vorgang öffnen <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
               </Link>
@@ -109,13 +109,13 @@ function VorgangVerknuepfung({
           <LoesenKnopf label="Lösen" disabled={busy} onClick={() => onPatch({ vorgang_id: null })} />
         </div>
         {element.termine.length > 0 && (
-          <ul className="space-y-0.5 px-1 text-[13px] text-label2">
+          <ul className="space-y-0.5 px-1 text-sekundaer text-label2">
             {element.termine.map((t) => (
               <li key={t.id}>{terminLabel(t)}</li>
             ))}
           </ul>
         )}
-        <p className="px-1 text-xs text-label2">Wird der Vorgang abgeschlossen, gilt der Schritt automatisch als erledigt.</p>
+        <p className="px-1 text-sekundaer text-label2">Wird der Vorgang abgeschlossen, gilt der Schritt automatisch als erledigt.</p>
       </div>
     );
   }
@@ -125,7 +125,7 @@ function VorgangVerknuepfung({
   const zeile = (v: (typeof eigene)[number], letzte: boolean) => (
     <GroupedListRow key={v.id} onClick={() => !busy && onPatch({ vorgang_id: v.id })} last={letzte}>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] text-label">
+        <p className="truncate text-fliess text-label">
           <span className="font-semibold tabular-nums">{v.vorgangsnummer}</span> · {v.titel}
         </p>
       </div>
@@ -139,18 +139,18 @@ function VorgangVerknuepfung({
       <div className="max-h-64 space-y-2 overflow-y-auto">
         {eigene.length > 0 && (
           <div>
-            <p className="px-1 pb-1 text-xs font-semibold text-label2">Aus diesem Projekt</p>
+            <p className="px-1 pb-1 text-sekundaer font-semibold text-label2">Aus diesem Projekt</p>
             <GroupedList>{eigene.map((v, i) => zeile(v, i === eigene.length - 1))}</GroupedList>
           </div>
         )}
         {weitere.length > 0 && (
           <div>
-            <p className="px-1 pb-1 text-xs font-semibold text-label2">{eigene.length > 0 ? "Weitere Vorgänge" : "Vorgänge"}</p>
+            <p className="px-1 pb-1 text-sekundaer font-semibold text-label2">{eigene.length > 0 ? "Weitere Vorgänge" : "Vorgänge"}</p>
             <GroupedList>{weitere.map((v, i) => zeile(v, i === weitere.length - 1))}</GroupedList>
           </div>
         )}
-        {data && data.length === 0 && <p className="px-1 text-sm text-label2">Keine Vorgänge gefunden.</p>}
-        {!data && isFetching && <p className="px-1 text-sm text-label2">Suche läuft …</p>}
+        {data && data.length === 0 && <p className="px-1 text-sekundaer text-label2">Keine Vorgänge gefunden.</p>}
+        {!data && isFetching && <p className="px-1 text-sekundaer text-label2">Suche läuft …</p>}
       </div>
     </div>
   );
@@ -190,24 +190,24 @@ function BestellungVerknuepfung({
       <div className="space-y-2">
         <div className="card-ap flex items-center gap-2 p-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] text-label">
+            <p className="truncate text-fliess text-label">
               <span className="font-semibold tabular-nums">{b.bestellnummer}</span>
               {b.lieferant_name ? ` · ${b.lieferant_name}` : ""}
             </p>
-            <p className={`text-[13px] ${b.liefertermin ? "text-label2" : "text-st-arbeit"}`}>
+            <p className={`text-sekundaer ${b.liefertermin ? "text-label2" : "text-st-arbeit"}`}>
               {liefertermin(b)} · {BESTELLUNG_STATUS_LABEL[b.status]}
             </p>
             <Link
               to={`/bestellungen/${b.id}`}
               onClick={onClose}
-              className="mt-0.5 inline-flex items-center gap-1 text-[13px] font-medium text-tint-text hover:underline"
+              className="mt-0.5 inline-flex items-center gap-1 text-sekundaer font-medium text-tint-text hover:underline"
             >
               Bestellung öffnen <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
             </Link>
           </div>
           <LoesenKnopf label="Lösen" disabled={busy} onClick={() => onPatch({ bestellung_id: null })} />
         </div>
-        <p className="px-1 text-xs text-label2">
+        <p className="px-1 text-meta text-label2">
           Das Datum dieses Meilensteins kommt aus dem Liefertermin der Bestellung und kann hier nicht verschoben werden. Änderungen am Liefertermin
           erfolgen in der Bestellung.
         </p>
@@ -217,7 +217,7 @@ function BestellungVerknuepfung({
 
   if (keinRecht) {
     return (
-      <p className="rounded-[10px] bg-fill px-3 py-2 text-sm text-label2">
+      <p className="rounded-[10px] bg-fill px-3 py-2 text-sekundaer text-label2">
         Für die Auswahl von Bestellungen fehlt dir der Zugriff auf das Modul Material (Recht „Material sehen“). Bitte wende dich an einen
         Administrator.
       </p>
@@ -234,19 +234,19 @@ function BestellungVerknuepfung({
               <GroupedListRow key={b.id} onClick={() => !busy && onPatch({ bestellung_id: b.id })} last={i === data.length - 1}>
                 <Package size={16} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] text-label">
+                  <p className="truncate text-fliess text-label">
                     <span className="font-semibold tabular-nums">{b.bestellnummer}</span>
                     {b.lieferant_name ? ` · ${b.lieferant_name}` : ""}
                   </p>
-                  <p className={`text-xs ${b.liefertermin ? "text-label2" : "text-st-arbeit"}`}>{liefertermin(b)}</p>
+                  <p className={`text-sekundaer ${b.liefertermin ? "text-label2" : "text-st-arbeit"}`}>{liefertermin(b)}</p>
                 </div>
               </GroupedListRow>
             ))}
           </GroupedList>
         )}
-        {data && data.length === 0 && <p className="px-1 text-sm text-label2">Keine Bestellungen gefunden.</p>}
-        {error && !keinRecht && <p role="alert" className="px-1 text-sm text-st-fehlt">Bestellungen konnten nicht geladen werden.</p>}
-        {!data && isFetching && <p className="px-1 text-sm text-label2">Suche läuft …</p>}
+        {data && data.length === 0 && <p className="px-1 text-sekundaer text-label2">Keine Bestellungen gefunden.</p>}
+        {error && !keinRecht && <p role="alert" className="px-1 text-fliess text-st-fehlt">Bestellungen konnten nicht geladen werden.</p>}
+        {!data && isFetching && <p className="px-1 text-sekundaer text-label2">Suche läuft …</p>}
       </div>
     </div>
   );
@@ -267,7 +267,7 @@ function PartnerAuswahl({ element, busy, onPatch }: { element: ZeitplanElement; 
         />
         {element.partner && <LoesenKnopf label="Lösen" disabled={busy} onClick={() => onPatch({ partner_id: null })} />}
       </div>
-      <p className="px-1 text-xs text-label2">Der Schritt wird im Plan als Fremdgewerk dargestellt und erscheint im Partnerportal des Nachunternehmers.</p>
+      <p className="px-1 text-sekundaer text-label2">Der Schritt wird im Plan als Fremdgewerk dargestellt und erscheint im Partnerportal des Nachunternehmers.</p>
     </div>
   );
 }
@@ -302,15 +302,15 @@ export function ElementDetailSheet({
       onClose={onClose}
       titel={`${TYP_TITEL[element.typ]}-Details`}
       rechts={
-        <button type="button" onClick={onClose} className="text-[17px] font-semibold text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile font-semibold text-tint-text">
           Fertig
         </button>
       }
     >
       <div className="space-y-5 p-4">
         <div>
-          <h3 className="text-[20px] leading-tight font-bold text-label">{element.titel}</h3>
-          <p className="text-[13px] text-label2">{TYP_TITEL[element.typ]}</p>
+          <h3 className="text-titel-mobil leading-tight font-bold text-label">{element.titel}</h3>
+          <p className="text-sekundaer text-label2">{TYP_TITEL[element.typ]}</p>
         </div>
 
         <GroupedList>
@@ -322,7 +322,7 @@ export function ElementDetailSheet({
         </GroupedList>
 
         {planInfo && planInfo.length > 0 && (
-          <ul className="space-y-0.5 rounded-[10px] bg-fill px-3 py-2 text-[13px] text-label2">
+          <ul className="space-y-0.5 rounded-[10px] bg-fill px-3 py-2 text-sekundaer text-label2">
             {planInfo.map((t) => (
               <li key={t}>{t}</li>
             ))}
@@ -330,7 +330,7 @@ export function ElementDetailSheet({
         )}
 
         {fehler && (
-          <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+          <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
             {fehler}
           </div>
         )}

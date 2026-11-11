@@ -45,7 +45,7 @@ export function PartnerRegistrierenPage() {
       <form onSubmit={handleSubmit}>
         {error && <FehlerHinweis>{error}</FehlerHinweis>}
 
-        <label htmlFor="partner-register-name" className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor="partner-register-name" className="mb-1 block text-fliess font-medium text-label">
           Name
         </label>
         <input
@@ -57,7 +57,7 @@ export function PartnerRegistrierenPage() {
           className="field-ap btn-touch mb-4"
         />
 
-        <label htmlFor="partner-register-password" className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor="partner-register-password" className="mb-1 block text-fliess font-medium text-label">
           Passwort
         </label>
         <input
@@ -70,7 +70,7 @@ export function PartnerRegistrierenPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="field-ap btn-touch mb-1"
         />
-        <p className="mb-5 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+        <p className="mb-5 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
         <button type="submit" disabled={submitting || !token} className="btn-ap-capsule btn-ap-capsule-primary w-full">
           {submitting ? "Registrieren…" : "Zugang einrichten"}

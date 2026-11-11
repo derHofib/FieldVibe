@@ -24,10 +24,10 @@ export const AUFTRAG_STATUS_LABEL: Record<AuftragStatus, string> = {
 };
 
 const AUFTRAG_STATUS_BADGE: Record<AuftragStatus, string> = {
-  offen: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  offen: "border rounded-[var(--radius-ap-pill)] border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 const spalten = createColumnHelper<Auftrag>();
@@ -38,7 +38,7 @@ const SPALTEN = [
   spalten.accessor("status", {
     header: "Status",
     cell: (info) => (
-      <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
+      <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
         {AUFTRAG_STATUS_LABEL[info.getValue()]}
       </span>
     ),
@@ -75,7 +75,7 @@ export function AuftraegeTabelle({
 
   return (
     <Karte className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-fliess">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b border-sepstrong">
@@ -85,7 +85,7 @@ export function AuftraegeTabelle({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
+                    className="cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}

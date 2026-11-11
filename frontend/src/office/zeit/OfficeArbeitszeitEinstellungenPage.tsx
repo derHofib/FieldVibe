@@ -12,6 +12,7 @@ import { BUNDESLAND_LABEL, parseStunden, sollWochensumme, stundenFuerApi } from 
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { toDateInput } from "../../utils/zeiterfassung";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const WOCHENTAG_LABEL: Record<SollWochentagFeld, string> = {
@@ -25,7 +26,7 @@ const WOCHENTAG_LABEL: Record<SollWochentagFeld, string> = {
 };
 
 const FELD_KLASSE =
-  "w-full rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-sm text-label";
+  "w-full rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-fliess text-label";
 
 function fehlerText(err: unknown): string {
   return err instanceof ApiError ? err.message : "Fehler";
@@ -39,7 +40,7 @@ function formatDatum(iso: string): string {
 export function OfficeArbeitszeitEinstellungenPage() {
   return (
     <div className="space-y-4">
-      <Link to="/einstellungen" className="text-sm font-medium text-tint-text hover:underline">
+      <Link to="/einstellungen" className="text-fliess font-medium text-tint-text hover:underline">
         ← Zurück zu Einstellungen
       </Link>
       <SeitenKopf titel="Arbeitszeit" />
@@ -69,14 +70,14 @@ function BundeslandAbschnitt() {
 
   return (
     <Karte className="space-y-3 p-4">
-      <h2 className="text-base font-semibold text-label">Bundesland</h2>
-      <p className="text-sm text-label2">
+      <h2 className="text-zeile font-semibold text-label">Bundesland</h2>
+      <p className="text-sekundaer text-label2">
         Bestimmt, welche gesetzlichen Feiertage beim Generieren entstehen. Ohne Bundesland entstehen nur die
         bundesweiten Feiertage.
       </p>
-      <select
+      <Select
+        className="w-full max-w-xs"
         aria-label="Bundesland"
-        className={`${FELD_KLASSE} max-w-xs`}
         disabled={isLoading || mutation.isPending}
         value={data?.bundesland ?? ""}
         onChange={(e) => mutation.mutate((e.target.value || null) as Bundesland | null)}
@@ -87,10 +88,10 @@ function BundeslandAbschnitt() {
             {BUNDESLAND_LABEL[k]}
           </option>
         ))}
-      </select>
-      {mutation.isError && <p className="text-sm text-st-fehlt">{fehlerText(mutation.error)}</p>}
+      </Select>
+      {mutation.isError && <p className="text-fliess text-st-fehlt">{fehlerText(mutation.error)}</p>}
       {hinweis && !mutation.isError && (
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Gespeichert. Bereits angelegte Feiertage bleiben unverändert und müssen bei einem Wechsel des
           Bundeslands manuell bereinigt werden.
         </p>
@@ -174,12 +175,12 @@ function FeiertageAbschnitt() {
   return (
     <Karte className="space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-label">Feiertage</h2>
+        <h2 className="text-zeile font-semibold text-label">Feiertage</h2>
         <div className="flex items-center gap-2">
           <button type="button" className="btn-ap px-3 py-1.5" onClick={() => setJahr((j) => j - 1)} aria-label="Vorheriges Jahr">
             ←
           </button>
-          <span className="w-12 text-center text-sm font-semibold tabular-nums text-label">{jahr}</span>
+          <span className="w-12 text-center text-fliess font-semibold tabular-nums text-label">{jahr}</span>
           <button type="button" className="btn-ap px-3 py-1.5" onClick={() => setJahr((j) => j + 1)} aria-label="Nächstes Jahr">
             →
           </button>
@@ -187,7 +188,7 @@ function FeiertageAbschnitt() {
       </div>
 
       {bundesland && bundesland.bundesland === null && (
-        <p className="rounded-[var(--radius-ap-md)] bg-st-wartet-bg px-3 py-2 text-sm text-st-wartet">
+        <p className="rounded-[var(--radius-ap-md)] bg-st-wartet-bg px-3 py-2 text-fliess text-st-wartet">
           Kein Bundesland gesetzt: Beim Generieren entstehen nur bundesweite Feiertage.
         </p>
       )}
@@ -201,15 +202,15 @@ function FeiertageAbschnitt() {
         >
           Feiertage {jahr} generieren
         </button>
-        {meldung && <span className="text-sm text-label2">{meldung}</span>}
+        {meldung && <span className="text-sekundaer text-label2">{meldung}</span>}
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-label2">Lädt…</p>
+        <p className="text-sekundaer text-label2">Lädt…</p>
       ) : feiertage && feiertage.length > 0 ? (
         <ul className="divide-y divide-sep">
           {feiertage.map((f) => (
-            <li key={f.id} className="flex items-center gap-3 py-2 text-sm">
+            <li key={f.id} className="flex items-center gap-3 py-2 text-fliess">
               <span className="w-24 tabular-nums text-label2">{formatDatum(f.datum)}</span>
               <span className="min-w-0 flex-1 truncate text-label">{f.bezeichnung}</span>
               <button
@@ -225,15 +226,15 @@ function FeiertageAbschnitt() {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-label2">Für {jahr} sind keine Feiertage hinterlegt.</p>
+        <p className="text-sekundaer text-label2">Für {jahr} sind keine Feiertage hinterlegt.</p>
       )}
 
       <form onSubmit={handleAnlegen} className="flex flex-wrap items-end gap-2 border-t border-sep pt-3">
-        <label className="text-xs font-medium text-label2">
+        <label className="text-meta font-medium text-label2">
           Datum
           <input type="date" className={`${FELD_KLASSE} mt-1 w-40`} value={datum} onChange={(e) => setDatum(e.target.value)} required />
         </label>
-        <label className="min-w-48 flex-1 text-xs font-medium text-label2">
+        <label className="min-w-48 flex-1 text-sekundaer font-medium text-label2">
           Bezeichnung
           <input
             type="text"
@@ -249,7 +250,7 @@ function FeiertageAbschnitt() {
           Hinzufügen
         </button>
       </form>
-      {fehler && <p className="text-sm text-st-fehlt">{fehler}</p>}
+      {fehler && <p className="text-fliess text-st-fehlt">{fehler}</p>}
     </Karte>
   );
 }
@@ -309,8 +310,8 @@ function SollAbschnitt() {
 
   return (
     <Karte className="space-y-3 p-4">
-      <h2 className="text-base font-semibold text-label">Soll-Zeit je Mitarbeiter</h2>
-      <p className="text-sm text-label2">
+      <h2 className="text-zeile font-semibold text-label">Soll-Zeit je Mitarbeiter</h2>
+      <p className="text-sekundaer text-label2">
         Eine Zeile gilt ab ihrem Datum bis zur nächsten. Änderungen wirken nie rückwirkend; eine Zeile mit gleichem
         Datum wird ersetzt.
       </p>
@@ -326,9 +327,9 @@ function SollAbschnitt() {
       {userId && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-fliess">
               <thead>
-                <tr className="text-left text-xs text-label2">
+                <tr className="text-left text-sekundaer text-label2">
                   <th className="py-1 pr-3 font-medium">Gültig ab</th>
                   {SOLL_WOCHENTAG_FELDER.map((f) => (
                     <th key={f} className="py-1 pr-2 text-right font-medium">
@@ -371,9 +372,9 @@ function SollAbschnitt() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3 border-t border-sep pt-3">
-            <h3 className="text-sm font-semibold text-label">Neue Zeile</h3>
+            <h3 className="text-fliess font-semibold text-label">Neue Zeile</h3>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-xs font-medium text-label2">
+              <label className="text-sekundaer font-medium text-label2">
                 Gültig ab
                 <input
                   type="date"
@@ -384,7 +385,7 @@ function SollAbschnitt() {
                 />
               </label>
               {SOLL_WOCHENTAG_FELDER.map((f) => (
-                <label key={f} className="text-xs font-medium text-label2">
+                <label key={f} className="text-sekundaer font-medium text-label2">
                   {WOCHENTAG_LABEL[f]}
                   <input
                     type="text"
@@ -400,11 +401,11 @@ function SollAbschnitt() {
               <button type="submit" className="btn-ap btn-ap-primary px-3 py-1.5" disabled={speichern.isPending}>
                 Speichern
               </button>
-              <span className="text-sm text-label2">
+              <span className="text-sekundaer text-label2">
                 Summe je Woche: <span className="font-semibold tabular-nums text-label">{formatStundenAlsHHMM(summe)} Std.</span>
               </span>
             </div>
-            {fehler && <p className="text-sm text-st-fehlt">{fehler}</p>}
+            {fehler && <p className="text-fliess text-st-fehlt">{fehler}</p>}
           </form>
         </>
       )}

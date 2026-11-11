@@ -24,7 +24,7 @@ const STATUS_ERKLAERUNG: Record<VorgangStatus, string> = {
 function PortalEventBubble({ event }: { event: PortalVorgangEvent }) {
   if (event.is_system) {
     return (
-      <div className="my-2 text-center text-xs text-label2">
+      <div className="my-2 text-center text-sekundaer text-label2">
         {event.body ?? event.event_type} ·{" "}
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
@@ -33,7 +33,7 @@ function PortalEventBubble({ event }: { event: PortalVorgangEvent }) {
 
   return (
     <div className="mb-3 card-ap p-3">
-      <div className="mb-1 text-xs text-label2">
+      <div className="mb-1 text-meta text-label2">
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
       {event.event_type === "foto" && event.foto_url && (
@@ -46,7 +46,7 @@ function PortalEventBubble({ event }: { event: PortalVorgangEvent }) {
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap break-words text-sm text-label">{event.body}</p>
+        <p className="whitespace-pre-wrap break-words text-fliess text-label">{event.body}</p>
       )}
     </div>
   );
@@ -74,25 +74,25 @@ export function PortalVorgangDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div className="card-ap p-4">
-        <div className="text-xs text-label2">Auftrag Nr. {vorgang.vorgangsnummer}</div>
-        <h1 className="text-lg font-bold text-label">{vorgang.titel}</h1>
+        <div className="text-meta text-label2">Auftrag Nr. {vorgang.vorgangsnummer}</div>
+        <h1 className="text-titel-mobil font-bold text-label">{vorgang.titel}</h1>
         {vorgang.beschreibung && (
-          <p className="mt-2 text-sm text-label">{vorgang.beschreibung}</p>
+          <p className="mt-2 text-fliess text-label">{vorgang.beschreibung}</p>
         )}
-        <span className={`mt-2 inline-block px-2 py-1 text-xs font-semibold ${STATUS_BADGE[vorgang.status]}`}>
+        <span className={`mt-2 inline-block px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[vorgang.status]}`}>
           {STATUS_LABEL[vorgang.status]}
         </span>
-        <p className="mt-1 text-xs text-label2">{STATUS_ERKLAERUNG[vorgang.status]}</p>
+        <p className="mt-1 text-sekundaer text-label2">{STATUS_ERKLAERUNG[vorgang.status]}</p>
       </div>
 
       <div>
         {eventsChronological.length === 0 ? (
-          <p className="text-center text-sm text-label2">Noch keine Einträge.</p>
+          <p className="text-center text-sekundaer text-label2">Noch keine Einträge.</p>
         ) : (
           eventsChronological.map((event) => <PortalEventBubble key={event.id} event={event} />)
         )}

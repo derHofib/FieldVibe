@@ -75,7 +75,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black/90 p-4">
       <div className="flex items-center justify-between text-white">
-        <h2 className="text-lg font-bold">QR-Code scannen</h2>
+        <h2 className="text-zeile font-bold">QR-Code scannen</h2>
         <button onClick={onClose} className="btn-touch px-3 py-2 text-white">
           ✕
         </button>
@@ -83,7 +83,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
 
       <div className="mt-4 flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-black">
         {cameraError ? (
-          <p className="p-4 text-center text-sm text-label3">{cameraError}</p>
+          <p className="p-4 text-center text-sekundaer text-label3">{cameraError}</p>
         ) : (
           <video ref={videoRef} className="max-h-full max-w-full" muted playsInline />
         )}
@@ -105,7 +105,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         />
         <button
           type="submit"
-          className="btn-touch rounded-md bg-white px-4 py-2 text-sm font-medium text-label"
+          className="btn-touch rounded-md bg-white px-4 py-2 text-sekundaer font-medium text-label"
         >
           OK
         </button>

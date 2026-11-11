@@ -24,6 +24,7 @@ import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { useAuth } from "../../context/AuthContext";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 const START_STUNDE = 7;
@@ -248,11 +249,10 @@ export function OfficeDispoPage() {
   return (
     <div>
       <SeitenKopf titel="Dispo">
-        <select
+        <Select className="w-auto" groesse="kompakt"
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
           aria-label="Nach Projekt filtern"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -260,28 +260,28 @@ export function OfficeDispoPage() {
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
       </SeitenKopf>
 
       {fehler && (
-        <div className="mb-4 flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div className="mb-4 flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
           </span>
-          <button onClick={() => setFehler(null)} className="text-xs underline">
+          <button onClick={() => setFehler(null)} className="text-sekundaer underline">
             Ausblenden
           </button>
         </div>
       )}
 
       {warnungen.length > 0 && (
-        <div className="mb-4 border border-st-arbeit p-3 text-sm text-st-arbeit">
+        <div className="mb-4 border rounded-[var(--radius-ap-card)] border-st-arbeit p-3 text-fliess text-st-arbeit">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
             </p>
           ))}
-          <button onClick={() => setWarnungen([])} className="mt-1 text-xs underline">
+          <button onClick={() => setWarnungen([])} className="mt-1 text-sekundaer underline">
             Ausblenden
           </button>
         </div>
@@ -290,10 +290,10 @@ export function OfficeDispoPage() {
       <div className="flex items-start gap-4">
         <div className="w-64 shrink-0 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-label2">
+            <span className="text-sekundaer font-bold text-label2">
               Nicht disponiert
             </span>
-            <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label2">
+            <span className="rounded-full bg-fill px-1.5 text-meta font-bold text-label2">
               {backlog.length}
             </span>
           </div>
@@ -335,18 +335,18 @@ export function OfficeDispoPage() {
                         className="mt-0.5 shrink-0 text-label2"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10.5px] font-bold text-label2">
+                        <p className="text-meta font-bold text-label2">
                           {v.vorgangsnummer}
                         </p>
-                        <p className="truncate text-[13px] font-semibold text-label">
+                        <p className="truncate text-sekundaer font-semibold text-label">
                           {v.titel}
                         </p>
-                        <p className="truncate text-[11.5px] text-label2">
+                        <p className="truncate text-meta text-label2">
                           {v.kunde_name}
                         </p>
                         {v.faelligkeit_am && (
                           <span
-                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-meta font-semibold ${
                               ueberfaellig
                                 ? "bg-st-fehlt-bg text-st-fehlt  "
                                 : "bg-fill text-label2 "
@@ -376,13 +376,13 @@ export function OfficeDispoPage() {
               <ChevronLeft size={16} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-label">
+              <span className="text-fliess font-semibold text-label">
                 {formatTag(tag)}
               </span>
               {!heute && (
                 <button
                   onClick={() => setTag(new Date())}
-                  className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-label2 hover:bg-fill2"
+                  className="rounded-full bg-fill px-2 py-0.5 text-meta font-medium text-label2 hover:bg-fill2"
                 >
                   Heute
                 </button>
@@ -410,7 +410,7 @@ export function OfficeDispoPage() {
                   {STUNDEN.map((h) => (
                     <div
                       key={h}
-                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-[11px] font-medium text-label2"
+                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-meta font-medium text-label2"
                       style={{ width: PX_PRO_STUNDE }}
                     >
                       {h}:00
@@ -426,7 +426,7 @@ export function OfficeDispoPage() {
                     {technikers.map((t, i) => (
                       <div
                         key={t.id}
-                        className="absolute inset-x-0 flex items-center border-b border-sep px-2 text-[13px] font-medium text-label "
+                        className="absolute inset-x-0 flex items-center border-b border-sep px-2 text-sekundaer font-medium text-label "
                         style={{ top: i * ROW_HOEHE, height: ROW_HOEHE }}
                       >
                         <span className="truncate">{t.name}</span>
@@ -520,14 +520,14 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-sep px-2 text-left text-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border rounded-[var(--radius-ap-md)] border-sep px-2 text-left text-sekundaer ${
                                 abgesagt
                                   ? "text-label2 line-through"
                                   : "bg-fill text-label"
                               }`}
                             >
                               <span className="truncate font-semibold">{termin.titel}</span>
-                              <span className="truncate text-[10.5px] opacity-80">
+                              <span className="truncate text-meta opacity-80">
                                 {formatUhrzeit(termin.start_at)}–{formatUhrzeit(termin.ende_at)}
                               </span>
                             </button>
@@ -634,7 +634,7 @@ function TerminBearbeitenPanel({
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
+          <h2 className="text-fliess font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-label2 hover:bg-fill"
@@ -645,60 +645,59 @@ function TerminBearbeitenPanel({
 
         <button
           onClick={onZumVorgang}
-          className="flex items-center gap-1 text-xs text-cyan-700 hover:underline dark:text-cyan-400"
+          className="flex items-center gap-1 text-sekundaer text-cyan-700 hover:underline dark:text-cyan-400"
         >
           Zum Vorgang <ExternalLink size={12} />
         </button>
 
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Titel *</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Titel *</label>
           <input id={`${uid}-0`}
             ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
 
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-1`}
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Techniker</label>
+          <Select id={`${uid}-1`}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Start</label>
             <input id={`${uid}-2`}
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div className="flex-1">
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label2">Ende</label>
             <input id={`${uid}-3`}
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label htmlFor={`${uid}-4`} className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-4`} className="mb-1 flex items-center gap-1 text-meta font-medium text-label2">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
             <input id={`${uid}-4`}
@@ -707,11 +706,11 @@ function TerminBearbeitenPanel({
               value={fahrzeit}
               onChange={(e) => setFahrzeit(e.target.value)}
               placeholder="0"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div className="flex-1">
-            <label htmlFor={`${uid}-5`} className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-5`} className="mb-1 flex items-center gap-1 text-sekundaer font-medium text-label2">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
             <input id={`${uid}-5`}
@@ -720,18 +719,18 @@ function TerminBearbeitenPanel({
               value={pause}
               onChange={(e) => setPause(e.target.value)}
               placeholder="0"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">Notiz</label>
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer font-medium text-label2">Notiz</label>
           <textarea id={`${uid}-6`}
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
 
@@ -740,14 +739,14 @@ function TerminBearbeitenPanel({
             onClick={async () => {
               if (await bestaetigen({ titel: "Termin löschen?", bestaetigenLabel: "Löschen" })) onDelete();
             }}
-            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
+            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >
             <Trash2 size={14} /> Löschen
           </button>
           <button
             onClick={speichern}
             disabled={!titel.trim()}
-            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Speichern
           </button>
@@ -798,7 +797,7 @@ function BacklogPlanenPanel({
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-label">Termin planen</h2>
+          <h2 className="text-fliess font-bold text-label">Termin planen</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-label2 hover:bg-fill"
@@ -807,43 +806,42 @@ function BacklogPlanenPanel({
           </button>
         </div>
 
-        <p className="text-xs text-label2">
+        <p className="text-meta text-label2">
           {vorgang.vorgangsnummer} — {vorgang.titel}
         </p>
 
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-0`}
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Techniker</label>
+          <Select id={`${uid}-0`}
             ref={technikerRef}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Start</label>
             <input id={`${uid}-1`}
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div className="flex-1">
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Ende</label>
             <input id={`${uid}-2`}
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
         </div>
@@ -858,7 +856,7 @@ function BacklogPlanenPanel({
               })
             }
             disabled={!technikerId}
-            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Termin anlegen
           </button>

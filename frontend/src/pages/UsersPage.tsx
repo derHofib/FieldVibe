@@ -14,6 +14,7 @@ import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { useBestaetigung } from "../components/ConfirmDialog";
 import { SkeletonList } from "../components/Skeleton";
+import { Select } from "../components/apple/Select";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -287,70 +288,69 @@ export function UsersPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-label">
+        <h2 className="mb-4 text-zeile font-bold text-label">
           {kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
         </h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Name</label>
               <input id={`${uid}-0`}
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
           )}
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">E-Mail</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">E-Mail</label>
             <input id={`${uid}-1`}
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Passwort</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Passwort</label>
               <input id={`${uid}-2`}
                 type="password"
                 required
                 minLength={MIN_PASSWORT_LAENGE}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
-              <p className="mt-1 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+              <p className="mt-1 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             </div>
           )}
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Rolle</label>
-            <select id={`${uid}-3`}
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Rolle</label>
+            <Select className="w-auto" id={`${uid}-3`}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             >
               {verfuegbareRollen.map((value) => (
                 <option key={value} value={value}>
                   {value === "custom" ? "Account-Typ…" : ROLE_LABEL[value]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">
+              <label className="mb-1 block text-fliess font-medium text-label">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
-                <select
+                <Select
+                  className="w-auto"
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -361,11 +361,11 @@ export function UsersPage() {
                       {t.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : (
                 <Link
                   to="/account-typen"
-                  className="text-sm font-medium text-tint-text hover:underline"
+                  className="text-fliess font-medium text-tint-text hover:underline"
                 >
                   Noch keine Account-Typen — jetzt anlegen →
                 </Link>
@@ -374,12 +374,11 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Mandant</label>
-              <select id={`${uid}-4`}
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-fliess font-medium text-label">Mandant</label>
+              <Select className="w-auto" id={`${uid}-4`}
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -389,7 +388,7 @@ export function UsersPage() {
                     {m.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
           <button
@@ -400,9 +399,9 @@ export function UsersPage() {
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
+        {formError && <p className="mt-2 text-fliess text-st-fehlt ">{formError}</p>}
         {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border border-st-erledigt px-4 py-3 text-sm text-st-erledigt ">
+          <div className="mt-3 flex flex-wrap items-center gap-3 border rounded-[var(--radius-ap-md)] border-st-erledigt px-4 py-3 text-fliess text-st-erledigt ">
             <span>
               Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
             </span>
@@ -415,9 +414,9 @@ export function UsersPage() {
 
       {einladungen && einladungen.length > 0 && (
         <section>
-          <h2 className="mb-4 text-lg font-bold text-label">Offene Einladungen</h2>
+          <h2 className="mb-4 text-zeile font-bold text-label">Offene Einladungen</h2>
           <table className="w-full card-ap text-left">
-            <thead className="text-sm text-label2">
+            <thead className="text-sekundaer text-label2">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
                 <th className="px-4 py-3">Rolle</th>
@@ -425,7 +424,7 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sep text-sm">
+            <tbody className="divide-y divide-sep text-fliess">
               {einladungen
                 .filter((e) => e.status === "offen")
                 .map((e) => (
@@ -434,7 +433,7 @@ export function UsersPage() {
                     <td className="px-4 py-3 text-label">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`border px-2 py-0.5 text-xs font-semibold ${
+                        className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${
                           e.abgelaufen
                             ? "border-st-arbeit text-st-arbeit "
                             : "border-sep text-label2"
@@ -473,18 +472,18 @@ export function UsersPage() {
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-label" onClick={aufUeberschriftKlick}>
+        <h2 className="mb-4 text-zeile font-bold text-label" onClick={aufUeberschriftKlick}>
           Accounts
         </h2>
         {versteckteAnzeigen && (
-          <p className="mb-2 flex items-center gap-2 text-sm text-label2">
+          <p className="mb-2 flex items-center gap-2 text-sekundaer text-label2">
             Versteckte Accounts werden angezeigt
             <button type="button" onClick={versteckteAusblenden} className="font-medium text-tint-text hover:underline">
               Ausblenden
             </button>
           </p>
         )}
-        {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
+        {deleteError && <p className="mb-2 text-fliess text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
           <SkeletonList count={4} />
         ) : ladeFehler && !users ? (
@@ -495,14 +494,14 @@ export function UsersPage() {
             {users?.map((u) => (
               <li key={u.id} className="card-ap flex items-start justify-between gap-2 p-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-label">{u.name}</p>
-                  <p className="truncate text-xs text-label2">{u.email}</p>
-                  <p className="mt-1 text-xs text-label2">
+                  <p className="truncate text-fliess font-medium text-label">{u.name}</p>
+                  <p className="truncate text-sekundaer text-label2">{u.email}</p>
+                  <p className="mt-1 text-sekundaer text-label2">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
                     {isSuperAdmin && u.mandant_id ? ` · ${mandantNameById.get(u.mandant_id) ?? "–"}` : ""}
                   </p>
                   <span
-                    className={`mt-1.5 inline-block border px-2 py-0.5 text-xs font-semibold ${
+                    className={`mt-1.5 inline-block border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${
                       u.aktiv ? "border-st-erledigt text-st-erledigt" : "border-sep text-label2"
                     }`}
                   >
@@ -515,7 +514,7 @@ export function UsersPage() {
           </ul>
           <div className="hidden md:block">
           <table className="w-full card-ap text-left">
-            <thead className="text-sm text-label2">
+            <thead className="text-sekundaer text-label2">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -525,7 +524,7 @@ export function UsersPage() {
                 <th className="px-4 py-3 text-right">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sep text-sm">
+            <tbody className="divide-y divide-sep text-fliess">
               {users?.map((u) => (
                 <tr key={u.id}>
                   <td className="px-4 py-3 font-medium text-label">{u.name}</td>
@@ -540,7 +539,7 @@ export function UsersPage() {
                   )}
                   <td className="px-4 py-3">
                     <span
-                      className={`border px-2 py-0.5 text-xs font-semibold ${
+                      className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${
                         u.aktiv
                           ? "border-st-erledigt text-st-erledigt "
                           : "border-sep text-label2"
@@ -566,7 +565,7 @@ export function UsersPage() {
         onClose={loeschDialogSchliessen}
         titel="Account löschen"
         links={
-          <button type="button" onClick={loeschDialogSchliessen} className="text-[17px] text-tint-text">
+          <button type="button" onClick={loeschDialogSchliessen} className="text-zeile text-tint-text">
             Abbrechen
           </button>
         }
@@ -575,7 +574,7 @@ export function UsersPage() {
             type="button"
             disabled={!loeschBestaetigt || deleteMutation.isPending}
             onClick={() => loeschZiel && deleteMutation.mutate(loeschZiel.id)}
-            className="text-[17px] font-semibold text-st-fehlt disabled:opacity-40"
+            className="text-zeile font-semibold text-st-fehlt disabled:opacity-40"
           >
             Löschen
           </button>
@@ -583,23 +582,23 @@ export function UsersPage() {
       >
         {loeschZiel && (
           <div className="space-y-4 p-4">
-            <p className="text-[15px] text-label">
+            <p className="text-fliess text-label">
               Account von {loeschZiel.name || loeschZiel.email} endgültig löschen? Persönliche Daten werden
               unwiderruflich entfernt. Zeiterfassungen, Rechnungen und Verlauf bleiben erhalten und werden als
               „Gelöschter Nutzer“ angezeigt.
             </p>
             <div>
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-fliess font-medium text-label">
                 Zur Bestätigung „{loeschErwartet}“ eintippen
               </label>
               <input id={`${uid}-5`}
                 value={loeschBestaetigung}
                 onChange={(e) => setLoeschBestaetigung(e.target.value)}
                 autoComplete="off"
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
-            {deleteError && <p className="text-sm text-st-fehlt">{deleteError}</p>}
+            {deleteError && <p className="text-fliess text-st-fehlt">{deleteError}</p>}
           </div>
         )}
       </Sheet>

@@ -78,14 +78,14 @@ export function AccountTypVorlageSheet({
       titel="Vorlage anlegen"
       links={
         !ergebnis && (
-          <button type="button" onClick={onClose} disabled={anlegen.isPending} className="text-[17px] text-tint-text disabled:opacity-40">
+          <button type="button" onClick={onClose} disabled={anlegen.isPending} className="text-zeile text-tint-text disabled:opacity-40">
             Abbrechen
           </button>
         )
       }
       rechts={
         ergebnis ? (
-          <button type="button" onClick={() => onAngelegt(ergebnis.typ)} className="text-[17px] font-semibold text-tint-text">
+          <button type="button" onClick={() => onAngelegt(ergebnis.typ)} className="text-zeile font-semibold text-tint-text">
             Fertig
           </button>
         ) : (
@@ -100,7 +100,7 @@ export function AccountTypVorlageSheet({
               anlegen.mutate();
             }}
             disabled={!registry || anlegen.isPending}
-            className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
+            className="text-zeile font-semibold text-tint-text disabled:opacity-40"
           >
             Anlegen
           </button>
@@ -109,7 +109,7 @@ export function AccountTypVorlageSheet({
     >
       <div className="space-y-4 p-4">
         {ergebnis ? (
-          <div role="alert" className="space-y-2 text-sm">
+          <div role="alert" className="space-y-2 text-fliess">
             <p className="font-medium text-st-arbeit">
               „{ergebnis.typ.name}“ wurde angelegt, aber {ergebnis.fehlgeschlagen.length} von {ergebnis.gesamt} Rechten konnten nicht gesetzt werden.
             </p>
@@ -125,12 +125,12 @@ export function AccountTypVorlageSheet({
           </div>
         ) : (
           <>
-            <p className="text-sm text-label2">
+            <p className="text-sekundaer text-label2">
               Die Vorlage legt einen normalen Account-Typ mit sinnvollen Rechten an. Danach lässt er sich frei ändern. Sie können nur Rechte vergeben,
               die Sie selbst besitzen.
             </p>
             <fieldset className="space-y-2">
-              <legend className="mb-1 text-sm font-medium text-label">Vorlage</legend>
+              <legend className="mb-1 text-fliess font-medium text-label">Vorlage</legend>
               {ACCOUNT_TYP_VORLAGEN.map((v) => (
                 <label
                   key={v.key}
@@ -147,13 +147,13 @@ export function AccountTypVorlageSheet({
                   />
                   <span>
                     <span className="block font-semibold text-label">{v.name}</span>
-                    <span className="block text-xs text-label2">{v.beschreibung}</span>
+                    <span className="block text-sekundaer text-label2">{v.beschreibung}</span>
                   </span>
                 </label>
               ))}
             </fieldset>
             <div>
-              <label htmlFor="vorlage-name" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="vorlage-name" className="mb-1 block text-fliess font-medium text-label">
                 Name des Account-Typs <span aria-hidden="true" className="text-st-fehlt">*</span>
               </label>
               <input
@@ -165,19 +165,19 @@ export function AccountTypVorlageSheet({
                 className="field-ap"
               />
               {nameFehler && (
-                <p id="vorlage-name-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                <p id="vorlage-name-fehler" role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                   {nameFehler}
                 </p>
               )}
-              <p className="mt-1 text-xs text-label2">{registry ? `${anzahlRechte} Rechte werden gesetzt.` : "Rechte-Registry lädt…"}</p>
+              <p className="mt-1 text-sekundaer text-label2">{registry ? `${anzahlRechte} Rechte werden gesetzt.` : "Rechte-Registry lädt…"}</p>
             </div>
             {anlegen.isPending && fortschritt && (
-              <p role="status" className="text-sm text-label2">
+              <p role="status" className="text-sekundaer text-label2">
                 Rechte werden gesetzt … {fortschritt[0]}/{fortschritt[1]}
               </p>
             )}
             {anlegen.isError && (
-              <p role="alert" className="text-sm text-st-fehlt">
+              <p role="alert" className="text-fliess text-st-fehlt">
                 {verstaendlicherFehler(anlegen.error, "Vorlage konnte nicht angelegt werden")}
               </p>
             )}

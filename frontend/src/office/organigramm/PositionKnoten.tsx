@@ -67,12 +67,12 @@ export function PositionKnoten({ data, draggable }: NodeProps<PositionKnotenTyp>
       >
         <div className="flex items-start gap-1">
           {kontext ? (
-            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-label2">{p.titel}</span>
+            <span className="min-w-0 flex-1 truncate text-sekundaer font-semibold text-label2">{p.titel}</span>
           ) : (
             <button
               type="button"
               onClick={() => onWaehlen(p.id)}
-              className="nopan min-w-0 flex-1 truncate text-left text-[14px] font-semibold text-label hover:underline focus-visible:outline-2 focus-visible:outline-tint"
+              className="nopan min-w-0 flex-1 truncate text-left text-sekundaer font-semibold text-label hover:underline focus-visible:outline-2 focus-visible:outline-tint"
               title={p.titel}
             >
               {p.titel}
@@ -96,29 +96,29 @@ export function PositionKnoten({ data, draggable }: NodeProps<PositionKnotenTyp>
         </div>
 
         {kontext ? (
-          <span className="text-[11px] text-label3">Pfad zur Wurzel (ohne Details)</span>
+          <span className="text-meta text-label3">Pfad zur Wurzel (ohne Details)</span>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-1">
               {p.account_typ && (
-                <span className="max-w-[120px] truncate rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-label">
+                <span className="max-w-[120px] truncate rounded-full bg-fill px-2 py-0.5 text-meta font-medium text-label">
                   {p.account_typ.name}
                 </span>
               )}
               {d.stab && (
-                <span className="rounded-full bg-tintbg px-2 py-0.5 text-[11px] font-semibold text-tint-text">Stab</span>
+                <span className="rounded-full bg-tintbg px-2 py-0.5 text-meta font-semibold text-tint-text">Stab</span>
               )}
               {p.status === "geplant" && (
-                <span className="rounded-full bg-st-geplant-bg px-2 py-0.5 text-[11px] font-semibold text-st-geplant">
+                <span className="rounded-full bg-st-geplant-bg px-2 py-0.5 text-meta font-semibold text-st-geplant">
                   Platzhalter
                 </span>
               )}
             </div>
-            <p className="flex items-center gap-1 truncate text-[11px] text-label2" title={p.org_einheit?.name}>
+            <p className="flex items-center gap-1 truncate text-meta text-label2" title={p.org_einheit?.name}>
               <Building2 size={11} strokeWidth={2} className="shrink-0" aria-hidden="true" />
               <span className="truncate">{p.org_einheit?.name ?? "Keine Einheit"}</span>
             </p>
-            <div className="flex items-center gap-1 text-[12px]">
+            <div className="flex items-center gap-1 text-sekundaer">
               <UserRound size={12} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />
               <span
                 className={`min-w-0 flex-1 truncate ${p.status === "vakant" ? "font-semibold text-st-arbeit" : "text-label"}`}
@@ -143,7 +143,7 @@ export function PositionKnoten({ data, draggable }: NodeProps<PositionKnotenTyp>
           onClick={() => onUmschalten(p.id)}
           aria-expanded={!zugeklappt}
           aria-label={`${zugeklappt ? "Aufklappen" : "Zuklappen"}: ${p.titel} (${kinder} direkte Unterposition${kinder === 1 ? "" : "en"})`}
-          className="nodrag nopan absolute -bottom-3 left-1/2 z-10 flex h-6 -translate-x-1/2 items-center gap-0.5 rounded-full border-[0.5px] border-sepstrong bg-card px-1.5 text-[11px] font-medium tabular-nums text-label shadow-sm hover:bg-fill"
+          className="nodrag nopan absolute -bottom-3 left-1/2 z-10 flex h-6 -translate-x-1/2 items-center gap-0.5 rounded-full border-[0.5px] border-sepstrong bg-card px-1.5 text-meta font-medium tabular-nums text-label shadow-sm hover:bg-fill"
         >
           {zugeklappt ? <ChevronRight size={12} strokeWidth={2.5} aria-hidden="true" /> : <ChevronDown size={12} strokeWidth={2.5} aria-hidden="true" />}
           {kinder}

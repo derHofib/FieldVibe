@@ -32,12 +32,12 @@ export function MfaEinrichtenFormular({ onFertig }: { onFertig?: () => void }) {
   if (!start.data) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Du brauchst eine Authenticator-App (z. B. Google Authenticator, Microsoft Authenticator, 2FAS oder
           Aegis).
         </p>
         {start.isError && (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {start.error instanceof ApiError ? start.error.message : "Einrichtung konnte nicht gestartet werden"}
           </p>
         )}
@@ -55,7 +55,7 @@ export function MfaEinrichtenFormular({ onFertig }: { onFertig?: () => void }) {
 
   return (
     <form onSubmit={bestaetigen} className="space-y-3">
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         1. QR-Code mit der Authenticator-App scannen (oder den Schlüssel von Hand eintragen).
       </p>
       <div className="flex justify-center">
@@ -67,19 +67,19 @@ export function MfaEinrichtenFormular({ onFertig }: { onFertig?: () => void }) {
           className="rounded-[var(--radius-ap-input)]"
         />
       </div>
-      <p className="text-center text-xs text-label2">
+      <p className="text-center text-sekundaer text-label2">
         Schlüssel:{" "}
         <span className="font-mono text-label select-all" data-testid="mfa-secret">
           {start.data.secret}
         </span>
       </p>
-      <p className="text-sm text-label2">2. Den 6-stelligen Code aus der App eingeben.</p>
+      <p className="text-sekundaer text-label2">2. Den 6-stelligen Code aus der App eingeben.</p>
       {fehler && (
-        <div role="alert" className="border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div role="alert" className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
           {fehler}
         </div>
       )}
-      <label htmlFor="mfa-bestaetigen-code" className="block text-sm font-medium text-label">
+      <label htmlFor="mfa-bestaetigen-code" className="block text-fliess font-medium text-label">
         Code
       </label>
       <input

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ScanLine } from "lucide-react";
+import { Info, ScanLine } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -19,6 +19,7 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { Select } from "../../components/apple/Select";
 
 const KUNDE_TYPEN: { value: KundeTyp; label: string }[] = [
   { value: "privat", label: "Privat" },
@@ -73,6 +74,7 @@ export function NewVorgangPage() {
   // bleiben trotzdem per SearchableSelect aenderbar (siehe dort unten).
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [infoOffen, setInfoOffen] = useState(false);
   const [kundeId, setKundeId] = useState(searchParams.get("kunde_id") ?? "");
   const [projektId, setProjektId] = useState(searchParams.get("projekt_id") ?? "");
   const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
@@ -287,7 +289,7 @@ export function NewVorgangPage() {
       onClose={schliessen}
       titel="Neuer Vorgang"
       links={
-        <button type="button" onClick={schliessen} className="text-[17px] text-tint">
+        <button type="button" onClick={schliessen} className="text-zeile text-tint">
           Abbrechen
         </button>
       }
@@ -296,7 +298,7 @@ export function NewVorgangPage() {
           type="submit"
           form={FORM_ID}
           disabled={createMutation.isPending}
-          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+          className="text-zeile font-semibold text-tint disabled:opacity-40"
         >
           Anlegen
         </button>
@@ -310,17 +312,17 @@ export function NewVorgangPage() {
         >
           <ScanLine size={16} strokeWidth={2} aria-hidden="true" /> QR-Code an Anlage scannen
         </button>
-        {scanError && <p className="text-sm text-st-fehlt">{scanError}</p>}
+        {scanError && <p className="text-fliess text-st-fehlt">{scanError}</p>}
         {anlage && (
-          <div className="flex items-center justify-between rounded-[var(--radius-ap-input)] bg-tintbg p-3 text-sm text-tint">
+          <div className="flex items-center justify-between rounded-[var(--radius-ap-input)] bg-tintbg p-3 text-fliess text-tint">
             <span>
               Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
             </span>
             <span className="flex gap-3">
-              <button type="button" onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-xs underline">
+              <button type="button" onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-sekundaer underline">
                 ansehen
               </button>
-              <button type="button" onClick={() => setAnlage(null)} className="text-xs underline">
+              <button type="button" onClick={() => setAnlage(null)} className="text-sekundaer underline">
                 entfernen
               </button>
             </span>
@@ -329,17 +331,31 @@ export function NewVorgangPage() {
 
         {showScanner && <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 
-        <p className="text-sm text-label2">
-          Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
-          Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
-          sich automatisch, sobald wieder eine Verbindung besteht.
-        </p>
+        <div>
+          <button
+            type="button"
+            onClick={() => setInfoOffen((o) => !o)}
+            aria-expanded={infoOffen}
+            aria-controls={`${uid}-info`}
+            aria-label="Hinweise zum Anlegen"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-label2 hover:bg-fill"
+          >
+            <Info size={18} aria-hidden="true" />
+          </button>
+          {infoOffen && (
+            <p id={`${uid}-info`} className="mt-1 text-sekundaer text-label2">
+              Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
+              Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
+              sich automatisch, sobald wieder eine Verbindung besteht.
+            </p>
+          )}
+        </div>
 
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
             Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
           </label>
-          <select id={`${uid}-0`}
+          <Select id={`${uid}-0`}
             required
             aria-invalid={!!feldFehler.kunde}
             aria-describedby={feldFehler.kunde ? `${uid}-kunde-fehler` : undefined}
@@ -349,7 +365,6 @@ export function NewVorgangPage() {
               setAnlage(null);
               setStandortId("");
             }}
-            className="field-ap"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -357,14 +372,14 @@ export function NewVorgangPage() {
                 {k.name} ({k.kundennummer})
               </option>
             ))}
-          </select>
+          </Select>
           {feldFehler.kunde && (
-            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
               {feldFehler.kunde}
             </p>
           )}
           {!showNewKunde && (
-            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-xs font-medium text-tint">
+            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-sekundaer font-medium text-tint">
               + Neuer Kunde
             </button>
           )}
@@ -373,7 +388,7 @@ export function NewVorgangPage() {
         {showNewKunde && (
           <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Name</label>
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Name</label>
               <input id={`${uid}-1`}
                 autoFocus
                 value={newKundeName}
@@ -382,11 +397,10 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
-              <select id={`${uid}-2`}
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Typ (optional)</label>
+              <Select id={`${uid}-2`}
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="field-ap"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -394,9 +408,9 @@ export function NewVorgangPage() {
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
-            {newKundeError && <p className="text-sm text-st-fehlt">{newKundeError}</p>}
+            {newKundeError && <p className="text-fliess text-st-fehlt">{newKundeError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -422,24 +436,24 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
-            <select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Standort (optional)</label>
+            <Select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)}>
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         {standortId && standortAnlagen && standortAnlagen.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Anlagen an diesem Standort</label>
+            <label className="mb-1 block text-fliess font-medium text-label">Anlagen an diesem Standort</label>
             <div className="space-y-1 rounded-[var(--radius-ap-input)] bg-fill p-2">
               {standortAnlagen.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm text-label">
+                <label key={a.id} className="flex items-center gap-2 text-fliess text-label">
                   <input
                     type="checkbox"
                     checked={weitereAnlagenIds.has(a.id)}
@@ -456,7 +470,7 @@ export function NewVorgangPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-label2">
+            <p className="mt-1 text-sekundaer text-label2">
               Alle angehakten Anlagen werden mit in den Vorgang aufgenommen.
             </p>
           </div>
@@ -464,11 +478,10 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
-            <select id={`${uid}-4`}
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-fliess font-medium text-label">Anlage (optional)</label>
+            <Select id={`${uid}-4`}
               value={anlage?.id ?? ""}
               onChange={(e) => setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)}
-              className="field-ap"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -476,9 +489,9 @@ export function NewVorgangPage() {
                   {a.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
             {!showNewAnlage && (
-              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs font-medium text-tint">
+              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-sekundaer font-medium text-tint">
                 + Neue Anlage
               </button>
             )}
@@ -488,7 +501,7 @@ export function NewVorgangPage() {
         {showNewAnlage && (
           <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-fliess font-medium text-label">Bezeichnung</label>
               <input id={`${uid}-5`}
                 autoFocus
                 value={newAnlageBezeichnung}
@@ -497,7 +510,7 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-fliess font-medium text-label">Typ (optional)</label>
               <input id={`${uid}-6`}
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
@@ -505,7 +518,7 @@ export function NewVorgangPage() {
                 className="field-ap"
               />
             </div>
-            {newAnlageError && <p className="text-sm text-st-fehlt">{newAnlageError}</p>}
+            {newAnlageError && <p className="text-fliess text-st-fehlt">{newAnlageError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -531,7 +544,7 @@ export function NewVorgangPage() {
 
         {darfProjekte && <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-fliess font-medium text-label">Projekt (optional)</label>
             <SearchableSelect id={`${uid}-7`}
               value={projektId}
               onChange={setProjektId}
@@ -540,7 +553,7 @@ export function NewVorgangPage() {
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-label">Auftrag (optional)</label>
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-fliess font-medium text-label">Auftrag (optional)</label>
             <SearchableSelect id={`${uid}-8`}
               value={auftragId}
               onChange={setAuftragId}
@@ -551,7 +564,7 @@ export function NewVorgangPage() {
         </div>}
 
         <div>
-          <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor={`${uid}-9`} className="mb-1 block text-fliess font-medium text-label">
             Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
           </label>
           <input
@@ -564,21 +577,21 @@ export function NewVorgangPage() {
             className="field-ap"
           />
           {feldFehler.titel && (
-            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
               {feldFehler.titel}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor={`${uid}-10`} className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <label htmlFor={`${uid}-10`} className="mb-1 block text-fliess font-medium text-label">Beschreibung</label>
           <textarea id={`${uid}-10`} value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-label">Adresse (optional)</label>
-          <p className="mb-1 text-xs text-label2">
-            Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
+          <label className="mb-1 block text-fliess font-medium text-label">Adresse (optional)</label>
+          <p className="mb-1 text-meta text-label2">
+            Nur nötig, wenn kein Standort ausgewählt ist – damit weiß der Ausführende, wo er hin muss.
           </p>
           <input
             value={adrStrasse}
@@ -594,46 +607,44 @@ export function NewVorgangPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
-            <select id={`${uid}-11`}
+            <label htmlFor={`${uid}-11`} className="mb-1 block text-fliess font-medium text-label">Leistungstyp</label>
+            <Select id={`${uid}-11`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="field-ap"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label htmlFor={`${uid}-12`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
-            <select id={`${uid}-12`}
+            <label htmlFor={`${uid}-12`} className="mb-1 block text-fliess font-medium text-label">Abrechnungsart</label>
+            <Select id={`${uid}-12`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="field-ap"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
                   {a.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label htmlFor={`${uid}-13`} className="mb-1 block text-sm font-medium text-label">Priorität</label>
-            <select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
+            <label htmlFor={`${uid}-13`} className="mb-1 block text-fliess font-medium text-label">Priorität</label>
+            <Select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))}>
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
-        {error && <p className="text-sm text-st-fehlt">{error}</p>}
+        {error && <p className="text-fliess text-st-fehlt">{error}</p>}
 
         {/* Primäraktion liegt in der Kopfzeile (rechts="Anlegen"); dieser
             Button bleibt als zweite, gut sichtbare Erreichbarkeit am Ende

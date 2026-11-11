@@ -105,7 +105,7 @@ export function SeitenPanel({
           className="absolute top-0 bottom-0 left-0 z-10 -ml-[3px] w-[6px] cursor-col-resize hover:bg-tint/30"
         />
         <div className="flex items-center border-b-[0.5px] border-sep px-4 py-3">
-          <h2 className="flex-1 truncate text-[17px] font-semibold text-label">{titel}</h2>
+          <h2 className="flex-1 truncate text-zeile font-semibold text-label">{titel}</h2>
           <div className="flex items-center gap-2">
             {aktionen}
             <button

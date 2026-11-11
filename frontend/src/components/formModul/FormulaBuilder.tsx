@@ -11,8 +11,9 @@ import { useEffect, useState } from "react";
 import type { FormelOperator, FormelTerm } from "../../utils/ruleFormulaBuilder";
 import { neuerTerm, parseFormel, serializeFormel } from "../../utils/ruleFormulaBuilder";
 import type { FormField } from "../../types";
+import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
 const OPERATOR_LABEL: Record<FormelOperator, string> = {
   "+": "+",
@@ -67,11 +68,11 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
             }
           }}
           rows={3}
-          className={`${inputClass} font-mono text-xs`}
+          className={`${inputClass} font-mono text-sekundaer`}
         />
-        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
+        {rawFehler && <p className="text-sekundaer text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
-          <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
+          <button type="button" onClick={() => setErweitert(false)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
             Zurück zum Formel-Baukasten
           </button>
         )}
@@ -81,47 +82,48 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
 
   return (
     <div className="space-y-1.5">
-      {terme.length === 0 && <p className="text-xs text-label2">Kein Term -- Formel hinzufügen.</p>}
+      {terme.length === 0 && <p className="text-sekundaer text-label2">Kein Term – Formel hinzufügen.</p>}
       {terme.map((term, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           {idx > 0 && (
-            <select
+            <Select
+              className="w-14 shrink-0"
               value={operatoren[idx - 1]}
               onChange={(e) => {
                 const nextOperatoren = [...operatoren];
                 nextOperatoren[idx - 1] = e.target.value as FormelOperator;
                 update(terme, nextOperatoren);
               }}
-              className="w-14 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-center text-sm text-label"
+              groesse="kompakt"
             >
               {(Object.keys(OPERATOR_LABEL) as FormelOperator[]).map((op) => (
                 <option key={op} value={op}>
                   {OPERATOR_LABEL[op]}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <select
+          <Select
+            className="w-20 shrink-0"
             value={term.art}
             onChange={(e) => {
               const next = [...terme];
               next[idx] = { art: e.target.value as "feld" | "zahl", wert: "" };
               update(next, operatoren);
             }}
-            className="w-20 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-sm text-label"
+            groesse="kompakt"
           >
             <option value="feld">Feld</option>
             <option value="zahl">Zahl</option>
-          </select>
+          </Select>
           {term.art === "feld" ? (
-            <select
+            <Select
               value={term.wert}
               onChange={(e) => {
                 const next = [...terme];
                 next[idx] = { ...term, wert: e.target.value };
                 update(next, operatoren);
               }}
-              className={inputClass}
             >
               <option value="">Feld wählen…</option>
               {rootFelder.map((f) => (
@@ -129,7 +131,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
                   {f.label.de ?? f.key}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <input
               type="number"
@@ -164,11 +166,11 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
         <button
           type="button"
           onClick={() => update([...terme, neuerTerm()], terme.length > 0 ? [...operatoren, "+"] : operatoren)}
-          className="btn-touch flex items-center gap-1 text-xs font-medium text-cyan-700 dark:text-cyan-400"
+          className="btn-touch flex items-center gap-1 text-sekundaer font-medium text-cyan-700 dark:text-cyan-400"
         >
           <Plus size={13} strokeWidth={1.5} /> Term
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
+        <button type="button" onClick={() => setErweitert(true)} className="text-sekundaer text-label2">
           Erweitert (JSON)
         </button>
       </div>

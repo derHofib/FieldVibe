@@ -8,6 +8,25 @@
      Google-Fonts-Link mehr noetig (index.html). */
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
 
+  /* Typografie-Skala: benannte Stufen statt freier Pixelwerte, Klassen
+     text-nav/-meta/-sekundaer/-fliess/-zeile/-titel-mobil/-titel-desktop.
+     Eingabefelder bleiben unabhaengig davon bei mindestens 16px (Regel
+     "font-size: 16px" weiter unten, iOS-Zoom bei Fokus). */
+  --text-nav: 10px;
+  --text-nav--line-height: 1.2;
+  --text-meta: 11px;
+  --text-meta--line-height: 1.4545;
+  --text-sekundaer: 13px;
+  --text-sekundaer--line-height: 1.4;
+  --text-fliess: 15px;
+  --text-fliess--line-height: 1.4667;
+  --text-zeile: 17px;
+  --text-zeile--line-height: 1.3;
+  --text-titel-mobil: 22px;
+  --text-titel-mobil--line-height: 1.2727;
+  --text-titel-desktop: 28px;
+  --text-titel-desktop--line-height: 1.2143;
+
   /* ---- Apple-Design-Token -------------------------------------------
      Kanonische Variablennamen 1:1 aus der Spezifikation (docs/ui-redesign,
      Abschnitt 3), bewusst OHNE "--color-"-Praefix, damit backdrop-filter/
@@ -21,7 +40,10 @@
   --win: #ffffff;
   --card: #ffffff;
   --insp: #f7f7f9;
-  --side: rgba(242, 242, 246, 0.94);
+  /* Heller als der graue Office-Inhalt (--gbg), sonst verschmelzen Seitenleiste
+     und Inhalt im Hell-Modus (beide ~#f2f2f7). Hellerer Grund hebt zugleich
+     den Kontrast von text-label2 in der Seitenleiste. */
+  --side: rgba(250, 250, 252, 0.94);
   --bar: rgba(249, 249, 251, 0.9);
   --menu: rgba(255, 255, 255, 0.96);
   --fill: rgba(118, 118, 128, 0.12);
@@ -104,12 +126,36 @@
   --tone-cyan: #32ade6;
   --tone-slate: #8e8e93;
   --tone-teal: #30b0c7;
+  /* Flaechen-Varianten fuer die gefuellte Kachel mit weissem Icon (3:1,
+     WCAG 1.4.11): amber/emerald/cyan/teal erreichen auf der Rohfarbe nur
+     2.2-2.6:1 und sind deshalb abgedunkelt; die uebrigen Toene reichen
+     unveraendert (sky 4.0, violet 4.1, rose 3.5, indigo 5.7). */
+  --tone-sky-fill: #007aff;
+  --tone-violet-fill: #af52de;
+  --tone-amber-fill: #d17a00;
+  --tone-rose-fill: #ff375f;
+  --tone-emerald-fill: #2aa348;
+  --tone-indigo-fill: #5856d6;
+  --tone-cyan-fill: #2c99cc;
+  --tone-slate-fill: #8e8e93;
+  --tone-teal-fill: #2a9cb1;
 
   /* Schalter (Switch, Abschnitt 4.2) -- an-Zustand ist Apple systemGreen,
      in beiden Modi identisch (kein Statustoken, eigene Bedeutung). */
   --switch-on: #34c759;
 
+  /* Markenakzent "Laeuft" (Logo-Gruen #d4ff3b): einzige Rolle ist "laeuft
+     gerade" (Zeiterfassung/Live). Das Logo-Neon-Gruen hat auf Hell nur ~1.2:1,
+     daher dort ein abgedunkelter Ton gleichen Farbtons (gelblich-oliv,
+     bewusst abseits von --st-erledigt); Dunkel nutzt das Logo-Gruen direkt. */
+  --live-dot: #5f8500;
+  --live-text: #4a6700;
+  --live-bg: rgba(143, 184, 0, 0.2);
+
   --color-switch-on: var(--switch-on);
+  --color-live: var(--live-dot);
+  --color-live-text: var(--live-text);
+  --color-live-bg: var(--live-bg);
 
   /* Radien (Abschnitt 4.1). */
   --radius-ap-sm: 7px;
@@ -184,6 +230,15 @@
   --color-tone-cyan: var(--tone-cyan);
   --color-tone-slate: var(--tone-slate);
   --color-tone-teal: var(--tone-teal);
+  --color-tone-sky-fill: var(--tone-sky-fill);
+  --color-tone-violet-fill: var(--tone-violet-fill);
+  --color-tone-amber-fill: var(--tone-amber-fill);
+  --color-tone-rose-fill: var(--tone-rose-fill);
+  --color-tone-emerald-fill: var(--tone-emerald-fill);
+  --color-tone-indigo-fill: var(--tone-indigo-fill);
+  --color-tone-cyan-fill: var(--tone-cyan-fill);
+  --color-tone-slate-fill: var(--tone-slate-fill);
+  --color-tone-teal-fill: var(--tone-teal-fill);
 
   --shadow-card: var(--shadow-card-value);
 
@@ -333,6 +388,10 @@ body {
 
   --origin-projekt-text: #9c9aff;
   --origin-projekt-bg: rgba(94, 92, 230, 0.28);
+
+  --live-dot: #d4ff3b;
+  --live-text: #d4ff3b;
+  --live-bg: rgba(212, 255, 59, 0.2);
 }
 
 /* Sheets (Modals von unten) weichen im Dunkelmodus von den sonstigen
@@ -413,6 +472,41 @@ body {
   border: 0.5px solid var(--sep);
   border-radius: var(--radius-ap-card);
   box-shadow: var(--shadow-card);
+}
+
+/* Office: Karten sind reine Flaechen auf dem grauen Inhalt (--gbg), ohne
+   Schatten und Rand -- die Stufe Karte/Hintergrund traegt die Gliederung,
+   Haarlinien stehen nur in Tabellen/Kopfzeilen. Rand bleibt transparent
+   statt "none", damit Inline-Ringe (Auswahlmarkierung) weiter greifen. Die
+   Feld-App bleibt unberuehrt, weil der Selektor am Office-Wrapper haengt. */
+.office-flaechen .card-ap {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+/* Detail-Panel (ListeMitPanel, Vorgangs-Detail): eine einzige Flaeche, die
+   Abschnitte darin sind keine eigenen Karten mehr, sondern durch eine
+   Haarlinie getrennt (sonst Karte-in-Karte-in-Karte). */
+.office-flaechen .office-panel .card-ap {
+  background-color: transparent;
+  border-width: 0 0 0.5px 0;
+  border-color: var(--sep);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.office-flaechen .office-panel .card-ap:last-child {
+  border-bottom-width: 0;
+}
+
+/* Uebernommene Feld-Seiten (SchmaleSpalte) haben eigene, kleinere Seiten-
+   titel; hier auf die Groesse von SeitenKopf gebracht. Titel innerhalb
+   von Karten (Detail-Ueberschriften) bleiben, wie sie sind. */
+.office-schmal h1:not(.card-ap h1) {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .btn-ap {
@@ -549,6 +643,42 @@ textarea.field-ap {
    schon ueber der Schwelle). */
 :where(input, select, textarea):not(.search-ap-input) {
   font-size: 16px;
+}
+
+/* Nativer <select> im Look von .field-ap (siehe components/apple/Select.tsx);
+   der Chevron liegt als eigenes Element im Wrapper. Mobil 44px Mindesthoehe
+   (Touch-Ziel), ab md wie .field-ap. Kompakt: 13px/32px nur ab md -- unter
+   md bleibt es bei den 16px der Regel oben (iOS-Zoom bei Fokus). Unlayered,
+   daher gewinnt es auch ueber die :where()-Regel oben. */
+.select-ap {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 2.25rem 0.45rem 0.7rem;
+  appearance: none;
+  color: var(--label);
+  background: var(--card);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--radius-ap-input);
+}
+.select-ap:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+  border-color: var(--tint);
+}
+.select-ap:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+@media (min-width: 768px) {
+  .select-ap {
+    min-height: 36px;
+  }
+  .select-ap-kompakt {
+    min-height: 32px;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: 13px;
+  }
 }
 
 /* Suchfeld (Abschnitt 4.2) -- randlos, Fuellung statt Rahmen. Groesse

@@ -21,7 +21,7 @@ function Initialen({ name }: { name: string }) {
     <span
       title={name}
       aria-label={`Zugewiesen an ${name}`}
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fill2 text-[9px] font-semibold text-label"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fill2 text-nav font-semibold text-label"
     >
       {kuerzel}
     </span>
@@ -61,7 +61,7 @@ function TitelEingabe({
           onAbbruch();
         }
       }}
-      className="h-6 min-w-0 flex-1 rounded-[6px] border border-tint bg-card px-1.5 text-[13px] text-label outline-none"
+      className="h-6 min-w-0 flex-1 rounded-[6px] border border-tint bg-card px-1.5 text-sekundaer text-label outline-none"
     />
   );
 }
@@ -143,9 +143,9 @@ export function GanttListe({
   return (
     <div className="sticky left-0 z-20 shrink-0 bg-card" style={{ width: LISTE_BREITE + (vergleich ? DELTA_BREITE : 0) }}>
       <div className="sticky top-0 z-10 flex items-end bg-card px-3 pb-1.5" style={{ height: KOPF_HOEHE }}>
-        <span className="flex-1 text-[11px] font-bold tracking-wide text-label3 uppercase">Phasen &amp; Schritte</span>
+        <span className="flex-1 text-meta font-bold tracking-wide text-label3 uppercase">Phasen &amp; Schritte</span>
         {vergleich && (
-          <span className="text-right text-[11px] font-bold text-label3" style={{ width: DELTA_BREITE - 12 }} title="Abweichung zum Basisplan in Tagen (positiv = später)">
+          <span className="text-right text-meta font-bold text-label3" style={{ width: DELTA_BREITE - 12 }} title="Abweichung zum Basisplan in Tagen (positiv = später)">
             Δ
           </span>
         )}
@@ -173,7 +173,7 @@ export function GanttListe({
                   key={typ}
                   type="button"
                   onClick={() => onEntwurfStart(typ, z.phaseId)}
-                  className="flex h-6 items-center gap-0.5 rounded-[6px] px-1.5 text-xs font-medium text-tint-text hover:bg-fill"
+                  className="flex h-6 items-center gap-0.5 rounded-[6px] px-1.5 text-sekundaer font-medium text-tint-text hover:bg-fill"
                 >
                   <Plus size={13} strokeWidth={2} aria-hidden="true" />
                   {TYP_NEU_LABEL[typ]}
@@ -230,7 +230,7 @@ export function GanttListe({
                 className="flex min-w-0 flex-1 flex-col items-start text-left"
               >
                 <span
-                  className={`flex w-full min-w-0 items-center gap-1 text-[13px] leading-[16px] ${istPhase ? "font-semibold" : ""} ${
+                  className={`flex w-full min-w-0 items-center gap-1 text-sekundaer leading-[16px] ${istPhase ? "font-semibold" : ""} ${
                     e.erledigt ? "text-label2 line-through" : "text-label"
                   }`}
                 >
@@ -239,7 +239,7 @@ export function GanttListe({
                   {e.bestellung && <Package size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Bestellung ${e.bestellung.bestellnummer} verknüpft`} role="img" />}
                   {e.offene_antraege > 0 && (
                     <span
-                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-st-arbeit-bg px-1.5 text-[11px] font-semibold text-st-arbeit"
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-st-arbeit-bg px-1.5 text-meta font-semibold text-st-arbeit"
                       title={`${e.offene_antraege} offene${e.offene_antraege === 1 ? "r Änderungsantrag" : " Änderungsanträge"}`}
                       role="img"
                       aria-label={`${e.offene_antraege} offene${e.offene_antraege === 1 ? "r Änderungsantrag" : " Änderungsanträge"}`}
@@ -250,10 +250,10 @@ export function GanttListe({
                   )}
                 </span>
                 {kritischText && !zweiteZeile(e) && (
-                  <span className={`block w-full truncate text-[11px] leading-[12px] ${kritischHervor ? "text-st-fehlt" : "text-label2"}`}>{kritischText}</span>
+                  <span className={`block w-full truncate text-meta leading-[12px] ${kritischHervor ? "text-st-fehlt" : "text-label2"}`}>{kritischText}</span>
                 )}
                 {zweiteZeile(e) && (
-                  <span className={`block w-full truncate text-[11px] leading-[12px] ${zweiteZeile(e)!.warn ? "text-st-arbeit" : "text-label2"}`}>
+                  <span className={`block w-full truncate text-meta leading-[12px] ${zweiteZeile(e)!.warn ? "text-st-arbeit" : "text-label2"}`}>
                     {zweiteZeile(e)!.text}
                   </span>
                 )}
@@ -282,7 +282,7 @@ export function GanttListe({
             />
             {vergleich && (
               <span
-                className={`shrink-0 text-right text-[12px] font-semibold tabular-nums ${abweichung ? DELTA_KLASSE[abweichung.ton] : "text-label3"}`}
+                className={`shrink-0 text-right text-sekundaer font-semibold tabular-nums ${abweichung ? DELTA_KLASSE[abweichung.ton] : "text-label3"}`}
                 style={{ width: DELTA_BREITE - 12 }}
                 aria-label={abweichung ? `Abweichung zum Basisplan ${abweichung.text}` : "Kein Basisplan-Eintrag"}
               >

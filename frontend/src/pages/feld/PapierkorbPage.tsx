@@ -9,6 +9,7 @@ import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { SkeletonList } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -84,35 +85,34 @@ export function PapierkorbPage() {
       setFehler(
         err instanceof ApiError
           ? err.message
-          : "Endgültiges Löschen fehlgeschlagen -- vermutlich verweisen noch andere Daten darauf.",
+          : "Endgültiges Löschen fehlgeschlagen – vermutlich verweisen noch andere Daten darauf.",
       ),
   });
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-label">Papierkorb</h1>
+        <h1 className="text-titel-mobil font-bold text-label">Papierkorb</h1>
       </div>
 
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         {istOperativ
           ? "Gelöschte Datensätze können hier wiederhergestellt oder endgültig entfernt werden."
           : "Nur-Ansicht: Wiederherstellen und endgültiges Löschen sind der Rolle „Papierkorb (operativ)“ vorbehalten."}
       </p>
 
-      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
+      {fehler && <p className="text-fliess text-st-fehlt ">{fehler}</p>}
 
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
           Nach Typ filtern
         </label>
-        <select id={`${uid}-0`}
+        <Select className="w-auto" id={`${uid}-0`}
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
-          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label text-label"
         >
           <option value="">Alle Typen</option>
           {Object.entries(ENTITY_TYP_LABEL).map(([value, label]) => (
@@ -120,7 +120,7 @@ export function PapierkorbPage() {
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -128,7 +128,7 @@ export function PapierkorbPage() {
       ) : ladeFehler && !eintraege ? (
         <FehlerZustand fehler={ladeFehler} was="Der Papierkorb" onErneut={() => void neuLaden()} />
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-card p-4 text-sm text-label2 shadow-xs ">
+        <p className="rounded-lg bg-card p-4 text-sekundaer text-label2 shadow-xs ">
           Der Papierkorb ist leer.
         </p>
       ) : (
@@ -140,14 +140,14 @@ export function PapierkorbPage() {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-semibold text-label">
                     {ENTITY_TYP_LABEL[eintrag.entity_typ]}
                   </span>
                   <span className="truncate font-medium text-label">
                     {anzeigeName(eintrag)}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-label2">
+                <p className="mt-0.5 text-meta text-label2">
                   Gelöscht am {formatDatum(eintrag.geloescht_am)}
                   {eintrag.geloescht_von_name ? ` von ${eintrag.geloescht_von_name}` : ""}
                 </p>
@@ -157,7 +157,7 @@ export function PapierkorbPage() {
                   <button
                     onClick={() => restoreMutation.mutate(eintrag)}
                     disabled={restoreMutation.isPending}
-                    className="btn-touch rounded-md bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 dark:bg-cyan-500/10 dark:text-cyan-300"
+                    className="btn-touch rounded-md bg-cyan-50 px-3 py-2 text-sekundaer font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 dark:bg-cyan-500/10 dark:text-cyan-300"
                   >
                     Wiederherstellen
                   </button>
@@ -170,7 +170,7 @@ export function PapierkorbPage() {
                       }
                     }}
                     disabled={purgeMutation.isPending}
-                    className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 "
+                    className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-2 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 "
                   >
                     Endgültig löschen
                   </button>

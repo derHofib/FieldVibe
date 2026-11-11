@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { abwesenheitenApi, arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
@@ -164,7 +165,7 @@ export function OfficeArbeitszeitPage() {
         <button type="button" onClick={() => monatWechseln(-1)} className="btn-ap px-3 py-1.5">
           ← Monat
         </button>
-        <span className="min-w-36 text-center text-sm font-semibold text-label">{monatsName}</span>
+        <span className="min-w-36 text-center text-fliess font-semibold text-label">{monatsName}</span>
         <button type="button" onClick={() => monatWechseln(1)} className="btn-ap px-3 py-1.5">
           Monat →
         </button>
@@ -229,7 +230,7 @@ export function OfficeArbeitszeitPage() {
         </div>
       )}
       {kannErfassen && keinSoll && (
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Keine Soll-Zeit hinterlegt.
           {currentUser?.darf_abwesenheiten_verwalten && (
             <>
@@ -244,14 +245,14 @@ export function OfficeArbeitszeitPage() {
 
       {kannErfassen && konto && (
         <section aria-label={`Urlaubskonto ${jahr}`} className="space-y-2">
-          <h2 className="text-sm font-semibold text-label">Urlaubskonto {jahr}</h2>
+          <h2 className="text-fliess font-semibold text-label">Urlaubskonto {jahr}</h2>
           <UrlaubskontoKacheln konto={konto} />
         </section>
       )}
 
       {kannErfassen && meineAbwesenheiten && meineAbwesenheiten.length > 0 && (
         <section aria-label="Meine Abwesenheiten" className="space-y-2">
-          <h2 className="text-sm font-semibold text-label">Meine Abwesenheiten</h2>
+          <h2 className="text-fliess font-semibold text-label">Meine Abwesenheiten</h2>
           <Karte className="p-1">
             <ul className="divide-y divide-sep">
               {meineAbwesenheiten.map((a) => (
@@ -259,7 +260,7 @@ export function OfficeArbeitszeitPage() {
                   {a.status === "offen" && (
                     <button
                       type="button"
-                      className="text-sm font-medium text-tint-text disabled:opacity-50"
+                      className="text-sekundaer font-medium text-tint-text disabled:opacity-50"
                       disabled={zurueckziehen.isPending}
                       onClick={() => zurueckziehen.mutate(a.id)}
                     >
@@ -267,13 +268,13 @@ export function OfficeArbeitszeitPage() {
                     </button>
                   )}
                   {a.status === "genehmigt" && !darfVerwalten && (
-                    <span className="text-xs text-label2">Stornierung über das Büro</span>
+                    <span className="text-sekundaer text-label2">Stornierung über das Büro</span>
                   )}
                 </AbwesenheitZeile>
               ))}
             </ul>
           </Karte>
-          {abwesenheitFehler && <p className="text-sm text-st-fehlt">{abwesenheitFehler}</p>}
+          {abwesenheitFehler && <p className="text-fliess text-st-fehlt">{abwesenheitFehler}</p>}
         </section>
       )}
 
@@ -293,14 +294,14 @@ export function OfficeArbeitszeitPage() {
                   type="button"
                   onClick={() => toggle(t.tag)}
                   aria-expanded={offen}
-                  className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm ${textFarbe}`}
+                  className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sekundaer ${textFarbe}`}
                 >
                   {offen ? <ChevronDown size={15} strokeWidth={2} /> : <ChevronRight size={15} strokeWidth={2} />}
                   <span className="w-7 font-semibold">{WOCHENTAG_KURZ[t.wochentag]}</span>
                   <span className="w-14 tabular-nums">
                     {String(t.tagNr).padStart(2, "0")}.{String(monat0 + 1).padStart(2, "0")}.
                   </span>
-                  <span className="flex flex-1 flex-wrap items-center gap-2 text-xs text-label2">
+                  <span className="flex flex-1 flex-wrap items-center gap-2 text-sekundaer text-label2">
                     {tagesEintraege.length > 0 &&
                       `${tagesEintraege.length} ${tagesEintraege.length === 1 ? "Eintrag" : "Einträge"}`}
                     {saldoTag?.feiertag && (
@@ -316,11 +317,11 @@ export function OfficeArbeitszeitPage() {
                   </span>
                   {saldoTag && (hatSollTag || saldoTag.feiertag || saldoTag.abwesenheit) && (
                     <>
-                      <span className="w-24 text-right text-xs tabular-nums text-label2">
+                      <span className="w-24 text-right text-sekundaer tabular-nums text-label2">
                         {hatSollTag ? `Soll ${formatStundenAlsHHMM(parseStunden(saldoTag.soll))}` : ""}
                       </span>
                       <span
-                        className={`w-16 text-right text-xs font-medium tabular-nums ${SALDO_TON_KLASSE[saldoTon(saldoTag.saldo)]}`}
+                        className={`w-16 text-right text-sekundaer font-medium tabular-nums ${SALDO_TON_KLASSE[saldoTon(saldoTag.saldo)]}`}
                       >
                         {hatSollTag || saldoTon(saldoTag.saldo) !== "null" ? formatSaldo(saldoTag.saldo) : ""}
                       </span>
@@ -334,9 +335,9 @@ export function OfficeArbeitszeitPage() {
                 {offen && (
                   <div className="px-3 pb-3">
                     {tagesEintraege.length > 0 && (
-                      <table className="w-full text-sm">
+                      <table className="w-full text-fliess">
                         <thead>
-                          <tr className="text-left text-xs text-label2">
+                          <tr className="text-left text-sekundaer text-label2">
                             <th className="py-1 pr-3 font-medium">Von–Bis</th>
                             <th className="py-1 pr-3 text-right font-medium">Dauer</th>
                             <th className="py-1 pr-3 font-medium">Vorgang / Kategorie</th>
@@ -354,7 +355,7 @@ export function OfficeArbeitszeitPage() {
                               <td className="py-1.5 pr-3 tabular-nums">
                                 {e.abwesenheit_id ? (
                                   <span>
-                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : <LaeuftPille className="align-middle" />}
                                   </span>
                                 ) : (
                                   <button
@@ -365,7 +366,7 @@ export function OfficeArbeitszeitPage() {
                                     }}
                                     className="text-tint-text"
                                   >
-                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : <LaeuftPille className="align-middle" />}
                                   </button>
                                 )}
                               </td>
@@ -408,14 +409,14 @@ export function OfficeArbeitszeitPage() {
                       <button
                         type="button"
                         onClick={() => setNeuAm(t.tag)}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-tint-text"
+                        className="inline-flex items-center gap-1 text-sekundaer font-medium text-tint-text"
                       >
                         <Plus size={14} strokeWidth={2} /> Zeit eintragen
                       </button>
                       <button
                         type="button"
                         onClick={() => setAbwesenheitAm(t.tag)}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-tint-text"
+                        className="inline-flex items-center gap-1 text-sekundaer font-medium text-tint-text"
                       >
                         <Plus size={14} strokeWidth={2} /> Abwesenheit beantragen
                       </button>

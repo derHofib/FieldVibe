@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -26,9 +27,9 @@ const STATUS_LABEL: Record<VorgangAnfrageStatus, string> = {
 };
 
 const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
-  offen: "border border-st-arbeit text-st-arbeit ",
-  angenommen: "border border-st-erledigt text-st-erledigt ",
-  abgelehnt: "border border-sep text-label2 ",
+  offen: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  angenommen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgelehnt: "border rounded-[var(--radius-ap-pill)] border-sep text-label2 ",
 };
 
 function NeueAnfrage() {
@@ -103,16 +104,16 @@ function NeueAnfrage() {
 
   return (
     <>
-      <button onClick={() => setZeigen(true)} className="btn-touch btn-ap-primary w-full rounded-lg py-3 text-sm font-medium">
+      <button onClick={() => setZeigen(true)} className="btn-touch btn-ap-primary w-full rounded-lg py-3 text-sekundaer font-medium">
         + Neue Anfrage
       </button>
       <AnlegenPanel offen={zeigen} titel="Neue Anfrage" onClose={() => setZeigen(false)}>
         <form onSubmit={handleSubmit} className="space-y-3 p-4">
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
           </p>
           <div>
-            <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-titel" className="mb-1 block text-fliess font-medium text-label">
               Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input
@@ -122,16 +123,16 @@ function NeueAnfrage() {
               onChange={(e) => setTitel(e.target.value)}
               aria-invalid={!!titelFehler}
               aria-describedby={titelFehler ? "portal-anfrage-titel-fehler" : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {titelFehler && (
-              <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {titelFehler}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-fliess font-medium text-label">
               Beschreibung
             </label>
             <textarea
@@ -139,40 +140,38 @@ function NeueAnfrage() {
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={3}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-label"
             />
           </div>
           <div>
-            <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-art" className="mb-1 block text-fliess font-medium text-label">
               Art
             </label>
-            <select
+            <Select
               id="portal-anfrage-art"
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {(standorte ?? []).length > 0 && (
             <div>
-              <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-standort" className="mb-1 block text-fliess font-medium text-label">
                 Standort (optional)
               </label>
-              <select
+              <Select
                 id="portal-anfrage-standort"
                 value={standortId}
                 onChange={(e) => {
                   setStandortId(e.target.value);
                   setAnlageId("");
                 }}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="">Kein Standort</option>
                 {standorte?.filter((s) => s.aktiv).map((s) => (
@@ -180,7 +179,7 @@ function NeueAnfrage() {
                     {s.bezeichnung}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 
@@ -188,13 +187,13 @@ function NeueAnfrage() {
             <button
               type="button"
               onClick={() => setZeigeNeuerStandort(true)}
-              className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+              className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium"
             >
               + Neuer Standort
             </button>
           ) : (
             <div>
-              <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-fliess font-medium text-label">
                 Neuer Standort <span aria-hidden="true" className="text-st-fehlt">*</span>
               </label>
               <div className="flex gap-2">
@@ -205,7 +204,7 @@ function NeueAnfrage() {
                   placeholder="z.B. Filiale Nord"
                   aria-invalid={!!standortFehler}
                   aria-describedby={standortFehler ? "portal-anfrage-standort-fehler" : undefined}
-                  className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
+                  className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
                 />
                 <button
                   type="button"
@@ -218,13 +217,13 @@ function NeueAnfrage() {
                     setStandortFehler(null);
                     neuerStandortMutation.mutate();
                   }}
-                  className="btn-touch btn-ap shrink-0 px-4 py-2 text-sm font-medium"
+                  className="btn-touch btn-ap shrink-0 px-4 py-2 text-sekundaer font-medium"
                 >
                   Anlegen
                 </button>
               </div>
               {standortFehler && (
-                <p id="portal-anfrage-standort-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                <p id="portal-anfrage-standort-fehler" role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                   {standortFehler}
                 </p>
               )}
@@ -233,14 +232,13 @@ function NeueAnfrage() {
 
           {anlagenFuerStandort.length > 0 && (
             <div>
-              <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-fliess font-medium text-label">
                 Anlage (optional)
               </label>
-              <select
+              <Select
                 id="portal-anfrage-anlage"
                 value={anlageId}
                 onChange={(e) => setAnlageId(e.target.value)}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="">Keine Anlage</option>
                 {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
@@ -248,16 +246,16 @@ function NeueAnfrage() {
                     {a.bezeichnung}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 
-          {error && <p role="alert" className="text-sm text-st-fehlt">{error}</p>}
+          {error && <p role="alert" className="text-fliess text-st-fehlt">{error}</p>}
 
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium"
+            className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium"
           >
             Anfrage senden
           </button>
@@ -275,7 +273,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Anfragen</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Ihre Anfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (
@@ -293,17 +291,17 @@ export function PortalAnfragenPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="font-medium text-label">{a.titel}</div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[a.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[a.status]}`}>
                   {STATUS_LABEL[a.status]}
                 </span>
               </div>
               {a.beschreibung && (
-                <p className="mt-1 text-sm text-label2">{a.beschreibung}</p>
+                <p className="mt-1 text-sekundaer text-label2">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
                 <>
-                  <p className="mt-1 text-xs text-label2">Grund: {a.ablehnungsgrund}</p>
-                  <p className="mt-1 text-xs text-label2">
+                  <p className="mt-1 text-sekundaer text-label2">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-sekundaer text-label2">
                     Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
                   </p>
                 </>

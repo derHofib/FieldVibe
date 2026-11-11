@@ -21,15 +21,15 @@ export function MfaPflichtSection({ einstellungen }: { einstellungen: MandantEin
 
   return (
     <div className="space-y-3 card-ap p-4" id="sicherheit-mfa">
-      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+      <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
         <ShieldCheck size={15} strokeWidth={2} className="text-tone-emerald" aria-hidden="true" /> Sicherheit
       </h2>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p id="mfa-pflicht-label" className="text-sm font-medium text-label">
+          <p id="mfa-pflicht-label" className="text-fliess font-medium text-label">
             Zwei-Faktor-Anmeldung vorschreiben
           </p>
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Alle Mitarbeiter müssen beim nächsten Anmelden eine Authenticator-App einrichten, bevor sie die App
             nutzen können. Bereits angemeldete Sitzungen laufen bis zum nächsten Token-Refresh weiter.
           </p>

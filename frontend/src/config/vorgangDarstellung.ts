@@ -15,17 +15,16 @@ export const STATUS_LABEL: Record<VorgangStatus, string> = {
   storniert: "Storniert",
 };
 
-// "Industry"-Design (siehe docs/DESIGN.md): Rahmen-Tag statt gefuellter
-// Pastell-Pille -- Aufrufer duerfen "rounded-full"/"bg-..." nicht mehr
-// selbst ergaenzen, dieser Wert bringt bereits "border" mit.
+// Rahmen-Pille: Aufrufer duerfen "rounded-*"/"bg-..." nicht selbst
+// ergaenzen, dieser Wert bringt Rahmen und Radius bereits mit.
 export const STATUS_BADGE: Record<VorgangStatus, string> = {
-  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  neu: "border rounded-[var(--radius-ap-pill)] border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 /** Für Stellen, die den Status nur als String kennen (z. B. Suchtreffer,

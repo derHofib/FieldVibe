@@ -18,9 +18,9 @@ export function SeitenKopf({
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="ap-heading text-2xl font-semibold text-label">
+      <h1 className="ap-heading text-titel-desktop font-semibold text-label">
         {titel}
-        {anzahl !== undefined && <span className="ml-2 text-sm font-medium text-label2">{anzahl}</span>}
+        {anzahl !== undefined && <span className="ml-2 text-sekundaer font-medium text-label2">{anzahl}</span>}
       </h1>
       <div className="flex items-center gap-2">{children}</div>
     </div>
@@ -53,7 +53,7 @@ export function AnsichtUmschalter<T extends string>({
             onClick={() => onWechsel(option.wert)}
             aria-pressed={aktiv}
             title={option.label}
-            className={`flex h-6 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-semibold transition-colors ${
+            className={`flex h-6 items-center gap-1.5 rounded-[7px] px-2.5 text-sekundaer font-semibold transition-colors ${
               // text-label statt text-label2: dasselbe Kontrast-Argument
               // wie in components/apple/SegmentedControl.tsx (axe-core,
               // Phase D, < 4.5:1 im dunklen Modus).
@@ -112,12 +112,12 @@ export function KennzahlKarte({
 
   return (
     <Karte className="p-4">
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-label2">
+      <p className="mb-2 flex items-center gap-1.5 text-sekundaer font-semibold text-label2">
         {Icon && <Icon size={13} strokeWidth={2} aria-hidden="true" />}
         {label}
       </p>
-      <p className={`ap-heading text-2xl font-semibold tabular-nums ${wertKlasse}`}>{wert}</p>
-      {zusatz && <p className={`mt-1 text-xs ${zusatzKlasse}`}>{zusatz}</p>}
+      <p className={`ap-heading text-titel-mobil font-semibold tabular-nums ${wertKlasse}`}>{wert}</p>
+      {zusatz && <p className={`mt-1 text-sekundaer ${zusatzKlasse}`}>{zusatz}</p>}
     </Karte>
   );
 }

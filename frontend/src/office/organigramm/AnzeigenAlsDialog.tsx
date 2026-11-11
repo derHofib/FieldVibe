@@ -52,7 +52,7 @@ export function AnzeigenAlsDialog({
   return (
     <SeitenPanel offen titel="Anzeigen als …" onClose={onClose} minBreite={980}>
       <div className="space-y-4 p-4">
-        <p role="note" className="rounded-[10px] bg-st-arbeit-bg px-3 py-2 text-sm font-medium text-st-arbeit">
+        <p role="note" className="rounded-[10px] bg-st-arbeit-bg px-3 py-2 text-sekundaer font-medium text-st-arbeit">
           Simulation – kein Accountwechsel. Es werden nur die Rechte angezeigt; Sie handeln weiterhin als Sie selbst.
         </p>
 
@@ -69,7 +69,7 @@ export function AnzeigenAlsDialog({
         )}
 
         <div className="max-w-md">
-          <label className="mb-1 block text-sm font-medium text-label">{modus === "user" ? "Nutzer" : "Position"}</label>
+          <label className="mb-1 block text-fliess font-medium text-label">{modus === "user" ? "Nutzer" : "Position"}</label>
           {modus === "user" ? (
             <SearchableSelect options={userOptionen} value={userId} onChange={setUserId} placeholder="Nutzer suchen…" />
           ) : (
@@ -78,24 +78,24 @@ export function AnzeigenAlsDialog({
         </div>
 
         {!registry ? (
-          <p className="text-sm text-label2">Rechte-Registry lädt…</p>
+          <p className="text-sekundaer text-label2">Rechte-Registry lädt…</p>
         ) : error ? (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {verstaendlicherFehler(error, "Effektive Rechte konnten nicht geladen werden")}
           </p>
         ) : !ziel ? (
-          <p className="text-sm text-label2">Wählen Sie {modus === "user" ? "einen Nutzer" : "eine Position"}, um die effektiven Rechte zu sehen.</p>
+          <p className="text-sekundaer text-label2">Wählen Sie {modus === "user" ? "einen Nutzer" : "eine Position"}, um die effektiven Rechte zu sehen.</p>
         ) : !data || isFetching ? (
-          <p className="text-sm text-label2">Lädt…</p>
+          <p className="text-sekundaer text-label2">Lädt…</p>
         ) : (
           <>
             {data.alle_rechte && (
-              <p className="text-sm text-label2">
+              <p className="text-sekundaer text-label2">
                 Die Rolle „{data.rolle}“ hat implizit alle Rechte (mandantweit), unabhängig vom Organigramm.
               </p>
             )}
             {modus === "position" && (
-              <p className="text-xs text-label2">Position: Account-Typ-Vorlage plus Overrides der Position. Nutzer-Overrides sind hier nicht enthalten.</p>
+              <p className="text-sekundaer text-label2">Position: Account-Typ-Vorlage plus Overrides der Position. Nutzer-Overrides sind hier nicht enthalten.</p>
             )}
             <EffektiveRechteTabelle
               registry={registry}

@@ -73,12 +73,12 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
         <div>
           <div className="font-medium text-label">{DOKUMENT_LABEL[typ]}</div>
           {dokument ? (
-            <div className="mt-1 text-xs text-label2">
+            <div className="mt-1 text-sekundaer text-label2">
               {dokument.dateiname} · {formatGroesse(dokument.groesse_bytes)} · hochgeladen am{" "}
               {new Date(dokument.updated_at).toLocaleDateString("de-DE")}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-label2">Noch kein Dokument hochgeladen</div>
+            <div className="mt-1 text-sekundaer text-label2">Noch kein Dokument hochgeladen</div>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -86,7 +86,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
             <>
               <button
                 onClick={handleDownload}
-                className="btn-touch rounded-md border border-sep px-3 py-2 text-sm font-medium text-label hover:bg-fill"
+                className="btn-touch rounded-md border border-sep px-3 py-2 text-sekundaer font-medium text-label hover:bg-fill"
               >
                 Herunterladen
               </button>
@@ -95,7 +95,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                   if (await bestaetigen({ titel: `"${DOKUMENT_LABEL[typ]}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
-                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
+                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sekundaer font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
               >
                 Löschen
               </button>
@@ -117,7 +117,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
           />
         </div>
       </div>
-      {error && <p className="mt-2 text-sm text-st-fehlt ">{error}</p>}
+      {error && <p className="mt-2 text-fliess text-st-fehlt ">{error}</p>}
     </div>
   );
 }
@@ -132,7 +132,7 @@ export function DsgvoPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         Zentrale Ablage der DSGVO-Pflichtdokumente (AVV-Vorlage, Datenschutzerklärung, Impressum,
         Löschkonzept, TOM-Dokument, Meldeprozess, Verarbeitungsverzeichnis). Erlaubt sind PDF, Word
         (.doc/.docx) oder Bilddateien (max. 10 MB).

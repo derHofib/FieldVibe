@@ -96,7 +96,7 @@ export function CaptureRenderer({
           if (eintrag.element.type !== "heading") return null;
           const inhalt = eintrag.element.inhalt as { text?: { de?: string } };
           return (
-            <h3 key={eintrag.element.id} className="pt-2 text-base font-semibold text-label">
+            <h3 key={eintrag.element.id} className="pt-2 text-zeile font-semibold text-label">
               {inhalt.text?.de ?? ""}
             </h3>
           );
@@ -131,8 +131,8 @@ export function CaptureRenderer({
         if (!eintrag.gruppe.repeatable) {
           const zeile = zeilen[0] ?? {};
           return (
-            <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
-              <h3 className="text-sm font-semibold text-label">{label}</h3>
+            <div key={eintrag.gruppe.id} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
+              <h3 className="text-fliess font-semibold text-label">{label}</h3>
               {eintrag.felder.map((feld) => {
                 const path = `${eintrag.gruppe.key}[0].${feld.key}`;
                 const state = states.get(path);
@@ -153,12 +153,12 @@ export function CaptureRenderer({
         }
 
         return (
-          <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
-            <h3 className="text-sm font-semibold text-label">{label}</h3>
+          <div key={eintrag.gruppe.id} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
+            <h3 className="text-fliess font-semibold text-label">{label}</h3>
             {zeilen.map((zeile, index) => (
-              <div key={index} className="space-y-2 border border-sep bg-fill p-2">
+              <div key={index} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sep bg-fill p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-label2">Eintrag {index + 1}</span>
+                  <span className="text-sekundaer font-medium text-label2">Eintrag {index + 1}</span>
                   {!readOnly && (
                     <button
                       type="button"
@@ -191,7 +191,7 @@ export function CaptureRenderer({
               <button
                 type="button"
                 onClick={() => zeileHinzufuegen(eintrag.gruppe.key)}
-                className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-1.5 text-sm font-medium text-label "
+                className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-1.5 text-sekundaer font-medium text-label "
               >
                 <Plus size={15} /> Eintrag hinzufügen
               </button>

@@ -117,8 +117,8 @@ export function MeineAufgabenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">Meine Aufgaben</h1>
-        <span className="text-sm font-medium text-label2">{offen.length} offen</span>
+        <h1 className="text-titel-mobil font-bold text-label">Meine Aufgaben</h1>
+        <span className="text-sekundaer font-medium text-label2">{offen.length} offen</span>
       </div>
 
       <div className="flex items-center gap-2 rounded-lg bg-card p-1 pl-3 shadow-xs dark:shadow-none dark:ring-1 ">
@@ -132,7 +132,7 @@ export function MeineAufgabenPage() {
             }
           }}
           placeholder="Neue private Aufgabe…"
-          className="flex-1 border-none bg-transparent p-1.5 text-sm outline-none placeholder:text-label2 dark:placeholder:text-label2"
+          className="flex-1 border-none bg-transparent p-1.5 text-zeile outline-none placeholder:text-label2 dark:placeholder:text-label2"
         />
         <button
           onClick={() => neueAufgabe.trim() && erstellen.mutate(neueAufgabe.trim())}
@@ -153,7 +153,7 @@ export function MeineAufgabenPage() {
         GRUPPEN_REIHENFOLGE.filter((g) => (gruppen.get(g) ?? []).length > 0).map((g) => (
           <div key={g} className="space-y-1.5">
             <span
-              className={`block text-[11px] font-bold tracking-wide uppercase ${
+              className={`block text-meta font-bold tracking-wide uppercase ${
                 g === "ueberfaellig"
                   ? "text-st-fehlt "
                   : "text-label2"
@@ -187,10 +187,10 @@ export function MeineAufgabenPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[13.5px] font-semibold text-label">{a.titel}</p>
+                      <p className="text-sekundaer font-semibold text-label">{a.titel}</p>
                       {a.faelligkeit_am && (
                         <span
-                          className={`shrink-0 text-[11px] font-semibold ${
+                          className={`shrink-0 text-meta font-semibold ${
                             ueberfaellig ? "text-st-fehlt " : "text-label2"
                           }`}
                         >
@@ -200,15 +200,15 @@ export function MeineAufgabenPage() {
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {a.projekt_id ? (
-                        <span className="flex items-center gap-1 rounded-full bg-st-arbeit-bg px-2 py-0.5 text-[10px] font-semibold text-st-arbeit ">
+                        <span className="flex items-center gap-1 rounded-full bg-st-arbeit-bg px-2 py-0.5 text-meta font-semibold text-st-arbeit ">
                           <KanbanSquare size={11} strokeWidth={2} /> Projekt
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
+                        <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-meta font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
                           <UserIcon size={11} strokeWidth={2} /> Privat
                         </span>
                       )}
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-meta font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
                         {PRIORITAET_LABEL[a.prioritaet]}
                       </span>
                       {a.vorgang_id && (
@@ -218,7 +218,7 @@ export function MeineAufgabenPage() {
                       {a.anlage_id && <Building2 size={13} strokeWidth={2} className="text-st-arbeit " />}
                       {a.standort_id && <MapPin size={13} strokeWidth={2} className="text-st-fehlt " />}
                       {!!a.unteraufgaben_gesamt && (
-                        <span className="text-[10px] font-medium text-label2">
+                        <span className="text-meta font-medium text-label2">
                           {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt} Unteraufgaben
                         </span>
                       )}
@@ -235,7 +235,7 @@ export function MeineAufgabenPage() {
         <div>
           <button
             onClick={() => setZeigeErledigt((v) => !v)}
-            className="flex items-center gap-1.5 py-1 text-xs font-medium text-label2"
+            className="flex items-center gap-1.5 py-1 text-sekundaer font-medium text-label2"
           >
             <CheckCircle2 size={14} strokeWidth={2} className="text-st-erledigt " />
             {erledigt.length} erledigt
@@ -259,7 +259,7 @@ export function MeineAufgabenPage() {
                   >
                     <CheckCircle2 size={13} strokeWidth={2.5} />
                   </button>
-                  <p className="flex-1 text-[13.5px] text-label2 line-through">{a.titel}</p>
+                  <p className="flex-1 text-sekundaer text-label2 line-through">{a.titel}</p>
                 </div>
               ))}
             </div>

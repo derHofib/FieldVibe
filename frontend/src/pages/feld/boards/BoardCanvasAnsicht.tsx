@@ -61,18 +61,18 @@ function VorgangKarteAnsicht({ data }: { data: VorgangKarteDaten }) {
         {vorgang ? (
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-label2">{vorgang.vorgangsnummer}</p>
-              <p className="mt-0.5 truncate text-[13px] font-bold text-label">{vorgang.titel}</p>
-              {kunde && <p className="mt-0.5 truncate text-[11px] text-label2">{kunde.name}</p>}
+              <p className="text-meta font-bold text-label2">{vorgang.vorgangsnummer}</p>
+              <p className="mt-0.5 truncate text-sekundaer font-bold text-label">{vorgang.titel}</p>
+              {kunde && <p className="mt-0.5 truncate text-meta text-label2">{kunde.name}</p>}
             </div>
             <span
-              className={`shrink-0 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
+              className={`shrink-0 px-2 py-0.5 text-meta font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
             >
               {STATUS_LABEL[vorgang.status]}
             </span>
           </div>
         ) : (
-          <p className="text-xs text-label2">Lädt…</p>
+          <p className="text-sekundaer text-label2">Lädt…</p>
         )}
       </div>
     </div>
@@ -85,7 +85,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "klebezettel": {
       const { text, farbe } = data as KlebezettelDaten;
       return (
-        <div className={`w-[150px] rounded-lg p-2.5 text-xs font-medium shadow-md ${FARB_KLASSEN[farbe] ?? FARB_KLASSEN.gelb}`}>
+        <div className={`w-[150px] rounded-lg p-2.5 text-sekundaer font-medium shadow-md ${FARB_KLASSEN[farbe] ?? FARB_KLASSEN.gelb}`}>
           {text || <span className="opacity-50">Leere Notiz</span>}
         </div>
       );
@@ -93,7 +93,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "text": {
       const { text } = data as TextDaten;
       return (
-        <div className="w-[170px] text-sm font-semibold text-label">
+        <div className="w-[170px] text-fliess font-semibold text-label">
           {text || <span className="text-label2">Leerer Text</span>}
         </div>
       );
@@ -102,7 +102,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label, form } = data as FormDaten;
       return (
         <div
-          className={`flex h-[70px] w-[140px] items-center justify-center bg-violet-100 p-2 text-center text-xs font-semibold text-violet-800 shadow-md ${
+          className={`flex h-[70px] w-[140px] items-center justify-center bg-violet-100 p-2 text-center text-sekundaer font-semibold text-violet-800 shadow-md ${
             form === "kreis" ? "rounded-full" : "rounded-xl"
           }`}
         >
@@ -114,7 +114,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label } = data as RahmenDaten;
       return (
         <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-fill">
-          <p className="m-2 text-xs font-bold tracking-wide text-label2 uppercase ">{label}</p>
+          <p className="m-2 text-meta font-bold text-label2 ">{label}</p>
         </div>
       );
     }
@@ -125,7 +125,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
           {url ? (
             <img src={url} alt="" className="block w-full" draggable={false} />
           ) : (
-            <div className="flex h-24 items-center justify-center bg-fill text-xs text-label2">
+            <div className="flex h-24 items-center justify-center bg-fill text-sekundaer text-label2">
               Kein Bild
             </div>
           )}
@@ -137,7 +137,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "anlagen_pin": {
       const { nummer } = data as AnlagenPinDaten;
       return (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-linear-to-r from-cyan-500 to-blue-600 text-xs font-extrabold text-white shadow-lg ">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-linear-to-r from-cyan-500 to-blue-600 text-sekundaer font-extrabold text-white shadow-lg ">
           {nummer}
         </div>
       );
@@ -146,8 +146,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label, sub } = data as ProzessSchrittDaten;
       return (
         <div className="w-[150px] rounded-xl border-[1.5px] border-sep bg-card p-2.5 shadow-sm">
-          <p className="text-[12px] font-bold text-label">{label}</p>
-          {sub && <p className="mt-0.5 text-[10px] text-label2">{sub}</p>}
+          <p className="text-sekundaer font-bold text-label">{label}</p>
+          {sub && <p className="mt-0.5 text-meta text-label2">{sub}</p>}
         </div>
       );
     }
@@ -156,7 +156,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       return (
         <div className="relative flex h-[110px] w-[110px] items-center justify-center">
           <div className="absolute inset-0 rotate-45 rounded-2xl border-[1.5px] border-st-arbeit bg-st-arbeit-bg " />
-          <span className="relative z-10 w-20 text-center text-[11px] font-bold text-st-arbeit ">
+          <span className="relative z-10 w-20 text-center text-meta font-bold text-st-arbeit ">
             {label}
           </span>
         </div>
@@ -172,8 +172,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const erledigt = punkte.filter((p) => p.erledigt).length;
       return (
         <div className="w-[170px] rounded-xl bg-card p-2.5 shadow-md">
-          <p className="truncate text-[11px] font-bold text-label">{titel || "Checkliste"}</p>
-          <p className="mt-0.5 text-[10px] text-label2">
+          <p className="truncate text-meta font-bold text-label">{titel || "Checkliste"}</p>
+          <p className="mt-0.5 text-meta text-label2">
             {erledigt}/{punkte.length} erledigt
           </p>
         </div>
@@ -184,7 +184,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       return (
         <div className="flex w-[150px] items-center gap-1.5 rounded-xl bg-card p-2.5 shadow-md">
           <Paperclip size={13} strokeWidth={2} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
-          <span className="truncate text-[11px] font-medium text-label">
+          <span className="truncate text-meta font-medium text-label">
             {dateiname || "Kein Anhang"}
           </span>
         </div>

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { anlagenApi, anlagenFeldDefinitionenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { AnlagenFeldTyp } from "../../types";
+import { Select } from "../../components/apple/Select";
 
 const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
   text: "Text",
@@ -81,13 +82,13 @@ export function AnlagenFelderPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-label">Anlagen-Zusatzfelder</h1>
-        <p className="mt-1 text-sm text-label2">
+        <h1 className="text-titel-mobil font-bold text-label">Anlagen-Zusatzfelder</h1>
+        <p className="mt-1 text-sekundaer text-label2">
           Lege je Anlagentyp (z. B. „Fahrzeug", „Ladestation", „Elektroanlage") eigene Felder fest, die
           beim Anlegen/Bearbeiten einer Anlage dieses Typs zusätzlich abgefragt werden.
         </p>
@@ -98,13 +99,13 @@ export function AnlagenFelderPage() {
         className="space-y-2 card-ap p-4"
       >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Anlagentyp</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Anlagentyp</label>
           <input id={`${uid}-0`}
             list="bekannte-anlagentypen"
             value={anlagentyp}
             onChange={(e) => setAnlagentyp(e.target.value)}
             placeholder="z.B. Fahrzeug, Ladestation, Elektroanlage"
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
           <datalist id="bekannte-anlagentypen">
             {bekannteTypen.map((t) => (
@@ -117,32 +118,32 @@ export function AnlagenFelderPage() {
             value={feldName}
             onChange={(e) => setFeldName(e.target.value)}
             placeholder="Feldname, z.B. Kennzeichen"
-            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
-          <select
+          <Select
+            className="w-auto"
             value={feldTyp}
             onChange={(e) => setFeldTyp(e.target.value as AnlagenFeldTyp)}
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           >
             {Object.entries(FELD_TYP_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
-        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           Feld hinzufügen
         </button>
       </form>
 
       {gruppen.length === 0 ? (
-        <p className="text-center text-sm text-label2">Noch keine Zusatzfelder definiert.</p>
+        <p className="text-center text-sekundaer text-label2">Noch keine Zusatzfelder definiert.</p>
       ) : (
         <div className="space-y-3">
           {gruppen.map(([typ, felder]) => (
@@ -150,21 +151,21 @@ export function AnlagenFelderPage() {
               key={typ}
               className="card-ap p-4"
             >
-              <h2 className="mb-2 text-sm font-semibold text-label2">{typ}</h2>
+              <h2 className="mb-2 text-fliess font-semibold text-label2">{typ}</h2>
               <div className="space-y-1.5">
                 {felder!.map((f) => (
                   <div
                     key={f.id}
                     className="flex items-center justify-between rounded-md bg-fill px-3 py-2"
                   >
-                    <span className="text-sm text-label">{f.feld_name}</span>
+                    <span className="text-fliess text-label">{f.feld_name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                      <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                         {FELD_TYP_LABEL[f.feld_typ]}
                       </span>
                       <button
                         onClick={() => deleteMutation.mutate(f.id)}
-                        className="btn-touch text-xs text-st-fehlt "
+                        className="btn-touch text-sekundaer text-st-fehlt "
                       >
                         Entfernen
                       </button>

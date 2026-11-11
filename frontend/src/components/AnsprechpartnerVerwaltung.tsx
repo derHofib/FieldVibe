@@ -5,6 +5,7 @@ import { AnlegenPanel } from "./AnlegenPanel";
 import { useBestaetigung } from "./ConfirmDialog";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "./FormularFeld";
 import type { Ansprechpartner, Eskalationsstufe } from "../types";
+import { Select } from "./apple/Select";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -66,13 +67,12 @@ function AnsprechpartnerForm({
       </div>
       <Feld label="Eskalationsstufe">
         {(p) => (
-          <select
+          <Select
             {...p}
             value={form.eskalationsstufe ?? ""}
             onChange={(e) =>
               setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
             }
-            className={FELD_KLASSE}
           >
             <option value="">Keine Eskalationsstufe</option>
             {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
@@ -80,14 +80,14 @@ function AnsprechpartnerForm({
                 {ESKALATIONSSTUFE_LABEL[stufe]}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </Feld>
-      <label className="btn-touch flex items-center gap-2 text-sm text-label">
+      <label className="btn-touch flex items-center gap-2 text-sekundaer text-label">
         <input type="checkbox" checked={form.operativ} onChange={(e) => setForm({ ...form, operativ: e.target.checked })} />
         Operativer Ansprechpartner (Tagesgeschäft)
       </label>
-      <button type="submit" disabled={speichernLaeuft} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+      <button type="submit" disabled={speichernLaeuft} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
         Speichern
       </button>
     </form>
@@ -141,7 +141,7 @@ export function AnsprechpartnerVerwaltung({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-label2">Ansprechpartner</h2>
+        <h2 className="text-fliess font-semibold text-label2">Ansprechpartner</h2>
         {kannVerwalten && (
           <button onClick={() => setNeuAnlegen(true)} className={NEU_BUTTON_KLASSE}>
             + Neuer Ansprechpartner
@@ -150,7 +150,7 @@ export function AnsprechpartnerVerwaltung({
       </div>
 
       {liste.length === 0 && (
-        <p className="text-sm text-label2">Noch keine Ansprechpartner hinterlegt.</p>
+        <p className="text-sekundaer text-label2">Noch keine Ansprechpartner hinterlegt.</p>
       )}
 
       <div className="space-y-2">
@@ -161,40 +161,40 @@ export function AnsprechpartnerVerwaltung({
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-label">{a.name}</div>
-                  {a.position && <div className="text-xs text-label2">{a.position}</div>}
+                  <div className="text-fliess font-medium text-label">{a.name}</div>
+                  {a.position && <div className="text-sekundaer text-label2">{a.position}</div>}
                 </div>
                 <div className="flex gap-1">
                   {a.operativ && (
-                    <span className="rounded-full bg-tintbg px-2 py-0.5 text-xs font-medium text-tint ">
+                    <span className="rounded-full bg-tintbg px-2 py-0.5 text-meta font-medium text-tint ">
                       Operativ
                     </span>
                   )}
                   {a.eskalationsstufe && (
-                    <span className="rounded-full bg-st-arbeit-bg px-2 py-0.5 text-xs font-medium text-st-arbeit ">
+                    <span className="rounded-full bg-st-arbeit-bg px-2 py-0.5 text-meta font-medium text-st-arbeit ">
                       Stufe {a.eskalationsstufe}
                     </span>
                   )}
                 </div>
               </div>
               {(a.telefon || a.email) && (
-                <div className="mt-1 text-xs text-label2">
+                <div className="mt-1 text-sekundaer text-label2">
                   {[a.telefon, a.email].filter(Boolean).join(" · ")}
                 </div>
               )}
-              {a.notiz && <p className="mt-1 text-xs text-label2">{a.notiz}</p>}
+              {a.notiz && <p className="mt-1 text-sekundaer text-label2">{a.notiz}</p>}
               {kannVerwalten && (
                 <div className="mt-2 flex gap-3">
                   <button
                     onClick={() => setBearbeitenId(a.id)}
-                    className="btn-touch text-xs text-tint underline "
+                    className="btn-touch text-sekundaer text-tint underline "
                   >
                     Bearbeiten
                   </button>
                   <button
                     onClick={() => void entfernen(a)}
                     disabled={speichernMutation.isPending}
-                    className="btn-touch text-xs text-st-fehlt underline disabled:opacity-50 "
+                    className="btn-touch text-sekundaer text-st-fehlt underline disabled:opacity-50 "
                   >
                     Entfernen
                   </button>

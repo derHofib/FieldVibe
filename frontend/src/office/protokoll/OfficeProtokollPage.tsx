@@ -7,6 +7,7 @@ import { protokollApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { downloadBlob } from "../../utils/download";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import {
   AKTEUR_LABEL,
   aktionLabel,
@@ -60,14 +61,14 @@ export function OfficeProtokollPage() {
       <SeitenKopf titel="Protokoll" anzahl={daten?.gesamt}>
         <button
           type="button"
-          className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-[13px]"
+          className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-sekundaer"
           onClick={csvLaden}
         >
           <Download size={14} aria-hidden="true" /> CSV exportieren
         </button>
         <button
           type="button"
-          className="btn-ap-primary inline-flex h-8 items-center gap-1.5 px-3 text-[13px] font-semibold disabled:opacity-50"
+          className="btn-ap-primary inline-flex h-8 items-center gap-1.5 px-3 text-sekundaer font-semibold disabled:opacity-50"
           disabled={pruefung.isPending}
           onClick={() => pruefung.mutate()}
         >
@@ -76,7 +77,7 @@ export function OfficeProtokollPage() {
         </button>
       </SeitenKopf>
 
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         Unveränderliches Protokoll aller GoBD-relevanten Vorgänge Ihres Betriebs. Einträge lassen sich weder ändern noch
         löschen und sind pro Betrieb in einer Hash-Kette verbunden.
       </p>
@@ -100,7 +101,7 @@ export function OfficeProtokollPage() {
           </p>
           {ergebnis.kopf_hash && (
             <p>
-              Kettenkopf Nr. {ergebnis.kopf_seq}: <code className="break-all text-xs">{ergebnis.kopf_hash}</code>
+              Kettenkopf Nr. {ergebnis.kopf_seq}: <code className="break-all text-sekundaer">{ergebnis.kopf_hash}</code>
             </p>
           )}
           {ergebnis.fehler.length > 0 && (
@@ -119,7 +120,7 @@ export function OfficeProtokollPage() {
       <Karte className="p-4">
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => e.preventDefault()}>
           <div>
-            <label htmlFor="pf-von" className="mb-1 block text-xs font-semibold text-label2">
+            <label htmlFor="pf-von" className="mb-1 block text-sekundaer font-semibold text-label2">
               Von
             </label>
             <input
@@ -131,7 +132,7 @@ export function OfficeProtokollPage() {
             />
           </div>
           <div>
-            <label htmlFor="pf-bis" className="mb-1 block text-xs font-semibold text-label2">
+            <label htmlFor="pf-bis" className="mb-1 block text-sekundaer font-semibold text-label2">
               Bis
             </label>
             <input
@@ -143,12 +144,11 @@ export function OfficeProtokollPage() {
             />
           </div>
           <div>
-            <label htmlFor="pf-aktion" className="mb-1 block text-xs font-semibold text-label2">
+            <label htmlFor="pf-aktion" className="mb-1 block text-sekundaer font-semibold text-label2">
               Aktion
             </label>
-            <select
+            <Select groesse="kompakt"
               id="pf-aktion"
-              className="field-ap"
               value={filter.aktion ?? ""}
               onChange={(e) => filterSetzen({ ...filter, aktion: e.target.value })}
             >
@@ -158,15 +158,14 @@ export function OfficeProtokollPage() {
                   {aktionLabel(a)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label htmlFor="pf-akteur" className="mb-1 block text-xs font-semibold text-label2">
+            <label htmlFor="pf-akteur" className="mb-1 block text-sekundaer font-semibold text-label2">
               Akteur
             </label>
-            <select
+            <Select groesse="kompakt"
               id="pf-akteur"
-              className="field-ap"
               value={filter.akteur_typ ?? ""}
               onChange={(e) => filterSetzen({ ...filter, akteur_typ: e.target.value })}
             >
@@ -176,11 +175,11 @@ export function OfficeProtokollPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <button
             type="button"
-            className="btn-ap h-9 px-3 text-[13px]"
+            className="btn-ap h-9 px-3 text-sekundaer"
             onClick={() => filterSetzen({})}
             disabled={Object.values(filter).every((v) => !v)}
           >
@@ -196,9 +195,9 @@ export function OfficeProtokollPage() {
       )}
 
       <TabellenRahmen>
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-fliess">
           <caption className="sr-only">Protokolleinträge, neueste zuerst</caption>
-          <thead className="bg-fill text-xs text-label2">
+          <thead className="bg-fill text-meta text-label2">
             <tr>
               <th scope="col" className="px-3 py-2">Zeit</th>
               <th scope="col" className="px-3 py-2">Akteur</th>
@@ -213,14 +212,14 @@ export function OfficeProtokollPage() {
                 <td className="whitespace-nowrap px-3 py-2 tabular-nums text-label">{zeitText(e.zeit)}</td>
                 <td className="px-3 py-2 text-label">
                   {e.actor_name ?? AKTEUR_LABEL[e.akteur_typ]}
-                  {e.actor_name && <span className="block text-xs text-label2">{AKTEUR_LABEL[e.akteur_typ]}</span>}
+                  {e.actor_name && <span className="block text-sekundaer text-label2">{AKTEUR_LABEL[e.akteur_typ]}</span>}
                 </td>
                 <td className="px-3 py-2 font-medium text-label">{aktionLabel(e.aktion)}</td>
                 <td className="px-3 py-2 text-label2">
                   {e.entity_type ?? "–"}
-                  {e.entity_id && <span className="block text-xs">{e.entity_id.slice(0, 8)}</span>}
+                  {e.entity_id && <span className="block text-sekundaer">{e.entity_id.slice(0, 8)}</span>}
                 </td>
-                <td className="max-w-[360px] px-3 py-2 text-xs text-label2">
+                <td className="max-w-[360px] px-3 py-2 text-sekundaer text-label2">
                   {detailsText(e.payload)}
                   {e.ip && <span className="block">IP {e.ip}</span>}
                   {e.request_id && <span className="block">Anfrage {e.request_id.slice(0, 8)}</span>}
@@ -239,12 +238,12 @@ export function OfficeProtokollPage() {
       </TabellenRahmen>
 
       {daten && (
-        <div className="flex items-center justify-between text-sm text-label2">
+        <div className="flex items-center justify-between text-sekundaer text-label2">
           <span>{seitenText(offset, daten.eintraege.length, daten.gesamt)}</span>
           <div className="flex gap-2">
             <button
               type="button"
-              className="btn-ap inline-flex h-8 items-center gap-1 px-3 text-[13px]"
+              className="btn-ap inline-flex h-8 items-center gap-1 px-3 text-sekundaer"
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - SEITENGROESSE))}
             >
@@ -252,7 +251,7 @@ export function OfficeProtokollPage() {
             </button>
             <button
               type="button"
-              className="btn-ap inline-flex h-8 items-center gap-1 px-3 text-[13px]"
+              className="btn-ap inline-flex h-8 items-center gap-1 px-3 text-sekundaer"
               disabled={offset + SEITENGROESSE >= daten.gesamt}
               onClick={() => setOffset(offset + SEITENGROESSE)}
             >

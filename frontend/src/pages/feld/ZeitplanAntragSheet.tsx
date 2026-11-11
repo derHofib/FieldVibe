@@ -63,7 +63,7 @@ export function ZeitplanAntragSheet({
       onClose={onClose}
       titel="Änderung beantragen"
       links={
-        <button type="button" onClick={onClose} className="btn-touch text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="btn-touch text-zeile text-tint-text">
           Abbrechen
         </button>
       }
@@ -72,14 +72,14 @@ export function ZeitplanAntragSheet({
           type="submit"
           form={FORM_ID}
           disabled={senden.isPending}
-          className="btn-touch text-[17px] font-semibold text-tint-text disabled:opacity-50"
+          className="btn-touch text-zeile font-semibold text-tint-text disabled:opacity-50"
         >
           Senden
         </button>
       }
     >
       <form id={FORM_ID} onSubmit={absenden} className="space-y-4 p-4">
-        <p className="truncate text-[15px] font-semibold text-label">{element.titel}</p>
+        <p className="truncate text-fliess font-semibold text-label">{element.titel}</p>
 
         {arten.length > 1 && (
           <SegmentedControl
@@ -92,12 +92,12 @@ export function ZeitplanAntragSheet({
           />
         )}
         {element.datum_gesperrt && (
-          <p className="text-[13px] text-label2">Das Datum kommt aus dem Liefertermin der Bestellung — hier lässt sich nur ein Problem melden.</p>
+          <p className="text-sekundaer text-label2">Das Datum kommt aus dem Liefertermin der Bestellung — hier lässt sich nur ein Problem melden.</p>
         )}
 
         {art === "verschieben" && (
           <div className="space-y-1">
-            <label htmlFor="antrag-start" className="text-[13px] font-medium text-label2">
+            <label htmlFor="antrag-start" className="text-sekundaer font-medium text-label2">
               Neuer Start
             </label>
             <input
@@ -109,7 +109,7 @@ export function ZeitplanAntragSheet({
               className="field-ap"
             />
             {neuesEnde && element.typ !== "meilenstein" && (
-              <p className="text-[13px] text-label2">
+              <p className="text-sekundaer text-label2">
                 Bisherige Dauer bleibt: bis {formatKurz(parseTag(neuesEnde))}
               </p>
             )}
@@ -117,7 +117,7 @@ export function ZeitplanAntragSheet({
         )}
         {art === "dauer_aendern" && (
           <div className="space-y-1">
-            <label htmlFor="antrag-ende" className="text-[13px] font-medium text-label2">
+            <label htmlFor="antrag-ende" className="text-sekundaer font-medium text-label2">
               Neues Ende
             </label>
             <input
@@ -133,7 +133,7 @@ export function ZeitplanAntragSheet({
         )}
 
         <div className="space-y-1.5">
-          <label htmlFor="antrag-begruendung" className="text-[13px] font-medium text-label2">
+          <label htmlFor="antrag-begruendung" className="text-sekundaer font-medium text-label2">
             Begründung (Pflicht)
           </label>
           <textarea
@@ -151,7 +151,7 @@ export function ZeitplanAntragSheet({
                 key={g}
                 type="button"
                 onClick={() => setBegruendung((b) => (b.trim() ? `${b.trim()}. ${g}` : g))}
-                className="rounded-full bg-fill px-3 py-1 text-[13px] text-label"
+                className="rounded-full bg-fill px-3 py-1 text-sekundaer text-label"
               >
                 {g}
               </button>
@@ -160,7 +160,7 @@ export function ZeitplanAntragSheet({
         </div>
 
         {fehler && (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {fehler}
           </p>
         )}

@@ -12,6 +12,7 @@ import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 /** "offene Vorgaenge je Techniker" als schlichte horizontale Balken statt
  * einer Chart-Bibliothek -- passend zum bisher chart-freien Frontend, ein
@@ -21,11 +22,11 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
   const breite = max > 0 ? Math.max(4, (anzahl / max) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
-      <span className="w-28 shrink-0 truncate text-xs text-label">{name}</span>
+      <span className="w-28 shrink-0 truncate text-sekundaer text-label">{name}</span>
       <div className="h-4 flex-1 bg-fill">
         <div className="h-full bg-cyan-600 dark:bg-cyan-500" style={{ width: `${breite}%` }} />
       </div>
-      <span className="w-6 shrink-0 text-right text-xs font-semibold text-label">{anzahl}</span>
+      <span className="w-6 shrink-0 text-right text-sekundaer font-semibold text-label">{anzahl}</span>
     </div>
   );
 }
@@ -45,13 +46,13 @@ export function TeamKennzahlen() {
   return (
     <div className="space-y-3 card-ap p-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-sm font-bold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-bold text-label">
           <Users size={15} strokeWidth={2} /> Team-Kennzahlen
         </h2>
-        {darfProjekte && <select
+        {darfProjekte && <Select className="w-auto"
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
-          className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+          groesse="kompakt"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -59,37 +60,37 @@ export function TeamKennzahlen() {
               {p.name}
             </option>
           ))}
-        </select>}
+        </Select>}
       </div>
 
       {ladeFehler && !kennzahlen ? (
         <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" onErneut={() => void neuLaden()} />
       ) : isLoading || !kennzahlen ? (
-        <p className="py-4 text-center text-sm text-label2">Lädt…</p>
+        <p className="py-4 text-center text-sekundaer text-label2">Lädt…</p>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2">
-            <div className="border border-sep bg-fill p-3 text-center">
-              <div className="text-xl font-bold text-label">{kennzahlen.offene_vorgaenge_gesamt}</div>
-              <div className="text-xs text-label2">Offene Vorgänge</div>
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
+              <div className="text-titel-mobil font-bold text-label">{kennzahlen.offene_vorgaenge_gesamt}</div>
+              <div className="text-sekundaer text-label2">Offene Vorgänge</div>
             </div>
-            <div className="border border-sep bg-fill p-3 text-center">
-              <div className="text-xl font-bold text-label">{kennzahlen.abgeschlossene_vorgaenge_zeitraum}</div>
-              <div className="text-xs text-label2">Abgeschlossen</div>
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
+              <div className="text-titel-mobil font-bold text-label">{kennzahlen.abgeschlossene_vorgaenge_zeitraum}</div>
+              <div className="text-sekundaer text-label2">Abgeschlossen</div>
             </div>
-            <div className="border border-sep bg-fill p-3 text-center">
-              <div className="text-xl font-bold text-label">
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
+              <div className="text-titel-mobil font-bold text-label">
                 {kennzahlen.durchschnittliche_durchlaufzeit_tage !== null
                   ? `${kennzahlen.durchschnittliche_durchlaufzeit_tage} T.`
                   : "—"}
               </div>
-              <div className="text-xs text-label2">Ø Durchlaufzeit</div>
+              <div className="text-meta text-label2">Ø Durchlaufzeit</div>
             </div>
           </div>
 
           {kennzahlen.offene_vorgaenge_je_techniker.length > 0 && (
             <div className="space-y-1.5 border-t border-sep pt-2 ">
-              <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Offen je Techniker</p>
+              <p className="text-meta font-bold text-label2">Offen je Techniker</p>
               {kennzahlen.offene_vorgaenge_je_techniker.map((t) => (
                 <TechnikerBalken key={t.techniker_id} name={t.techniker_name} anzahl={t.anzahl_offen} max={maxOffen} />
               ))}
@@ -148,11 +149,11 @@ export function StatistikPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">Meine Arbeitszeit</h1>
+        <h1 className="text-titel-mobil font-bold text-label">Meine Arbeitszeit</h1>
         {kannErfassen && (
           <button
             onClick={() => setFormularOffen(true)}
-            className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
+            className="btn-touch btn-ap-primary px-4"
           >
             + Zeit erfassen
           </button>
@@ -175,22 +176,22 @@ export function StatistikPage() {
       {kannAuswerten && statistik && (
         <div className="grid grid-cols-3 gap-2">
           <div className="card-ap p-3 text-center">
-            <div className="text-xl font-bold text-label">
+            <div className="text-titel-mobil font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
-            <div className="text-xs text-label2">Std. diese Woche</div>
+            <div className="text-sekundaer text-label2">Std. diese Woche</div>
           </div>
           <div className="card-ap p-3 text-center">
-            <div className="text-xl font-bold text-label">
+            <div className="text-titel-mobil font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
-            <div className="text-xs text-label2">Std. dieser Monat</div>
+            <div className="text-sekundaer text-label2">Std. dieser Monat</div>
           </div>
           <div className="card-ap p-3 text-center">
-            <div className="text-xl font-bold text-label">
+            <div className="text-titel-mobil font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
-            <div className="text-xs text-label2">Std. dieses Jahr</div>
+            <div className="text-sekundaer text-label2">Std. dieses Jahr</div>
           </div>
         </div>
       )}
@@ -204,11 +205,11 @@ export function StatistikPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer text-label "
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-label">
+            <span className="text-fliess font-medium text-label">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -217,7 +218,7 @@ export function StatistikPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer text-label "
             >
               Woche →
             </button>
@@ -236,7 +237,7 @@ export function StatistikPage() {
             <div className="mt-2 flex items-center justify-end border-t border-sep pt-2 ">
               <button
                 onClick={exportieren}
-                className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+                className="btn-touch btn-ap px-4"
               >
                 <FileText size={15} strokeWidth={2} /> Als PDF exportieren
               </button>

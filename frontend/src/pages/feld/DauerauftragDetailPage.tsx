@@ -11,13 +11,13 @@ import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-tint text-tint ",
-  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border border-st-wartet text-st-wartet",
-  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-sep text-label ",
-  storniert: "border border-sep text-label2",
+  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
+  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
 };
 
 export function DauerauftragDetailPage() {
@@ -100,34 +100,34 @@ export function DauerauftragDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-lg font-bold text-label">{dauerauftrag.titel}</h1>
+            <h1 className="text-titel-mobil font-bold text-label">{dauerauftrag.titel}</h1>
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
-                className="text-sm text-tint underline-offset-2 hover:underline "
+                className="text-sekundaer text-tint underline-offset-2 hover:underline "
               >
                 {kunde.name}
               </button>
             )}
           </div>
           {!dauerauftrag.aktiv && (
-            <span className="border border-sep px-2 py-1 text-xs text-label">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label">
               pausiert
             </span>
           )}
         </div>
         {dauerauftrag.beschreibung && (
-          <p className="mt-2 text-sm text-label">{dauerauftrag.beschreibung}</p>
+          <p className="mt-2 text-fliess text-label">{dauerauftrag.beschreibung}</p>
         )}
 
-        <dl className="mt-3 space-y-1 text-sm">
+        <dl className="mt-3 space-y-1 text-fliess">
           <div className="flex justify-between">
             <dt className="text-label2">Intervall</dt>
             <dd className="text-label">
@@ -137,7 +137,7 @@ export function DauerauftragDetailPage() {
                   {kannVerwalten && (
                     <button
                       onClick={() => setEditIntervall(String(dauerauftrag.intervall_tage))}
-                      className="btn-touch text-xs text-tint underline "
+                      className="btn-touch text-sekundaer text-tint underline "
                     >
                       ändern
                     </button>
@@ -150,19 +150,19 @@ export function DauerauftragDetailPage() {
                     min={1}
                     value={editIntervall}
                     onChange={(e) => setEditIntervall(e.target.value)}
-                    className="w-16 border border-sep bg-transparent px-2 py-1 text-label"
+                    className="w-16 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-label"
                   />
                   Tage
                   <button
                     onClick={() => intervallMutation.mutate(Number(editIntervall))}
                     disabled={intervallMutation.isPending}
-                    className="btn-touch rounded-md btn-ap-primary px-2 py-1 text-xs disabled:opacity-50"
+                    className="btn-touch rounded-md btn-ap-primary px-2 py-1 text-sekundaer disabled:opacity-50"
                   >
                     Speichern
                   </button>
                   <button
                     onClick={() => setEditIntervall(null)}
-                    className="btn-touch text-xs text-label2 underline "
+                    className="btn-touch text-sekundaer text-label2 underline "
                   >
                     Abbrechen
                   </button>
@@ -206,13 +206,13 @@ export function DauerauftragDetailPage() {
 
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-label2">
+            <h2 className="text-fliess font-semibold text-label2">
               Anlagen im Bündel ({dauerauftrag.anzahl_ziele})
             </h2>
             {kannVerwalten && !anlagenBearbeiten && (
               <button
                 onClick={anlagenBearbeitenStarten}
-                className="btn-touch text-xs text-tint underline "
+                className="btn-touch text-sekundaer text-tint underline "
               >
                 Anlagen verwalten
               </button>
@@ -224,12 +224,12 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.ziele.map((z) => (
                 <div
                   key={z.id}
-                  className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-fliess"
                 >
                   <span className="text-label">
                     {z.anlage_id ? anlageNameById.get(z.anlage_id) ?? "Anlage" : "Ohne Anlagenbezug"}
                   </span>
-                  <span className="text-xs text-label2">
+                  <span className="text-sekundaer text-label2">
                     {z.offener_vorgang_id ? (
                       <button
                         onClick={() => navigate(`/vorgaenge/${z.offener_vorgang_id}`)}
@@ -247,13 +247,13 @@ export function DauerauftragDetailPage() {
           ) : (
             <div className="space-y-2 rounded-md border border-sep p-2 ">
               {!anlagenListe || anlagenListe.length === 0 ? (
-                <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
+                <p className="text-sekundaer text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
               ) : (
                 <div className="max-h-48 space-y-1 overflow-y-auto">
                   {anlagenListe.map((a) => (
                     <label
                       key={a.id}
-                      className="flex items-center gap-2 py-1 text-sm text-label"
+                      className="flex items-center gap-2 py-1 text-fliess text-label"
                     >
                       <input
                         type="checkbox"
@@ -270,27 +270,27 @@ export function DauerauftragDetailPage() {
                 </div>
               )}
               <div>
-                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">
                   Fälligkeit für neu hinzugefügte Anlagen
                 </label>
                 <input id={`${uid}-0`}
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}
-                  className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+                  className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setAnlagenMutation.mutate()}
                   disabled={setAnlagenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
                 >
                   Speichern
                 </button>
                 <button
                   onClick={() => setAnlagenBearbeiten(false)}
-                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm text-label "
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer text-label "
                 >
                   Abbrechen
                 </button>
@@ -304,7 +304,7 @@ export function DauerauftragDetailPage() {
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch w-full rounded-md border border-sep py-2 text-sm font-medium text-label disabled:opacity-50 "
+              className="btn-touch w-full rounded-md border border-sep py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
@@ -315,7 +315,7 @@ export function DauerauftragDetailPage() {
                 }
               }}
               disabled={deleteMutation.isPending}
-              className="btn-touch w-full rounded-md border border-st-fehlt py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 "
+              className="btn-touch w-full rounded-md border border-st-fehlt py-2 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
             >
               Dauer-Auftrag löschen
             </button>
@@ -324,11 +324,11 @@ export function DauerauftragDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-label2">
+        <h2 className="mb-2 text-fliess font-semibold text-label2">
           Verlauf ({dauerauftrag.vorgaenge.length} Vorgänge)
         </h2>
         {dauerauftrag.vorgaenge.length === 0 ? (
-          <p className="text-sm text-label2">Noch kein Vorgang erzeugt.</p>
+          <p className="text-sekundaer text-label2">Noch kein Vorgang erzeugt.</p>
         ) : (
           <div className="space-y-2">
             {dauerauftrag.vorgaenge.map((v) => (
@@ -340,10 +340,10 @@ export function DauerauftragDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-xs text-label2">{v.vorgangsnummer}</div>
-                  <div className="text-sm font-medium text-label">{v.titel}</div>
+                  <div className="text-meta text-label2">{v.vorgangsnummer}</div>
+                  <div className="text-fliess font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
                   {statusLabel(v.status)}
                 </span>
               </button>

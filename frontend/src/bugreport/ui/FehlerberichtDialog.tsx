@@ -76,7 +76,7 @@ function Umschalter<T extends string>({
             type="button"
             aria-pressed={aktiv}
             onClick={() => onChange(o.wert)}
-            className={`h-8 flex-1 rounded-[7px] px-1 text-[13px] ${
+            className={`h-8 flex-1 rounded-[7px] px-1 text-sekundaer ${
               aktiv ? "bg-thumb font-semibold text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "font-medium text-label"
             }`}
           >
@@ -100,7 +100,7 @@ function kurzinfo(key: Kategorie, kontext: FehlerberichtKontext): string {
   return "";
 }
 
-const labelKlasse = "mb-1 block text-[13px] font-medium text-label2";
+const labelKlasse = "mb-1 block text-sekundaer font-medium text-label2";
 
 export function FehlerberichtDialog({
   start,
@@ -215,7 +215,7 @@ export function FehlerberichtDialog({
   }
 
   const schliessen = (
-    <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+    <button type="button" onClick={onClose} className="text-zeile text-tint-text">
       {ergebnis ? "Fertig" : "Abbrechen"}
     </button>
   );
@@ -229,7 +229,7 @@ export function FehlerberichtDialog({
       links={schliessen}
       rechts={
         ergebnis ? undefined : (
-          <button type="submit" form={formId} disabled={!kannSenden} className="text-[17px] font-semibold text-tint-text disabled:opacity-40">
+          <button type="submit" form={formId} disabled={!kannSenden} className="text-zeile font-semibold text-tint-text disabled:opacity-40">
             {sendet ? "Sendet…" : "Senden"}
           </button>
         )
@@ -243,11 +243,11 @@ export function FehlerberichtDialog({
             ) : (
               <Bug size={32} strokeWidth={2} className="mx-auto mb-3 text-tint" aria-hidden="true" />
             )}
-            <p className="text-[17px] font-semibold text-label">
+            <p className="text-zeile font-semibold text-label">
               {idee ? `Danke! Deine Idee #${String(ergebnis.id)} wurde eingereicht.` : `Danke! Fehler #${String(ergebnis.id)} gemeldet.`}
             </p>
             {ergebnis.duplikat_von_id != null && (
-              <p className="mt-2 text-[15px] text-label2">
+              <p className="mt-2 text-fliess text-label2">
                 Dieses Problem ist bereits bekannt (#{String(ergebnis.duplikat_von_id)}). Deine Meldung wurde zugeordnet.
               </p>
             )}
@@ -261,7 +261,7 @@ export function FehlerberichtDialog({
             <section aria-label="Screenshot">
               {original && bild ? (
                 <>
-                  <label className="mb-2 flex items-center gap-2 text-[15px] text-label">
+                  <label className="mb-2 flex items-center gap-2 text-fliess text-label">
                     <input
                       type="checkbox"
                       checked={mitScreenshot}
@@ -272,13 +272,13 @@ export function FehlerberichtDialog({
                     Screenshot mitsenden
                   </label>
                   {mitScreenshot && idee && (
-                    <p className="mb-2 text-[13px] text-label2">Markiere die Stelle, die sich ändern soll.</p>
+                    <p className="mb-2 text-sekundaer text-label2">Markiere die Stelle, die sich ändern soll.</p>
                   )}
                   {mitScreenshot && <AnnotationEditor bild={bild} formen={formen} onFormen={setFormen} />}
                 </>
               ) : (
                 <div className="rounded-[var(--radius-ap-card)] bg-fill p-3">
-                  <p className="text-[15px] text-label">
+                  <p className="text-fliess text-label">
                     {original
                       ? "Bild wird geladen…"
                       : start.aufnahmeFehlgeschlagen
@@ -287,21 +287,21 @@ export function FehlerberichtDialog({
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {kannBildschirmFreigeben() && (
-                      <button type="button" onClick={freigeben} className="btn-ap inline-flex h-9 items-center gap-1.5 px-3 text-[13px]">
+                      <button type="button" onClick={freigeben} className="btn-ap inline-flex h-9 items-center gap-1.5 px-3 text-sekundaer">
                         <Monitor size={15} strokeWidth={2} aria-hidden="true" />
                         Bildschirm freigeben
                       </button>
                     )}
-                    <label className="btn-ap inline-flex h-9 cursor-pointer items-center gap-1.5 px-3 text-[13px]">
+                    <label className="btn-ap inline-flex h-9 cursor-pointer items-center gap-1.5 px-3 text-sekundaer">
                       <ImagePlus size={15} strokeWidth={2} aria-hidden="true" />
                       Bild hochladen
                       <input type="file" accept="image/*" className="sr-only" onChange={dateiGewaehlt} />
                     </label>
                   </div>
-                  <p className="mt-2 text-[13px] text-label2">Du kannst auch ganz ohne Bild melden.</p>
+                  <p className="mt-2 text-sekundaer text-label2">Du kannst auch ganz ohne Bild melden.</p>
                 </div>
               )}
-              {bildFehler && <p className="mt-2 text-[13px] text-st-fehlt">{bildFehler}</p>}
+              {bildFehler && <p className="mt-2 text-sekundaer text-st-fehlt">{bildFehler}</p>}
             </section>
 
             <div>
@@ -358,7 +358,7 @@ export function FehlerberichtDialog({
                 type="button"
                 aria-expanded={schritteOffen}
                 onClick={() => setSchritteOffen(!schritteOffen)}
-                className="flex items-center gap-1 text-[15px] text-tint-text"
+                className="flex items-center gap-1 text-fliess text-tint-text"
               >
                 <ChevronDown size={16} strokeWidth={2} className={schritteOffen ? "" : "-rotate-90"} aria-hidden="true" />
                 Schritte zur Reproduktion (optional)
@@ -376,8 +376,8 @@ export function FehlerberichtDialog({
             )}
 
             <section aria-label="Mitgesendete technische Daten">
-              <h3 className="mb-1 text-[13px] font-semibold tracking-wide text-label2 uppercase">Mitgesendete technische Daten</h3>
-              <p className="mb-2 text-[13px] text-label2">
+              <h3 className="mb-1 text-sekundaer font-semibold text-label2">Mitgesendete technische Daten</h3>
+              <p className="mb-2 text-sekundaer text-label2">
                 {idee ? "Standardmäßig wird nur die Umgebung (Seite und App-Version) mitgesendet; weitere Daten kannst du anhaken." : "Diese Daten helfen bei der Fehlersuche."}{" "}
                 Passwörter, Tokens und Kontodaten sind bereits entfernt. Du siehst
                 hier genau, was gesendet wird.
@@ -397,21 +397,21 @@ export function FehlerberichtDialog({
                           className="h-5 w-5 shrink-0"
                         />
                         <label htmlFor={`${formId}-${k.key}`} className="min-w-0 flex-1">
-                          <span className="block text-[15px] text-label">{k.label}</span>
-                          <span className="block text-[13px] text-label2">{kurzinfo(k.key, start.kontext)}</span>
+                          <span className="block text-fliess text-label">{k.label}</span>
+                          <span className="block text-sekundaer text-label2">{kurzinfo(k.key, start.kontext)}</span>
                         </label>
                         <button
                           type="button"
                           aria-expanded={offen}
                           aria-label={`Vorschau ${k.label}`}
                           onClick={() => schalte(vorschau, setVorschau, k.key)}
-                          className="shrink-0 text-[13px] text-tint-text"
+                          className="shrink-0 text-sekundaer text-tint-text"
                         >
                           {offen ? "Ausblenden" : "Vorschau"}
                         </button>
                       </div>
                       {offen && (
-                        <pre className="mt-2 max-h-52 overflow-auto rounded-[8px] bg-fill p-2 text-[11px] leading-snug whitespace-pre-wrap break-all text-label">
+                        <pre className="mt-2 max-h-52 overflow-auto rounded-[8px] bg-fill p-2 text-meta leading-snug whitespace-pre-wrap break-all text-label">
                           {JSON.stringify(start.kontext[k.key], null, 2)}
                         </pre>
                       )}
@@ -423,7 +423,7 @@ export function FehlerberichtDialog({
             </section>
 
             {fehler && (
-              <p role="alert" className="rounded-[var(--radius-ap-input)] bg-st-fehlt-bg p-3 text-[14px] text-st-fehlt">
+              <p role="alert" className="rounded-[var(--radius-ap-input)] bg-st-fehlt-bg p-3 text-fliess text-st-fehlt">
                 {fehler}
               </p>
             )}

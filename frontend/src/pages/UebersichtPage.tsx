@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { auditLogApi, mandantenApi, systemApi, usersApi } from "../api/endpoints";
 import { Sparkline } from "../components/Sparkline";
 import { useAuth } from "../context/AuthContext";
-import { auditLabel } from "../utils/auditLabel";
+import { aktivitaetLabel } from "../utils/anzeigeNamen";
 
 function SystemStatus() {
   const { data: health, isLoading, isError } = useQuery({
@@ -21,7 +21,7 @@ function SystemStatus() {
   const ok = !isError && health?.status === "ok";
   return (
     <div
-      className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
+      className={`flex items-center justify-between rounded-lg px-4 py-3 text-fliess ${
         ok
           ? "bg-st-erledigt-bg text-st-erledigt  "
           : "bg-st-fehlt-bg text-st-fehlt  "
@@ -38,7 +38,7 @@ function SystemStatus() {
           </>
         )}
       </span>
-      <span className="text-xs">
+      <span className="text-sekundaer">
         {health?.scheduler_letzter_lauf
           ? `Letzter Scheduler-Lauf: ${new Date(health.scheduler_letzter_lauf).toLocaleString("de-DE")}`
           : "Scheduler noch ohne erfolgreichen Lauf"}
@@ -71,8 +71,8 @@ function ResourceRow({
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium text-label">{label}</span>
-        <span className={`text-sm font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
+        <span className="text-fliess font-medium text-label">{label}</span>
+        <span className={`text-fliess font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
       </div>
       <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-fill">
         <div
@@ -81,7 +81,7 @@ function ResourceRow({
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <span className="text-xs text-label2">{detail}</span>
+        <span className="text-sekundaer text-label2">{detail}</span>
         <Sparkline values={verlauf} color={farbe.spark} />
       </div>
     </div>
@@ -109,7 +109,7 @@ function ServerAuslastung() {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold text-label">Server-Auslastung</h2>
+      <h2 className="mb-3 text-zeile font-bold text-label">Server-Auslastung</h2>
       <div className="grid grid-cols-1 gap-5 rounded-lg bg-card p-4 shadow-xs sm:grid-cols-3 dark:shadow-none dark:ring-1 ">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
@@ -132,11 +132,11 @@ function ServerAuslastung() {
 function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="card-ap p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-label2">
+      <div className="text-meta font-medium text-label2">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold text-label">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-label2">{sub}</div>}
+      <div className="mt-1 text-titel-mobil font-bold text-label">{value}</div>
+      {sub && <div className="mt-0.5 text-sekundaer text-label2">{sub}</div>}
     </div>
   );
 }
@@ -186,19 +186,19 @@ export function UebersichtPage() {
 
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-label">Letzte Aktivität</h2>
+          <h2 className="text-zeile font-bold text-label">Letzte Aktivität</h2>
           <Link
             to="/audit-log"
-            className="text-sm font-medium text-tint-text hover:underline"
+            className="text-fliess font-medium text-tint-text hover:underline"
           >
             Gesamtes Audit-Log →
           </Link>
         </div>
         {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-sep rounded-lg bg-card text-sm shadow-xs dark:shadow-none dark:ring-1 ">
+          <ul className="divide-y divide-sep rounded-lg bg-card text-fliess shadow-xs dark:shadow-none dark:ring-1 ">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-label">{auditLabel(e.aktion)}</span>
+                <span className="font-medium text-label">{aktivitaetLabel(e.aktion)}</span>
                 <span className="text-label2">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </span>
@@ -206,7 +206,7 @@ export function UebersichtPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-label2">Noch keine Einträge.</p>
+          <p className="text-sekundaer text-label2">Noch keine Einträge.</p>
         )}
       </section>
     </div>

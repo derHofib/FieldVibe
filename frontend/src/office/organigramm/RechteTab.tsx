@@ -72,7 +72,7 @@ function Zelle({
         value={zustandZuWert(zustand)}
         disabled={schreibgeschuetzt}
         onChange={(e) => onAendern(wertZuZustand(e.target.value))}
-        className={`h-7 w-[112px] rounded-[7px] border bg-card px-1 text-xs disabled:opacity-70 ${ART_KLASSE[art]}`}
+        className={`h-7 w-[112px] rounded-[7px] border bg-card px-1 text-sekundaer disabled:opacity-70 ${ART_KLASSE[art]}`}
         title={bezeichnung}
       >
         <option value="vorlage">Vorlage: {vorlage ? scopeLabel(vorlage) : "–"}</option>
@@ -99,7 +99,7 @@ function Zelle({
         <Info size={14} strokeWidth={2} aria-hidden="true" />
       </button>
       {info && (
-        <div role="note" style={{ top: info.top, left: info.left }} className="fixed z-[70] w-56 rounded-[10px] border-[0.5px] border-sepstrong bg-card p-2 text-left text-xs shadow-lg">
+        <div role="note" style={{ top: info.top, left: info.left }} className="fixed z-[70] w-56 rounded-[10px] border-[0.5px] border-sepstrong bg-card p-2 text-left text-sekundaer shadow-lg">
           <p className="mb-1 font-semibold text-label">Herkunft (gespeicherter Stand)</p>
           {herkunft.length > 0 ? (
             <ul className="list-disc space-y-0.5 pl-4 text-label2">
@@ -180,7 +180,7 @@ export function RechteTab({
   return (
     <div role="tabpanel" id="org-tabpanel-rechte" aria-labelledby="org-tab-rechte" className="space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Vorlage:{" "}
           <span className="font-medium text-label">{typName ?? "kein Account-Typ"}</span>
           {!typName && " – ohne Account-Typ gewährt die Position nur die Overrides unten."}
@@ -197,14 +197,14 @@ export function RechteTab({
       </div>
 
       {!darfRechteVerwalten && (
-        <p className="rounded-[10px] bg-fill px-3 py-2 text-sm text-label2">Nur Ansicht – Rechte ändern erfordert „Rechte verwalten“ im Organigramm.</p>
+        <p className="rounded-[10px] bg-fill px-3 py-2 text-sekundaer text-label2">Nur Ansicht – Rechte ändern erfordert „Rechte verwalten“ im Organigramm.</p>
       )}
 
       {ansicht === "matrix" ? (
         <div className="overflow-x-auto rounded-[12px] bg-cell">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-fliess">
             <caption className="sr-only">Rechte der Position je Bereich und Aktion</caption>
-            <thead className="text-xs text-label2">
+            <thead className="text-sekundaer text-label2">
               <tr>
                 <th scope="col" className="px-3 py-2">
                   Bereich
@@ -254,12 +254,12 @@ export function RechteTab({
           </table>
         </div>
       ) : detail.diff_zur_vorlage.length === 0 ? (
-        <p className="rounded-[12px] bg-cell px-3 py-3 text-sm text-label2">Keine Abweichungen – die Position nutzt die Vorlage unverändert.</p>
+        <p className="rounded-[12px] bg-cell px-3 py-3 text-sekundaer text-label2">Keine Abweichungen – die Position nutzt die Vorlage unverändert.</p>
       ) : (
         <div className="overflow-x-auto rounded-[12px] bg-cell">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-fliess">
             <caption className="sr-only">Abweichungen der Position von der Vorlage</caption>
-            <thead className="text-xs text-label2">
+            <thead className="text-sekundaer text-label2">
               <tr>
                 <th scope="col" className="px-3 py-2">Recht</th>
                 <th scope="col" className="px-3 py-2">Abweichung</th>
@@ -275,7 +275,7 @@ export function RechteTab({
                   </td>
                   <td className="px-3 py-2">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      className={`rounded-full px-2 py-0.5 text-meta font-semibold ${
                         d.art === "entfernt" ? "bg-st-fehlt-bg text-st-fehlt" : d.art === "hinzugefuegt" ? "bg-st-erledigt-bg text-st-erledigt" : "bg-st-arbeit-bg text-st-arbeit"
                       }`}
                     >
@@ -292,7 +292,7 @@ export function RechteTab({
       )}
 
       {fehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
@@ -305,7 +305,7 @@ export function RechteTab({
             Zurücksetzen
           </button>
           {erfolg && !dirty && (
-            <span role="status" className="text-sm text-st-erledigt">
+            <span role="status" className="text-fliess text-st-erledigt">
               Gespeichert
             </span>
           )}

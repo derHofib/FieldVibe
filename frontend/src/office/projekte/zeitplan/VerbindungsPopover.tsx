@@ -74,10 +74,10 @@ export function VerbindungsPopover({
         boxShadow: "0 10px 30px rgba(0,0,0,.22)",
       }}
     >
-      <p className="mb-2 truncate text-xs text-label2">
+      <p className="mb-2 truncate text-meta text-label2">
         {vorgaengerTitel} → {nachfolgerTitel}
       </p>
-      <p id="zeitplan-art-label" className="mb-1 text-[11px] font-bold tracking-wide text-label3 uppercase">
+      <p id="zeitplan-art-label" className="mb-1 text-meta font-bold text-label3">
         Art der Verbindung
       </p>
       <div role="radiogroup" aria-labelledby="zeitplan-art-label" className="mb-3 space-y-1">
@@ -92,7 +92,7 @@ export function VerbindungsPopover({
               onClick={() => !aktiv && onArt(art)}
               className={`block w-full rounded-[8px] px-2 py-1.5 text-left ${aktiv ? "bg-tintbg" : "hover:bg-fill"}`}
             >
-              <span className={`flex items-center gap-1.5 text-[13px] font-semibold ${aktiv ? "text-tint-text" : "text-label"}`}>
+              <span className={`flex items-center gap-1.5 text-sekundaer font-semibold ${aktiv ? "text-tint-text" : "text-label"}`}>
                 <span
                   aria-hidden="true"
                   className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${aktiv ? "border-tint" : "border-sepstrong"}`}
@@ -101,12 +101,12 @@ export function VerbindungsPopover({
                 </span>
                 {ART_LABEL[art]}
               </span>
-              <span className="block pl-5 text-[11px] text-label2">{ART_ERKLAERUNG[art]}</span>
+              <span className="block pl-5 text-meta text-label2">{ART_ERKLAERUNG[art]}</span>
             </button>
           );
         })}
       </div>
-      <label className="mb-1 block text-[11px] font-bold tracking-wide text-label3 uppercase" htmlFor="zeitplan-versatz">
+      <label className="mb-1 block text-meta font-bold text-label3" htmlFor="zeitplan-versatz">
         Versatz in Tagen
       </label>
       <input
@@ -124,11 +124,11 @@ export function VerbindungsPopover({
         }}
         className="field-ap"
       />
-      <p className="mt-1.5 text-[11px] text-label2">+2 = 2 Tage Wartezeit, −1 = 1 Tag Überlappung</p>
+      <p className="mt-1.5 text-meta text-label2">+2 = 2 Tage Wartezeit, −1 = 1 Tag Überlappung</p>
       <button
         type="button"
         onClick={onLoeschen}
-        className="mt-2 flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-[13px] text-st-fehlt hover:bg-st-fehlt-bg"
+        className="mt-2 flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg"
       >
         <Trash2 size={15} strokeWidth={2} aria-hidden="true" />
         Verbindung löschen

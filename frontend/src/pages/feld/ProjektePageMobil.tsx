@@ -56,8 +56,8 @@ function MeineZeitplaeneMobil() {
               >
                 <SymbolKachel icon={CalendarRange} farbe="orange" />
                 <div className="min-w-0">
-                  <p className="truncate text-[17px] text-label">{projekt.name}</p>
-                  <p className="flex text-[13px] text-label2">
+                  <p className="truncate text-zeile text-label">{projekt.name}</p>
+                  <p className="flex text-sekundaer text-label2">
                     {projekt.naechster_schritt_titel ? (
                       <>
                         <span className="truncate">Nächster Schritt: {projekt.naechster_schritt_titel}</span>
@@ -114,9 +114,9 @@ function ProjektListeMobil() {
                 >
                   <SymbolKachel icon={Folder} farbe="indigo" />
                   <div className="min-w-0 pr-9">
-                    <p className="truncate text-[17px] text-label">{projekt.name}</p>
+                    <p className="truncate text-zeile text-label">{projekt.name}</p>
                     {projekt.beschreibung && (
-                      <p className="truncate text-[13px] text-label2">{projekt.beschreibung}</p>
+                      <p className="truncate text-sekundaer text-label2">{projekt.beschreibung}</p>
                     )}
                   </div>
                 </GroupedListRow>

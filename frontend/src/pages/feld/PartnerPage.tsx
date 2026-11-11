@@ -87,11 +87,11 @@ export function PartnerPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Partner &amp; Nachunternehmer</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Partner &amp; Nachunternehmer</h1>
 
       <button
         onClick={() => setShowForm(true)}
-        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap-primary px-4"
       >
         + Neuer Partner
       </button>
@@ -99,7 +99,7 @@ export function PartnerPage() {
       <AnlegenPanel offen={showForm} titel="Neuer Partner" onClose={() => setShowForm(false)}>
         <div className="space-y-3 p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">
               Firmenname <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input id={`${uid}-0`}
@@ -109,78 +109,78 @@ export function PartnerPage() {
               aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerPartner.name}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, name: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             {nameFehler && (
-              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {nameFehler}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer text-label2">
               Gewerk / was die Firma macht
             </label>
             <input id={`${uid}-1`}
               value={neuerPartner.gewerk}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, gewerk: e.target.value })}
               placeholder="z.B. Elektroinstallation, Trockenbau, Gerüstbau"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Telefon</label>
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer text-label2">Telefon</label>
             <input id={`${uid}-2`}
               value={neuerPartner.telefon}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, telefon: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">E-Mail</label>
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer text-label2">E-Mail</label>
             <input id={`${uid}-3`}
               type="email"
               value={neuerPartner.email}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, email: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer text-label2">Straße + Hausnr.</label>
             <input id={`${uid}-4`}
               value={neuerPartner.strasse}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, strasse: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">PLZ</label>
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sekundaer text-label2">PLZ</label>
               <input id={`${uid}-5`}
                 value={neuerPartner.plz}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, plz: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-label2">Ort</label>
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer text-label2">Ort</label>
               <input id={`${uid}-6`}
                 value={neuerPartner.ort}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, ort: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
           </div>
           <div>
-            <label htmlFor={`${uid}-7`} className="mb-1 block text-xs text-label2">Notiz</label>
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-sekundaer text-label2">Notiz</label>
             <textarea id={`${uid}-7`}
               value={neuerPartner.notiz}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, notiz: e.target.value })}
               rows={2}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Ansprechpartner und Nachweise (Freistellungsbescheinigung, Haftpflicht, ...) können
             anschließend auf der Partner-Detailseite hinterlegt werden.
           </p>
@@ -194,7 +194,7 @@ export function PartnerPage() {
               setNameFehler(null);
               createMutation.mutate();
             }}
-            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -207,7 +207,7 @@ export function PartnerPage() {
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suche nach Name oder Gewerk…"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         )}
         {isLoading ? (
@@ -217,7 +217,7 @@ export function PartnerPage() {
         ) : (partner ?? []).length === 0 ? (
           <EmptyState icon={HardHat} text="Noch keine Partner/Nachunternehmer angelegt." />
         ) : partnerGefiltert.length === 0 ? (
-          <p className="text-center text-sm text-label2">
+          <p className="text-center text-sekundaer text-label2">
             Keine Partner gefunden für „{suche}".
           </p>
         ) : (
@@ -230,13 +230,13 @@ export function PartnerPage() {
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-label">{p.name}</div>
+                <div className="text-fliess font-medium text-label">{p.name}</div>
                 {p.gewerk && (
-                  <div className="text-xs text-label2">{p.gewerk}</div>
+                  <div className="text-sekundaer text-label2">{p.gewerk}</div>
                 )}
               </div>
               {!p.aktiv && (
-                <span className="border border-sep px-2 py-1 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label">
                   inaktiv
                 </span>
               )}

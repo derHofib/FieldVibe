@@ -33,7 +33,7 @@ export function PartnerForgotPasswordPage() {
         </ErfolgsHinweis>
       ) : (
         <form onSubmit={handleSubmit}>
-          <label htmlFor="partner-forgot-email" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="partner-forgot-email" className="mb-1 block text-fliess font-medium text-label">
             E-Mail
           </label>
           <input
@@ -50,7 +50,7 @@ export function PartnerForgotPasswordPage() {
           </button>
         </form>
       )}
-      <Link to="/partnerportal/login" className="btn-touch mt-2 flex items-center justify-center text-sm text-tint-text">
+      <Link to="/partnerportal/login" className="btn-touch mt-2 flex items-center justify-center text-sekundaer text-tint-text">
         Zurück zur Anmeldung
       </Link>
     </PartnerAuthShell>

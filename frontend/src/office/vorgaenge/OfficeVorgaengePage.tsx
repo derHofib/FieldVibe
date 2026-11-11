@@ -24,6 +24,7 @@ import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
@@ -150,14 +151,14 @@ export function OfficeVorgaengePage() {
         <button
           onClick={() => setZeigeFilter((v) => !v)}
           aria-pressed={zeigeFilter || aktiveFilterAnzahl > 0}
-          className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-xs font-medium ${
+          className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-sekundaer font-medium ${
             zeigeFilter || aktiveFilterAnzahl > 0 ? "bg-tint-solid text-white" : "bg-fill text-label"
           }`}
         >
           <Filter size={13} strokeWidth={2} aria-hidden="true" />
           Weitere Filter
           {aktiveFilterAnzahl > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] font-bold">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-meta font-bold">
               {aktiveFilterAnzahl}
             </span>
           )}
@@ -169,7 +170,7 @@ export function OfficeVorgaengePage() {
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-sekundaer font-medium text-label"
             >
               {c.label}
               <button
@@ -181,7 +182,7 @@ export function OfficeVorgaengePage() {
               </button>
             </span>
           ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint-text">
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-sekundaer font-semibold text-tint-text">
             Bearbeiten
           </button>
         </div>
@@ -190,7 +191,7 @@ export function OfficeVorgaengePage() {
       {zeigeFilter && (
         <div className="card-ap mb-4 space-y-3 p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-label2">
+            <div className="mb-1 text-sekundaer font-medium text-label2">
               Status (Mehrfachauswahl möglich)
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -206,10 +207,9 @@ export function OfficeVorgaengePage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-            <select
+            <Select groesse="kompakt"
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -217,12 +217,11 @@ export function OfficeVorgaengePage() {
                   {k.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.anlage_id ?? ""}
               onChange={(e) => setField("anlage_id", e.target.value)}
               disabled={!filter.kunde_id}
-              className="field-ap disabled:opacity-50"
             >
               <option value="">{filter.kunde_id ? "Alle Anlagen" : "Erst Kunden wählen"}</option>
               {(anlagenFuerKunde ?? []).map((a) => (
@@ -230,11 +229,10 @@ export function OfficeVorgaengePage() {
                   {a.bezeichnung}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.projekt_id ?? ""}
               onChange={(e) => setField("projekt_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Projekte</option>
               {(projekte ?? []).map((p) => (
@@ -242,11 +240,10 @@ export function OfficeVorgaengePage() {
                   {p.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -254,7 +251,7 @@ export function OfficeVorgaengePage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
             <input
               type="date"
               value={filter.faellig_von ?? ""}
@@ -275,14 +272,13 @@ export function OfficeVorgaengePage() {
               placeholder="#Tag"
               className="field-ap"
             />
-            <select
+            <Select groesse="kompakt"
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
-            </select>
+            </Select>
           </div>
         </div>
       )}
@@ -301,7 +297,7 @@ export function OfficeVorgaengePage() {
           text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
           action={
             aktiveFilterAnzahl > 0 && (
-              <button onClick={() => setFilter(LEER_FILTER)} className="btn-ap mt-1 text-xs">
+              <button onClick={() => setFilter(LEER_FILTER)} className="btn-ap mt-1 text-sekundaer">
                 Filter zurücksetzen
               </button>
             )

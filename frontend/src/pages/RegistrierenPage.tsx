@@ -43,24 +43,24 @@ export function RegistrierenPage() {
         </div>
 
         <Blueprint className="bg-card p-8">
-          <h1 className="mb-6 text-center font-heading text-sm font-semibold uppercase tracking-[0.14em] text-label2">
+          <h1 className="mb-6 text-center font-heading text-zeile font-semibold text-label">
             Einladung annehmen
           </h1>
 
           {!token && (
-            <p className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
               Der Link ist unvollständig. Bitte den Einladungslink erneut vom Absender anfordern.
             </p>
           )}
 
           <form onSubmit={handleSubmit}>
             {error && (
-              <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
                 {error}
               </div>
             )}
 
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Name</label>
             <input id={`${uid}-0`}
               required
               value={name}
@@ -68,7 +68,7 @@ export function RegistrierenPage() {
               className="field-ap btn-touch mb-4"
             />
 
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Passwort</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Passwort</label>
             <input id={`${uid}-1`}
               type="password"
               required
@@ -77,7 +77,7 @@ export function RegistrierenPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="field-ap btn-touch mb-1"
             />
-            <p className="mb-6 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+            <p className="mb-6 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
             <button
               type="submit"

@@ -11,8 +11,8 @@ function Fallback() {
   return (
     <div role="alert" className="mx-auto flex max-w-sm flex-col items-center gap-3 py-12 text-center">
       <IconBadge icon={TriangleAlert} tone="rose" />
-      <h2 className="text-[17px] font-semibold text-label">Etwas ist schiefgelaufen</h2>
-      <p className="text-sm text-label2">
+      <h2 className="text-zeile font-semibold text-label">Etwas ist schiefgelaufen</h2>
+      <p className="text-sekundaer text-label2">
         Diese Ansicht konnte nicht angezeigt werden. Lade die Seite neu
         {fehlerbericht.verfuegbar ? " und melde den Fehler, falls er wieder auftritt." : "; tritt der Fehler wieder auf, wende dich an deinen Administrator."}
       </p>

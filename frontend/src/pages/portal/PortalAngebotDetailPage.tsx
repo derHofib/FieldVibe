@@ -36,10 +36,10 @@ function VerbindlichBeauftragen({
   return (
     <>
       <section aria-labelledby="zusammenfassung-titel" className="card-ap space-y-2 p-4">
-        <h2 id="zusammenfassung-titel" className="text-sm font-semibold text-label">
+        <h2 id="zusammenfassung-titel" className="text-fliess font-semibold text-label">
           Zusammenfassung Ihrer Beauftragung
         </h2>
-        <dl className="space-y-1 text-sm">
+        <dl className="space-y-1 text-fliess">
           <div>
             <dt className="text-label2">Leistung</dt>
             <dd className="text-label">{angebot.positionen.map((p) => p.beschreibung).join(", ")}</dd>
@@ -55,7 +55,7 @@ function VerbindlichBeauftragen({
             </div>
           )}
         </dl>
-        <p className="text-xs text-label2">
+        <p className="text-sekundaer text-label2">
           Ausführungstermin und Zahlungsziel ergeben sich aus dem Angebot und der späteren Rechnung.
         </p>
       </section>
@@ -63,7 +63,7 @@ function VerbindlichBeauftragen({
       <BelehrungBlock daten={verbraucher} />
 
       <div className="card-ap space-y-3 p-4">
-        <label className="flex items-start gap-3 text-sm text-label">
+        <label className="flex items-start gap-3 text-fliess text-label">
           <input
             type="checkbox"
             checked={kenntnis}
@@ -77,11 +77,11 @@ function VerbindlichBeauftragen({
           onClick={onBeauftragen}
           disabled={!kenntnis || laeuft || angebot.ist_abgelaufen}
           aria-describedby="beauftragen-hinweis"
-          className="btn-touch btn-ap-primary w-full px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch btn-ap-primary w-full px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           Zahlungspflichtig beauftragen
         </button>
-        <p id="beauftragen-hinweis" className="text-xs text-label2">
+        <p id="beauftragen-hinweis" className="text-sekundaer text-label2">
           Mit Klick auf diesen Button beauftragen Sie die Leistung verbindlich und sind zur Zahlung
           verpflichtet.
           {!kenntnis && " Bitte bestätigen Sie zuerst die Kenntnisnahme der Widerrufsbelehrung."}
@@ -90,7 +90,7 @@ function VerbindlichBeauftragen({
           type="button"
           onClick={onAblehnen}
           disabled={laeuft}
-          className="btn-touch btn-ap w-full px-4 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50"
+          className="btn-touch btn-ap w-full px-4 py-2 text-sekundaer font-medium text-st-fehlt disabled:opacity-50"
         >
           Ablehnen
         </button>
@@ -105,16 +105,16 @@ function WiderrufBereich({ angebot, verbraucher }: { angebot: PortalAngebot; ver
   return (
     <>
       <section aria-labelledby="widerruf-titel" className="card-ap space-y-3 p-4">
-        <h2 id="widerruf-titel" className="text-sm font-semibold text-label">
+        <h2 id="widerruf-titel" className="text-fliess font-semibold text-label">
           Ihr Widerrufsrecht
         </h2>
-        <p className="text-sm text-label">
+        <p className="text-fliess text-label">
           Sie können diesen Vertrag bis zum {widerrufFristLetzterTag(frist)} ohne Angabe von Gründen widerrufen.
         </p>
         {angebot.widerruf_moeglich ? (
           <Link
             to={`/portal/angebote/${angebot.id}/widerruf`}
-            className="btn-touch btn-ap-capsule btn-ap-capsule-primary inline-flex w-full items-center justify-center px-4 text-sm font-semibold"
+            className="btn-touch btn-ap-capsule btn-ap-capsule-primary inline-flex w-full items-center justify-center px-4 text-sekundaer font-semibold"
           >
             Vertrag widerrufen
           </Link>
@@ -189,30 +189,30 @@ export function PortalAngebotDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="btn-touch text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="btn-touch text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">Angebot Nr. {angebot.angebotsnummer}</div>
-            <h1 className="text-lg font-bold text-label">Ihr Angebot</h1>
+            <div className="text-meta text-label2">Angebot Nr. {angebot.angebotsnummer}</div>
+            <h1 className="text-titel-mobil font-bold text-label">Ihr Angebot</h1>
           </div>
-          <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[angebot.status]}`}>
+          <span className={`px-2 py-1 text-sekundaer font-semibold ${ANGEBOT_STATUS_BADGE[angebot.status]}`}>
             {ANGEBOT_STATUS_LABEL[angebot.status]}
           </span>
         </div>
-        <p className="mt-1 text-xs text-label2">{ANGEBOT_STATUS_ERKLAERUNG[angebot.status]}</p>
+        <p className="mt-1 text-sekundaer text-label2">{ANGEBOT_STATUS_ERKLAERUNG[angebot.status]}</p>
         {angebot.gueltig_bis && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-meta text-label2">
             Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
           </p>
         )}
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           <FileText size={14} strokeWidth={2} aria-hidden="true" />{" "}
           {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
@@ -222,18 +222,18 @@ export function PortalAngebotDetailPage() {
       {fehler && <Hinweiskasten ton="fehler">{fehler}</Hinweiskasten>}
 
       <section aria-labelledby="positionen-titel" className="card-ap p-4">
-        <h2 id="positionen-titel" className="mb-2 text-sm font-semibold text-label2">
+        <h2 id="positionen-titel" className="mb-2 text-fliess font-semibold text-label2">
           Positionen
         </h2>
         {angebot.positionen.length === 0 ? (
-          <p className="text-sm text-label2">Keine Positionen.</p>
+          <p className="text-sekundaer text-label2">Keine Positionen.</p>
         ) : (
           <ul className="divide-y divide-sep">
             {angebot.positionen.map((p) => (
-              <li key={p.id} className="flex items-center justify-between py-2 text-sm">
+              <li key={p.id} className="flex items-center justify-between py-2 text-fliess">
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
-                  <div className="text-xs text-label2">
+                  <div className="text-sekundaer text-label2">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export function PortalAngebotDetailPage() {
             ))}
           </ul>
         )}
-        <div className="mt-3 border-t border-sep pt-2 text-right text-sm ">
+        <div className="mt-3 border-t border-sep pt-2 text-right text-fliess ">
           <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
           <div className="font-semibold text-label">Brutto: {angebot.gesamt_brutto} EUR</div>
         </div>
@@ -265,21 +265,21 @@ export function PortalAngebotDetailPage() {
         />
       )}
       {angebot.status === "versendet" && angebot.verbraucherschutz && !verbraucher?.belehrung && (
-        <p className="text-center text-sm text-label2">Rechtliche Hinweise werden geladen…</p>
+        <p className="text-center text-sekundaer text-label2">Rechtliche Hinweise werden geladen…</p>
       )}
       {angebot.status === "versendet" && !angebot.verbraucherschutz && (
         <div className="flex gap-2">
           <button
             onClick={() => antwortMutation.mutate("angenommen")}
             disabled={antwortMutation.isPending || angebot.ist_abgelaufen}
-            className="btn-touch btn-ap-primary flex-1 px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch btn-ap-primary flex-1 px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Annehmen
           </button>
           <button
             onClick={ablehnen}
             disabled={antwortMutation.isPending}
-            className="btn-touch btn-ap flex-1 px-4 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50"
+            className="btn-touch btn-ap flex-1 px-4 py-2 text-sekundaer font-medium text-st-fehlt disabled:opacity-50"
           >
             Ablehnen
           </button>
@@ -288,9 +288,9 @@ export function PortalAngebotDetailPage() {
 
       {angebot.status === "angenommen" && (
         <>
-          <p className="text-center text-sm text-st-erledigt ">Sie haben dieses Angebot angenommen.</p>
+          <p className="text-center text-fliess text-st-erledigt ">Sie haben dieses Angebot angenommen.</p>
           {angebot.widerruf_frist_bis && (
-            <p className="text-center text-xs text-label2">
+            <p className="text-center text-sekundaer text-label2">
               Eine Bestätigung mit der Widerrufsbelehrung senden wir an {currentKunde?.email ?? "Ihre E-Mail-Adresse"}.
             </p>
           )}
@@ -298,15 +298,15 @@ export function PortalAngebotDetailPage() {
         </>
       )}
       {angebot.status === "widerrufen" && angebot.widerrufen_am && (
-        <p className="text-center text-sm text-st-arbeit">
+        <p className="text-center text-fliess text-st-arbeit">
           Sie haben diesen Vertrag am {datumZeit(angebot.widerrufen_am)} Uhr widerrufen.
         </p>
       )}
       {angebot.status === "abgelehnt" && (
-        <p className="text-center text-sm text-st-fehlt ">Sie haben dieses Angebot abgelehnt.</p>
+        <p className="text-center text-fliess text-st-fehlt ">Sie haben dieses Angebot abgelehnt.</p>
       )}
       {angebot.nachweis_referenz && (
-        <p className="text-center text-xs text-label2">Referenz: {angebot.nachweis_referenz}</p>
+        <p className="text-center text-sekundaer text-label2">Referenz: {angebot.nachweis_referenz}</p>
       )}
     </div>
   );

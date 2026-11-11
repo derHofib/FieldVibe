@@ -59,19 +59,19 @@ function AntragKarte({
     <li className="card-ap space-y-2 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold text-label">{antrag.element_titel}</p>
-          <p className="text-[13px] text-label2">
+          <p className="truncate text-fliess font-semibold text-label">{antrag.element_titel}</p>
+          <p className="text-sekundaer text-label2">
             {ANTRAG_ART_LABEL[antrag.art]} · {antragZeitText(antrag)}
           </p>
         </div>
         <StatusPille status={ANTRAG_STATUS_TOKEN[antrag.status]} label={ANTRAG_STATUS_LABEL[antrag.status]} />
       </div>
-      <p className="rounded-[8px] bg-fill px-2.5 py-1.5 text-[14px] whitespace-pre-wrap text-label">{antrag.begruendung}</p>
-      <p className="text-xs text-label2">
+      <p className="rounded-[8px] bg-fill px-2.5 py-1.5 text-fliess whitespace-pre-wrap text-label">{antrag.begruendung}</p>
+      <p className="text-meta text-label2">
         {antrag.erstellt_von_name ?? "Unbekannt"} · {datumZeit(antrag.erstellt_am)}
       </p>
       {antrag.antwort && (
-        <p className="text-[13px] text-label2">
+        <p className="text-sekundaer text-label2">
           <span className="font-medium text-label">Antwort{antrag.bearbeitet_von_name ? ` von ${antrag.bearbeitet_von_name}` : ""}:</span>{" "}
           {antrag.antwort}
         </p>
@@ -79,10 +79,10 @@ function AntragKarte({
 
       {offen && modus === null && (
         <div className="flex gap-2 pt-1">
-          <button type="button" onClick={() => setModus("annehmen")} className="btn-ap btn-ap-primary px-3 py-1.5 text-sm">
+          <button type="button" onClick={() => setModus("annehmen")} className="btn-ap btn-ap-primary px-3 py-1.5 text-sekundaer">
             Annehmen
           </button>
-          <button type="button" onClick={() => setModus("ablehnen")} className="btn-ap px-3 py-1.5 text-sm text-st-fehlt">
+          <button type="button" onClick={() => setModus("ablehnen")} className="btn-ap px-3 py-1.5 text-sekundaer text-st-fehlt">
             Ablehnen
           </button>
         </div>
@@ -90,7 +90,7 @@ function AntragKarte({
 
       {offen && modus !== null && (
         <div className="space-y-2 pt-1">
-          <label className="block text-[13px] font-medium text-label2" htmlFor={`antwort-${antrag.id}`}>
+          <label className="block text-sekundaer font-medium text-label2" htmlFor={`antwort-${antrag.id}`}>
             {modus === "annehmen" ? "Kommentar (optional)" : "Begründung der Ablehnung (Pflicht)"}
           </label>
           <textarea
@@ -102,7 +102,7 @@ function AntragKarte({
             className="field-ap"
           />
           {fehler && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {fehler}
             </p>
           )}
@@ -114,7 +114,7 @@ function AntragKarte({
                 setFehler(null);
                 entscheiden.mutate();
               }}
-              className={`btn-ap px-3 py-1.5 text-sm ${modus === "annehmen" ? "btn-ap-primary" : "text-st-fehlt"}`}
+              className={`btn-ap px-3 py-1.5 text-sekundaer ${modus === "annehmen" ? "btn-ap-primary" : "text-st-fehlt"}`}
             >
               {modus === "annehmen" ? "Änderung übernehmen" : "Ablehnen"}
             </button>
@@ -125,7 +125,7 @@ function AntragKarte({
                 setText("");
                 setFehler(null);
               }}
-              className="btn-ap px-3 py-1.5 text-sm"
+              className="btn-ap px-3 py-1.5 text-sekundaer"
             >
               Abbrechen
             </button>
@@ -133,7 +133,7 @@ function AntragKarte({
         </div>
       )}
       {offen && modus === null && fehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
@@ -167,16 +167,16 @@ export function AntraegeSheet({
       onClose={onClose}
       titel="Änderungsanträge"
       rechts={
-        <button type="button" onClick={onClose} className="text-[17px] font-semibold text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile font-semibold text-tint-text">
           Fertig
         </button>
       }
     >
       <div className="space-y-4 p-4">
         {isLoading ? (
-          <p className="text-sm text-label2">Anträge werden geladen …</p>
+          <p className="text-sekundaer text-label2">Anträge werden geladen …</p>
         ) : error ? (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             Anträge konnten nicht geladen werden.
           </p>
         ) : (
@@ -196,7 +196,7 @@ export function AntraegeSheet({
                   type="button"
                   onClick={() => setErledigtOffen((v) => !v)}
                   aria-expanded={erledigtOffen}
-                  className="flex items-center gap-1 text-[13px] font-semibold text-label2"
+                  className="flex items-center gap-1 text-sekundaer font-semibold text-label2"
                 >
                   {erledigtOffen ? <ChevronDown size={15} strokeWidth={2} aria-hidden="true" /> : <ChevronRight size={15} strokeWidth={2} aria-hidden="true" />}
                   Erledigte Anträge ({erledigte.length})

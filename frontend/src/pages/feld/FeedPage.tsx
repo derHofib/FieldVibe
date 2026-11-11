@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { heuteIso } from "../../utils/format";
+import { heuteIso, statusMetaZeile } from "../../utils/format";
 import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -8,11 +8,13 @@ import { ApiError } from "../../api/client";
 import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
+import { Select } from "../../components/apple/Select";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
-import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
+import { FilterVorlagenMenue, FilterVorlagenVerwaltung, useFilterVorlagen } from "../../components/FilterVorlagenLeiste";
 import { QrScanner } from "../../components/QrScanner";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
@@ -69,8 +71,8 @@ function StoryChip({ item }: { item: StoryItem }) {
         // Utility fuer nur die linke Kante koennte das nicht ueberschreiben.
         style={{ borderLeftWidth: 2, borderLeftColor: item.ampel ? AMPEL_VAR[item.ampel] : "var(--sepstrong)" }}
       >
-        <span className="line-clamp-2 text-xs font-semibold leading-tight text-label">{item.titel}</span>
-        {item.subtitel && <span className="mt-0.5 block text-[11px] text-label2">{item.subtitel}</span>}
+        <span className="line-clamp-2 text-sekundaer font-semibold leading-tight text-label">{item.titel}</span>
+        {item.subtitel && <span className="mt-0.5 block text-meta text-label2">{item.subtitel}</span>}
       </Blueprint>
     </button>
   );
@@ -97,6 +99,8 @@ function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
+  // last_activity_at ist nur naeherungsweise der Zeitpunkt des Events (kein eigenes Feld im Feed).
+  const statusMeta = statusMetaZeile(card.letztes_event_vorschau, card.last_activity_at);
 
   const invalidateFeed = () => queryClient.invalidateQueries({ queryKey: ["feed"] });
   const zuweisenMutation = useMutation({
@@ -135,25 +139,25 @@ function FeedCardView({ card }: { card: FeedCard }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] tracking-wide text-label2">{card.vorgangsnummer}</div>
+            <div className="text-meta tracking-wide text-label2">{card.vorgangsnummer}</div>
             <div className="mt-0.5 font-semibold text-label">{card.titel}</div>
-            <div className="text-xs text-label2">{card.kunde_name}</div>
+            <div className="text-meta text-label2">{card.kunde_name}</div>
             {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-              <div className="text-xs text-label2">
+              <div className="text-meta text-label2">
                 {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
               </div>
             )}
-            {card.anlage_kurzadresse && <div className="text-xs text-label2">{card.anlage_kurzadresse}</div>}
-            {card.ersteller_name && <div className="text-xs text-label2">von {card.ersteller_name}</div>}
+            {card.anlage_kurzadresse && <div className="text-sekundaer text-label2">{card.anlage_kurzadresse}</div>}
+            {card.ersteller_name && <div className="text-sekundaer text-label2">von {card.ersteller_name}</div>}
             {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
-              <div className="text-xs text-label2">
+              <div className="text-sekundaer text-label2">
                 {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
               </div>
             )}
           </div>
           <div className="flex flex-none flex-col items-end gap-1">
             {card.timer_laeuft && (
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" title="Timer läuft" />
+              <LaeuftPille />
             )}
             {card.dauerauftrag_id && (
               <span title="Dauerauftrag" className="text-st-arbeit">
@@ -161,18 +165,18 @@ function FeedCardView({ card }: { card: FeedCard }) {
               </span>
             )}
             <StatusPille status={vorgangStatusZuToken(card.status)} label={STATUS_LABEL[card.status]} />
-            <span className="whitespace-nowrap text-xs text-label2">
+            <span className="whitespace-nowrap text-sekundaer text-label2">
               {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
             </span>
           </div>
         </div>
         {card.status === "wartet_kunde" ? (
-          <span className="flex items-center gap-1 text-xs text-label2">
+          <span className="flex items-center gap-1 text-sekundaer text-label2">
             <MessageCircle size={13} strokeWidth={1.5} aria-hidden="true" /> Wartet auf Rückmeldung
           </span>
         ) : (
           faelligkeitIso && (
-            <span className={`flex items-center gap-1 text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
+            <span className={`flex items-center gap-1 text-sekundaer font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
               {faelligkeitIso < heuteIso() ? (
                 <>
                   <Clock size={13} strokeWidth={1.5} aria-hidden="true" /> {tageUeberfaellig(faelligkeitIso)}{" "}
@@ -184,15 +188,20 @@ function FeedCardView({ card }: { card: FeedCard }) {
             </span>
           )
         )}
-        {card.letztes_event_vorschau && (
-          <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-sm text-label">
-            {card.letztes_event_vorschau}
-          </p>
+        {statusMeta ? (
+          <p className="text-sekundaer text-label2">{statusMeta}</p>
+        ) : (
+          card.letztes_event_vorschau &&
+          card.letztes_event_vorschau !== "Status geändert" && (
+            <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-fliess text-label">
+              {card.letztes_event_vorschau}
+            </p>
+          )
         )}
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {card.tags.map((tag) => (
-              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label">
+              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-meta text-label">
                 #{tag}
               </span>
             ))}
@@ -201,7 +210,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
       </button>
       {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
         <div className="flex items-center justify-end gap-1.5 border-t-[0.5px] border-sep px-3 py-2">
-          {aktionFehlerText && <span className="mr-auto text-xs text-st-fehlt">{aktionFehlerText}</span>}
+          {aktionFehlerText && <span className="mr-auto text-sekundaer text-st-fehlt">{aktionFehlerText}</span>}
           {zeigeUebernehmen && (
             <button
               onClick={(e) => {
@@ -209,7 +218,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 zuweisenMutation.mutate();
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <UserPlus size={13} strokeWidth={1.5} aria-hidden="true" /> Übernehmen
             </button>
@@ -221,7 +230,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 statusMutation.mutate("in_arbeit");
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <Play size={13} strokeWidth={1.5} aria-hidden="true" /> Starten
             </button>
@@ -233,7 +242,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 statusMutation.mutate("abgeschlossen");
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <CheckCircle2 size={13} strokeWidth={1.5} aria-hidden="true" /> Fertig melden
             </button>
@@ -244,7 +253,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 e.stopPropagation();
                 navigate(`/vorgaenge/${card.id}#email`);
               }}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <Bell size={13} strokeWidth={1.5} aria-hidden="true" /> Nachfragen
             </button>
@@ -305,6 +314,7 @@ export function FeedPage() {
   }
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
+  const vorlagenState = useFilterVorlagen({ entitaet: "vorgaenge", filter, onApply: anwendenFilter });
 
   const wirksamerFilter = useMemo(
     () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS_FILTER }),
@@ -369,7 +379,16 @@ export function FeedPage() {
         ) : (
           <span />
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
+          {istModulAktiv(currentUser, "highlights") && (
+            <button
+              onClick={() => navigate("/highlights")}
+              aria-label="Highlights ansehen"
+              className="btn-touch flex items-center gap-1 rounded-[13px] bg-fill px-2.5 text-sekundaer font-medium text-st-arbeit"
+            >
+              <Star size={14} strokeWidth={1.5} aria-hidden="true" /> Highlights
+            </button>
+          )}
           <button
             onClick={() => navigate("/suche")}
             aria-label="Suchen"
@@ -391,31 +410,10 @@ export function FeedPage() {
 
       {zeigeScanner && <QrScanner onScan={handleScan} onClose={() => setZeigeScanner(false)} />}
       {scanFehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {scanFehler}
         </p>
       )}
-
-      {istModulAktiv(currentUser, "highlights") && (
-        <button
-          onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-[var(--radius-ap-input)] bg-fill py-2.5 text-sm font-medium text-st-arbeit"
-        >
-          <Star size={15} strokeWidth={1.5} aria-hidden="true" /> Highlights ansehen
-        </button>
-      )}
-
-      <SegmentedControl
-        ariaLabel="Vorgänge filtern"
-        groesse="mobil"
-        volleBreite
-        wert={nurMeine ? "meine" : "alle"}
-        optionen={[
-          { wert: "meine", label: "Meine Vorgänge" },
-          { wert: "alle", label: "Alle" },
-        ]}
-        onChange={(wert) => setField("nur_meine", wert === "meine" ? "true" : "")}
-      />
 
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
@@ -431,7 +429,15 @@ export function FeedPage() {
           Formular explizit geoeffnet wird (siehe Design-Vorschlag
           "Filterleiste Varianten"). */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
+        {/* Einzeilig scrollbar statt Umbruch; die Maske blendet den rechten Rand weich aus. */}
+        <div
+          className="scrollbar-none flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-1 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-16px),transparent)]"
+        >
+          <FilterChip
+            label="Meine"
+            aktiv={nurMeine}
+            onClick={() => setField("nur_meine", nurMeine ? "" : "true")}
+          />
           <FilterChip
             label="Überfällig"
             aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
@@ -459,11 +465,12 @@ export function FeedPage() {
           >
             <Filter size={14} strokeWidth={2} aria-hidden="true" />
             {aktiveFilterAnzahl > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-nav font-bold text-white">
                 {aktiveFilterAnzahl}
               </span>
             )}
           </button>
+          <FilterVorlagenMenue v={vorlagenState} />
           <SegmentedControl
             ariaLabel="Ansicht"
             groesse="mobil"
@@ -482,7 +489,7 @@ export function FeedPage() {
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-sekundaer font-medium text-label"
             >
               {c.label}
               <button
@@ -494,7 +501,7 @@ export function FeedPage() {
               </button>
             </span>
           ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint">
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-sekundaer font-semibold text-tint">
             Bearbeiten
           </button>
         </div>
@@ -503,7 +510,7 @@ export function FeedPage() {
       {zeigeFilter && (
         <div className="card-ap space-y-2 p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
+            <div className="mb-1 text-sekundaer font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(STATUS_LABEL) as VorgangStatus[]).map((value) => {
                 const aktiv = aktiveStatus.includes(value);
@@ -520,10 +527,10 @@ export function FeedPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select
+            <Select
+              groesse="kompakt"
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -531,11 +538,11 @@ export function FeedPage() {
                   {k.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
+              groesse="kompakt"
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -543,7 +550,7 @@ export function FeedPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
             <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
               <input
                 type="date"
@@ -552,7 +559,7 @@ export function FeedPage() {
                 title="Fällig ab"
                 className="field-ap"
               />
-              <span className="text-xs text-label2">bis</span>
+              <span className="text-sekundaer text-label2">bis</span>
               <input
                 type="date"
                 value={filter.faellig_bis ?? ""}
@@ -567,19 +574,19 @@ export function FeedPage() {
               placeholder="#Tag"
               className="field-ap"
             />
-            <select
+            <Select
+              groesse="kompakt"
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
-            </select>
+            </Select>
           </div>
         </div>
       )}
 
-      <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
+      <FilterVorlagenVerwaltung v={vorlagenState} chipsZeigen={zeigeFilter} />
 
       {ansicht === "karte" ? (
         isLoading ? (
@@ -598,11 +605,11 @@ export function FeedPage() {
               />
             </Suspense>
             {ohneKoordinatenAnzahl > 0 && (
-              <p className="text-center text-xs text-label2">
+              <p className="text-center text-sekundaer text-label2">
                 {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
               </p>
             )}
-            {hasNextPage && <p className="text-center text-xs text-label2">Lädt weitere Vorgänge…</p>}
+            {hasNextPage && <p className="text-center text-sekundaer text-label2">Lädt weitere Vorgänge…</p>}
           </>
         )
       ) : (
@@ -635,7 +642,7 @@ export function FeedPage() {
                   aktiveFilterAnzahl > 0 && (
                   <button
                     onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
-                    className="btn-ap mt-1 text-xs"
+                    className="btn-ap mt-1 text-sekundaer"
                   >
                     Filter zurücksetzen
                   </button>
@@ -649,7 +656,7 @@ export function FeedPage() {
                 <div key={gruppe} className="space-y-3">
                   <div className="flex items-baseline gap-1.5 px-1">
                     <h2
-                      className={`text-[10px] font-medium tracking-[0.14em] uppercase ${
+                      className={`text-meta font-medium tracking-wide uppercase ${
                         gruppe === "ueberfaellig"
                           ? "text-st-fehlt"
                           : gruppe === "heute"
@@ -659,7 +666,7 @@ export function FeedPage() {
                     >
                       {GRUPPEN_LABEL[gruppe]}
                     </h2>
-                    <span className="text-xs text-label2">{gruppenCards.length}</span>
+                    <span className="text-sekundaer text-label2">{gruppenCards.length}</span>
                   </div>
                   <div className="space-y-3">
                     {gruppenCards.map((card) => (

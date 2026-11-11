@@ -3,6 +3,7 @@ import { Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
+import { Select } from "../../components/apple/Select";
 import type { MailAccount, MailVerschluesselung } from "../../types";
 
 const VERSCHLUESSELUNG_OPTIONEN: { wert: MailVerschluesselung; label: string }[] = [
@@ -21,7 +22,7 @@ function optionenFuer(aktuell: MailVerschluesselung) {
 function KlartextHinweis({ wert }: { wert: MailVerschluesselung }) {
   if (wert !== "keine") return null;
   return (
-    <span className="mt-1 block text-[11px] font-normal text-amber-700 dark:text-amber-300">
+    <span className="mt-1 block text-meta font-normal text-amber-700 dark:text-amber-300">
       Unverschlüsselt nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen.
     </span>
   );
@@ -132,161 +133,161 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300">
           <Mail size={18} strokeWidth={2} />
         </span>
-        <h1 className="text-lg font-bold text-label">
+        <h1 className="text-titel-desktop font-bold text-label">
           {bearbeiten ? "Postfach bearbeiten" : "Postfach verbinden"}
         </h1>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="sm:col-span-2 text-xs font-medium text-label2">
+        <label className="sm:col-span-2 text-sekundaer font-medium text-label2">
           Name (nur für dich sichtbar)
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z. B. Mein Geschäftspostfach"
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="sm:col-span-2 text-xs font-medium text-label2">
+        <label className="sm:col-span-2 text-sekundaer font-medium text-label2">
           E-Mail-Adresse
           <input
             type="email"
             value={emailAdresse}
             onChange={(e) => setEmailAdresse(e.target.value)}
             placeholder="technik@meinbetrieb.de"
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
+        <p className="sm:col-span-2 mt-1 text-meta font-bold text-label2">
           Posteingang (IMAP)
         </p>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Server
           <input
             value={imapHost}
             onChange={(e) => setImapHost(e.target.value)}
             placeholder="imap.provider.de"
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Port
           <input
             type="number"
             value={imapPort}
             onChange={(e) => setImapPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Verschlüsselung
-          <select
+          <Select
+            className="mt-1 w-full"
             value={imapVerschluesselung}
             onChange={(e) => setImapVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {optionenFuer(imapVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <KlartextHinweis wert={imapVerschluesselung} />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Benutzername
           <input
             value={imapBenutzername}
             onChange={(e) => setImapBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
+        <p className="sm:col-span-2 mt-1 text-meta font-bold text-label2">
           Postausgang (SMTP)
         </p>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Server
           <input
             value={smtpHost}
             onChange={(e) => setSmtpHost(e.target.value)}
             placeholder="smtp.provider.de"
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Port
           <input
             type="number"
             value={smtpPort}
             onChange={(e) => setSmtpPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Verschlüsselung
-          <select
+          <Select
+            className="mt-1 w-full"
             value={smtpVerschluesselung}
             onChange={(e) => setSmtpVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {optionenFuer(smtpVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <KlartextHinweis wert={smtpVerschluesselung} />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Benutzername
           <input
             value={smtpBenutzername}
             onChange={(e) => setSmtpBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-label2">
+        <label className="sm:col-span-2 text-sekundaer font-medium text-label2">
           Passwort{bearbeiten && " (leer lassen, um es unverändert zu lassen)"}
           <input
             type="password"
             value={passwort}
             onChange={(e) => setPasswort(e.target.value)}
             placeholder={bearbeiten ? "••••••••" : ""}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
           {imapHost.toLowerCase().includes("gmail") || smtpHost.toLowerCase().includes("gmail") ? (
-            <span className="mt-1 block text-[11px] text-st-arbeit ">
+            <span className="mt-1 block text-meta text-st-arbeit ">
               Bei Gmail mit Zwei-Faktor-Anmeldung ein App-Passwort statt des normalen Passworts verwenden.
             </span>
           ) : null}
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-label2">
+        <label className="sm:col-span-2 text-sekundaer font-medium text-label2">
           Signatur (optional, wird an jede gesendete Mail angehängt)
           <textarea
             value={signatur}
             onChange={(e) => setSignatur(e.target.value)}
             rows={3}
-            className="mt-1 w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
+            className="mt-1 w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-zeile text-label dark:bg-stone-800 "
           />
         </label>
       </div>
 
       {testStatus === "ok" && (
-        <p className="rounded-lg bg-st-erledigt-bg px-3 py-2 text-xs font-medium text-st-erledigt ">
+        <p className="rounded-lg bg-st-erledigt-bg px-3 py-2 text-sekundaer font-medium text-st-erledigt ">
           Verbindung erfolgreich.
         </p>
       )}
       {testStatus === "fehler" && (
-        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-sekundaer font-medium text-st-fehlt ">
           {testFehler}
         </p>
       )}
       {speicherFehler && (
-        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-sekundaer font-medium text-st-fehlt ">
           {speicherFehler}
         </p>
       )}
@@ -296,7 +297,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           type="button"
           disabled={!imapHost || !smtpHost || !imapBenutzername || !smtpBenutzername || !passwort || testMutation.isPending}
           onClick={() => testMutation.mutate()}
-          className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-2 text-xs font-semibold text-label disabled:opacity-40 "
+          className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-2 text-sekundaer font-semibold text-label disabled:opacity-40 "
         >
           {testMutation.isPending && <Loader2 size={13} className="animate-spin" />}
           Verbindung testen
@@ -307,7 +308,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             <button
               type="button"
               onClick={onAbbrechen}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-label2"
+              className="rounded-lg px-3 py-2 text-sekundaer font-semibold text-label2"
             >
               Abbrechen
             </button>
@@ -315,7 +316,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <button
             type="submit"
             disabled={!kannSpeichern || speichernMutation.isPending}
-            className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
+            className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-sekundaer"
           >
             {speichernMutation.isPending && <Loader2 size={13} className="animate-spin" />}
             {bearbeiten ? "Speichern" : "Postfach anlegen"}

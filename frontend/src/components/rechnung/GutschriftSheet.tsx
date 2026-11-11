@@ -121,7 +121,7 @@ export function GutschriftSheet({
       onClose={onClose}
       titel="Gutschrift erstellen"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }
@@ -130,7 +130,7 @@ export function GutschriftSheet({
           type="submit"
           form={FORM_ID}
           disabled={!gueltig || erstellen.isPending}
-          className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
+          className="text-zeile font-semibold text-tint-text disabled:opacity-40"
         >
           Erstellen
         </button>
@@ -144,7 +144,7 @@ export function GutschriftSheet({
         </Hinweiskasten>
 
         {ohnePositionen ? (
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Diese Rechnung hat keine einzelnen Positionen – die Gutschrift gilt für den gesamten Betrag.
           </p>
         ) : (
@@ -159,7 +159,7 @@ export function GutschriftSheet({
         )}
 
         {modus === "alle" && !ohnePositionen && (
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Alle noch nicht gutgeschriebenen Mengen werden zurückgenommen.
           </p>
         )}
@@ -173,7 +173,7 @@ export function GutschriftSheet({
               return (
                 <li
                   key={p.id}
-                  className={`rounded-[var(--radius-ap-md)] bg-fill p-3 text-sm ${max <= 0 ? "opacity-50" : ""}`}
+                  className={`rounded-[var(--radius-ap-md)] bg-fill p-3 text-fliess ${max <= 0 ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-start gap-3">
                     <input
@@ -189,7 +189,7 @@ export function GutschriftSheet({
                       <label htmlFor={`gs-pos-${p.id}`} className="block text-label">
                         {p.beschreibung}
                       </label>
-                      <p className="text-xs text-label2">
+                      <p className="text-sekundaer text-label2">
                         {p.menge} {p.einheit} × {p.einzelpreis} EUR
                         {max <= 0
                           ? " · bereits vollständig gutgeschrieben"
@@ -199,7 +199,7 @@ export function GutschriftSheet({
                       </p>
                       {aktiv && (
                         <div className="mt-2 flex items-center gap-2">
-                          <label htmlFor={`gs-menge-${p.id}`} className="text-xs text-label2">
+                          <label htmlFor={`gs-menge-${p.id}`} className="text-sekundaer text-label2">
                             Menge (max. {mengeText(max)})
                           </label>
                           <input
@@ -209,13 +209,13 @@ export function GutschriftSheet({
                             value={auswahl[p.id]}
                             onChange={(e) => setAuswahl((alt) => ({ ...alt, [p.id]: e.target.value }))}
                             aria-invalid={!!fehlerText}
-                            className="w-24 rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-right text-sm tabular-nums text-label"
+                            className="w-24 rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-right text-zeile tabular-nums text-label"
                           />
-                          <span className="text-xs text-label2">{p.einheit}</span>
+                          <span className="text-sekundaer text-label2">{p.einheit}</span>
                         </div>
                       )}
                       {fehlerText && (
-                        <p role="alert" className="mt-1 text-xs text-st-fehlt">
+                        <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                           {fehlerText}
                         </p>
                       )}
@@ -224,12 +224,12 @@ export function GutschriftSheet({
                 </li>
               );
             })}
-            {waehlbar.length === 0 && <li className="text-sm text-label2">Keine gutschreibbaren Positionen.</li>}
+            {waehlbar.length === 0 && <li className="text-sekundaer text-label2">Keine gutschreibbaren Positionen.</li>}
           </ul>
         )}
 
         <div>
-          <label htmlFor="gutschrift-grund" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="gutschrift-grund" className="mb-1 block text-sekundaer font-medium text-label2">
             Grund
           </label>
           <textarea
@@ -242,7 +242,7 @@ export function GutschriftSheet({
             aria-describedby="gutschrift-grund-hinweis"
             className="field-ap"
           />
-          <div id="gutschrift-grund-hinweis" className="mt-1 flex justify-between text-xs">
+          <div id="gutschrift-grund-hinweis" className="mt-1 flex justify-between text-sekundaer">
             <span role={grundBeruehrt && grundFehler ? "alert" : undefined} className="text-st-fehlt">
               {grundBeruehrt && grundFehler ? grundFehler : ""}
             </span>
@@ -252,7 +252,7 @@ export function GutschriftSheet({
           </div>
         </div>
 
-        <div className="card-ap space-y-1 p-3 text-sm" aria-label="Summe der Gutschrift">
+        <div className="card-ap space-y-1 p-3 text-fliess" aria-label="Summe der Gutschrift">
           <div className="flex justify-between text-label2">
             <span>Netto</span>
             <span className="tabular-nums">{formatEuro(summe.netto)}</span>

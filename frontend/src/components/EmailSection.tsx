@@ -72,11 +72,11 @@ export function EmailSection({
   return (
     <div className="card-ap p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-label2">E-Mail</h2>
+        <h2 className="text-fliess font-semibold text-label2">E-Mail</h2>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="btn-touch text-xs font-medium text-tint "
+            className="btn-touch text-sekundaer font-medium text-tint "
           >
             + E-Mail senden
           </button>
@@ -84,38 +84,38 @@ export function EmailSection({
       </div>
 
       {showForm && (
-        <div className="mb-3 space-y-2 border border-sepstrong p-2">
-          {hinweis && <p className="text-xs text-label2">{hinweis}</p>}
+        <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
+          {hinweis && <p className="text-sekundaer text-label2">{hinweis}</p>}
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">
               Empfänger
             </label>
             <input id={`${uid}-0`}
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
             <input id={`${uid}-1`}
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
             <textarea id={`${uid}-2`}
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-zeile text-label"
             />
           </div>
           {error && <FehlerMeldung meldung={error} />}
@@ -127,7 +127,7 @@ export function EmailSection({
                 (betreffPflicht && (!betreff.trim() || !inhalt.trim())) ||
                 sendMutation.isPending
               }
-              className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Senden
             </button>
@@ -136,7 +136,7 @@ export function EmailSection({
                 setShowForm(false);
                 setError(null);
               }}
-              className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
+              className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sekundaer font-medium text-label "
             >
               Abbrechen
             </button>
@@ -145,15 +145,15 @@ export function EmailSection({
       )}
 
       {showHistory && ((emails ?? []).length === 0 ? (
-        <p className="text-sm text-label2">Noch keine E-Mails versendet.</p>
+        <p className="text-sekundaer text-label2">Noch keine E-Mails versendet.</p>
       ) : (
         <div className="space-y-1.5">
           {emails!.map((e) => (
-            <div key={e.id} className="rounded-md bg-fill p-2 text-sm">
+            <div key={e.id} className="rounded-md bg-fill p-2 text-fliess">
               <div className="flex items-start justify-between gap-2">
                 <span className="font-medium text-label">{e.betreff}</span>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-meta font-medium ${
                     e.status === "gesendet"
                       ? "bg-st-erledigt-bg text-st-erledigt  "
                       : e.status === "ausstehend"
@@ -164,13 +164,13 @@ export function EmailSection({
                   {e.status === "gesendet" ? "Gesendet" : e.status === "ausstehend" ? "Wird gesendet" : "Fehler"}
                 </span>
               </div>
-              <div className="text-xs text-label2">
+              <div className="text-sekundaer text-label2">
                 an {e.empfaenger} ·{" "}
                 {new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}
               </div>
               {e.status === "ausstehend" && e.fehlermeldung && (
-                <div className="mt-0.5 text-xs text-label2">{e.fehlermeldung}</div>
+                <div className="mt-0.5 text-sekundaer text-label2">{e.fehlermeldung}</div>
               )}
               {e.status === "fehler" && e.fehlermeldung && (
                 <div className="mt-0.5">

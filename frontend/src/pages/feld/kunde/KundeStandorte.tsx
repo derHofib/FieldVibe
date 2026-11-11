@@ -80,11 +80,11 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
             <Feld label="Ort">{(p) => <input {...p} value={ort} onChange={(e) => setOrt(e.target.value)} className={FELD_KLASSE} />}</Feld>
           </div>
           {error && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {error}
             </p>
           )}
-          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
             Anlegen
           </button>
         </form>
@@ -108,7 +108,7 @@ export function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: strin
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-label2">Standorte</h2>
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Standorte</h2>
       {!standorte || standorte.length === 0 ? (
         <EmptyState icon={MapPin} text="Keine Standorte." className="py-4" />
       ) : (
@@ -124,11 +124,11 @@ export function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: strin
                 onClick={() => navigate(`/standorte/${s.id}`)}
                 className="btn-touch flex-1 text-left"
               >
-                <div className="text-sm font-medium text-label hover:underline">
+                <div className="text-fliess font-medium text-label hover:underline">
                   {s.bezeichnung}
                 </div>
                 {s.adresse?.ort && (
-                  <div className="text-xs text-label2">
+                  <div className="text-sekundaer text-label2">
                     {[s.adresse.strasse, [s.adresse.plz, s.adresse.ort].filter(Boolean).join(" ")]
                       .filter(Boolean)
                       .join(", ")}
@@ -138,7 +138,7 @@ export function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: strin
               {kannVerwalten && (
                 <button
                   onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}
-                  className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
+                  className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-sekundaer font-semibold"
                 >
                   {s.aktiv ? "Deaktivieren" : "Aktivieren"}
                 </button>

@@ -11,8 +11,9 @@ import { useEffect, useState } from "react";
 import type { Clause, ClauseOperator, Combinator } from "../../utils/ruleConditionBuilder";
 import { newClause, parseCondition, serializeCondition } from "../../utils/ruleConditionBuilder";
 import type { FormField } from "../../types";
+import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
 function operatorenFuer(feld: FormField | undefined): { operator: ClauseOperator; label: string }[] {
   if (!feld) return [{ operator: "==", label: "ist" }];
@@ -81,10 +82,10 @@ export function FieldValueInput({
   switch (feld.feld_typ) {
     case "ja_nein":
       return (
-        <select value={String(value)} onChange={(e) => onChange(e.target.value === "true")} className={inputClass}>
+        <Select value={String(value)} onChange={(e) => onChange(e.target.value === "true")}>
           <option value="true">Ja</option>
           <option value="false">Nein</option>
-        </select>
+        </Select>
       );
     case "zahl":
     case "bewertung":
@@ -103,14 +104,14 @@ export function FieldValueInput({
       const optionen = werteOptionen(feld);
       if (optionen.length > 0) {
         return (
-          <select value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+          <Select value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)}>
             <option value="">Bitte wählen…</option>
             {optionen.map((w) => (
               <option key={w} value={w}>
                 {w}
               </option>
             ))}
-          </select>
+          </Select>
         );
       }
       return <input value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} className={inputClass} />;
@@ -210,11 +211,11 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
             }
           }}
           rows={3}
-          className={`${inputClass} font-mono text-xs`}
+          className={`${inputClass} font-mono text-sekundaer`}
         />
-        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
+        {rawFehler && <p className="text-sekundaer text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
-          <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
+          <button type="button" onClick={() => setErweitert(false)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
             Zurück zum Regel-Baukasten
           </button>
         )}
@@ -224,32 +225,32 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
 
   return (
     <div className="space-y-1.5">
-      {clauses.length === 0 && <p className="text-xs text-label2">Immer aktiv (keine Bedingung).</p>}
+      {clauses.length === 0 && <p className="text-sekundaer text-label2">Immer aktiv (keine Bedingung).</p>}
       {clauses.map((clause, idx) => {
         const feld = rootFelder.find((f) => f.key === clause.field);
         return (
           <div key={idx} className="space-y-1">
             {idx > 0 && (
-              <div className="flex items-center gap-2 text-xs font-medium text-label2">
-                <select
+              <div className="flex items-center gap-2 text-sekundaer font-medium text-label2">
+                <Select
+                  className="w-auto"
                   value={combinator}
                   onChange={(e) => updateClauses(clauses, e.target.value as Combinator)}
-                  className="border border-sep bg-transparent px-1 py-0.5"
+                  groesse="kompakt"
                 >
                   <option value="and">UND</option>
                   <option value="or">ODER</option>
-                </select>
+                </Select>
               </div>
             )}
             <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5">
-              <select
+              <Select
                 value={clause.field}
                 onChange={(e) => {
                   const next = [...clauses];
                   next[idx] = newClause(e.target.value);
                   updateClauses(next);
                 }}
-                className={inputClass}
               >
                 <option value="">Feld wählen…</option>
                 {rootFelder.map((f) => (
@@ -257,22 +258,21 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
                     {f.label.de ?? f.key}
                   </option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={clause.operator}
                 onChange={(e) => {
                   const next = [...clauses];
                   next[idx] = { ...clause, operator: e.target.value as ClauseOperator, value: "", values: [] };
                   updateClauses(next);
                 }}
-                className={inputClass}
               >
                 {operatorenFuer(feld).map((o) => (
                   <option key={o.operator} value={o.operator}>
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <ValueInput
                 feld={feld}
                 operator={clause.operator}
@@ -306,11 +306,11 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
           type="button"
           onClick={() => updateClauses([...clauses, newClause(rootFelder[0]?.key ?? "")])}
           disabled={rootFelder.length === 0}
-          className="btn-touch flex items-center gap-1 text-xs font-medium text-cyan-700 disabled:opacity-50 dark:text-cyan-400"
+          className="btn-touch flex items-center gap-1 text-sekundaer font-medium text-cyan-700 disabled:opacity-50 dark:text-cyan-400"
         >
           <Plus size={13} /> Bedingung
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
+        <button type="button" onClick={() => setErweitert(true)} className="text-sekundaer text-label2">
           Erweitert (JSON)
         </button>
       </div>

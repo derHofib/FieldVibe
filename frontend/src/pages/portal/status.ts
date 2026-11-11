@@ -13,11 +13,11 @@ export const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
 };
 
 export const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
-  entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
-  versendet: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  angenommen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  abgelehnt: "border border-red-400 text-red-700 dark:border-red-600 dark:text-red-300",
-  widerrufen: "border border-st-arbeit text-st-arbeit",
+  entwurf: "border rounded-[var(--radius-ap-pill)] border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  versendet: "border rounded-[var(--radius-ap-pill)] border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  angenommen: "border rounded-[var(--radius-ap-pill)] border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  abgelehnt: "border rounded-[var(--radius-ap-pill)] border-red-400 text-red-700 dark:border-red-600 dark:text-red-300",
+  widerrufen: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit",
 };
 
 // Laienverstaendliche Erklaerung fuer den Kunden -- nur auf der Detailseite

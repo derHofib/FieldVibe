@@ -15,14 +15,14 @@ export function HerkunftZeile({
 }) {
   if (projektName) {
     return (
-      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-origin-projekt">
+      <span className="inline-flex items-center gap-1 text-sekundaer font-medium text-origin-projekt">
         <Folder size={13} strokeWidth={2} className={gefuellt ? "fill-current" : undefined} aria-hidden="true" />
         {projektName}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[13px] text-label2">
+    <span className="inline-flex items-center gap-1 text-sekundaer text-label2">
       <File size={13} strokeWidth={2} aria-hidden="true" />
       Einzelvorgang
     </span>

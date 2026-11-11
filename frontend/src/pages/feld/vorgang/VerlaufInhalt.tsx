@@ -93,11 +93,11 @@ export function VerlaufInhalt({
       />
 
       <div className="scroll-mt-4 flex items-center justify-between gap-2">
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Verlauf</h2>
-        <span className="text-sm text-label2">{kundenansicht ? "Kundenansicht" : "Interne Ansicht"}</span>
+        <h2 className="font-heading text-fliess font-semibold text-label">Verlauf</h2>
+        <span className="text-sekundaer text-label2">{kundenansicht ? "Kundenansicht" : "Interne Ansicht"}</span>
         <button
           onClick={() => setKundenansicht((v) => !v)}
-          className={`btn-touch border px-3 py-1 text-xs font-semibold ${
+          className={`btn-touch border rounded-[var(--radius-ap-md)] px-3 py-1 text-sekundaer font-semibold ${
             kundenansicht ? "border-tint bg-tint-solid text-white" : "border-sep text-label hover:bg-fill"
           }`}
         >
@@ -105,7 +105,7 @@ export function VerlaufInhalt({
         </button>
       </div>
 
-      <div className="mt-2 mb-1 flex flex-wrap items-center gap-1.5 text-xs">
+      <div className="mt-2 mb-1 flex flex-wrap items-center gap-1.5 text-sekundaer">
         {(
           [
             { wert: "alle", label: "Alle" },
@@ -117,7 +117,7 @@ export function VerlaufInhalt({
           <button
             key={f.wert}
             onClick={() => setVerlaufFilter(f.wert)}
-            className={`btn-touch border px-2.5 py-1 font-medium ${
+            className={`btn-touch border rounded-[var(--radius-ap-md)] px-2.5 py-1 font-medium ${
               verlaufFilter === f.wert
                 ? "border-tint bg-tint-solid text-white"
                 : "border-sep text-label2 hover:bg-fill"
@@ -130,7 +130,7 @@ export function VerlaufInhalt({
 
       <div>
         {verlaufEintraegeGefiltert.length === 0 && eigeneOutboxItemsGefiltert.length === 0 ? (
-          <p className="text-center text-sm text-label2">
+          <p className="text-center text-sekundaer text-label2">
             {verlaufFilter === "alle" ? "Noch keine Einträge." : "Keine Einträge in diesem Filter."}
           </p>
         ) : (
@@ -171,7 +171,7 @@ export function VerlaufInhalt({
               onChange={(e) => setComment(e.target.value)}
               placeholder="Kommentar schreiben…"
               rows={2}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-zeile text-label"
             />
             {/* .card-ap bringt schon eine eigene box-shadow mit (siehe
              * Cascade-Layer-Falle in DESIGN.md) -- shadow-lg hier waere
@@ -185,7 +185,7 @@ export function VerlaufInhalt({
                       setComment((c) => `${c}@[${u.name}](${u.id}) `);
                       setShowMentionPicker(false);
                     }}
-                    className="btn-touch block w-full px-3 py-2 text-left text-sm text-label hover:bg-fill"
+                    className="btn-touch block w-full px-3 py-2 text-left text-sekundaer text-label hover:bg-fill"
                   >
                     {u.name}
                   </button>
@@ -216,7 +216,7 @@ export function VerlaufInhalt({
             }}
           />
           {partnerKommentarMoeglich && (
-            <label className="mb-2 flex items-center gap-2 text-sm text-label2">
+            <label className="mb-2 flex items-center gap-2 text-sekundaer text-label2">
               <input
                 type="checkbox"
                 checked={anPartner}
@@ -232,7 +232,7 @@ export function VerlaufInhalt({
                 onClick={() => setShowMentionPicker((v) => !v)}
                 title="Erwähnen"
                 aria-label="Erwähnen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-base text-label hover:bg-fill"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-zeile text-label hover:bg-fill"
               >
                 @
               </button>
@@ -241,7 +241,7 @@ export function VerlaufInhalt({
                 disabled={fotoMutation.isPending}
                 title="Foto anhängen"
                 aria-label="Foto anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Camera size={16} strokeWidth={2} />
               </button>
@@ -250,7 +250,7 @@ export function VerlaufInhalt({
                 disabled={dokumentMutation.isPending}
                 title="Dokument anhängen"
                 aria-label="Dokument anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Paperclip size={16} strokeWidth={2} />
               </button>
@@ -258,7 +258,7 @@ export function VerlaufInhalt({
                 onClick={() => setShowUnterschriftPad((v) => !v)}
                 title="Unterschrift erfassen"
                 aria-label="Unterschrift erfassen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill"
               >
                 <PenLine size={16} strokeWidth={1.5} />
               </button>
@@ -271,7 +271,7 @@ export function VerlaufInhalt({
                 }
                 aria-label="Für Kunde sichtbar umschalten"
                 aria-pressed={kundensichtbar}
-                className={`btn-touch flex h-9 w-9 items-center justify-center border ${
+                className={`btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] ${
                   kundensichtbar ? "border-tint text-tint-text" : "border-sep text-label2 hover:bg-fill"
                 }`}
               >
@@ -281,7 +281,7 @@ export function VerlaufInhalt({
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sm"
+              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sekundaer"
             >
               Senden
             </button>
@@ -295,7 +295,7 @@ export function VerlaufInhalt({
                 onSave={(blob, unterzeichnerName) => unterschriftMutation.mutate({ blob, unterzeichnerName })}
               />
               {unterschriftMutation.isError && (
-                <p className="mt-1 text-xs text-st-fehlt">
+                <p className="mt-1 text-sekundaer text-st-fehlt">
                   {unterschriftMutation.error instanceof ApiError
                     ? unterschriftMutation.error.message
                     : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}

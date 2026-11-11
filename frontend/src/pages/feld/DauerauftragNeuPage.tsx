@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { DauerauftragModus, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "wartung", label: "Wartung" },
@@ -93,11 +94,11 @@ export function DauerauftragNeuPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-label">Neuer Dauer-Auftrag</h1>
-      <p className="text-sm text-label2">
+      <h1 className="text-titel-mobil font-bold text-label">Neuer Dauer-Auftrag</h1>
+      <p className="text-sekundaer text-label2">
         Erzeugt automatisch einen neuen Vorgang, sobald das eingestellte Intervall ab dem Abschluss
         des jeweils letzten erzeugten Vorgangs erreicht ist.
       </p>
@@ -107,14 +108,13 @@ export function DauerauftragNeuPage() {
         className="space-y-3 card-ap p-4"
       >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Kunde</label>
-          <select id={`${uid}-0`}
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Kunde</label>
+          <Select id={`${uid}-0`}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
               setAnlageIds([]);
             }}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -122,27 +122,27 @@ export function DauerauftragNeuPage() {
                 {k.name} ({k.kundennummer})
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">
+            <label className="mb-1 block text-fliess font-medium text-label">
               Anlagen (optional, mehrfach möglich)
             </label>
-            <p className="mb-1 text-xs text-label2">
+            <p className="mb-1 text-sekundaer text-label2">
               Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
               ausgewählt: ein Bündel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
-              anlegt -- statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
+              anlegt – statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
             </p>
             {!anlagenListe || anlagenListe.length === 0 ? (
-              <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
+              <p className="text-sekundaer text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
             ) : (
               <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-sep p-2 ">
                 {anlagenListe.map((a) => (
                   <label
                     key={a.id}
-                    className="flex items-center gap-2 py-1 text-sm text-label"
+                    className="flex items-center gap-2 py-1 text-fliess text-label"
                   >
                     <input
                       type="checkbox"
@@ -162,60 +162,58 @@ export function DauerauftragNeuPage() {
         )}
 
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Titel</label>
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Titel</label>
           <input id={`${uid}-1`}
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             placeholder="z.B. Monatliche Wartung Lüftungsanlage"
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
 
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Beschreibung</label>
           <textarea id={`${uid}-2`}
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
-            className="w-full resize-none border border-sep bg-transparent p-2 text-label"
+            className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-label"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
-            <select id={`${uid}-3`}
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Leistungstyp</label>
+            <Select id={`${uid}-3`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
-            <select id={`${uid}-4`}
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-fliess font-medium text-label">Abrechnungsart</label>
+            <Select id={`${uid}-4`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
                   {a.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-fliess font-medium text-label">
               Intervall (Tage)
             </label>
             <input id={`${uid}-5`}
@@ -224,11 +222,11 @@ export function DauerauftragNeuPage() {
               required
               value={intervallTage}
               onChange={(e) => setIntervallTage(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-fliess font-medium text-label">
               Erste Fälligkeit
             </label>
             <input id={`${uid}-6`}
@@ -236,26 +234,25 @@ export function DauerauftragNeuPage() {
               required
               value={naechsteFaelligkeit}
               onChange={(e) => setNaechsteFaelligkeit(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-fliess font-medium text-label">
             Wann wird die nächste Fälligkeit berechnet?
           </label>
-          <select id={`${uid}-7`}
+          <Select id={`${uid}-7`}
             value={modus}
             onChange={(e) => setModus(e.target.value as DauerauftragModus)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="rollierend">
-              Rollierend -- ab dem tatsächlichen Abschlussdatum (empfohlen)
+              Rollierend – ab dem tatsächlichen Abschlussdatum (empfohlen)
             </option>
-            <option value="fest">Fest -- ab dem ursprünglich geplanten Termin</option>
-          </select>
-          <p className="mt-1 text-xs text-label2">
+            <option value="fest">Fest – ab dem ursprünglich geplanten Termin</option>
+          </Select>
+          <p className="mt-1 text-sekundaer text-label2">
             {modus === "rollierend"
               ? "Wird ein Vorgang früher oder später abgeschlossen, verschiebt sich die nächste Fälligkeit entsprechend mit."
               : "Der Kalenderrhythmus bleibt fest, unabhängig davon, wann tatsächlich abgeschlossen wird."}
@@ -264,7 +261,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-fliess font-medium text-label">
               Toleranz zu früh (Tage)
             </label>
             <input id={`${uid}-8`}
@@ -273,11 +270,11 @@ export function DauerauftragNeuPage() {
               value={toleranzFrueh}
               onChange={(e) => setToleranzFrueh(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-9`} className="mb-1 block text-fliess font-medium text-label">
               Toleranz zu spät (Tage)
             </label>
             <input id={`${uid}-9`}
@@ -286,16 +283,16 @@ export function DauerauftragNeuPage() {
               value={toleranzSpaet}
               onChange={(e) => setToleranzSpaet(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-label2">
+        <p className="-mt-2 text-sekundaer text-label2">
           Wird außerhalb dieser Toleranz abgeschlossen, entsteht dazu nur ein Hinweis im
-          Vorgangs-Chat -- der Abschluss selbst wird nie blockiert.
+          Vorgangs-Chat – der Abschluss selbst wird nie blockiert.
         </p>
 
-        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
 
         <button
           type="submit"

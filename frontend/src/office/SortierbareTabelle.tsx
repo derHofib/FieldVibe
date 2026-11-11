@@ -59,8 +59,8 @@ export function SortierbareTabelle<T>({
 
   return (
     <TabellenRahmen>
-      <table className="w-full border-collapse text-sm">
-        <thead className="border-b border-sepstrong text-xs text-label2">
+      <table className="w-full border-collapse text-fliess">
+        <thead className="border-b border-sepstrong text-sekundaer text-label2">
           <tr>
             {spalten.map((spalte) => {
               const aktiv = sortierung?.key === spalte.key;
@@ -71,12 +71,12 @@ export function SortierbareTabelle<T>({
                   aria-sort={
                     aktiv ? (sortierung?.absteigend ? "descending" : "ascending") : undefined
                   }
-                  className={`px-3 py-2 text-xs font-medium tracking-wide uppercase ${spalte.align === "rechts" ? "text-right" : "text-left"}`}
+                  className={`px-3 py-2 text-meta font-medium tracking-wide uppercase ${spalte.align === "rechts" ? "text-right" : "text-left"}`}
                 >
                   {spalte.sortWert ? (
                     <button
                       onClick={() => umschalten(spalte.key)}
-                      className={`inline-flex items-center gap-1 rounded-sm uppercase hover:text-label ${
+                      className={`inline-flex items-center gap-1 rounded-sm tracking-wide uppercase hover:text-label ${
                         aktiv ? "text-label" : ""
                       }`}
                     >

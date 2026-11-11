@@ -22,10 +22,10 @@ function uhrzeit(iso: string): string {
 }
 
 function Leer({ text }: { text: string }) {
-  return <p className="py-4 text-sm text-label2">{text}</p>;
+  return <p className="py-4 text-sekundaer text-label2">{text}</p>;
 }
 
-const MONO = "overflow-x-auto whitespace-pre-wrap break-all rounded-[var(--radius-ap-input)] bg-fill p-2 font-mono text-xs text-label";
+const MONO = "overflow-x-auto whitespace-pre-wrap break-all rounded-[var(--radius-ap-input)] bg-fill p-2 font-mono text-sekundaer text-label";
 
 const BREADCRUMB_ICON = { route: Navigation, klick: MousePointerClick, submit: Send } as const;
 
@@ -41,11 +41,11 @@ function Klickpfad({ eintraege }: { eintraege: Breadcrumb[] }) {
               <Icon size={13} strokeWidth={2} aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="break-all text-sm text-label">
+              <p className="break-all text-fliess text-label">
                 <span className="font-semibold">{b.typ}</span> · {b.ziel}
               </p>
-              {b.text && <p className="break-words text-xs text-label2">{b.text}</p>}
-              <p className="text-xs tabular-nums text-label2">{uhrzeit(b.zeit)}</p>
+              {b.text && <p className="break-words text-sekundaer text-label2">{b.text}</p>}
+              <p className="text-meta tabular-nums text-label2">{uhrzeit(b.zeit)}</p>
             </div>
           </li>
         );
@@ -58,7 +58,7 @@ function Kopfzeilen({ titel, werte }: { titel: string; werte?: Record<string, st
   if (!werte || Object.keys(werte).length === 0) return null;
   return (
     <div>
-      <p className="mb-1 text-xs font-semibold text-label2">{titel}</p>
+      <p className="mb-1 text-sekundaer font-semibold text-label2">{titel}</p>
       <pre className={MONO}>{Object.entries(werte).map(([k, v]) => `${k}: ${v}`).join("\n")}</pre>
     </div>
   );
@@ -68,7 +68,7 @@ function Textblock({ titel, text }: { titel: string; text?: string }) {
   if (!text) return null;
   return (
     <div>
-      <p className="mb-1 text-xs font-semibold text-label2">{titel}</p>
+      <p className="mb-1 text-sekundaer font-semibold text-label2">{titel}</p>
       <pre className={MONO}>{text}</pre>
     </div>
   );
@@ -84,7 +84,7 @@ function NetzwerkZeile({ e }: { e: NetzwerkEintrag }) {
         type="button"
         aria-expanded={offen}
         onClick={() => setOffen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sekundaer"
       >
         <Pfeil size={14} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />
         <span className="w-10 shrink-0 font-mono font-semibold text-label">{e.methode}</span>
@@ -97,7 +97,7 @@ function NetzwerkZeile({ e }: { e: NetzwerkEintrag }) {
       </button>
       {offen && (
         <div className="space-y-2 px-3 pb-3">
-          {e.fehler && <p className="break-words text-xs font-semibold text-st-fehlt">Fehler: {e.fehler}</p>}
+          {e.fehler && <p className="break-words text-sekundaer font-semibold text-st-fehlt">Fehler: {e.fehler}</p>}
           <Kopfzeilen titel="Request-Header" werte={e.request_headers} />
           <Textblock titel="Request-Body" text={e.request_body} />
           <Kopfzeilen titel="Response-Header" werte={e.response_headers} />
@@ -128,8 +128,8 @@ function KonsolenZeile({ e }: { e: KonsolenEintrag }) {
   const [offen, setOffen] = useState(false);
   return (
     <li data-level={e.level} className={KONSOLE_KLASSE[e.level] ?? "text-label"}>
-      <div className="flex items-start gap-2 px-3 py-2 text-xs">
-        <span className="w-12 shrink-0 font-mono font-semibold uppercase">{e.level}</span>
+      <div className="flex items-start gap-2 px-3 py-2 text-sekundaer">
+        <span className="w-12 shrink-0 font-mono font-semibold">{e.level}</span>
         <span className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono">{e.nachricht}</span>
         <span className="hidden shrink-0 tabular-nums sm:inline">{uhrzeit(e.zeit)}</span>
       </div>
@@ -139,7 +139,7 @@ function KonsolenZeile({ e }: { e: KonsolenEintrag }) {
             type="button"
             aria-expanded={offen}
             onClick={() => setOffen((v) => !v)}
-            className="text-xs font-medium underline"
+            className="text-sekundaer font-medium underline"
           >
             {offen ? "Stack ausblenden" : "Stack anzeigen"}
           </button>
@@ -173,12 +173,12 @@ function KeyValue({ titel, daten }: { titel: string; daten: Record<string, unkno
   if (eintraege.length === 0) return null;
   return (
     <section>
-      <h3 className="mb-1 text-xs font-semibold text-label2 uppercase">{titel}</h3>
+      <h3 className="mb-1 text-meta font-semibold text-label2">{titel}</h3>
       <dl className="divide-y divide-sep overflow-hidden rounded-[var(--radius-ap-card)] bg-cell">
         {eintraege.map(([k, v]) => (
           <div key={k} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:gap-3">
-            <dt className="shrink-0 font-mono text-xs text-label2 sm:w-40">{k}</dt>
-            <dd className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-xs text-label">{wertText(v)}</dd>
+            <dt className="shrink-0 font-mono text-sekundaer text-label2 sm:w-40">{k}</dt>
+            <dd className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-sekundaer text-label">{wertText(v)}</dd>
           </div>
         ))}
       </dl>

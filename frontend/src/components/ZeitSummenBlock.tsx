@@ -25,15 +25,15 @@ export function ZeitSummenBlock({ filter }: { filter: { auftrag_id: string } | {
 
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Zeit</label>
+      <label className="mb-1.5 block text-meta font-bold text-label3">Zeit</label>
       {zeilen.length === 0 ? (
-        <p className="text-sm text-label2">Keine Zeit erfasst.</p>
+        <p className="text-sekundaer text-label2">Keine Zeit erfasst.</p>
       ) : (
         <div className="space-y-1.5">
           {zeilen.map(({ status, summe }) => (
             <div
               key={status}
-              className="flex items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-sm"
+              className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-fliess"
             >
               <StatusPille status={buchungsstatusZuToken(status)} label={BUCHUNGSSTATUS_LABEL[status]} />
               <span className="text-label2">

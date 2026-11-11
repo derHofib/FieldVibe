@@ -81,39 +81,39 @@ entstehen Kopien, die bei künftigen Änderungen lautlos auseinanderlaufen
 
 Systemschrift-Stack (`--font-sans: -apple-system, BlinkMacSystemFont,
 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif`), kein
-eigener Web-Font mehr geladen. Beobachtete Größen-Stufen (kein benanntes
-Scale-System, aus dem Code verifiziert):
+eigener Web-Font mehr geladen.
 
-| Größe | Verwendung |
-|---|---|
-| 17px | Listenzeilen-Text, Sheet-Titel, Formularfelder |
-| 16px | `.field-ap` Eingabefeld-Text (Mindestgröße auf allen Eingabefeldern -- iOS Safari zoomt sonst beim Fokussieren hinein) |
-| 13px | Buttons, Sekundärtext, Segmented-Control |
-| 11–13px | Meta-Text, Badges |
-| 10px | Bottom-Nav-Tab-Label |
+Benannte Stufen als Token in `index.css` (`@theme`), daraus entstehen die Tailwind-Klassen. Keine rohen `text-[Npx]`, keine halben Pixel.
+
+| Klasse | Größe | Verwendung |
+|---|---|---|
+| `text-meta` | 11px | Meta, Badges, Zeitstempel, Spaltenköpfe |
+| `text-sekundaer` | 13px | Sekundärtext, Buttons (Desktop) |
+| `text-fliess` | 15px | Fließtext Desktop |
+| `text-zeile` | 17px | Listenzeilen, Felder, Sheet-Titel (Mobil) |
+| `text-titel-mobil` | 22px | Seitentitel Mobil, Kennzahlen |
+| `text-titel-desktop` | 28px | Seitentitel Desktop |
+| `text-nav` | 10px | Ausnahme: Bottom-Nav-Label |
+
+Eingabefelder bleiben mindestens 16px (iOS-Zoom). Ausnahmen ohne Token: Avatar-Initialen (proportional), SVG-Beschriftungen im Gantt, Druck-HTML, Board-Knoten (Nutzerinhalt).
+
+**Versalien** nur in Gruppenüberschriften (`AbschnittskopfB`, Listen-Gruppenköpfe, Tabellen-Spaltenköpfe), dann `text-meta tracking-wide uppercase`. Nie in Titeln, Karten-Überschriften, Buttons, Badges oder Formular-Labels.
 
 `tabular-nums` weiterhin für Zahlen in Tabellen/Kennzahl-Kacheln.
 
 ## Icons
 
-Ausschließlich `lucide-react`, nie Emoji, nie frei im Text. Zwei parallele
-Icon-Container mit unterschiedlicher Form — **bewusst nicht vereinheitlicht**,
-siehe Begründung:
+Ausschließlich `lucide-react`, nie Emoji, nie frei im Text. Icon-Container:
 
 - **`SymbolKachel`** (`components/apple/SymbolKachel.tsx`) — die eigentliche
   Apple-HIG-Kachel: 29×29px, Radius 7, gefüllte Farbfläche
   (`--tile-*`), weißes Icon (`strokeWidth={2}`). Verwendung z. B. in
   `GroupedListRow`-Zeilen (Projekte-Tab, Mehr-Menü)
-- **`IconBadge`**/`StatusBadge`** (`components/IconBadge.tsx`,
-  `StatusBadge.tsx`) — älterer, aus der Industry-Ära übernommener
-  Rahmen-Quadrat-Stil (`rounded-none`, Haarlinien-Rand statt Füllung),
-  nur auf `--tone-*`-Token umgefärbt, **nicht** auf die Kachel-Form
-  umgebaut. Ehrliche Einschränkung: dieses Muster ist noch nicht
-  vollständig HIG-konvertiert, siehe „Was offen bleibt" unten
+- **`IconBadge`/`StatusBadge`** (`components/IconBadge.tsx`, `StatusBadge.tsx`) — dieselbe Form wie `SymbolKachel`: gefüllte Kachel, Radius 7, weißes Icon (`strokeWidth` 2). Fläche über `--tone-*-fill` (amber, emerald, cyan, teal sind dafür abgedunkelt, weißes Icon ≥3:1). `StatusBadge` ist eine getönte Pille mit Punkt und Text.
 
-Bei neuen Bereichs-/Kategorie-Icons: `SymbolKachel` bevorzugen, wenn eine
-gefüllte Kachel ins Layout passt (Listenzeile); `IconBadge`, wo eine
-bestehende Seite das Rahmen-Muster schon konsequent nutzt.
+Eine Formensprache: kein nacktes `border` ohne Radius an Bedienelementen; gestrichelt nur für echte Ablageflächen (Drop-Zonen, Datei- und Karten-Platzhalter).
+
+Bei neuen Bereichs-/Kategorie-Icons: `SymbolKachel` oder `IconBadge`, nie ein Rahmen-Quadrat.
 
 ## Bausteine (`components/apple/`, `index.css`)
 
@@ -216,6 +216,8 @@ Dev-Stack. Verbindliche Konventionen daraus:
 
 ## Formulare
 
+Native `<select>` nur über `components/apple/Select.tsx` (`.select-ap`, eigener Chevron, auf Mobil mind. 44px Höhe und 16px Schrift, `groesse="kompakt"` für Filterleisten ab md). Nativ bleiben nur `<select multiple>` und der zustandsgefärbte Rechte-Select im Organigramm.
+
 Lange Auswahllisten weiterhin als `SearchableSelect` (tippbare Combobox),
 kein natives `<select>`. `.field-ap` für Standard-Eingabefelder (siehe
 Bausteine oben); bei Feldern mit eigener Breite (`w-20` etc.) die
@@ -281,13 +283,29 @@ Je Interaktion genau ein Muster; vor einem neuen Baustein hier nachsehen.
 - **Office-Navigation**: aktiver Eintrag und Workspace folgen der Route (`office/navAktiv.ts`); Hilfslinks
   (Seitenleiste anpassen, Fehler melden, mobile Ansicht, Abmelden) liegen im Nutzermenü.
 
+## Button-Rangfolge
+
+Pro Ansicht genau eine gefüllte Primäraktion (`.btn-ap-primary`), alles andere sekundär (`.btn-ap`). Anlegen-Buttons nutzen überall `NEU_BUTTON_KLASSE` (`components/FormularFeld.tsx`). Auf Mobil ist bei Detailseiten mit klebender Leiste diese Leiste die Primäraktion, Aktionen in der Karte werden sekundär. Seltene und destruktive Aktionen („Vorgang löschen“) liegen im „…“-Menü, der Bestätigungsdialog bleibt.
+
+## Office-Hierarchie
+
+Office-Inhalt liegt auf `gbg`, Karten sind weiße Flächen ohne Schatten (`.office-flaechen`), Haarlinie nur in Tabellenzeilen und Kopfzeilen. Detail-Panels sind eine Fläche mit Abschnitten und Trennlinien (`.office-panel`); die Kopfzeile trägt „Zurück“, „Ganze Seite“ und das „…“-Menü. Jede Office-Seite nutzt `SeitenKopf` (gleiche Größe und linke Kante). Seitenleiste: Icons `label2`, nur der aktive Eintrag in Tint; die vier Kacheln zeigen immer eine Zahl (0 gedämpft); Hilfseinträge liegen im Nutzermenü unten links.
+
+## Gesperrt und leer
+
+Gesperrt: `GesperrtZustand` (`components/EmptyState.tsx`; Schloss, Erklärsatz, Zurück), genutzt von `KeinZugriff` und `FehlerZustand` (403). `EmptyState` hat einen `action`-Slot; leere Listen bieten die Anlegen-Aktion an, wenn das Recht da ist.
+
+## Markenakzent „läuft gerade“
+
+Token `live` / `live-text` / `live-bg` (Logo-Lime, in Hell abgedunkelt). Genau eine Rolle: „läuft gerade“ (`LaeuftPille`/`LaeuftPunkt`, `components/apple/LaeuftPille.tsx`). Immer mit Text „Läuft“ und pulsierendem Punkt (nur `motion-safe`), nie dekorativ, nie für Status. Kontrast: Text ≥5,0:1, Punkt ≥3,9:1 auf den Flächen.
+
 ## Was offen bleibt (ehrlich dokumentiert, siehe `docs/ui-redesign/REVIEW.md`)
 
-- **Hartkodierte Farben nicht restlos entfernt**: kategoriale Icon-Töne
-  (sky/violet/…) und einzelne Randfälle (React-Flow-Handles, Modal-
-  Scrim, `disabled:`-Varianten) bleiben bewusst auf Tailwind-
-  Palettenfarben statt Design-Token, siehe REVIEW.md Abschnitt 5
-- **`IconBadge`/`StatusBadge`** noch nicht auf die `SymbolKachel`-Form
-  umgebaut (Rahmen-Quadrat statt gefüllte Kachel), siehe Icons-Abschnitt
-- **Cross-Browser-Testabdeckung** nur Chromium (kein WebKit in dieser
-  Entwicklungsumgebung installiert)
+- **Hartkodierte Farben nicht restlos entfernt**: kategoriale Icon-Töne und einzelne Randfälle (React-Flow-Handles, Modal-Scrim, `disabled:`-Varianten) bleiben auf Tailwind-Palettenfarben, siehe REVIEW.md Abschnitt 5
+- **Cross-Browser** nur Chromium (kein WebKit), Tablet-Breiten nicht geprüft
+- **Board-Knoten** (`office/boards/nodes/*`) behalten rohe Schriftgrößen und Versalien (Nutzerinhalt)
+- **`RechteTab`-Select** bleibt nativ (Zustandsfarbe am Select)
+- **Löschen im Menü**: Material, Angebot, Bestellung, Rechnung, Eingangsrechnung, Standort, Partner, Anlage, Dauerauftrag und das Auftrags-Panel zeigen „… löschen“ noch dauerhaft als roten Text statt im „…“-Menü
+- **Office-Panels**: Aufträge- und Projekt-Detail nutzen `.office-panel` noch nicht
+- **Seitenleisten-Kacheln** zählen clientseitig (max. 200, dann „200+“); ein Zähl-Endpoint fehlt
+- **`e2e/portal-a11y.spec.ts`** läuft im lokalen Stack nicht durch (Seiten rendern unter dem Mock nicht, schon vor diesem Stand)

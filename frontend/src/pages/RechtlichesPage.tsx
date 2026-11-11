@@ -16,7 +16,7 @@ function Hinweiskasten() {
       <Info size={18} strokeWidth={2} className="mt-0.5 shrink-0 text-st-arbeit" aria-hidden="true" />
       <div className="space-y-2">
         <StatusPille status="arbeit" label="Platzhalter" />
-        <p className="text-sm text-label">
+        <p className="text-fliess text-label">
           Platzhalter – der rechtsgeprüfte Text wird vom Betreiber ergänzt. Bis dahin dienen diese
           Angaben nur der Orientierung.
         </p>
@@ -28,21 +28,21 @@ function Hinweiskasten() {
 function Block({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="card-ap space-y-2 p-4">
-      <h2 className="text-[13px] font-semibold tracking-wide text-label2 uppercase">{titel}</h2>
+      <h2 className="text-sekundaer font-semibold text-label2">{titel}</h2>
       {children}
     </section>
   );
 }
 
 function Fehlt() {
-  return <p className="text-sm text-label2">Angaben noch nicht hinterlegt</p>;
+  return <p className="text-sekundaer text-label2">Angaben noch nicht hinterlegt</p>;
 }
 
 function Zeilen({ zeilen }: { zeilen: Array<[string, string | null | undefined]> }) {
   const befuellt = zeilen.filter(([, wert]) => !!wert);
   if (befuellt.length === 0) return <Fehlt />;
   return (
-    <dl className="space-y-1 text-[15px] text-label">
+    <dl className="space-y-1 text-fliess text-label">
       {befuellt.map(([label, wert]) => (
         <div key={label} className="flex flex-wrap gap-x-2">
           <dt className="text-label2">{label}:</dt>
@@ -62,7 +62,7 @@ function Anschrift({ anbieter }: { anbieter: RechtlichesAnbieter | null | undefi
   const zeilen = anbieter ? anschrift(anbieter) : [];
   if (!anbieter || zeilen.length === 0) return <Fehlt />;
   return (
-    <p className="text-[15px] text-label">
+    <p className="text-fliess text-label">
       {zeilen.map((z, i) => (
         <span key={i} className="block">
           {z}
@@ -90,12 +90,12 @@ function Rahmen({ titel, children }: { titel: string; children: ReactNode }) {
         <button
           type="button"
           onClick={zurueck}
-          className="btn-touch -ml-2 inline-flex items-center gap-1 rounded-md px-2 text-[15px] text-tint-text hover:opacity-80"
+          className="btn-touch -ml-2 inline-flex items-center gap-1 rounded-md px-2 text-fliess text-tint-text hover:opacity-80"
         >
           <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" />
           Zurück
         </button>
-        <h1 className="ap-heading text-2xl font-bold text-label">{titel}</h1>
+        <h1 className="ap-heading text-titel-desktop font-bold text-label">{titel}</h1>
         <Hinweiskasten />
         {children}
       </main>
@@ -111,7 +111,7 @@ export function ImpressumPage() {
   return (
     <Rahmen titel="Impressum">
       <Block titel="Angaben gemäß § 5 DDG">
-        {a ? <p className="text-[17px] font-semibold text-label">{a.name}</p> : <Fehlt />}
+        {a ? <p className="text-zeile font-semibold text-label">{a.name}</p> : <Fehlt />}
       </Block>
       <Block titel="Anschrift">
         <Anschrift anbieter={a} />
@@ -148,7 +148,7 @@ export function DatenschutzPage() {
       <Block titel="Verantwortlicher">
         {a ? (
           <>
-            <p className="text-[17px] font-semibold text-label">{a.name}</p>
+            <p className="text-zeile font-semibold text-label">{a.name}</p>
             <Anschrift anbieter={a} />
             <Zeilen
               zeilen={[
@@ -162,7 +162,7 @@ export function DatenschutzPage() {
         )}
       </Block>
       <Block titel="Erklärung">
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Die Datenschutzerklärung dieses Angebots wird vom Betreiber noch bereitgestellt.
         </p>
       </Block>
@@ -189,7 +189,7 @@ export function BarrierefreiheitPage() {
       <Block titel="Anbieter">
         {a ? (
           <>
-            <p className="text-[17px] font-semibold text-label">{a.name}</p>
+            <p className="text-zeile font-semibold text-label">{a.name}</p>
             <Anschrift anbieter={a} />
           </>
         ) : (
@@ -197,22 +197,22 @@ export function BarrierefreiheitPage() {
         )}
       </Block>
       <Block titel="Stand der Vereinbarkeit mit den Anforderungen">
-        <p className="text-[15px] text-label">
+        <p className="text-fliess text-label">
           Dieses Kundenportal ist mit den Anforderungen an die Barrierefreiheit (WCAG 2.1, Stufe AA)
           <strong> teilweise konform</strong>.
         </p>
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Platzhalter – der Konformitätsstatus und die Liste der nicht barrierefreien Inhalte müssen vom Betreiber
           geprüft und ergänzt werden.
         </p>
         <Zeilen zeilen={[["Stand", stand(data?.barrierefreiheit_stand)]]} />
       </Block>
       <Block titel="Barrieren melden und Feedback">
-        <p className="text-[15px] text-label">
+        <p className="text-fliess text-label">
           Sind Ihnen Barrieren aufgefallen oder benötigen Sie Inhalte in einer anderen Form? Schreiben Sie uns.
         </p>
         {kontakt ? (
-          <p className="text-[15px]">
+          <p className="text-fliess">
             <a href={`mailto:${kontakt}`} className="text-tint-text underline underline-offset-2">
               {kontakt}
             </a>

@@ -31,11 +31,12 @@ import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormVi
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 const sectionClass = "space-y-3 card-ap p-4";
 
 const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
@@ -98,23 +99,23 @@ function RegelForm({
   const istZielNumerisch = zielFeld?.feld_typ === "zahl" || zielFeld?.feld_typ === "betrag";
 
   return (
-    <div className="space-y-2 border border-sepstrong p-3">
-      <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
+    <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
+      <Select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)}>
         {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
           <option key={e} value={e}>
             {EFFEKT_LABEL[e]}
           </option>
         ))}
-      </select>
+      </Select>
 
       <RuleConditionBuilder fields={schema.fields} condition={condition} onChange={setCondition} />
 
       {effect === "set_value" && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-label">Zu setzender Wert</label>
+            <label className="block text-sekundaer font-medium text-label">Zu setzender Wert</label>
             {istZielNumerisch && (
-              <div className="flex border border-sep text-[11px] font-medium">
+              <div className="flex border rounded-[var(--radius-ap-md)] border-sep text-meta font-medium">
                 <button
                   type="button"
                   onClick={() => {
@@ -147,22 +148,22 @@ function RegelForm({
       )}
 
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Gültig in</label>
-        <select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">Gültig in</label>
+        <Select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)}>
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} ({v.type})
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
+      {error && <p className="text-sekundaer text-st-fehlt ">{error}</p>}
 
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="btn-touch btn-ap px-3 py-1.5 text-sm">
+          <button type="button" onClick={onCancel} className="btn-touch btn-ap px-3 py-1.5 text-sekundaer">
             Abbrechen
           </button>
         )}
@@ -179,7 +180,7 @@ function RegelForm({
             })
           }
           disabled={submitting}
-          className="btn-touch flex items-center gap-1.5 btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex items-center gap-1.5 btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           <Plus size={15} /> {initial ? "Speichern" : "Regel hinzufügen"}
         </button>
@@ -219,7 +220,7 @@ function RegelnPanelInhalt({
   return (
     <div className="space-y-3">
       {zielRegeln.length === 0 && (
-        <p className="text-sm text-label2">Noch keine Regeln für dieses Ziel.</p>
+        <p className="text-sekundaer text-label2">Noch keine Regeln für dieses Ziel.</p>
       )}
       {zielRegeln.map((r) =>
         editingRuleId === r.id ? (
@@ -243,7 +244,7 @@ function RegelnPanelInhalt({
             }
           />
         ) : (
-          <div key={r.id} className="flex items-center justify-between gap-2 border-b border-sep py-1.5 text-sm">
+          <div key={r.id} className="flex items-center justify-between gap-2 border-b border-sep py-1.5 text-fliess">
             <span className="min-w-0 text-label">
               {EFFEKT_LABEL[r.effect]}{" "}
               <span className="text-label2">
@@ -252,7 +253,7 @@ function RegelnPanelInhalt({
               {r.effect === "set_value" && <span className="text-label2"> = {JSON.stringify(r.value)}</span>}
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
+              <button onClick={() => setEditingRuleId(r.id)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
                 Bearbeiten
               </button>
               <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-label2 hover:text-st-fehlt">
@@ -406,34 +407,34 @@ export function FormSchemaEditorPage() {
   });
 
   if (ladeFehler && !schema) return <FehlerZustand fehler={ladeFehler} was="Das Formular" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-sekundaer text-label2">Lädt…</p>;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 
   return (
     <div className="space-y-4 pb-8">
-      <button onClick={() => navigate("/form-schemas")} className="text-sm text-label2">
+      <button onClick={() => navigate("/form-schemas")} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-label">{schema.name}</h1>
-          <p className="text-xs text-label2">Version {schema.version} · {schema.status}</p>
+          <h1 className="text-titel-mobil font-bold text-label">{schema.name}</h1>
+          <p className="text-sekundaer text-label2">Version {schema.version} · {schema.status}</p>
         </div>
         {schema.status === "draft" && (
-          <button onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending} className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50">
+          <button onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending} className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50">
             Veröffentlichen
           </button>
         )}
       </div>
-      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
+      {fehler && <p className="text-fliess text-st-fehlt ">{fehler}</p>}
 
       <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
         {(Object.keys(TAB_LABEL) as EditorTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 px-3 py-2 text-xs font-semibold ${
+            className={`flex-1 px-3 py-2 text-sekundaer font-semibold ${
               tab === t ? "bg-tint-solid text-white" : "text-label hover:bg-fill"
             }`}
           >
@@ -456,13 +457,13 @@ export function FormSchemaEditorPage() {
 
       {tab === "visualisierung" && (
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-label">Views</h2>
+          <h2 className="text-fliess font-semibold text-label">Views</h2>
           {(views ?? []).map((v) => (
-            <div key={v.id} className="flex items-center justify-between border-b border-sep py-1.5 text-sm">
+            <div key={v.id} className="flex items-center justify-between border-b border-sep py-1.5 text-fliess">
               <span className="text-label">{v.name} <span className="text-label2">({v.type})</span></span>
               <div className="flex items-center gap-2">
                 {v.type !== "capture" ? null : (
-                  <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
+                  <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
                     Layout aus Feldern übernehmen
                   </button>
                 )}
@@ -473,13 +474,13 @@ export function FormSchemaEditorPage() {
             </div>
           ))}
           <div className="flex gap-2">
-            <select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)} className={inputClass}>
+            <Select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)}>
               {VIEW_TYPEN.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
               ))}
-            </select>
+            </Select>
             <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
             <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-ap px-3 disabled:opacity-50">
               <Plus size={16} />
@@ -490,9 +491,9 @@ export function FormSchemaEditorPage() {
 
       {tab === "zuordnungen" && (
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-label">Leistungstyp-Zuordnungen</h2>
+          <h2 className="text-fliess font-semibold text-label">Leistungstyp-Zuordnungen</h2>
           {schema.zuordnungen.map((z) => (
-            <div key={z.id} className="flex items-center justify-between border-b border-sep py-1.5 text-sm">
+            <div key={z.id} className="flex items-center justify-between border-b border-sep py-1.5 text-fliess">
               <span className="text-label">
                 {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-label2">(Pflicht vor Abschluss)</span>}
               </span>
@@ -502,14 +503,14 @@ export function FormSchemaEditorPage() {
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)} className={inputClass}>
+            <Select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)}>
               {LEISTUNGSTYPEN.map((lt) => (
                 <option key={lt} value={lt}>
                   {LEISTUNGSTYP_LABEL[lt]}
                 </option>
               ))}
-            </select>
-            <label className="flex shrink-0 items-center gap-1.5 text-xs text-label">
+            </Select>
+            <label className="flex shrink-0 items-center gap-1.5 text-sekundaer text-label">
               <input type="checkbox" checked={zuPflicht} onChange={(e) => setZuPflicht(e.target.checked)} /> Pflicht
             </label>
             <button onClick={() => createZuordnungMutation.mutate()} className="btn-touch shrink-0 btn-ap px-3">

@@ -22,16 +22,16 @@ export function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; 
 
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+      <label className="mb-1.5 block text-meta font-bold text-label2">
         Kunden-Zuweisung
       </label>
-      <p className="mb-1.5 text-xs text-label2">Leer = gilt für alle Kunden</p>
+      <p className="mb-1.5 text-sekundaer text-label2">Leer = gilt für alle Kunden</p>
       {kundenIds.length > 0 && (
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {kundenIds.map((id) => (
             <span
               key={id}
-              className="flex items-center gap-1 rounded-full bg-violet-100 py-0.5 pr-1 pl-2.5 text-xs font-medium text-violet-700 dark:bg-violet-500/10 dark:text-violet-300"
+              className="flex items-center gap-1 rounded-full bg-violet-100 py-0.5 pr-1 pl-2.5 text-meta font-medium text-violet-700 dark:bg-violet-500/10 dark:text-violet-300"
             >
               {kunden?.find((k) => k.id === id)?.name ?? "…"}
               <button
@@ -83,7 +83,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
         className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-sep bg-card"
       >
         <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4 ">
-          <h2 className="text-base font-bold text-label">Neues Leistungsverzeichnis</h2>
+          <h2 className="text-zeile font-bold text-label">Neues Leistungsverzeichnis</h2>
           <button
             onClick={onClose}
             className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill"
@@ -93,7 +93,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label2">
               Name
             </label>
             <input id={`${uid}-0`}
@@ -101,31 +101,31 @@ function LvFormular({ onClose }: { onClose: () => void }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z. B. Wartungsvertraege, Standardleistungen"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label2">
               Beschreibung
             </label>
             <textarea id={`${uid}-1`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={2}
-              className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
-          {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+          {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 border-t border-sep px-5 py-4 ">
-          <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sm font-semibold">
+          <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sekundaer font-semibold">
             Abbrechen
           </button>
           <button
             onClick={() => erstellen.mutate()}
             disabled={!name.trim() || erstellen.isPending}
-            className="btn-touch btn-ap-primary px-4 py-2 text-sm"
+            className="btn-touch btn-ap-primary px-4 py-2 text-sekundaer"
           >
             Anlegen
           </button>
@@ -214,8 +214,8 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
   return (
     <div className="card-interactive flex items-center gap-2 rounded-lg bg-card p-3 shadow-xs dark:shadow-none dark:ring-1 ">
       <button onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)} className="min-w-0 flex-1 text-left">
-        <p className="truncate text-sm font-semibold text-label">{lv.name}</p>
-        <p className="truncate text-xs text-label2">
+        <p className="truncate text-fliess font-semibold text-label">{lv.name}</p>
+        <p className="truncate text-sekundaer text-label2">
           {lv.beschreibung && <span>{lv.beschreibung} · </span>}
           <span
             className={
@@ -288,23 +288,23 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
         className="btn-touch flex w-full items-center gap-2 px-3 py-2.5 text-left"
       >
         <Settings2 size={15} strokeWidth={2} className="shrink-0 text-label2" />
-        <span className="flex-1 text-xs font-semibold text-label">
+        <span className="flex-1 text-sekundaer font-semibold text-label">
           Standard-Kalkulation für neue Positionen
         </span>
-        <span className="text-xs text-label2">
+        <span className="text-meta text-label2">
           Gemeinkosten {einstellungen.standard_lohn_gemeinkosten_prozent}% · Gewinn/Wagnis{" "}
           {einstellungen.standard_gewinn_wagnis_prozent}%
         </span>
       </button>
       {offen && (
         <div className="space-y-3 border-t border-sep px-3 py-3 ">
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Vorbelegung für neu angelegte Positionen im Modus "Berechnet". Gilt nicht rückwirkend für bereits
             angelegte Positionen.
           </p>
           <div className={layout === "dicht" ? "flex flex-wrap items-end gap-3" : "grid grid-cols-2 gap-2"}>
             <div className={layout === "dicht" ? "w-48" : undefined}>
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-[10.5px] font-medium text-label2">
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-meta font-medium text-label2">
                 Lohn-Gemeinkosten (%)
               </label>
               <input id={`${uid}-0`}
@@ -312,24 +312,24 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
                 step="0.1"
                 value={gemeinkosten}
                 onChange={(e) => setGemeinkosten(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             <div className={layout === "dicht" ? "w-48" : undefined}>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-[10.5px] font-medium text-label2">Gewinn/Wagnis (%)</label>
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-meta font-medium text-label2">Gewinn/Wagnis (%)</label>
               <input id={`${uid}-1`}
                 type="number"
                 step="0.1"
                 value={gewinnWagnis}
                 onChange={(e) => setGewinnWagnis(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
           </div>
           <button
             onClick={() => speichern.mutate()}
             disabled={speichern.isPending}
-            className="btn-touch btn-ap-primary px-4 py-1.5 text-xs"
+            className="btn-touch btn-ap-primary px-4 py-1.5 text-sekundaer"
           >
             Speichern
           </button>
@@ -357,7 +357,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
   const neuKnopf = kannVerwalten && (
     <button
       onClick={() => setNeuesLv(true)}
-      className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-xs font-semibold"
+      className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-sekundaer font-semibold"
     >
       <Plus size={14} strokeWidth={2.5} />
       Neues Leistungsverzeichnis
@@ -372,7 +372,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
         </SeitenKopf>
       ) : (
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-label">Leistungsverzeichnisse</h1>
+          <h1 className="text-titel-mobil font-bold text-label">Leistungsverzeichnisse</h1>
           {neuKnopf}
         </div>
       )}
@@ -387,15 +387,15 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
         <EmptyState icon={ClipboardList} text="Noch keine Leistungsverzeichnisse angelegt." />
       ) : layout === "dicht" ? (
         <TabellenRahmen>
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-fliess">
             <thead>
               <tr className="border-b border-sepstrong">
                 {["Name", "Beschreibung", "Kunden-Zuweisung"].map((k) => (
-                  <th key={k} className="px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase">
+                  <th key={k} className="px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase">
                     {k}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right text-xs font-medium tracking-wide text-label2 uppercase">
+                <th className="px-3 py-2 text-right text-meta font-medium tracking-wide text-label2 uppercase">
                   Aktionen
                 </th>
               </tr>

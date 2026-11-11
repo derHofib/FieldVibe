@@ -82,12 +82,12 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   return (
     <div>
       {ausgewaehlt.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-tintbg px-3 py-2 text-xs font-semibold text-tint-text">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-tintbg px-3 py-2 text-sekundaer font-semibold text-tint-text">
           <span>{ausgewaehlt.size} ausgewählt</span>
-          <button onClick={() => statusSetzen.mutate("geplant")} disabled={statusSetzen.isPending} className="btn-ap text-xs">
+          <button onClick={() => statusSetzen.mutate("geplant")} disabled={statusSetzen.isPending} className="btn-ap text-sekundaer">
             Auf „Geplant" setzen
           </button>
-          <button onClick={() => statusSetzen.mutate("in_arbeit")} disabled={statusSetzen.isPending} className="btn-ap text-xs">
+          <button onClick={() => statusSetzen.mutate("in_arbeit")} disabled={statusSetzen.isPending} className="btn-ap text-sekundaer">
             Auf „In Arbeit" setzen
           </button>
           <button
@@ -107,7 +107,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
         let laufindex = -1;
         return gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe} className="mb-4 last:mb-0">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <p className="mb-1.5 flex items-center gap-1.5 text-meta font-bold tracking-wide text-label3 uppercase">
               {GRUPPEN_LABEL[gruppe]}
               <span className="font-medium normal-case text-label2">{cards.length}</span>
             </p>
@@ -146,18 +146,18 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                     </button>
 
                     <button onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)} className="block w-full text-left">
-                      <p className="text-[10px] font-bold text-label2">
+                      <p className="text-meta font-bold text-label2">
                         {v.vorgangsnummer}
                       </p>
-                      <p className="mt-0.5 pr-5 text-[13px] font-semibold text-label">
+                      <p className="mt-0.5 pr-5 text-sekundaer font-semibold text-label">
                         {v.titel}
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className="truncate text-[11px] text-label2">
+                        <span className="truncate text-meta text-label2">
                           {v.kunde_name}
                         </span>
                         {ueberfaellig ? (
-                          <span className="shrink-0 rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
+                          <span className="shrink-0 rounded-full bg-st-fehlt-bg px-2 py-0.5 text-meta font-semibold text-st-fehlt">
                             Überfällig
                           </span>
                         ) : (
@@ -178,7 +178,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
 
 function Taste({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded border border-b-2 border-sepstrong bg-fill px-1 text-[10px] font-bold text-label2">
+    <kbd className="rounded border border-b-2 border-sepstrong bg-fill px-1 text-meta font-bold text-label2">
       {children}
     </kbd>
   );

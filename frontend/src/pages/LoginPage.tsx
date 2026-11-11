@@ -59,23 +59,23 @@ export function LoginPage() {
         </div>
 
         <Blueprint className="bg-card p-8">
-          <h1 className="mb-6 text-center font-heading text-sm font-semibold uppercase tracking-[0.14em] text-label2">
+          <h1 className="mb-6 text-center font-heading text-zeile font-semibold tracking-[0.14em] text-label2">
             Anmeldung
           </h1>
 
           {error && (
-            <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
               {error}
             </div>
           )}
 
           {mfaToken ? (
             <>
-              <p className="mb-4 text-sm text-label2">
+              <p className="mb-4 text-sekundaer text-label2">
                 Gib den 6-stelligen Code aus deiner Authenticator-App ein – oder einen deiner
                 Wiederherstellungscodes.
               </p>
-              <label htmlFor="mfa-code" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="mfa-code" className="mb-1 block text-fliess font-medium text-label">
                 Code
               </label>
               <input
@@ -94,7 +94,7 @@ export function LoginPage() {
             </>
           ) : (
             <>
-              <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-label">E-Mail</label>
+              <label htmlFor="login-email" className="mb-1 block text-fliess font-medium text-label">E-Mail</label>
               <input
                 id="login-email"
                 type="email"
@@ -104,7 +104,7 @@ export function LoginPage() {
                 className="field-ap btn-touch mb-4"
               />
 
-              <label htmlFor="login-passwort" className="mb-1 block text-sm font-medium text-label">Passwort</label>
+              <label htmlFor="login-passwort" className="mb-1 block text-fliess font-medium text-label">Passwort</label>
               <input
                 id="login-passwort"
                 type="password"
@@ -131,13 +131,13 @@ export function LoginPage() {
                 zurueckZumPasswort();
                 setError(null);
               }}
-              className="mt-4 block w-full text-center text-sm text-label2 hover:text-label"
+              className="mt-4 block w-full text-center text-sekundaer text-label2 hover:text-label"
             >
               Zurück
             </button>
           )}
 
-          <Link to="/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+          <Link to="/passwort-vergessen" className="mt-4 block text-center text-sekundaer text-label2 hover:text-label">
             Passwort vergessen?
           </Link>
         </Blueprint>

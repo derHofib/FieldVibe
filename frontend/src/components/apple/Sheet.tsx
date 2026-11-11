@@ -59,7 +59,7 @@ export function Sheet({
         )}
         <div className="flex items-center border-b-[0.5px] border-sep px-4 py-3">
           <div className="flex min-w-16 flex-1 justify-start">{links}</div>
-          <h2 className="shrink-0 px-2 text-[17px] font-semibold text-label">{titel}</h2>
+          <h2 className="shrink-0 px-2 text-zeile font-semibold text-label">{titel}</h2>
           <div className="flex min-w-16 flex-1 justify-end">{rechts}</div>
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>

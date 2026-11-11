@@ -66,7 +66,7 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
 
   return (
     <Karte className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-fliess">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b border-sepstrong">
@@ -76,7 +76,7 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
+                    className="cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}

@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { useAuth } from "../../context/AuthContext";
 import type { Zeiterfassung, ZeiterfassungBuchungsstatus } from "../../types";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
@@ -20,6 +21,7 @@ import {
 } from "../../utils/zeiterfassung";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { Select } from "../../components/apple/Select";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
 
@@ -220,31 +222,30 @@ export function ZeitenBuchenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-lg font-bold text-label">
+      <h1 className="flex items-center gap-2 text-titel-mobil font-bold text-label">
         <Hourglass size={19} strokeWidth={2} className="text-tint" />
         Zeiten buchen
       </h1>
 
-      {aktionsFehler && <p className="text-sm text-st-fehlt">{aktionsFehler}</p>}
+      {aktionsFehler && <p className="text-fliess text-st-fehlt">{aktionsFehler}</p>}
 
       <div className="card-ap grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-0`} value={technikerId} onChange={(e) => setTechnikerId(e.target.value)} className="field-ap">
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Techniker</label>
+          <Select id={`${uid}-0`} value={technikerId} onChange={(e) => setTechnikerId(e.target.value)}>
             <option value="">Alle</option>
             {techniker.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Status</label>
-          <select id={`${uid}-1`}
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Status</label>
+          <Select id={`${uid}-1`}
             value={buchungsstatus}
             onChange={(e) => setBuchungsstatus(e.target.value as ZeiterfassungBuchungsstatus | "")}
-            className="field-ap"
           >
             <option value="">Alle</option>
             {BUCHUNGSSTATUS_OPTIONEN.map((s) => (
@@ -252,10 +253,10 @@ export function ZeitenBuchenPage() {
                 {BUCHUNGSSTATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Vermerkt älter als (Tage)</label>
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Vermerkt älter als (Tage)</label>
           <input id={`${uid}-2`}
             type="number"
             min="0"
@@ -267,15 +268,15 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Von</label>
+          <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label2">Von</label>
           <input id={`${uid}-3`} type="date" value={von} onChange={(e) => setVon(e.target.value)} className="field-ap" />
         </div>
         <div>
-          <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label2">Bis</label>
+          <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer font-medium text-label2">Bis</label>
           <input id={`${uid}-4`} type="date" value={bis} onChange={(e) => setBis(e.target.value)} className="field-ap" />
         </div>
         <div>
-          <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+          <label htmlFor={`${uid}-5`} className="mb-1 block text-sekundaer font-medium text-label2">Kunde</label>
           <SearchableSelect id={`${uid}-5`}
             value={kundeId}
             onChange={setKundeId}
@@ -284,7 +285,7 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">Auftrag</label>
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer font-medium text-label2">Auftrag</label>
           <SearchableSelect id={`${uid}-6`}
             value={auftragId}
             onChange={setAuftragId}
@@ -293,7 +294,7 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-7`} className="mb-1 block text-xs font-medium text-label2">Projekt</label>
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-sekundaer font-medium text-label2">Projekt</label>
           <SearchableSelect id={`${uid}-7`}
             value={projektId}
             onChange={setProjektId}
@@ -305,7 +306,7 @@ export function ZeitenBuchenPage() {
 
       <div className="card-ap p-3">
         {isLoading ? (
-          <p className="text-sm text-label2">Lädt…</p>
+          <p className="text-sekundaer text-label2">Lädt…</p>
         ) : ladeFehler && !eintraege ? (
           <FehlerZustand fehler={ladeFehler} was="Die Zeiten" onErneut={() => void neuLaden()} />
         ) : gruppen.length === 0 ? (
@@ -319,16 +320,16 @@ export function ZeitenBuchenPage() {
                     {gruppe.vorgangId ? (
                       <button
                         onClick={() => navigate(`/vorgaenge/${gruppe.vorgangId}`)}
-                        className="truncate text-sm font-semibold text-tint hover:underline"
+                        className="truncate text-sekundaer font-semibold text-tint hover:underline"
                       >
                         {gruppe.vorgangsnummer ?? "Vorgang"}
                       </button>
                     ) : (
-                      <span className="truncate text-sm font-semibold text-label">{gruppe.kategorieLabel}</span>
+                      <span className="truncate text-fliess font-semibold text-label">{gruppe.kategorieLabel}</span>
                     )}
-                    {gruppe.kontext && <p className="truncate text-xs text-label2">{gruppe.kontext}</p>}
+                    {gruppe.kontext && <p className="truncate text-sekundaer text-label2">{gruppe.kontext}</p>}
                   </div>
-                  <span className="shrink-0 text-xs font-medium text-label2">
+                  <span className="shrink-0 text-sekundaer font-medium text-label2">
                     {formatSekundenAlsHHMM(gruppenSumme(gruppe))} Std.
                   </span>
                 </div>
@@ -347,7 +348,7 @@ export function ZeitenBuchenPage() {
                         )}
                         <button
                           onClick={() => setSheetEintrag(e)}
-                          className="btn-touch flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-xs text-label2 hover:bg-fill"
+                          className="btn-touch flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-sekundaer text-label2 hover:bg-fill"
                         >
                           <span className="min-w-0 truncate">
                             {users?.find((u) => u.id === e.techniker_id)?.name ?? "—"}
@@ -385,30 +386,30 @@ export function ZeitenBuchenPage() {
                   value={stornierenGrund}
                   onChange={(e) => setStornierenGrund(e.target.value)}
                   placeholder="Grund für die Stornierung"
-                  className="field-ap flex-1 text-sm"
+                  className="field-ap flex-1 text-zeile"
                 />
                 <button
                   onClick={() => stornierenMutation.mutate()}
                   disabled={!stornierenGrund.trim() || stornierenMutation.isPending}
-                  className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-xs disabled:opacity-40"
+                  className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sekundaer disabled:opacity-40"
                 >
                   Bestätigen
                 </button>
                 <button
                   onClick={() => setStornierenModus(false)}
-                  className="btn-touch shrink-0 px-2 py-1.5 text-xs text-label2"
+                  className="btn-touch shrink-0 px-2 py-1.5 text-sekundaer text-label2"
                 >
                   Abbrechen
                 </button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-label2">{ausgewaehlteIds.size} ausgewählt</span>
+                <span className="text-sekundaer text-label2">{ausgewaehlteIds.size} ausgewählt</span>
                 {ausgewaehlterStatus === "vermerkt" && (
                   <button
                     onClick={() => vormerkenMutation.mutate([...ausgewaehlteIds])}
                     disabled={vormerkenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                   >
                     Zur Buchung vormerken
                   </button>
@@ -417,7 +418,7 @@ export function ZeitenBuchenPage() {
                   <button
                     onClick={handleBuchen}
                     disabled={buchenMutation.isPending}
-                    className="btn-touch btn-ap-primary px-3 py-1.5 text-xs"
+                    className="btn-touch btn-ap-primary px-3 py-1.5 text-sekundaer"
                   >
                     Buchen
                   </button>
@@ -426,7 +427,7 @@ export function ZeitenBuchenPage() {
                   <button
                     onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteIds])}
                     disabled={zurueckziehenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                   >
                     Zurückziehen
                   </button>
@@ -434,14 +435,14 @@ export function ZeitenBuchenPage() {
                 {ausgewaehlterStatus === "gebucht" && (
                   <button
                     onClick={() => setStornierenModus(true)}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                   >
                     Buchung stornieren
                   </button>
                 )}
                 <button
                   onClick={() => setAusgewaehlteIds(new Set())}
-                  className="btn-touch px-2 py-1.5 text-xs text-label2"
+                  className="btn-touch px-2 py-1.5 text-sekundaer text-label2"
                 >
                   Auswahl aufheben
                 </button>
@@ -452,22 +453,25 @@ export function ZeitenBuchenPage() {
       </div>
 
       <div className="card-ap p-3">
-        <h2 className="mb-2 flex items-center gap-1.5 font-heading text-sm font-semibold uppercase tracking-wide text-label">
+        <h2 className="mb-2 flex items-center gap-1.5 font-heading text-fliess font-semibold text-label">
           <Clock size={15} strokeWidth={2} />
           Laufende Timer
         </h2>
         {!laufendeTimer || laufendeTimer.length === 0 ? (
-          <p className="text-sm text-label2">Kein Timer läuft gerade.</p>
+          <p className="text-sekundaer text-label2">Kein Timer läuft gerade.</p>
         ) : (
           <div className="space-y-1">
             {laufendeTimer.map((t) => {
               const technikerName = users?.find((u) => u.id === t.techniker_id)?.name ?? "—";
               const istFremd = t.techniker_id !== currentUser?.id;
               return (
-                <div key={t.id} className="flex items-center justify-between gap-2 border-b border-sep py-2 text-sm last:border-0">
+                <div key={t.id} className="flex items-center justify-between gap-2 border-b border-sep py-2 text-fliess last:border-0">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-label">{technikerName}</p>
-                    <p className="truncate text-xs text-label2">
+                    <p className="flex items-center gap-2 truncate font-medium text-label">
+                      {technikerName}
+                      <LaeuftPille />
+                    </p>
+                    <p className="truncate text-meta text-label2">
                       {t.vorgangsnummer ?? ZEITERFASSUNG_KATEGORIE_LABEL[t.kategorie] ?? t.kategorie}
                       {" · seit "}
                       {formatUhrzeit(t.start_at)}
@@ -480,12 +484,12 @@ export function ZeitenBuchenPage() {
                         value={beendenGrund}
                         onChange={(e) => setBeendenGrund(e.target.value)}
                         placeholder="Grund"
-                        className="field-ap w-28 text-xs"
+                        className="field-ap w-28 text-sekundaer"
                       />
                       <button
                         onClick={() => stopMutation.mutate({ id: t.id, grund: beendenGrund })}
                         disabled={!beendenGrund.trim() || stopMutation.isPending}
-                        className="btn-touch btn-ap-primary px-2 py-1.5 text-xs disabled:opacity-40"
+                        className="btn-touch btn-ap-primary px-2 py-1.5 text-sekundaer disabled:opacity-40"
                       >
                         OK
                       </button>
@@ -494,7 +498,7 @@ export function ZeitenBuchenPage() {
                           setBeendenId(null);
                           setBeendenGrund("");
                         }}
-                        className="btn-touch px-1.5 py-1.5 text-xs text-label2"
+                        className="btn-touch px-1.5 py-1.5 text-sekundaer text-label2"
                       >
                         Abbrechen
                       </button>
@@ -503,7 +507,7 @@ export function ZeitenBuchenPage() {
                     <button
                       onClick={() => (istFremd ? setBeendenId(t.id) : stopMutation.mutate({ id: t.id }))}
                       disabled={stopMutation.isPending}
-                      className="btn-touch shrink-0 border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                      className="btn-touch shrink-0 border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                     >
                       Beenden
                     </button>

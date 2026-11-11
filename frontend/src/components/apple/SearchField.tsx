@@ -32,7 +32,7 @@ export function SearchField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className={`search-ap-input ${mobil ? "text-[17px]" : "text-[13px]"}`}
+        className={`search-ap-input ${mobil ? "text-zeile" : "text-sekundaer"}`}
       />
       {mobil && onMikrofon && (
         <button type="button" onClick={onMikrofon} aria-label="Spracheingabe" className="shrink-0 text-label2">

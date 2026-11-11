@@ -44,8 +44,8 @@ export function GroupedListRow({
 export function GroupedListValueRow({ label, wert, last = false }: { label: string; wert: ReactNode; last?: boolean }) {
   return (
     <GroupedListRow last={last}>
-      <span className="flex-1 text-[17px] text-label">{label}</span>
-      <span className="shrink-0 text-[17px] text-label2">{wert}</span>
+      <span className="flex-1 text-zeile text-label">{label}</span>
+      <span className="shrink-0 text-zeile text-label2">{wert}</span>
     </GroupedListRow>
   );
 }

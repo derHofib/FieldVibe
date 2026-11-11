@@ -49,11 +49,11 @@ export function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">Benachrichtigungen</h1>
+        <h1 className="text-titel-mobil font-bold text-label">Benachrichtigungen</h1>
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
-            className="btn-touch text-sm font-medium text-tint "
+            className="btn-touch text-sekundaer font-medium text-tint "
           >
             Alle als gelesen markieren
           </button>
@@ -77,8 +77,8 @@ export function NotificationsPage() {
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-label">{n.titel}</div>
-                <div className="text-xs text-label2">
+                <div className="text-fliess font-medium text-label">{n.titel}</div>
+                <div className="text-meta text-label2">
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>

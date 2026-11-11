@@ -24,7 +24,7 @@ export function AppearancePicker() {
           className="flex w-full items-center justify-between px-4 py-3 text-left"
           style={i > 0 ? { boxShadow: "inset 0 0.5px 0 var(--sep)" } : undefined}
         >
-          <span className="text-[17px] text-label">{opt.label}</span>
+          <span className="text-zeile text-label">{opt.label}</span>
           {appearance === opt.wert && <Check size={18} strokeWidth={2.5} className="text-tint" />}
         </button>
       ))}

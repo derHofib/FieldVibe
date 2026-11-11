@@ -68,7 +68,7 @@ export function AbschlagSheet({
       onClose={onClose}
       titel="Abschlag erstellen"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }
@@ -77,7 +77,7 @@ export function AbschlagSheet({
           type="submit"
           form={FORM_ID}
           disabled={!gueltig || erstellen.isPending}
-          className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
+          className="text-zeile font-semibold text-tint-text disabled:opacity-40"
         >
           Erstellen
         </button>
@@ -99,7 +99,7 @@ export function AbschlagSheet({
         />
 
         <div>
-          <label htmlFor="abschlag-eingabe" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="abschlag-eingabe" className="mb-1 block text-sekundaer font-medium text-label2">
             {modus === "prozent" ? "Anteil am Angebot (%)" : "Nettobetrag (EUR)"}
           </label>
           <input
@@ -116,7 +116,7 @@ export function AbschlagSheet({
           />
         </div>
 
-        <div id="abschlag-vorschau" className="card-ap space-y-1 p-3 text-sm">
+        <div id="abschlag-vorschau" className="card-ap space-y-1 p-3 text-fliess">
           <div className="flex justify-between text-label2">
             <span>Angebot netto</span>
             <span className="tabular-nums">{formatEuro(angebotNetto)}</span>
@@ -132,14 +132,14 @@ export function AbschlagSheet({
             </span>
           </div>
           {vorschau.fehler && (
-            <p role="alert" className="pt-1 text-xs text-st-fehlt">
+            <p role="alert" className="pt-1 text-sekundaer text-st-fehlt">
               {vorschau.fehler}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="abschlag-faellig" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="abschlag-faellig" className="mb-1 block text-sekundaer font-medium text-label2">
             Fällig am (optional)
           </label>
           <input
@@ -151,7 +151,7 @@ export function AbschlagSheet({
           />
         </div>
 
-        <p className="text-xs text-label2">
+        <p className="text-sekundaer text-label2">
           Der Abschlag wird als Entwurf angelegt und kann vor dem Versand noch geprüft werden.
         </p>
       </form>

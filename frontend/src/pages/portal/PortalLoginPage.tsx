@@ -57,10 +57,10 @@ export function PortalLoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2.5">
-          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-sepstrong text-tint">
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border rounded-[var(--radius-ap-md)] border-sepstrong text-tint">
             <Hexagon size={17} strokeWidth={1.5} aria-hidden="true" />
           </div>
-          <h1 className="font-heading text-xl font-semibold uppercase tracking-wide text-label">
+          <h1 className="font-heading text-titel-mobil font-semibold text-label">
             Kunden<span className="text-tint-text">portal</span>
           </h1>
         </div>
@@ -73,19 +73,19 @@ export function PortalLoginPage() {
               className="mx-auto mb-4 h-16 w-16 object-contain"
             />
           )}
-          <p className="mb-6 text-center text-sm text-label2">
+          <p className="mb-6 text-center text-sekundaer text-label2">
             {linkInfo
               ? `Willkommen, ${linkInfo.kunde_name} – bitte mit Ihrer E-Mail und Ihrem Passwort anmelden.`
               : "Anmeldung für Ihre Aufträge, Angebote und Rechnungen"}
           </p>
 
           {error && (
-            <div role="alert" className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
               {error}
             </div>
           )}
 
-          <label htmlFor="portal-login-email" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="portal-login-email" className="mb-1 block text-fliess font-medium text-label">
             E-Mail
           </label>
           <input
@@ -97,7 +97,7 @@ export function PortalLoginPage() {
             className="field-ap btn-touch mb-4"
           />
 
-          <label htmlFor="portal-login-password" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="portal-login-password" className="mb-1 block text-fliess font-medium text-label">
             Passwort
           </label>
           <input
@@ -119,7 +119,7 @@ export function PortalLoginPage() {
 
           <Link
             to={slug ? `/portal/passwort-vergessen?portal_slug=${encodeURIComponent(slug)}` : "/portal/passwort-vergessen"}
-            className="mt-4 block text-center text-sm text-label2 hover:text-label"
+            className="mt-4 block text-center text-sekundaer text-label2 hover:text-label"
           >
             Passwort vergessen?
           </Link>

@@ -30,7 +30,7 @@ export function AbwesenheitZeile({
   children?: ReactNode;
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-fliess">
       {mitName && <span className="font-semibold text-label">{a.user_name}</span>}
       <span className="font-medium text-label">{ABWESENHEIT_ART_LABEL[a.art]}</span>
       <span className="tabular-nums text-label2">{formatZeitraum(a)}</span>
@@ -63,7 +63,7 @@ export function UrlaubskontoKacheln({ konto }: { konto: Urlaubskonto }) {
         />
       </div>
       {hinweis.text && (
-        <p role="alert" className="flex items-center gap-1.5 text-sm font-medium text-st-fehlt">
+        <p role="alert" className="flex items-center gap-1.5 text-fliess font-medium text-st-fehlt">
           <AlertTriangle size={15} strokeWidth={2} aria-hidden="true" />
           {hinweis.text}
         </p>

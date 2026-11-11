@@ -10,6 +10,7 @@ import { BUCHUNGSSTATUS_LABEL, buchungsstatusGesperrt, buchungsstatusZuToken } f
 import { StatusPille } from "./apple/StatusPille";
 import { Sheet } from "./apple/Sheet";
 import { useBestaetigung } from "./ConfirmDialog";
+import { Select } from "./apple/Select";
 
 // Lokale Kopie von toLocalInputValue aus VorgangDetailPage.tsx -- dort eine
 // seiten-lokale Hilfsfunktion, kein geteiltes Modul (siehe dortiger
@@ -233,7 +234,7 @@ export function ZeiteintragSheet({
           key={r}
           type="button"
           onClick={() => setReiter(r)}
-          className={`btn-touch px-3 py-2 text-sm font-medium ${
+          className={`btn-touch px-3 py-2 text-sekundaer font-medium ${
             reiter === r ? "border-b-2 border-tint text-tint-text" : "text-label2"
           }`}
         >
@@ -249,7 +250,7 @@ export function ZeiteintragSheet({
       onClose={onClose}
       titel={istBearbeiten ? "Zeit bearbeiten" : "Zeit nachtragen"}
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint">
+        <button type="button" onClick={onClose} className="text-zeile text-tint">
           {gesperrt || reiter === "verlauf" ? "Schließen" : "Abbrechen"}
         </button>
       }
@@ -259,7 +260,7 @@ export function ZeiteintragSheet({
             type="submit"
             form={FORM_ID}
             disabled={speichertGerade}
-            className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            className="text-zeile font-semibold text-tint disabled:opacity-40"
           >
             Speichern
           </button>
@@ -271,22 +272,22 @@ export function ZeiteintragSheet({
       {reiter === "verlauf" && istBearbeiten ? (
         <div className="space-y-3 p-4">
           {!verlauf ? (
-            <p className="text-sm text-label2">Lädt…</p>
+            <p className="text-sekundaer text-label2">Lädt…</p>
           ) : verlauf.length === 0 ? (
-            <p className="text-sm text-label2">Noch keine Einträge im Verlauf.</p>
+            <p className="text-sekundaer text-label2">Noch keine Einträge im Verlauf.</p>
           ) : (
             verlauf.map((v) => (
-              <div key={v.id} className="border-b border-sep pb-2 text-sm last:border-0">
+              <div key={v.id} className="border-b border-sep pb-2 text-fliess last:border-0">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-label">{AKTION_LABEL[v.aktion] ?? v.aktion}</span>
-                  <span className="text-xs text-label2">{formatZeitpunkt(v.geaendert_am)}</span>
+                  <span className="text-meta text-label2">{formatZeitpunkt(v.geaendert_am)}</span>
                 </div>
                 {v.feld && (
-                  <p className="text-xs text-label2">
+                  <p className="text-sekundaer text-label2">
                     {v.feld}: {String(v.alter_wert ?? "—")} → {String(v.neuer_wert ?? "—")}
                   </p>
                 )}
-                {v.grund && <p className="mt-0.5 text-xs italic text-label2">Grund: {v.grund}</p>}
+                {v.grund && <p className="mt-0.5 text-sekundaer italic text-label2">Grund: {v.grund}</p>}
               </div>
             ))
           )}
@@ -297,7 +298,7 @@ export function ZeiteintragSheet({
             status={buchungsstatusZuToken(eintrag.buchungsstatus)}
             label={BUCHUNGSSTATUS_LABEL[eintrag.buchungsstatus]}
           />
-          <dl className="space-y-2 text-sm">
+          <dl className="space-y-2 text-fliess">
             <div className="flex justify-between">
               <dt className="text-label2">Tätigkeit</dt>
               <dd className="text-label">{eintrag.taetigkeit || "—"}</dd>
@@ -314,7 +315,7 @@ export function ZeiteintragSheet({
                 <dd className="text-label">
                   {eintrag.km} km
                   {eintrag.km_abgerechnet_rechnung_id && eintrag.buchungsstatus !== "abgerechnet" && (
-                    <span className="text-xs text-label2"> · km abgerechnet</span>
+                    <span className="text-sekundaer text-label2"> · km abgerechnet</span>
                   )}
                   {eintrag.fahrzeug_id &&
                     ` · ${fahrzeuge?.find((f) => f.id === eintrag.fahrzeug_id)?.bezeichnung ?? "—"}`}
@@ -334,7 +335,7 @@ export function ZeiteintragSheet({
               </div>
             )}
           </dl>
-          <p className="flex items-center gap-1.5 text-xs text-label2">
+          <p className="flex items-center gap-1.5 text-sekundaer text-label2">
             <Lock size={13} strokeWidth={2} />
             {eintrag.buchungsstatus === "vorgemerkt"
               ? "Zur Buchung vorgemerkt — erst zurückziehen, um zu bearbeiten."
@@ -347,34 +348,33 @@ export function ZeiteintragSheet({
               type="button"
               onClick={() => zurueckziehenMutation.mutate()}
               disabled={zurueckziehenMutation.isPending}
-              className="btn-touch btn-ap w-full text-sm"
+              className="btn-touch btn-ap w-full text-sekundaer"
             >
               Vormerkung zurückziehen
             </button>
           )}
-          {error && <p className="text-sm text-st-fehlt">{error}</p>}
+          {error && <p className="text-fliess text-st-fehlt">{error}</p>}
         </div>
       ) : (
         <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-4 p-4">
-          {error && <p className="text-sm text-st-fehlt">{error}</p>}
+          {error && <p className="text-fliess text-st-fehlt">{error}</p>}
 
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kategorie</label>
-            <select id={`${uid}-0`}
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Kategorie</label>
+            <Select id={`${uid}-0`}
               value={kategorie}
               onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
-              className="field-ap"
             >
               {(eintrag?.kategorie === "freizeitausgleich" ? KATEGORIE_OPTIONEN_MIT_FZA : KATEGORIE_OPTIONEN).map((opt) => (
                 <option key={opt.wert} value={opt.wert}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Tätigkeit</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Tätigkeit</label>
             <input id={`${uid}-1`}
               value={taetigkeit}
               onChange={(e) => setTaetigkeit(e.target.value)}
@@ -385,7 +385,7 @@ export function ZeiteintragSheet({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Start</label>
               <input id={`${uid}-2`}
                 type="datetime-local"
                 value={startAt}
@@ -395,7 +395,7 @@ export function ZeiteintragSheet({
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label2">Ende</label>
               <input id={`${uid}-3`}
                 type="datetime-local"
                 value={endeAt}
@@ -409,7 +409,7 @@ export function ZeiteintragSheet({
           {zeigtFahrtFelder && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label2">
+                <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer font-medium text-label2">
                   km {kategorie === "auftrag" && <span className="font-normal text-label3">(optional)</span>}
                 </label>
                 <input id={`${uid}-4`}
@@ -423,15 +423,14 @@ export function ZeiteintragSheet({
                   className="field-ap"
                 />
                 {Number(km) > KM_HINWEIS_SCHWELLE && (
-                  <p className="mt-1 text-xs text-st-fehlt">Ungewöhnlich viele km — bitte prüfen.</p>
+                  <p className="mt-1 text-sekundaer text-st-fehlt">Ungewöhnlich viele km — bitte prüfen.</p>
                 )}
               </div>
               <div>
-                <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label2">Fahrzeug</label>
-                <select id={`${uid}-5`}
+                <label htmlFor={`${uid}-5`} className="mb-1 block text-sekundaer font-medium text-label2">Fahrzeug</label>
+                <Select id={`${uid}-5`}
                   value={fahrzeugId}
                   onChange={(e) => setFahrzeugId(e.target.value)}
-                  className="field-ap"
                 >
                   <option value="">—</option>
                   {fahrzeuge?.map((f) => (
@@ -439,12 +438,12 @@ export function ZeiteintragSheet({
                       {f.bezeichnung}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           )}
 
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input
               type="checkbox"
               checked={abrechenbar}
@@ -456,7 +455,7 @@ export function ZeiteintragSheet({
 
           {istFremd && (
             <div>
-              <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer font-medium text-label2">
                 Grund (Pflicht bei fremden Einträgen)
               </label>
               <input id={`${uid}-6`}
@@ -478,7 +477,7 @@ export function ZeiteintragSheet({
               }}
               disabled={loeschenMutation.isPending || (istFremd && !grund.trim())}
               title={istFremd && !grund.trim() ? "Grund eintragen, um einen fremden Eintrag zu löschen" : undefined}
-              className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50"
+              className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50"
             >
               Eintrag löschen
             </button>

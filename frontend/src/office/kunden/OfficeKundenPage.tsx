@@ -17,6 +17,7 @@ import type { Kunde, KundeTyp } from "../../types";
 import { filtereKunden } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { SeitenKopf } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 
 const TYP_LABEL: Record<KundeTyp, string> = {
@@ -35,7 +36,7 @@ const SPALTEN: Spalte<Kunde>[] = [
     key: "typ",
     label: "Typ",
     render: (k) =>
-      k.typ ? <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
+      k.typ ? <span className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-meta font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
     sortWert: (k) => (k.typ ? TYP_LABEL[k.typ] : ""),
   },
   { key: "ort", label: "Ort", render: (k) => <span className="whitespace-nowrap">{ORT(k) || "–"}</span>, sortWert: ORT },
@@ -89,7 +90,7 @@ export function OfficeKundenPage() {
         {hatRecht("kunden", "erstellen") && (
           <button
             onClick={() => setNeu(true)}
-            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neuer Kunde
@@ -118,7 +119,14 @@ export function OfficeKundenPage() {
           ) : (data ?? []).length === 0 ? (
             <EmptyState
               icon={Users}
-              text="Noch keine Kunden angelegt. Mit „Neuer Kunde“ legst du den ersten an."
+              text="Noch keine Kunden angelegt."
+              action={
+                hatRecht("kunden", "erstellen") ? (
+                  <button type="button" onClick={() => setNeu(true)} className="btn-ap px-4 py-2 text-sekundaer">
+                    Neuer Kunde
+                  </button>
+                ) : undefined
+              }
             />
           ) : gefiltert.length === 0 ? (
             <EmptyState icon={Search} text="Kein Kunde entspricht der Suche oder dem Filter." />
@@ -150,7 +158,7 @@ export function OfficeKundenPage() {
 }
 
 const FELD = "field-ap";
-const LABEL = "mb-1 block text-xs font-medium text-label2";
+const LABEL = "mb-1 block text-sekundaer font-medium text-label2";
 
 function NeuerKundeFormular({
   onAbbrechen,
@@ -231,14 +239,14 @@ function NeuerKundeFormular({
           <label htmlFor="kunde-typ" className={LABEL}>
             Typ
           </label>
-          <select id="kunde-typ" value={form.typ} onChange={(e) => setze({ typ: e.target.value })} className={FELD}>
+          <Select id="kunde-typ" value={form.typ} onChange={(e) => setze({ typ: e.target.value })}>
             <option value="">Bitte wählen…</option>
             {(Object.keys(TYP_LABEL) as KundeTyp[]).map((typ) => (
               <option key={typ} value={typ}>
                 {TYP_LABEL[typ]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
       {(form.typ === "gewerbe" || form.typ === "oeffentlich") && (
@@ -281,11 +289,11 @@ function NeuerKundeFormular({
         </label>
         <textarea id="kunde-notiz" rows={2} value={form.notiz} onChange={(e) => setze({ notiz: e.target.value })} className={FELD} />
       </div>
-      <p className="text-xs text-label2">
+      <p className="text-sekundaer text-label2">
         Ansprechpartner können anschließend im Kundenprofil angelegt werden.
       </p>
       {anlegen.isError && (
-        <p role="alert" className="text-xs text-st-fehlt">
+        <p role="alert" className="text-sekundaer text-st-fehlt">
           {anlegen.error instanceof ApiError ? anlegen.error.message : "Anlegen fehlgeschlagen."}
         </p>
       )}
@@ -293,14 +301,14 @@ function NeuerKundeFormular({
         <button
           type="button"
           onClick={onAbbrechen}
-          className="btn-ap px-3 py-2 text-xs font-semibold"
+          className="btn-ap px-3 py-2 text-sekundaer font-semibold"
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={anlegen.isPending}
-          className="btn-ap-primary px-4 py-2 text-xs font-semibold disabled:opacity-50"
+          className="btn-ap-primary px-4 py-2 text-sekundaer font-semibold disabled:opacity-50"
         >
           {anlegen.isPending ? "Legt an…" : "Kunde anlegen"}
         </button>

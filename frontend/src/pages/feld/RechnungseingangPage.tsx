@@ -13,6 +13,7 @@ import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -128,7 +129,7 @@ export function RechnungseingangPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-label">Rechnungseingang</h1>
+        <h1 className="text-titel-mobil font-bold text-label">Rechnungseingang</h1>
         {kannErstellen && (
           <div className="flex items-center gap-2">
             <input
@@ -141,14 +142,14 @@ export function RechnungseingangPage() {
             <button
               onClick={() => importInputRef.current?.click()}
               disabled={eRechnungMutation.isPending}
-              className="btn-touch flex items-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50"
+              className="btn-touch btn-ap px-4"
             >
               <FileUp size={14} strokeWidth={2} aria-hidden="true" />
               {eRechnungMutation.isPending ? "Importiert…" : "E-Rechnung importieren"}
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+              className="btn-touch btn-ap-primary px-4"
             >
               + Neue Eingangsrechnung
             </button>
@@ -164,10 +165,9 @@ export function RechnungseingangPage() {
 
       <AnlegenPanel offen={showForm} titel="Neue Eingangsrechnung" onClose={() => setShowForm(false)}>
         <div className="space-y-2 p-4">
-          <select
+          <Select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             <option value="">Lieferant manuell eintragen…</option>
             {(lieferanten ?? []).map((l) => (
@@ -175,38 +175,38 @@ export function RechnungseingangPage() {
                 {l.name}
               </option>
             ))}
-          </select>
+          </Select>
           {!form.lieferantId && (
             <input
               value={form.lieferantName}
               onChange={(e) => setForm({ ...form, lieferantName: e.target.value })}
               placeholder="Name des Ausstellers"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           )}
           <input
             value={form.rechnungsnummerLieferant}
             onChange={(e) => setForm({ ...form, rechnungsnummerLieferant: e.target.value })}
             placeholder="Rechnungsnummer (vom Aussteller)"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs text-label2">
+            <label className="text-meta text-label2">
               Rechnungsdatum
               <input
                 type="date"
                 value={form.rechnungsdatum}
                 onChange={(e) => setForm({ ...form, rechnungsdatum: e.target.value })}
-                className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </label>
-            <label className="text-xs text-label2">
+            <label className="text-sekundaer text-label2">
               Fällig am
               <input
                 type="date"
                 value={form.faelligAm}
                 onChange={(e) => setForm({ ...form, faelligAm: e.target.value })}
-                className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </label>
           </div>
@@ -217,12 +217,13 @@ export function RechnungseingangPage() {
               value={form.betragNetto}
               onChange={(e) => setForm({ ...form, betragNetto: e.target.value })}
               placeholder="Betrag netto"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
-            <select
+            <Select
+              className="w-auto"
               value={form.kategorie}
               onChange={(e) => setForm({ ...form, kategorie: e.target.value })}
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              groesse="kompakt"
             >
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
@@ -230,7 +231,7 @@ export function RechnungseingangPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <input
@@ -239,7 +240,7 @@ export function RechnungseingangPage() {
               value={form.skontoProzent}
               onChange={(e) => setForm({ ...form, skontoProzent: e.target.value })}
               placeholder="Skonto %"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               type="number"
@@ -247,10 +248,10 @@ export function RechnungseingangPage() {
               value={form.skontoTage}
               onChange={(e) => setForm({ ...form, skontoTage: e.target.value })}
               placeholder="Skonto-Frist (Tage)"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
-          {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
+          {fehler && <p className="text-sekundaer text-st-fehlt ">{fehler}</p>}
           <button
             disabled={
               !form.rechnungsnummerLieferant ||
@@ -259,14 +260,14 @@ export function RechnungseingangPage() {
               createMutation.isPending
             }
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
         </div>
       </AnlegenPanel>
 
-      <div className="flex gap-2 text-xs">
+      <div className="flex gap-2 text-sekundaer">
         {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (
           <button
             key={s}
@@ -287,7 +288,7 @@ export function RechnungseingangPage() {
           <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnungen" onErneut={() => void neuLaden()} />
         )}
         {!ladeFehler && (eingangsrechnungen ?? []).length === 0 && (
-          <p className="text-sm text-label2">Keine Eingangsrechnungen.</p>
+          <p className="text-sekundaer text-label2">Keine Eingangsrechnungen.</p>
         )}
         {(eingangsrechnungen ?? []).map((e) => (
           <button
@@ -296,10 +297,10 @@ export function RechnungseingangPage() {
             className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
           >
             <div>
-              <div className="text-sm font-semibold text-label">
+              <div className="text-fliess font-semibold text-label">
                 {e.lieferant_name}
               </div>
-              <div className="text-xs text-label2">
+              <div className="text-meta text-label2">
                 {e.rechnungsnummer_lieferant} · {new Date(e.rechnungsdatum).toLocaleDateString("de-DE")}
                 {e.kategorie && ` · ${KATEGORIE_LABEL[e.kategorie]}`}
                 {e.hat_xml && " · E-Rechnung"}
@@ -307,10 +308,10 @@ export function RechnungseingangPage() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm font-medium text-label">
+              <div className="text-fliess font-medium text-label">
                 {e.betrag_brutto} EUR
               </div>
-              <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-semibold text-label">
                 {STATUS_LABEL[e.status]}
               </span>
             </div>

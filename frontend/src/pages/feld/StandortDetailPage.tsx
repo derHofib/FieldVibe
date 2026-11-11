@@ -12,15 +12,16 @@ import type { Adresse } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-tint text-tint ",
-  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border border-st-wartet text-st-wartet",
-  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-sep text-label ",
-  storniert: "border border-sep text-label2",
+  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
+  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
 };
 
 function AdresseBearbeiten({
@@ -60,9 +61,9 @@ function AdresseBearbeiten({
     return (
       <div className="mt-1 flex items-center gap-2">
         {zeile ? (
-          <p className="text-sm text-label2">{zeile}</p>
+          <p className="text-sekundaer text-label2">{zeile}</p>
         ) : (
-          kannVerwalten && <p className="text-sm text-label2">Keine Adresse hinterlegt.</p>
+          kannVerwalten && <p className="text-sekundaer text-label2">Keine Adresse hinterlegt.</p>
         )}
         {kannVerwalten && (
           <button
@@ -70,7 +71,7 @@ function AdresseBearbeiten({
               setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-tint "
+            className="btn-touch text-sekundaer font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -80,38 +81,38 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 border border-sepstrong p-2">
+    <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sekundaer font-medium text-label "
         >
           Abbrechen
         </button>
@@ -191,12 +192,12 @@ function AnlagenVerwaltung({
   if (modus === "keine") {
     return (
       <div className="flex gap-3">
-        <button onClick={() => setModus("neu")} className="btn-touch text-xs font-medium text-tint ">
+        <button onClick={() => setModus("neu")} className="btn-touch text-sekundaer font-medium text-tint ">
           + Neue Anlage
         </button>
         <button
           onClick={() => setModus("zuordnen")}
-          className="btn-touch text-xs font-medium text-tint "
+          className="btn-touch text-sekundaer font-medium text-tint "
         >
           Bestehende Anlage zuordnen
         </button>
@@ -206,33 +207,33 @@ function AnlagenVerwaltung({
 
   if (modus === "neu") {
     return (
-      <form onSubmit={handleSubmitNeu} className="space-y-2 border border-sepstrong p-3">
+      <form onSubmit={handleSubmitNeu} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-3">
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="Bezeichnung"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
         />
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="Typ (optional)"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
         />
-        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={neuMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
           <button
             type="button"
             onClick={reset}
-            className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
+            className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
           >
             Abbrechen
           </button>
@@ -242,16 +243,15 @@ function AnlagenVerwaltung({
   }
 
   return (
-    <div className="space-y-2 border border-sepstrong p-3">
+    <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
       {zuordenbar.length === 0 ? (
-        <p className="text-sm text-label2">
+        <p className="text-sekundaer text-label2">
           Keine weiteren Anlagen dieses Kunden verfügbar.
         </p>
       ) : (
-        <select
+        <Select
           value={zuordnenId}
           onChange={(e) => setZuordnenId(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Anlage wählen…</option>
           {zuordenbar.map((a) => (
@@ -259,21 +259,21 @@ function AnlagenVerwaltung({
               {a.bezeichnung}
             </option>
           ))}
-        </select>
+        </Select>
       )}
-      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+      {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
           onClick={() => zuordnenMutation.mutate()}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           Zuordnen
         </button>
         <button
           type="button"
           onClick={reset}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
         >
           Abbrechen
         </button>
@@ -318,7 +318,7 @@ export function StandortDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -329,7 +329,7 @@ export function StandortDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Standort löschen
           </button>
@@ -338,26 +338,26 @@ export function StandortDetailPage() {
 
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
-          <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
+          <h1 className="text-titel-mobil font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-xs font-semibold text-label disabled:opacity-50 "
+              className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-semibold text-label disabled:opacity-50 "
             >
               {profil.aktiv ? "Deaktivieren" : "Aktivieren"}
             </button>
           )}
         </div>
         {!profil.aktiv && (
-          <span className="mt-1 inline-block border border-sep px-2 py-0.5 text-xs text-label">
+          <span className="mt-1 inline-block border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
             inaktiv
           </span>
         )}
         {profil.kunde && (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
-            className="mt-1 block text-sm text-tint underline-offset-2 hover:underline "
+            className="mt-1 block text-sekundaer text-tint underline-offset-2 hover:underline "
           >
             {profil.kunde.name}
           </button>
@@ -366,16 +366,16 @@ export function StandortDetailPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">Auswertung</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
-          <p className="text-sm text-label2">Noch keine Vorgänge an diesem Standort.</p>
+          <p className="text-sekundaer text-label2">Noch keine Vorgänge an diesem Standort.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
               <span
                 key={status}
-                className={`px-2 py-1 text-xs font-semibold ${
-                  STATUS_BADGE[status] ?? "border border-sep text-label"
+                className={`px-2 py-1 text-sekundaer font-semibold ${
+                  STATUS_BADGE[status] ?? "border rounded-[var(--radius-ap-pill)] border-sep text-label"
                 }`}
               >
                 {anzahl}× {statusLabel(status)}
@@ -386,7 +386,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-label2">Assets an diesem Standort</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Assets an diesem Standort</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Assets an diesem Standort." className="py-4" />
         ) : (
@@ -400,11 +400,11 @@ export function StandortDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium text-label">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
+                  <div className="text-fliess font-medium text-label">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-sekundaer text-label2">{a.anlagentyp}</div>}
                 </div>
                 {!a.aktiv && (
-                  <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                     inaktiv
                   </span>
                 )}
@@ -421,7 +421,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge an diesem Standort</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Vorgänge an diesem Standort</h2>
         {profil.vorgaenge.length === 0 ? (
           <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
@@ -435,7 +435,7 @@ export function StandortDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-xs text-label2">
+                  <div className="text-meta text-label2">
                     {v.vorgangsnummer}
                     {v.dauerauftrag_id && (
                       <>
@@ -444,9 +444,9 @@ export function StandortDetailPage() {
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-label">{v.titel}</div>
+                  <div className="text-fliess font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
                   {statusLabel(v.status)}
                 </span>
               </button>

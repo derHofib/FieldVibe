@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gespeicherteFilterApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { GespeicherterFilter, GespeicherterFilterEntitaet } from "../types";
+import { MoreHorizontal } from "lucide-react";
+import { PulldownMenu, type PulldownItem } from "./apple/PulldownMenu";
 import { useBestaetigung } from "./ConfirmDialog";
 
 function filtersEqual(a: Record<string, string>, b: Record<string, string>): boolean {
@@ -13,20 +15,20 @@ function filtersEqual(a: Record<string, string>, b: Record<string, string>): boo
   return aKeys.every((k) => a[k] === b[k]);
 }
 
+interface FilterVorlagenProps {
+  entitaet: GespeicherterFilterEntitaet;
+  filter: Record<string, string>;
+  onApply: (filterJson: Record<string, string>) => void;
+}
+
+export type FilterVorlagenState = ReturnType<typeof useFilterVorlagen>;
+
 /** Wiederverwendbare Leiste fuer benannte Filter-Vorlagen (Standort, Kunde,
  * Assets, Aufträge...): laedt/wendet gespeicherte Filter-Sets an, erlaubt
  * das Speichern des aktuell aktiven Filters unter einem Namen sowie das
  * Markieren einer Vorlage als Standard -- die dann beim naechsten Aufruf der
  * jeweiligen Liste automatisch angewendet wird. */
-export function FilterVorlagenLeiste({
-  entitaet,
-  filter,
-  onApply,
-}: {
-  entitaet: GespeicherterFilterEntitaet;
-  filter: Record<string, string>;
-  onApply: (filterJson: Record<string, string>) => void;
-}) {
+export function useFilterVorlagen({ entitaet, filter, onApply }: FilterVorlagenProps) {
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const appliedDefault = useRef(false);
@@ -80,8 +82,16 @@ export function FilterVorlagenLeiste({
 
   const hatAktivenFilter = Object.values(filter).some((v) => !!v);
 
+  return {
+    vorlagen, filter, onApply, hatAktivenFilter, zeigeSpeichern, setZeigeSpeichern, name, setName,
+    alsStandard, setAlsStandard, error, createMutation, standardMutation, deleteMutation, bestaetigen,
+  };
+}
+
+function VorlagenChips({ v: h }: { v: FilterVorlagenState }) {
+  const { vorlagen, filter, onApply, standardMutation, deleteMutation, bestaetigen } = h;
   return (
-    <div className="space-y-2">
+    <>
       {(vorlagen ?? []).length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 py-0.5">
           {vorlagen!.map((v) => {
@@ -89,7 +99,7 @@ export function FilterVorlagenLeiste({
             return (
               <div
                 key={v.id}
-                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-xs font-medium ${
+                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-sekundaer font-medium ${
                   aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
                 }`}
               >
@@ -120,47 +130,114 @@ export function FilterVorlagenLeiste({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        {hatAktivenFilter && (
-          <button
-            onClick={() => onApply({})}
-            className="btn-touch text-xs text-label2 underline "
-          >
-            Filter zurücksetzen
-          </button>
-        )}
-        <button
-          onClick={() => setZeigeSpeichern((v) => !v)}
-          disabled={!hatAktivenFilter}
-          className="btn-touch text-xs text-tint underline disabled:opacity-40 "
-        >
-          {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
-        </button>
-      </div>
+    </>
+  );
+}
 
+function SpeichernForm({ v: h }: { v: FilterVorlagenState }) {
+  const { zeigeSpeichern, name, setName, alsStandard, setAlsStandard, createMutation, error } = h;
+  return (
+    <>
       {zeigeSpeichern && (
-        <div className="flex flex-wrap items-center gap-2 border border-sepstrong p-2">
+        <div className="flex flex-wrap items-center gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name der Vorlage"
-            className="btn-touch min-w-0 flex-1 border border-sep bg-transparent px-3 py-1.5 text-sm text-label"
+            className="btn-touch min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-1.5 text-zeile text-label"
           />
-          <label className="flex shrink-0 items-center gap-1 text-xs text-label">
+          <label className="flex shrink-0 items-center gap-1 text-sekundaer text-label">
             <input type="checkbox" checked={alsStandard} onChange={(e) => setAlsStandard(e.target.checked)} />
             Als Standard
           </label>
           <button
             disabled={!name.trim() || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Speichern
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
+      {error && <p className="text-sekundaer text-st-fehlt ">{error}</p>}
+    </>
+  );
+}
+
+/** Office: Leiste mit Vorlagen-Chips, Zuruecksetzen und Speichern-Link. */
+export function FilterVorlagenLeiste(props: FilterVorlagenProps) {
+  const h = useFilterVorlagen(props);
+  const { onApply, hatAktivenFilter, zeigeSpeichern, setZeigeSpeichern } = h;
+  return (
+    <div className="space-y-2">
+      <VorlagenChips v={h} />
+      <div className="flex flex-wrap items-center gap-3">
+        {hatAktivenFilter && (
+          <button
+            onClick={() => onApply({})}
+            className="btn-touch text-sekundaer text-label2 "
+          >
+            Filter zurücksetzen
+          </button>
+        )}
+        {/* Ohne aktiven Filter gibt es nichts zu speichern: ausblenden statt blass zu deaktivieren (Kontrast). */}
+        {(hatAktivenFilter || zeigeSpeichern) && (
+          <button
+            onClick={() => setZeigeSpeichern((v) => !v)}
+            className="btn-touch text-sekundaer font-medium text-tint-text"
+          >
+            {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
+          </button>
+        )}
+      </div>
+
+      <SpeichernForm v={h} />
+    </div>
+  );
+}
+
+/** Feld-App: Vorlagen-Aktionen im Filter-Menue statt als eigene Zeilen im Seitenkopf.
+ * Chips (Standard setzen/Loeschen) und Speichern-Formular erscheinen erst, wenn
+ * die Seite das Filterpanel oeffnet bzw. "Speichern" gewaehlt wurde. */
+export function FilterVorlagenMenue({ v: h }: { v: FilterVorlagenState }) {
+  const { vorlagen, onApply, hatAktivenFilter, setZeigeSpeichern } = h;
+  const items: PulldownItem[] = [
+    ...(vorlagen ?? []).map((vl) => ({
+      label: `${vl.ist_standard ? "★ " : ""}${vl.name}`,
+      onSelect: () => onApply(vl.filter_json),
+    })),
+    ...((vorlagen ?? []).length > 0 ? (["trenner"] as PulldownItem[]) : []),
+    { label: "Filter zurücksetzen", disabled: !hatAktivenFilter, onSelect: () => onApply({}) },
+    { label: "Aktuellen Filter als Vorlage speichern…", disabled: !hatAktivenFilter, onSelect: () => setZeigeSpeichern(true) },
+  ];
+  return (
+    <PulldownMenu
+      ariaLabel="Filter-Vorlagen"
+      items={items}
+      trigger={({ toggeln, triggerRef, offen }) => (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={toggeln}
+          aria-haspopup="menu"
+          aria-expanded={offen}
+          aria-label="Filter-Vorlagen"
+          title="Filter-Vorlagen"
+          className="btn-ap-toolbar"
+        >
+          <MoreHorizontal size={16} strokeWidth={2} aria-hidden="true" />
+        </button>
+      )}
+    />
+  );
+}
+
+export function FilterVorlagenVerwaltung({ v: h, chipsZeigen }: { v: FilterVorlagenState; chipsZeigen: boolean }) {
+  return (
+    <div className="space-y-2">
+      {chipsZeigen && <VorlagenChips v={h} />}
+      <SpeichernForm v={h} />
     </div>
   );
 }

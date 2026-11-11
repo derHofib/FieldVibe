@@ -48,5 +48,8 @@ export default defineConfig({
     // e2e/ enthaelt Playwright-Specs (playwright.config.ts), die vitest
     // sonst wegen des gleichen "*.spec.ts"-Musters faelschlich einsammelt.
     exclude: [...configDefaults.exclude, "e2e/**"],
+    // Ein Worker je Testdatei: auf ausgelasteten CI-Runnern reisst selbst ein
+    // billiger Test das 5-s-Standardlimit (bugreport "kuerzt zu grossen Debug-State").
+    testTimeout: 15_000,
   },
 });

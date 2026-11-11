@@ -19,18 +19,18 @@ export function PortalLayout() {
     <div className="min-h-screen bg-slate-100 pb-16 dark:bg-stone-950">
       <a
         href="#portal-inhalt"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:text-label"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2 focus:text-fliess focus:text-label"
       >
         Zum Inhalt springen
       </a>
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sep bg-card/80 px-4 py-3 backdrop-blur-md">
-        <Link to="/portal/vorgaenge" className="btn-touch flex items-center text-lg font-bold text-label">
+        <Link to="/portal/vorgaenge" className="btn-touch flex items-center text-zeile font-bold text-label">
           Kunden<span className="text-tint-text">portal</span>
         </Link>
         <div className="flex items-center gap-2">
-          <span className="hidden text-sm text-label sm:inline ">{currentKunde?.name}</span>
+          <span className="hidden text-fliess text-label sm:inline ">{currentKunde?.name}</span>
           <ThemeToggle />
-          <button onClick={logout} className="btn-touch rounded-md px-2 text-sm font-medium text-label2 hover:bg-fill">
+          <button onClick={logout} className="btn-touch rounded-md px-2 text-sekundaer font-medium text-label2 hover:bg-fill">
             Abmelden
           </button>
         </div>
@@ -47,7 +47,7 @@ export function PortalLayout() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `btn-touch flex-1 py-3 text-center text-sm font-medium ${isActive ? "text-tint-text" : "text-label2"}`
+              `btn-touch flex-1 py-3 text-center text-sekundaer font-medium ${isActive ? "text-tint-text" : "text-label2"}`
             }
           >
             {item.label}
