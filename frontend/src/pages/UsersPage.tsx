@@ -14,6 +14,7 @@ import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { useBestaetigung } from "../components/ConfirmDialog";
 import { SkeletonList } from "../components/Skeleton";
+import { Select } from "../components/apple/Select";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -328,17 +329,16 @@ export function UsersPage() {
           )}
           <div>
             <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Rolle</label>
-            <select id={`${uid}-3`}
+            <Select className="w-auto" id={`${uid}-3`}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             >
               {verfuegbareRollen.map((value) => (
                 <option key={value} value={value}>
                   {value === "custom" ? "Account-Typ…" : ROLE_LABEL[value]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {role === "custom" && (
             <div>
@@ -346,11 +346,11 @@ export function UsersPage() {
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
-                <select
+                <Select
+                  className="w-auto"
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -361,7 +361,7 @@ export function UsersPage() {
                       {t.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : (
                 <Link
                   to="/account-typen"
@@ -375,11 +375,10 @@ export function UsersPage() {
           {isSuperAdmin && role !== "super_admin" && (
             <div>
               <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Mandant</label>
-              <select id={`${uid}-4`}
+              <Select className="w-auto" id={`${uid}-4`}
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -389,7 +388,7 @@ export function UsersPage() {
                     {m.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
           <button

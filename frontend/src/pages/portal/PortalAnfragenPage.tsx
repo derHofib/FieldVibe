@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -146,18 +147,17 @@ function NeueAnfrage() {
             <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
               Art
             </label>
-            <select
+            <Select
               id="portal-anfrage-art"
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {(standorte ?? []).length > 0 && (
@@ -165,14 +165,13 @@ function NeueAnfrage() {
               <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
                 Standort (optional)
               </label>
-              <select
+              <Select
                 id="portal-anfrage-standort"
                 value={standortId}
                 onChange={(e) => {
                   setStandortId(e.target.value);
                   setAnlageId("");
                 }}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="">Kein Standort</option>
                 {standorte?.filter((s) => s.aktiv).map((s) => (
@@ -180,7 +179,7 @@ function NeueAnfrage() {
                     {s.bezeichnung}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 
@@ -236,11 +235,10 @@ function NeueAnfrage() {
               <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
                 Anlage (optional)
               </label>
-              <select
+              <Select
                 id="portal-anfrage-anlage"
                 value={anlageId}
                 onChange={(e) => setAnlageId(e.target.value)}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="">Keine Anlage</option>
                 {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
@@ -248,7 +246,7 @@ function NeueAnfrage() {
                     {a.bezeichnung}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 

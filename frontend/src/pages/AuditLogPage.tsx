@@ -7,6 +7,7 @@ import { aktivitaetLabel } from "../utils/anzeigeNamen";
 import { auditLabel } from "../utils/auditLabel";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
+import { Select } from "../components/apple/Select";
 
 export function AuditLogPage() {
   const uid = useId();
@@ -46,10 +47,9 @@ export function AuditLogPage() {
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Mandant</label>
-          <select id={`${uid}-0`}
+          <Select className="w-auto" id={`${uid}-0`}
             value={mandantId}
             onChange={(e) => setMandantId(e.target.value)}
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Alle</option>
             {mandanten?.map((m) => (
@@ -57,7 +57,7 @@ export function AuditLogPage() {
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Aktion</label>

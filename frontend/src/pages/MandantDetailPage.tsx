@@ -9,6 +9,7 @@ import type { MandantModul, MandantStatus } from "../types";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { useBestaetigung } from "../components/ConfirmDialog";
 import { DetailSkeleton } from "../components/Skeleton";
+import { Select } from "../components/apple/Select";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -188,19 +189,19 @@ export function MandantDetailPage() {
 
       <section>
         <h2 className="mb-4 text-lg font-bold text-label">Status</h2>
-        <select
+        <Select
+          className="w-auto"
           aria-label="Status des Mandanten"
           value={mandant.status}
           disabled={statusMutation.isPending}
           onChange={(e) => handleStatusChange(e.target.value as MandantStatus)}
-          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
         <div className="mt-3">
           <button
             disabled={isImpersonating || mandant.status !== "aktiv"}
