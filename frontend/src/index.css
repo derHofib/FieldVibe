@@ -104,6 +104,19 @@
   --tone-cyan: #32ade6;
   --tone-slate: #8e8e93;
   --tone-teal: #30b0c7;
+  /* Flaechen-Varianten fuer die gefuellte Kachel mit weissem Icon (3:1,
+     WCAG 1.4.11): amber/emerald/cyan/teal erreichen auf der Rohfarbe nur
+     2.2-2.6:1 und sind deshalb abgedunkelt; die uebrigen Toene reichen
+     unveraendert (sky 4.0, violet 4.1, rose 3.5, indigo 5.7). */
+  --tone-sky-fill: #007aff;
+  --tone-violet-fill: #af52de;
+  --tone-amber-fill: #d17a00;
+  --tone-rose-fill: #ff375f;
+  --tone-emerald-fill: #2aa348;
+  --tone-indigo-fill: #5856d6;
+  --tone-cyan-fill: #2c99cc;
+  --tone-slate-fill: #8e8e93;
+  --tone-teal-fill: #2a9cb1;
 
   /* Schalter (Switch, Abschnitt 4.2) -- an-Zustand ist Apple systemGreen,
      in beiden Modi identisch (kein Statustoken, eigene Bedeutung). */
@@ -184,6 +197,15 @@
   --color-tone-cyan: var(--tone-cyan);
   --color-tone-slate: var(--tone-slate);
   --color-tone-teal: var(--tone-teal);
+  --color-tone-sky-fill: var(--tone-sky-fill);
+  --color-tone-violet-fill: var(--tone-violet-fill);
+  --color-tone-amber-fill: var(--tone-amber-fill);
+  --color-tone-rose-fill: var(--tone-rose-fill);
+  --color-tone-emerald-fill: var(--tone-emerald-fill);
+  --color-tone-indigo-fill: var(--tone-indigo-fill);
+  --color-tone-cyan-fill: var(--tone-cyan-fill);
+  --color-tone-slate-fill: var(--tone-slate-fill);
+  --color-tone-teal-fill: var(--tone-teal-fill);
 
   --shadow-card: var(--shadow-card-value);
 
@@ -549,6 +571,42 @@ textarea.field-ap {
    schon ueber der Schwelle). */
 :where(input, select, textarea):not(.search-ap-input) {
   font-size: 16px;
+}
+
+/* Nativer <select> im Look von .field-ap (siehe components/apple/Select.tsx);
+   der Chevron liegt als eigenes Element im Wrapper. Mobil 44px Mindesthoehe
+   (Touch-Ziel), ab md wie .field-ap. Kompakt: 13px/32px nur ab md -- unter
+   md bleibt es bei den 16px der Regel oben (iOS-Zoom bei Fokus). Unlayered,
+   daher gewinnt es auch ueber die :where()-Regel oben. */
+.select-ap {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 2.25rem 0.45rem 0.7rem;
+  appearance: none;
+  color: var(--label);
+  background: var(--card);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--radius-ap-input);
+}
+.select-ap:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+  border-color: var(--tint);
+}
+.select-ap:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+@media (min-width: 768px) {
+  .select-ap {
+    min-height: 36px;
+  }
+  .select-ap-kompakt {
+    min-height: 32px;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: 13px;
+  }
 }
 
 /* Suchfeld (Abschnitt 4.2) -- randlos, Fuellung statt Rahmen. Groesse
