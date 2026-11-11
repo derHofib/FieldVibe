@@ -9,6 +9,7 @@ import type { BoardTyp } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
@@ -88,17 +89,16 @@ export function OfficeBoardsPage() {
             </div>
             <div>
               <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Art</label>
-              <select id={`${uid}-1`}
+              <Select className="w-auto" id={`${uid}-1`}
                 value={typ}
                 onChange={(e) => setTyp(e.target.value as BoardTyp)}
-                className="border border-sep bg-transparent px-3 py-2 text-sm text-label"
               >
                 {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
                   <option key={t} value={t}>
                     {TYP_LABEL[t]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <button
               onClick={() => erstellen.mutate()}

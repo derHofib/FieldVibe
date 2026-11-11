@@ -5,6 +5,7 @@ import { useState } from "react";
 import { kundenApi, maengelApi, vorgaengeApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import type { Board, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { Select } from "../../components/apple/Select";
 import type { BoardNode, KlebezettelDaten, TextDaten } from "./types";
 
 const LEISTUNGSTYP_OPTIONEN: { value: Leistungstyp; label: string }[] = [
@@ -211,28 +212,26 @@ function NeuerVorgangMiniform({
         options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
       />
       <div className="grid grid-cols-2 gap-2">
-        <select
+        <Select className="w-auto" groesse="kompakt"
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-          className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
         >
           {LEISTUNGSTYP_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select className="w-auto" groesse="kompakt"
           value={abrechnungsart}
           onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-          className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
         >
           {ABRECHNUNGSART_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       {erstellen.isError && <p className="text-[11px] text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">

@@ -18,6 +18,7 @@ import { monatsGrenzen, toDateInput } from "../../utils/zeiterfassung";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
 import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Tab = "offen" | "kalender" | "alle" | "anspruch";
@@ -303,8 +304,7 @@ function AlleAntraege() {
         </label>
         <label className="text-xs font-medium text-label2">
           Status
-          <select
-            className="mt-1 block rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-sm text-label"
+          <Select className="mt-1 w-auto" groesse="kompakt"
             value={status}
             onChange={(e) => setStatus(e.target.value as AbwesenheitStatus | "")}
           >
@@ -314,7 +314,7 @@ function AlleAntraege() {
                 {ABWESENHEIT_STATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
       {isLoading ? (
@@ -396,8 +396,8 @@ function AnspruchAbschnitt() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs font-medium text-label2">
             Mitarbeiter
-            <select
-              className="field-ap mt-1 min-w-48"
+            <Select
+              className="mt-1 min-w-48"
               value={userId}
               onChange={(e) => {
                 setUserId(e.target.value);
@@ -409,7 +409,7 @@ function AnspruchAbschnitt() {
                   {u.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="text-xs font-medium text-label2">
             Jahr

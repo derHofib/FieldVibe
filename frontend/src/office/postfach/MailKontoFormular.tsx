@@ -3,6 +3,7 @@ import { Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
+import { Select } from "../../components/apple/Select";
 import type { MailAccount, MailVerschluesselung } from "../../types";
 
 const VERSCHLUESSELUNG_OPTIONEN: { wert: MailVerschluesselung; label: string }[] = [
@@ -181,17 +182,17 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         </label>
         <label className="text-xs font-medium text-label2">
           Verschlüsselung
-          <select
+          <Select
+            className="mt-1 w-full"
             value={imapVerschluesselung}
             onChange={(e) => setImapVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {optionenFuer(imapVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <KlartextHinweis wert={imapVerschluesselung} />
         </label>
         <label className="text-xs font-medium text-label2">
@@ -226,17 +227,17 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         </label>
         <label className="text-xs font-medium text-label2">
           Verschlüsselung
-          <select
+          <Select
+            className="mt-1 w-full"
             value={smtpVerschluesselung}
             onChange={(e) => setSmtpVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {optionenFuer(smtpVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <KlartextHinweis wert={smtpVerschluesselung} />
         </label>
         <label className="text-xs font-medium text-label2">

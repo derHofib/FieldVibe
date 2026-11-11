@@ -12,6 +12,7 @@ import { BUNDESLAND_LABEL, parseStunden, sollWochensumme, stundenFuerApi } from 
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { toDateInput } from "../../utils/zeiterfassung";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const WOCHENTAG_LABEL: Record<SollWochentagFeld, string> = {
@@ -74,9 +75,9 @@ function BundeslandAbschnitt() {
         Bestimmt, welche gesetzlichen Feiertage beim Generieren entstehen. Ohne Bundesland entstehen nur die
         bundesweiten Feiertage.
       </p>
-      <select
+      <Select
+        className="w-full max-w-xs"
         aria-label="Bundesland"
-        className={`${FELD_KLASSE} max-w-xs`}
         disabled={isLoading || mutation.isPending}
         value={data?.bundesland ?? ""}
         onChange={(e) => mutation.mutate((e.target.value || null) as Bundesland | null)}
@@ -87,7 +88,7 @@ function BundeslandAbschnitt() {
             {BUNDESLAND_LABEL[k]}
           </option>
         ))}
-      </select>
+      </Select>
       {mutation.isError && <p className="text-sm text-st-fehlt">{fehlerText(mutation.error)}</p>}
       {hinweis && !mutation.isError && (
         <p className="text-sm text-label2">

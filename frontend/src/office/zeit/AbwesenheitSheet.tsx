@@ -7,6 +7,7 @@ import { Sheet } from "../../components/apple/Sheet";
 import { useAuth } from "../../context/AuthContext";
 import type { AbwesenheitArt } from "../../types";
 import { ABWESENHEIT_ARTEN, ABWESENHEIT_ART_LABEL } from "../../utils/abwesenheit";
+import { Select } from "../../components/apple/Select";
 import { toDateInput } from "../../utils/zeiterfassung";
 
 const FORM_ID = "abwesenheit-formular";
@@ -93,25 +94,25 @@ export function AbwesenheitSheet({
         {darfVerwalten && (
           <label className="block text-xs font-medium text-label2">
             Mitarbeiter
-            <select className="field-ap mt-1" value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <Select className="mt-1 w-full" value={userId} onChange={(e) => setUserId(e.target.value)}>
               {(users ?? []).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
               {!users && currentUser && <option value={currentUser.id}>{currentUser.name}</option>}
-            </select>
+            </Select>
           </label>
         )}
         <label className="block text-xs font-medium text-label2">
           Art
-          <select className="field-ap mt-1" value={art} onChange={(e) => setArt(e.target.value as AbwesenheitArt)}>
+          <Select className="mt-1 w-full" value={art} onChange={(e) => setArt(e.target.value as AbwesenheitArt)}>
             {ABWESENHEIT_ARTEN.map((a) => (
               <option key={a} value={a}>
                 {ABWESENHEIT_ART_LABEL[a]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs font-medium text-label2">
