@@ -19,11 +19,13 @@ export function AktionsMenue({
   eintraege,
   label,
   ausloeser,
+  richtung,
 }: {
   eintraege: (AktionsMenueEintrag | "trenner")[];
   label: string;
   /** Eigener Auslöser; Standard ist ein Drei-Punkte-Button. */
   ausloeser?: (props: { offen: boolean }) => ReactNode;
+  richtung?: "unten" | "oben";
 }) {
   const items: PulldownItem[] = eintraege.map((e) =>
     e === "trenner" ? e : { ...e, onSelect: e.onClick },
@@ -31,6 +33,7 @@ export function AktionsMenue({
   return (
     <PulldownMenu
       ariaLabel={label}
+      richtung={richtung}
       items={items}
       trigger={({ offen, toggeln, triggerRef }) => (
         <button
@@ -41,7 +44,7 @@ export function AktionsMenue({
           title={label}
           aria-haspopup="menu"
           aria-expanded={offen}
-          className={ausloeser ? undefined : "btn-ap-toolbar"}
+          className={ausloeser ? "block w-full" : "btn-ap-toolbar"}
         >
           {ausloeser ? ausloeser({ offen }) : <MoreHorizontal size={16} strokeWidth={2} />}
         </button>

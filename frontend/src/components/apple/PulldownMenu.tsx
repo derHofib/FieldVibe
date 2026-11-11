@@ -23,13 +23,16 @@ export function PulldownMenu({
   trigger,
   items,
   ariaLabel,
+  richtung = "unten",
 }: {
   trigger: (opts: { offen: boolean; toggeln: () => void; triggerRef: React.RefObject<HTMLButtonElement | null> }) => React.ReactNode;
   items: PulldownItem[];
   ariaLabel: string;
+  /** "oben": Panel öffnet über dem Auslöser (Auslöser am unteren Fensterrand). */
+  richtung?: "unten" | "oben";
 }) {
   const [offen, setOffen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -43,7 +46,14 @@ export function PulldownMenu({
 
   function oeffnen() {
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPosition({ top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 280) });
+    if (rect) {
+      const left = Math.min(rect.left, window.innerWidth - 280);
+      setPosition(
+        richtung === "oben"
+          ? { bottom: window.innerHeight - rect.top + 4, left }
+          : { top: rect.bottom + 4, left },
+      );
+    }
     setOffen(true);
   }
 
@@ -88,6 +98,7 @@ export function PulldownMenu({
             className="fixed z-50 w-[264px] rounded-[10px] border-[0.5px] p-[5px]"
             style={{
               top: position.top,
+              bottom: position.bottom,
               left: position.left,
               backgroundColor: "var(--menu)",
               backdropFilter: "blur(30px)",

@@ -4,9 +4,11 @@ import {
   Bug,
   CalendarDays,
   ChevronDown,
+  ChevronUp,
   ClipboardList,
   Clock,
   Flag,
+  Folder,
   FolderCog,
   Inbox,
   Lightbulb,
@@ -21,7 +23,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 
-import { navKategorienApi, projekteApi, statistikApi } from "../api/endpoints";
+import { navKategorienApi, projekteApi, statistikApi, vorgaengeApi } from "../api/endpoints";
 import { useFehlerbericht } from "../bugreport/ui";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { Monogramm } from "../components/apple/Monogramm";
@@ -68,19 +70,46 @@ const ROLLE_LABEL: Record<string, string> = {
   loesch_operativ: "Papierkorb (Verwaltung)",
 };
 
+const ZAEHL_LIMIT = 200;
+const ERLEDIGTE_STATUS = ["abgeschlossen", "abgerechnet", "storniert"];
+
+/** Offene Vorgaenge im Faelligkeitsfenster. Es gibt keinen Zaehl-Endpoint --
+ * gezaehlt wird die Treffermenge der Listen-Route (Backend-Limit 200), bei
+ * Erreichen des Limits zeigt die Kachel "200+" statt einer falschen Zahl. */
+function useOffeneAnzahl(
+  schluessel: string,
+  params: Record<string, string>,
+  enabled: boolean,
+): { anzahl: number | undefined; gekappt: boolean } {
+  const { data } = useQuery({
+    queryKey: ["vorgang-anzahl", "sidebar", schluessel, params.faellig_von ?? "", params.faellig_bis ?? ""],
+    queryFn: () => vorgaengeApi.list({ ...params, limit: String(ZAEHL_LIMIT) }),
+    enabled,
+    staleTime: 60 * 1000,
+  });
+  return {
+    anzahl: data?.filter((v) => !ERLEDIGTE_STATUS.includes(v.status)).length,
+    gekappt: (data?.length ?? 0) >= ZAEHL_LIMIT,
+  };
+}
+
 function SchnellfilterKachel({
   icon: Icon,
-  farbeKlasse,
   label,
   anzahl,
+  gekappt = false,
+  warnung = false,
   onClick,
 }: {
   icon: typeof CalendarDays;
-  farbeKlasse: string;
   label: string;
-  anzahl?: number;
+  anzahl: number | undefined;
+  gekappt?: boolean;
+  /** Zahl > 0 als Status-Rot (nur "Dringend"); 0 bleibt gedaempft. */
+  warnung?: boolean;
   onClick: () => void;
 }) {
+  const zahlKlasse = !anzahl ? "text-label2" : warnung ? "text-st-fehlt" : "text-label";
   return (
     <button
       type="button"
@@ -88,12 +117,10 @@ function SchnellfilterKachel({
       className="card-ap flex flex-col items-start gap-2 p-2.5 text-left transition-opacity hover:opacity-90"
     >
       <div className="flex w-full items-start justify-between">
-        <span className={`flex h-6 w-6 items-center justify-center rounded-full ${farbeKlasse}`}>
-          <Icon size={13} strokeWidth={2} className="text-white" />
+        <Icon size={15} strokeWidth={2} className="text-label2" aria-hidden="true" />
+        <span className={`text-[19px] font-bold tabular-nums ${zahlKlasse}`}>
+          {anzahl === undefined ? "–" : gekappt ? `${ZAEHL_LIMIT}+` : anzahl}
         </span>
-        {anzahl !== undefined && (
-          <span className="text-[19px] font-bold tabular-nums text-label">{anzahl}</span>
-        )}
       </div>
       <span className="text-xs font-semibold text-label2">{label}</span>
     </button>
@@ -186,16 +213,19 @@ export function OfficeLayout() {
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: hatRecht("projekte", "sehen") });
   const aktiveProjekte = (projekte ?? []).filter((p) => !p.archiviert).slice(0, 6);
 
-  // Exakte Zaehlung nur fuer "Alle" (aus dem bereits vorhandenen Kennzahlen-
-  // Endpoint) -- fuer Heute/Diese-Woche/Dringend gaebe es das nur durch
-  // mehrere zusaetzliche Voll-Feed-Abfragen ohne Backend-Zaehl-Endpoint,
-  // siehe docs/ui-redesign/REVIEW.md "Datenluecken".
+  // "Alle" kommt aus dem Kennzahlen-Endpoint (exakt, nur mit Statistik-Recht),
+  // sonst wie die anderen Kacheln aus der Listen-Route.
+  const darfVorgaenge = hatRecht("vorgaenge", "sehen");
   const darfStatistik = hatRecht("statistik", "sehen");
   const { data: kennzahlen } = useQuery({
     queryKey: ["vorgang-kennzahlen", "sidebar"],
     queryFn: () => statistikApi.vorgangKennzahlen(),
     enabled: darfStatistik,
   });
+  const heute = useOffeneAnzahl("heute", { faellig_von: heuteIso(), faellig_bis: heuteIso() }, darfVorgaenge);
+  const woche = useOffeneAnzahl("woche", { faellig_von: heuteIso(), faellig_bis: heuteIso(7) }, darfVorgaenge);
+  const dringend = useOffeneAnzahl("dringend", { faellig_bis: heuteIso() }, darfVorgaenge);
+  const alleListe = useOffeneAnzahl("alle", {}, darfVorgaenge && !darfStatistik);
 
   const zurMobilenAnsicht = () => {
     const ziel = mobileUrl();
@@ -244,7 +274,7 @@ export function OfficeLayout() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-win text-label" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
+    <div className="office-flaechen min-h-screen bg-gbg text-label" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
       <ImpersonationBanner />
       {!isOnline && (
         <div className="bg-st-arbeit-bg px-4 py-1.5 text-center text-xs font-medium text-st-arbeit">
@@ -306,31 +336,35 @@ export function OfficeLayout() {
             </div>
           )}
 
-          {!eingeklappt && aktiverWorkspace?.key === "operativ" && (
+          {!eingeklappt && aktiverWorkspace?.key === "operativ" && darfVorgaenge && (
             <div className="mb-4 grid grid-cols-2 gap-2">
               <SchnellfilterKachel
                 icon={CalendarDays}
-                farbeKlasse="bg-tile-blue"
                 label="Heute"
+                anzahl={heute.anzahl}
+                gekappt={heute.gekappt}
                 onClick={() => navigate(`/vorgaenge?faellig_von=${heuteIso()}&faellig_bis=${heuteIso()}`)}
               />
               <SchnellfilterKachel
                 icon={Clock}
-                farbeKlasse="bg-tile-red"
                 label="Diese Woche"
+                anzahl={woche.anzahl}
+                gekappt={woche.gekappt}
                 onClick={() => navigate(`/vorgaenge?faellig_von=${heuteIso()}&faellig_bis=${heuteIso(7)}`)}
               />
               <SchnellfilterKachel
                 icon={Flag}
-                farbeKlasse="bg-tile-orange"
                 label="Dringend"
+                anzahl={dringend.anzahl}
+                gekappt={dringend.gekappt}
+                warnung
                 onClick={() => navigate(`/vorgaenge?faellig_bis=${heuteIso()}`)}
               />
               <SchnellfilterKachel
                 icon={Inbox}
-                farbeKlasse="bg-tile-gray"
                 label="Alle"
-                anzahl={darfStatistik ? kennzahlen?.offene_vorgaenge_gesamt : undefined}
+                anzahl={darfStatistik ? kennzahlen?.offene_vorgaenge_gesamt : alleListe.anzahl}
+                gekappt={!darfStatistik && alleListe.gekappt}
                 onClick={() => navigate("/vorgaenge")}
               />
             </div>
@@ -371,7 +405,7 @@ export function OfficeLayout() {
                         <seite.icon
                           size={17}
                           strokeWidth={2}
-                          className={`shrink-0 ${seite.key === "projekte" ? "text-tile-indigo" : "text-tint"}`}
+                          className={`shrink-0 ${seite.key === aktiverKey ? "text-tint" : "text-label2"}`}
                         />
                         {!eingeklappt && <span className="truncate">{seite.label}</span>}
                         {seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl && (
@@ -400,11 +434,7 @@ export function OfficeLayout() {
                     to={`/vorgaenge?projekt_id=${p.id}`}
                     className="mb-0.5 flex h-[30px] items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] text-label2 hover:bg-fill hover:text-label"
                   >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] bg-tile-indigo">
-                      <svg viewBox="0 0 24 24" width={10} height={10} fill="white" aria-hidden="true">
-                        <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />
-                      </svg>
-                    </span>
+                    <Folder size={15} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />
                     <span className="truncate">{p.name}</span>
                   </NavLink>
                 ))}
@@ -412,16 +442,32 @@ export function OfficeLayout() {
             )}
           </nav>
 
-          <div className={`flex items-center gap-2.5 border-t-[0.5px] border-sep pt-2.5 ${eingeklappt ? "justify-center" : "px-1"}`}>
-            <Monogramm name={currentUser?.name ?? "?"} groesse={28} />
-            {!eingeklappt && (
-              <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-label">{currentUser?.name}</p>
-                <p className="truncate text-[11px] text-label2">
-                  {currentUser?.account_typ_name ?? (currentUser ? ROLLE_LABEL[currentUser.role] : "")}
-                </p>
-              </div>
-            )}
+          <div className="border-t-[0.5px] border-sep pt-2.5">
+            <AktionsMenue
+              label="Benutzermenü"
+              eintraege={nutzerMenue}
+              richtung="oben"
+              ausloeser={({ offen }) => (
+                <span
+                  className={`flex w-full items-center gap-2.5 rounded-[7px] py-1 text-left hover:bg-fill ${
+                    eingeklappt ? "justify-center px-0" : "px-1.5"
+                  } ${offen ? "bg-fill" : ""}`}
+                >
+                  <Monogramm name={currentUser?.name ?? "?"} groesse={28} />
+                  {!eingeklappt && (
+                    <>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold text-label">{currentUser?.name}</span>
+                        <span className="block truncate text-[11px] text-label2">
+                          {currentUser?.account_typ_name ?? (currentUser ? ROLLE_LABEL[currentUser.role] : "")}
+                        </span>
+                      </span>
+                      <ChevronUp size={14} strokeWidth={2} className="shrink-0 text-label2" />
+                    </>
+                  )}
+                </span>
+              )}
+            />
           </div>
         </aside>
 
@@ -447,20 +493,6 @@ export function OfficeLayout() {
               <Search size={17} strokeWidth={2} />
             </button>
             <ThemeToggle />
-            <AktionsMenue
-              label="Benutzermenü"
-              eintraege={nutzerMenue}
-              ausloeser={({ offen }) => (
-                <span
-                  className={`flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-sm text-label2 hover:bg-fill hover:text-label ${
-                    offen ? "bg-fill text-label" : ""
-                  }`}
-                >
-                  {currentUser?.name}
-                  <ChevronDown size={14} strokeWidth={2} />
-                </span>
-              )}
-            />
           </header>
 
           <main className="px-5 py-5">
