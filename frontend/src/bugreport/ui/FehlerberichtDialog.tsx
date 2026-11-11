@@ -376,7 +376,7 @@ export function FehlerberichtDialog({
             )}
 
             <section aria-label="Mitgesendete technische Daten">
-              <h3 className="mb-1 text-sekundaer font-semibold tracking-wide text-label2 uppercase">Mitgesendete technische Daten</h3>
+              <h3 className="mb-1 text-sekundaer font-semibold text-label2">Mitgesendete technische Daten</h3>
               <p className="mb-2 text-sekundaer text-label2">
                 {idee ? "Standardmäßig wird nur die Umgebung (Seite und App-Version) mitgesendet; weitere Daten kannst du anhaken." : "Diese Daten helfen bei der Fehlersuche."}{" "}
                 Passwörter, Tokens und Kontodaten sind bereits entfernt. Du siehst
