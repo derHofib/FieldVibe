@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ScanLine } from "lucide-react";
+import { Info, ScanLine } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -73,6 +73,7 @@ export function NewVorgangPage() {
   // bleiben trotzdem per SearchableSelect aenderbar (siehe dort unten).
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [infoOffen, setInfoOffen] = useState(false);
   const [kundeId, setKundeId] = useState(searchParams.get("kunde_id") ?? "");
   const [projektId, setProjektId] = useState(searchParams.get("projekt_id") ?? "");
   const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
@@ -329,11 +330,25 @@ export function NewVorgangPage() {
 
         {showScanner && <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 
-        <p className="text-sm text-label2">
-          Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
-          Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
-          sich automatisch, sobald wieder eine Verbindung besteht.
-        </p>
+        <div>
+          <button
+            type="button"
+            onClick={() => setInfoOffen((o) => !o)}
+            aria-expanded={infoOffen}
+            aria-controls={`${uid}-info`}
+            aria-label="Hinweise zum Anlegen"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-label2 hover:bg-fill"
+          >
+            <Info size={18} aria-hidden="true" />
+          </button>
+          {infoOffen && (
+            <p id={`${uid}-info`} className="mt-1 text-sm text-label2">
+              Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
+              Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
+              sich automatisch, sobald wieder eine Verbindung besteht.
+            </p>
+          )}
+        </div>
 
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
@@ -578,7 +593,7 @@ export function NewVorgangPage() {
         <div>
           <label className="mb-1 block text-sm font-medium text-label">Adresse (optional)</label>
           <p className="mb-1 text-xs text-label2">
-            Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
+            Nur nötig, wenn kein Standort ausgewählt ist – damit weiß der Ausführende, wo er hin muss.
           </p>
           <input
             value={adrStrasse}
