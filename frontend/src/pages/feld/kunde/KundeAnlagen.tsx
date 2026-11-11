@@ -6,6 +6,7 @@ import { ApiError } from "../../../api/client";
 import { AnlegenPanel } from "../../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
 import type { Anlage, Standort } from "../../../types";
+import { Select } from "../../../components/apple/Select";
 
 export function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Standort[] }) {
   const queryClient = useQueryClient();
@@ -120,14 +121,14 @@ export function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte:
             <Feld label="Standort (optional)">
               {(p) => (
                 <div className="space-y-2">
-                  <select {...p} value={standortId} onChange={(e) => setStandortId(e.target.value)} className={FELD_KLASSE}>
+                  <Select {...p} value={standortId} onChange={(e) => setStandortId(e.target.value)}>
                     <option value="">Kein Standort</option>
                     {standorte.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.bezeichnung}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <button type="button" onClick={() => setZeigeNeuerStandort(true)} className={NEU_BUTTON_KLASSE}>
                     + Neuer Standort
                   </button>

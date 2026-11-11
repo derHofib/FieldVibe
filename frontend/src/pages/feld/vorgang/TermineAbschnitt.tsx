@@ -4,6 +4,7 @@ import { TERMIN_STATUS_LABEL, WOCHENTAGE, addTage, startOfWoche, tagesSchluessel
 import type { UseMutationResult } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { Select } from "../../../components/apple/Select";
 
 export function TermineAbschnitt({
   istAktiverTab,
@@ -109,10 +110,9 @@ export function TermineAbschnitt({
             placeholder="Titel"
             className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
-          <select
+          <Select
             value={terminTechnikerId}
             onChange={(e) => setTerminTechnikerId(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {(users ?? [])
               .filter((u) => u.role === "mandant_admin" || u.role === "custom")
@@ -121,7 +121,7 @@ export function TermineAbschnitt({
                   {u.name}
                 </option>
               ))}
-          </select>
+          </Select>
           <div className="flex gap-2">
             <input
               type="datetime-local"

@@ -6,6 +6,7 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import { UserCheck } from "lucide-react";
 import { Suspense, lazy, type Dispatch, type SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
+import { Select } from "../../../components/apple/Select";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -187,29 +188,27 @@ export function UebersichtAbschnitt({
         <div className="mt-2 space-y-2 border border-sepstrong p-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
-            <select
+            <Select
               value={editKundeId}
               onChange={(e) => {
                 setEditKundeId(e.target.value);
                 setEditAnlageId("");
               }}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {alleKunden?.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.name} ({k.kundennummer})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">
               Anlage (optional)
             </label>
-            <select
+            <Select
               value={editAnlageId}
               onChange={(e) => setEditAnlageId(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Keine Anlage</option>
               {anlagenFuerEditKunde?.map((a) => (
@@ -217,7 +216,7 @@ export function UebersichtAbschnitt({
                   {a.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {zuordnungError && <p className="text-xs text-st-fehlt">{zuordnungError}</p>}
           <div className="flex gap-2">
@@ -374,10 +373,11 @@ export function UebersichtAbschnitt({
           )}
           {showAnlageHinzufuegen && (
             <div className="mt-2 flex gap-2">
-              <select
+              <Select
+                className="flex-1"
                 value={neueAnlageId}
                 onChange={(e) => setNeueAnlageId(e.target.value)}
-                className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                groesse="kompakt"
               >
                 <option value="">Anlage wählen…</option>
                 {(anlagenFuerVorgangKunde ?? [])
@@ -387,7 +387,7 @@ export function UebersichtAbschnitt({
                       {a.bezeichnung}
                     </option>
                   ))}
-              </select>
+              </Select>
               <button
                 onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
                 disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
@@ -438,18 +438,19 @@ export function UebersichtAbschnitt({
         ) : (
           <label className="flex items-center gap-1 text-sm text-label2">
             Priorität
-            <select
+            <Select
+              className="w-auto"
               value={vorgang.prioritaet}
               disabled={VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
               onChange={(e) => prioritaetMutation.mutate(Number(e.target.value))}
-              className="btn-touch border border-sep bg-transparent px-2 py-1 text-sm text-label"
+              groesse="kompakt"
             >
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <button
@@ -543,17 +544,16 @@ export function UebersichtAbschnitt({
             Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
             Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
           </p>
-          <select
+          <Select
             value={folgeAuftragLeistungstyp}
             onChange={(e) => setFolgeAuftragLeistungstyp(e.target.value as Leistungstyp)}
-            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {LEISTUNGSTYPEN.map((l) => (
               <option key={l.value} value={l.value}>
                 {l.label}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="flex gap-2">
             <button
               onClick={() => {

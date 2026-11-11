@@ -4,6 +4,7 @@ import type { useBestaetigung } from "../../../components/ConfirmDialog";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { Select } from "../../../components/apple/Select";
 
 export function MaengelAbschnitt({
   istAktiverTab,
@@ -87,17 +88,16 @@ export function MaengelAbschnitt({
             rows={2}
             className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
           />
-          <select
+          <Select
             value={mangelSchweregrad}
             onChange={(e) => setMangelSchweregrad(e.target.value as MangelSchweregrad)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {SCHWEREGRAD_OPTIONEN.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
-          </select>
+          </Select>
           <button
             disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
             onClick={mangelErfassen}

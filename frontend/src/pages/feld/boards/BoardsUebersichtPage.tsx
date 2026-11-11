@@ -8,6 +8,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import type { BoardTyp } from "../../../types";
 import { FehlerZustand } from "../../../components/FehlerZustand";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
+import { Select } from "../../../components/apple/Select";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
   frei: LayoutGrid,
@@ -97,17 +98,16 @@ export function BoardsUebersichtPage() {
             placeholder="z. B. Projektplanung Rheinblick"
             className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
-          <select
+          <Select
             value={typ}
             onChange={(e) => setTyp(e.target.value as BoardTyp)}
-            className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
           >
             {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
               <option key={t} value={t}>
                 {TYP_LABEL[t]}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="flex items-center gap-3">
             <button
               onClick={() => erstellen.mutate()}

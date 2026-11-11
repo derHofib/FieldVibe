@@ -6,6 +6,7 @@ import { NEU_MATERIAL } from "./konstanten";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { Clock, Package } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { Select } from "../../../components/apple/Select";
 
 export function PositionenInhalt({
   setShowBedarfForm,
@@ -173,10 +174,9 @@ export function PositionenInhalt({
                     className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
-                <select
+                <Select
                   value={bedarfNeuLieferantId}
                   onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
@@ -184,7 +184,7 @@ export function PositionenInhalt({
                       {l.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
 
@@ -198,14 +198,15 @@ export function PositionenInhalt({
                 placeholder="Menge"
                 className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
-              <select
+              <Select
+                className="w-auto"
                 value={bedarfZweck}
                 onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                groesse="kompakt"
               >
                 <option value="bestellung">Zur Bestellung</option>
                 <option value="angebot">Für Angebot</option>
-              </select>
+              </Select>
             </div>
             <input
               type="text"
@@ -432,10 +433,9 @@ export function PositionenInhalt({
               }))}
             />
             {materialId && (
-              <select
+              <Select
                 value={materialLagerId}
                 onChange={(e) => setMaterialLagerId(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Lagerort wählen…</option>
                 {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
@@ -452,7 +452,7 @@ export function PositionenInhalt({
                       {l.bezeichnung} (0 verfügbar)
                     </option>
                   ))}
-              </select>
+              </Select>
             )}
             <div className="flex gap-2">
               <input

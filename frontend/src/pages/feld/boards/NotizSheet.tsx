@@ -6,6 +6,7 @@ import { kundenApi, maengelApi, vorgaengeApi } from "../../../api/endpoints";
 import { SearchableSelect } from "../../../components/SearchableSelect";
 import type { KlebezettelDaten, KlebezettelFarbe } from "../../../office/boards/types";
 import type { Leistungstyp, VorgangAbrechnungsart } from "../../../types";
+import { Select } from "../../../components/apple/Select";
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];
 const FARB_SWATCH: Record<KlebezettelFarbe, string> = {
@@ -289,28 +290,26 @@ function NeuerVorgangForm({
         placeholder="Kunde wählen…"
         options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
       />
-      <select
+      <Select
         value={leistungstyp}
         onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-        className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       >
         {LEISTUNGSTYP_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
-      </select>
-      <select
+      </Select>
+      <Select
         value={abrechnungsart}
         onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-        className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       >
         {ABRECHNUNGSART_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
       {erstellen.isError && <p className="text-xs text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">
         <button

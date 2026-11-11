@@ -5,6 +5,7 @@ import { DauerauftraegeUebersicht } from "./DauerauftraegeUebersicht";
 import { Inbox, Repeat } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
+import { Select } from "../../../components/apple/Select";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -43,10 +44,11 @@ export function KundeVorgaengeTab({
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Vorgänge</h2>
         {profil.anlagen.length > 0 && (
-          <select
+          <Select
+            className="w-auto"
             value={anlageFilter}
             onChange={(e) => setAnlageFilter(e.target.value)}
-            className="btn-touch border border-sep bg-transparent px-2 py-1 text-xs text-label"
+            groesse="kompakt"
           >
             <option value="">Alle Anlagen</option>
             {profil.anlagen.map((a) => (
@@ -54,7 +56,7 @@ export function KundeVorgaengeTab({
                 {a.bezeichnung}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
       {sichtbareVorgaenge.length === 0 ? (
