@@ -118,7 +118,14 @@ export function OfficeKundenPage() {
           ) : (data ?? []).length === 0 ? (
             <EmptyState
               icon={Users}
-              text="Noch keine Kunden angelegt. Mit „Neuer Kunde“ legst du den ersten an."
+              text="Noch keine Kunden angelegt."
+              action={
+                hatRecht("kunden", "erstellen") ? (
+                  <button type="button" onClick={() => setNeu(true)} className="btn-ap btn-ap-primary px-4 py-2 text-sm">
+                    Neuer Kunde
+                  </button>
+                ) : undefined
+              }
             />
           ) : gefiltert.length === 0 ? (
             <EmptyState icon={Search} text="Kein Kunde entspricht der Suche oder dem Filter." />

@@ -260,7 +260,17 @@ export function KundenPage() {
         ) : ladeFehler && !kunden ? (
           <FehlerZustand fehler={ladeFehler} was="Die Kunden" onErneut={() => void neuLaden()} />
         ) : (kunden ?? []).length === 0 ? (
-          <EmptyState icon={Users} text="Keine Kunden vorhanden." />
+          <EmptyState
+            icon={Users}
+            text="Keine Kunden vorhanden."
+            action={
+              hatRecht("kunden", "erstellen") ? (
+                <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap btn-ap-primary px-4">
+                  + Neuer Kunde
+                </button>
+              ) : undefined
+            }
+          />
         ) : kundenGefiltert.length === 0 ? (
           <p className="text-center text-sm text-label2">
             Keine Kunden gefunden für „{kundenSuche}".

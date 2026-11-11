@@ -333,7 +333,17 @@ export function RechnungenPage() {
             ) : rechnungenFehler && !data ? (
               <FehlerZustand fehler={rechnungenFehler} was="Die Rechnungen" onErneut={() => void rechnungenNeu()} />
             ) : eintraege.length === 0 ? (
-              <EmptyState icon={Receipt} text="Keine Rechnungen für diesen Filter." />
+              <EmptyState
+                icon={Receipt}
+                text="Keine Rechnungen für diesen Filter."
+                action={
+                  hatRecht("abrechnung", "erstellen") ? (
+                    <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap btn-ap-primary px-4">
+                      + Neue Rechnung
+                    </button>
+                  ) : undefined
+                }
+              />
             ) : (
               eintraege.map((r) => (
                 <button
