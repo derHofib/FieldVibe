@@ -77,7 +77,7 @@ export function VerbindungsPopover({
       <p className="mb-2 truncate text-meta text-label2">
         {vorgaengerTitel} → {nachfolgerTitel}
       </p>
-      <p id="zeitplan-art-label" className="mb-1 text-meta font-bold tracking-wide text-label3 uppercase">
+      <p id="zeitplan-art-label" className="mb-1 text-meta font-bold text-label3">
         Art der Verbindung
       </p>
       <div role="radiogroup" aria-labelledby="zeitplan-art-label" className="mb-3 space-y-1">
@@ -106,7 +106,7 @@ export function VerbindungsPopover({
           );
         })}
       </div>
-      <label className="mb-1 block text-meta font-bold tracking-wide text-label3 uppercase" htmlFor="zeitplan-versatz">
+      <label className="mb-1 block text-meta font-bold text-label3" htmlFor="zeitplan-versatz">
         Versatz in Tagen
       </label>
       <input

@@ -25,7 +25,7 @@ export function ZeitSummenBlock({ filter }: { filter: { auftrag_id: string } | {
 
   return (
     <div>
-      <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Zeit</label>
+      <label className="mb-1.5 block text-meta font-bold text-label3">Zeit</label>
       {zeilen.length === 0 ? (
         <p className="text-sekundaer text-label2">Keine Zeit erfasst.</p>
       ) : (

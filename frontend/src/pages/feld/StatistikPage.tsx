@@ -90,7 +90,7 @@ export function TeamKennzahlen() {
 
           {kennzahlen.offene_vorgaenge_je_techniker.length > 0 && (
             <div className="space-y-1.5 border-t border-sep pt-2 ">
-              <p className="text-meta font-bold tracking-wide text-label2 uppercase">Offen je Techniker</p>
+              <p className="text-meta font-bold text-label2">Offen je Techniker</p>
               {kennzahlen.offene_vorgaenge_je_techniker.map((t) => (
                 <TechnikerBalken key={t.techniker_id} name={t.techniker_name} anzahl={t.anzahl_offen} max={maxOffen} />
               ))}

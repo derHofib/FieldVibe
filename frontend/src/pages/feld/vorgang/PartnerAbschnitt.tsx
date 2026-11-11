@@ -48,7 +48,7 @@ export function PartnerAbschnitt({
           {...tabPanelProps("abschnitt-uebersicht")}
         >
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
+            <h2 className="font-heading text-fliess font-semibold text-label">Nachunternehmer</h2>
             {!vorgang.partner_id && (
               <button
                 onClick={() => setShowPartnerForm((v) => !v)}

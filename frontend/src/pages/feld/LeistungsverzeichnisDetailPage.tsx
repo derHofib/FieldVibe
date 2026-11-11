@@ -222,7 +222,7 @@ function LvPositionFelder({
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2">
-          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label2">
             Bezeichnung
           </label>
           <input id={`${uid}-0`}
@@ -234,7 +234,7 @@ function LvPositionFelder({
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label2">
             Einheit
           </label>
           <input id={`${uid}-1`}
@@ -265,7 +265,7 @@ function LvPositionFelder({
       ) : (
         <>
           <div>
-            <label className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+            <label className="mb-1.5 block text-meta font-bold text-label2">
               Preisermittlung
             </label>
             <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
@@ -287,7 +287,7 @@ function LvPositionFelder({
 
           {kalkulationsmodus === "festpreis" ? (
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold text-label2">
                 Einzelpreis (€)
               </label>
               <input id={`${uid}-2`}
@@ -414,7 +414,7 @@ function LvPositionFelder({
       )}
 
       <div>
-        <label htmlFor={`${uid}-8`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+        <label htmlFor={`${uid}-8`} className="mb-1.5 block text-meta font-bold text-label2">
           Notiz
         </label>
         <textarea id={`${uid}-8`}
@@ -427,7 +427,7 @@ function LvPositionFelder({
 
       {!istNeu && !istUnterpunkt && (
         <div className="space-y-2 border-t border-sep pt-4">
-          <p className="text-meta font-bold tracking-wide text-label2 uppercase">Unterpositionen</p>
+          <p className="text-meta font-bold text-label2">Unterpositionen</p>
           {(unterpunkte ?? []).map((u) => (
             <UnterpunktZeileAufklappbar
               key={u.id}
@@ -462,7 +462,7 @@ function LvPositionFelder({
        * Aktions-Buttons, siehe Komponenten-Docstring. */}
       {hatUnterpunkte ? (
         <div className="border-t border-sep pt-4">
-          <p className="mb-1.5 text-meta font-bold tracking-wide text-label2 uppercase">Summe</p>
+          <p className="mb-1.5 text-meta font-bold text-label2">Summe</p>
           <div className="flex items-center justify-between border rounded-[var(--radius-ap-card)] border-sepstrong bg-fill/40 p-3 text-fliess font-bold text-label">
             <span>Gesamt (Summe der Unterpositionen)</span>
             <span>{euro(position!.einzelpreis)}</span>
@@ -471,7 +471,7 @@ function LvPositionFelder({
       ) : (
         kalkulationsmodus === "berechnet" && (
           <div className="border-t border-sep pt-4">
-            <p className="mb-1.5 text-meta font-bold tracking-wide text-label2 uppercase">Summe</p>
+            <p className="mb-1.5 text-meta font-bold text-label2">Summe</p>
             <div className="space-y-1 border rounded-[var(--radius-ap-card)] border-sepstrong p-3 text-sekundaer text-label2">
               <div className="flex justify-between">
                 <span>Lohn-Basis</span>

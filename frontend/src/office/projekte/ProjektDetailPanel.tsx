@@ -179,7 +179,7 @@ export function ProjektDetailPanel({
           </div>
 
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Name</label>
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Name</label>
             <input id={`${uid}-0`}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -199,7 +199,7 @@ export function ProjektDetailPanel({
           </label>
 
           <div>
-            <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+            <label className="mb-1.5 block text-meta font-bold text-label3">
               Aufträge ({auftraege?.length ?? 0})
             </label>
             {!auftraege || auftraege.length === 0 ? (
@@ -218,7 +218,7 @@ export function ProjektDetailPanel({
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="block text-meta font-bold tracking-wide text-label3 uppercase">
+              <label className="block text-meta font-bold text-label3">
                 Vorgänge direkt am Projekt ({vorgaenge?.length ?? 0})
               </label>
               <button

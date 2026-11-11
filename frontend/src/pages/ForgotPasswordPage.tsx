@@ -32,7 +32,7 @@ export function ForgotPasswordPage() {
         </div>
 
         <Blueprint className="bg-card p-8">
-          <h1 className="mb-1 text-center font-heading text-zeile font-semibold uppercase tracking-[0.14em] text-label2">
+          <h1 className="mb-1 text-center font-heading text-zeile font-semibold tracking-[0.14em] text-label2">
             Passwort vergessen
           </h1>
           <p className="mb-6 text-center text-sekundaer text-label2">

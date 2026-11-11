@@ -71,7 +71,7 @@ export function ArbeitszeitInhalt({
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
+        <h2 className="font-heading text-fliess font-semibold text-label">Arbeitszeit</h2>
         {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
           <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-sekundaer font-medium text-tint-text">
             + Zeit nachtragen

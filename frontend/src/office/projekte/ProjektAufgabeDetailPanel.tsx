@@ -61,7 +61,7 @@ function VerknuepfungsZeile({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">{label}</label>
+      <label className="mb-1.5 block text-meta font-bold text-label3">{label}</label>
       {anzeige ? (
         <div className="flex items-center gap-2.5 rounded-md bg-fill px-2.5 py-2">
           <SymbolKachel icon={Icon} farbe={farbe} groesse={26} />
@@ -294,7 +294,7 @@ export function ProjektAufgabeDetailPanel({
 
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">
               Beschreibung
             </label>
             <textarea id={`${uid}-0`}
@@ -307,7 +307,7 @@ export function ProjektAufgabeDetailPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label3">
                 Fälligkeit
               </label>
               <input id={`${uid}-1`}
@@ -318,7 +318,7 @@ export function ProjektAufgabeDetailPanel({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+              <label className="mb-1.5 block text-meta font-bold text-label3">
                 Priorität
               </label>
               <div className="flex gap-0.5 rounded-lg bg-fill p-0.5">
@@ -341,7 +341,7 @@ export function ProjektAufgabeDetailPanel({
 
           {!istPrivat && istEigenstaendig && (
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold text-label3">
                 Spalte
               </label>
               <Select id={`${uid}-2`}
@@ -358,7 +358,7 @@ export function ProjektAufgabeDetailPanel({
           )}
 
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold text-label3">
               Zuständiger
             </label>
             <SearchableSelect id={`${uid}-3`}
@@ -451,7 +451,7 @@ export function ProjektAufgabeDetailPanel({
           />
 
           <div>
-            <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+            <label className="mb-1.5 block text-meta font-bold text-label3">
               Checkliste{checkliste.length > 0 && ` · ${checkliste.filter((p) => p.erledigt).length}/${checkliste.length}`}
             </label>
             <div className="space-y-0.5">
@@ -505,7 +505,7 @@ export function ProjektAufgabeDetailPanel({
 
           {!istNeu && istEigenstaendig && (
             <div>
-              <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
+              <label className="mb-1.5 block text-meta font-bold text-label3">
                 Unteraufgaben
                 {unteraufgaben && unteraufgaben.length > 0 &&
                   ` · ${unteraufgaben.filter((u) => u.erledigt_am).length}/${unteraufgaben.length}`}

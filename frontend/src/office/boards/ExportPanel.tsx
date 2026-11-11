@@ -80,7 +80,7 @@ export function ExportPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <p className="mb-2.5 text-meta font-bold tracking-wide text-label2 uppercase">
+          <p className="mb-2.5 text-meta font-bold text-label2">
             Format
           </p>
           <div className="mb-6 grid grid-cols-3 gap-2.5">
@@ -115,7 +115,7 @@ export function ExportPanel({
             {format.toUpperCase()} herunterladen
           </button>
 
-          <p className="mb-2.5 text-meta font-bold tracking-wide text-label2 uppercase">
+          <p className="mb-2.5 text-meta font-bold text-label2">
             In FieldVibe übernehmen
           </p>
           {notizen.length === 0 ? (

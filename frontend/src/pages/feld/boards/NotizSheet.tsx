@@ -210,7 +210,7 @@ export function NotizAktionSheet({
         </div>
       </div>
 
-      <p className="mt-4 mb-1.5 text-meta font-bold tracking-wide text-label2 uppercase">
+      <p className="mt-4 mb-1.5 text-meta font-bold text-label2">
         In FieldVibe übernehmen
       </p>
       <button

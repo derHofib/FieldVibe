@@ -139,7 +139,7 @@ export function BesetzungTab({
       )}
 
       <section>
-        <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Aktuell besetzt</h3>
+        <h3 className="mb-1.5 text-meta font-semibold text-label2">Aktuell besetzt</h3>
         {aktive.length > 0 ? (
           <ul className="divide-y divide-sep overflow-hidden rounded-[12px] bg-cell">
             {aktive.map((b) => (
@@ -165,7 +165,7 @@ export function BesetzungTab({
 
       {darfBearbeiten && !archiviert && (
         <section>
-          <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Person zuweisen</h3>
+          <h3 className="mb-1.5 text-meta font-semibold text-label2">Person zuweisen</h3>
           <form onSubmit={absenden} className="card-ap space-y-3 p-3">
             <div>
               <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Mitarbeiter</label>
@@ -203,7 +203,7 @@ export function BesetzungTab({
 
       {historie.length > 0 && (
         <section>
-          <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Historie</h3>
+          <h3 className="mb-1.5 text-meta font-semibold text-label2">Historie</h3>
           <ul className="divide-y divide-sep overflow-hidden rounded-[12px] bg-cell">
             {historie.map((b) => (
               <BesetzungZeile key={b.id} b={b} darfBeenden={false} beendenLaeuft={false} />

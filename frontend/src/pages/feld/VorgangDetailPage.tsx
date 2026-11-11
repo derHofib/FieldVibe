@@ -1342,7 +1342,7 @@ export function VorgangDetailPage({
 
       {(verknuepfteAufgaben ?? []).length > 0 && (
         <div className="scroll-mt-4 card-ap p-3">
-          <h2 className="font-heading mb-2 text-fliess font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
+          <h2 className="font-heading mb-2 text-fliess font-semibold text-label">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
           <div className="space-y-1.5">

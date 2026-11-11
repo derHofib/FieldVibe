@@ -22,7 +22,7 @@ export function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; 
 
   return (
     <div>
-      <label className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+      <label className="mb-1.5 block text-meta font-bold text-label2">
         Kunden-Zuweisung
       </label>
       <p className="mb-1.5 text-sekundaer text-label2">Leer = gilt für alle Kunden</p>
@@ -93,7 +93,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label2">
               Name
             </label>
             <input id={`${uid}-0`}
@@ -105,7 +105,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label2">
               Beschreibung
             </label>
             <textarea id={`${uid}-1`}

@@ -129,7 +129,7 @@ function KonsolenZeile({ e }: { e: KonsolenEintrag }) {
   return (
     <li data-level={e.level} className={KONSOLE_KLASSE[e.level] ?? "text-label"}>
       <div className="flex items-start gap-2 px-3 py-2 text-sekundaer">
-        <span className="w-12 shrink-0 font-mono font-semibold uppercase">{e.level}</span>
+        <span className="w-12 shrink-0 font-mono font-semibold">{e.level}</span>
         <span className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono">{e.nachricht}</span>
         <span className="hidden shrink-0 tabular-nums sm:inline">{uhrzeit(e.zeit)}</span>
       </div>
@@ -173,7 +173,7 @@ function KeyValue({ titel, daten }: { titel: string; daten: Record<string, unkno
   if (eintraege.length === 0) return null;
   return (
     <section>
-      <h3 className="mb-1 text-meta font-semibold text-label2 uppercase">{titel}</h3>
+      <h3 className="mb-1 text-meta font-semibold text-label2">{titel}</h3>
       <dl className="divide-y divide-sep overflow-hidden rounded-[var(--radius-ap-card)] bg-cell">
         {eintraege.map(([k, v]) => (
           <div key={k} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:gap-3">

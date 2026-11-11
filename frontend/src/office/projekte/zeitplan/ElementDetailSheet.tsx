@@ -20,7 +20,7 @@ const BESTELLUNG_STATUS_LABEL = { entwurf: "Entwurf", bestellt: "Bestellt", eing
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="px-1 text-sekundaer font-semibold tracking-wide text-label2 uppercase">{titel}</h3>
+      <h3 className="px-1 text-sekundaer font-semibold text-label2">{titel}</h3>
       {children}
     </section>
   );

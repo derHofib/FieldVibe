@@ -28,7 +28,7 @@ function Hinweiskasten() {
 function Block({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="card-ap space-y-2 p-4">
-      <h2 className="text-sekundaer font-semibold tracking-wide text-label2 uppercase">{titel}</h2>
+      <h2 className="text-sekundaer font-semibold text-label2">{titel}</h2>
       {children}
     </section>
   );

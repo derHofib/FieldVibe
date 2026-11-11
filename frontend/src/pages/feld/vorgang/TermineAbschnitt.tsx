@@ -67,7 +67,7 @@ export function TermineAbschnitt({
          * eine ganze Zeile, ohne den Abschnitt komplett zu verstecken
          * (Aktion bleibt sofort erreichbar). */}
         {!(layout !== "dicht" && (termine ?? []).length === 0 && !showTerminForm) && (
-          <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Termine</h2>
+          <h2 className="font-heading text-fliess font-semibold text-label">Termine</h2>
         )}
         {kannDisponieren && (
           <button

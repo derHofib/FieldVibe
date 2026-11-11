@@ -27,7 +27,7 @@ export function PortalForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
-        <h1 className="mb-1 font-heading text-titel-mobil font-semibold uppercase tracking-wide text-label">
+        <h1 className="mb-1 font-heading text-titel-mobil font-semibold text-label">
           Passwort vergessen
         </h1>
         <p className="mb-6 text-sekundaer text-label2">

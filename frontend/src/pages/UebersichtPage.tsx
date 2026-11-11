@@ -132,7 +132,7 @@ function ServerAuslastung() {
 function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="card-ap p-4">
-      <div className="text-meta font-medium uppercase tracking-wide text-label2">
+      <div className="text-meta font-medium text-label2">
         {label}
       </div>
       <div className="mt-1 text-titel-mobil font-bold text-label">{value}</div>

@@ -58,7 +58,7 @@ export function MaengelAbschnitt({
          * Leer-Meldung nennt den Abschnitt stattdessen selbst (siehe
          * gleiches Muster oben bei Termine). */}
         {!(layout !== "dicht" && (maengel ?? []).length === 0 && !showMangelForm) && (
-          <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Mängel</h2>
+          <h2 className="font-heading text-fliess font-semibold text-label">Mängel</h2>
         )}
         <div className="flex items-center gap-3">
           {(maengel ?? []).length > 0 && (

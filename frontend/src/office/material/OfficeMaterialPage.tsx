@@ -96,7 +96,7 @@ export function OfficeMaterialPage() {
       <MaterialDetailPage key={id} id={id} eingebettet />
       {gewaehltesMaterial && (
         <div>
-          <h3 className="mb-2 text-meta font-bold tracking-wider text-label2 uppercase">
+          <h3 className="mb-2 text-meta font-bold text-label2">
             Bestände je Lager
           </h3>
           <MaterialZeile

@@ -16,7 +16,7 @@ import { DetailSkeleton } from "../Skeleton";
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-meta font-semibold text-label2 uppercase">{titel}</h3>
+      <h3 className="text-meta font-semibold text-label2">{titel}</h3>
       {children}
     </section>
   );

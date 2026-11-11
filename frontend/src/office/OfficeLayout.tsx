@@ -381,7 +381,7 @@ export function OfficeLayout() {
                     <button
                       onClick={() => kategorieUmschalten(gruppe.name)}
                       aria-expanded={!kollabiert}
-                      className="flex w-full items-center justify-between px-2 pb-1.5 text-meta font-semibold text-label2 uppercase hover:text-label"
+                      className="flex w-full items-center justify-between px-2 pb-1.5 text-meta font-semibold text-label2 tracking-wide uppercase hover:text-label"
                     >
                       <span>{gruppe.name}</span>
                       <ChevronDown
@@ -427,7 +427,7 @@ export function OfficeLayout() {
 
             {!eingeklappt && aktiveProjekte.length > 0 && (
               <div>
-                <p className="px-2 pb-1.5 text-meta font-semibold text-label2 uppercase">Aktive Projekte</p>
+                <p className="px-2 pb-1.5 text-meta font-semibold text-label2 tracking-wide uppercase">Aktive Projekte</p>
                 {aktiveProjekte.map((p) => (
                   <NavLink
                     key={p.id}

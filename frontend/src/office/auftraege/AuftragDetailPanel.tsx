@@ -64,7 +64,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
     <SeitenPanel offen titel={aktuell?.titel ?? auftrag.titel} onClose={onClose}>
       <div className="space-y-5 p-4">
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Titel</label>
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Titel</label>
           <input id={`${uid}-0`}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -74,7 +74,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Status</label>
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label3">Status</label>
           <Select id={`${uid}-1`}
             value={aktuell?.status ?? auftrag.status}
             onChange={(e) => aktualisieren.mutate({ status: e.target.value as AuftragStatus })}
@@ -88,7 +88,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Projekt</label>
+          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold text-label3">Projekt</label>
           <SearchableSelect id={`${uid}-2`}
             value={aktuell?.projekt_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ projekt_id: v || null })}
@@ -99,7 +99,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Kunde</label>
+          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold text-label3">Kunde</label>
           <SearchableSelect id={`${uid}-3`}
             value={aktuell?.kunde_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ kunde_id: v || null })}
@@ -111,7 +111,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="block text-meta font-bold tracking-wide text-label3 uppercase">
+            <label className="block text-meta font-bold text-label3">
               Vorgänge ({vorgaenge?.length ?? 0})
             </label>
             <button

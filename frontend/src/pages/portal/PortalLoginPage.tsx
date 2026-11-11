@@ -60,7 +60,7 @@ export function PortalLoginPage() {
           <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border rounded-[var(--radius-ap-md)] border-sepstrong text-tint">
             <Hexagon size={17} strokeWidth={1.5} aria-hidden="true" />
           </div>
-          <h1 className="font-heading text-titel-mobil font-semibold uppercase tracking-wide text-label">
+          <h1 className="font-heading text-titel-mobil font-semibold text-label">
             Kunden<span className="text-tint-text">portal</span>
           </h1>
         </div>

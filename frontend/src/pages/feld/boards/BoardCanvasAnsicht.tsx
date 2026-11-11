@@ -114,7 +114,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label } = data as RahmenDaten;
       return (
         <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-fill">
-          <p className="m-2 text-meta font-bold tracking-wide text-label2 uppercase ">{label}</p>
+          <p className="m-2 text-meta font-bold text-label2 ">{label}</p>
         </div>
       );
     }

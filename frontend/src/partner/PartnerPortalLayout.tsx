@@ -29,7 +29,7 @@ export function PartnerPortalLayout() {
             {currentPartner?.mandant_name ?? <Logo variante="wortmarke" hoehe={22} />}
           </span>
         )}
-        <span className="hidden text-sekundaer font-semibold tracking-wide text-label2 uppercase sm:inline">Partnerportal</span>
+        <span className="hidden text-sekundaer font-semibold text-label2 sm:inline">Partnerportal</span>
         <nav aria-label="Hauptnavigation" className="ml-4 hidden items-center gap-1 md:flex">
           {NAV_ITEMS.map((item) => (
             <NavLink

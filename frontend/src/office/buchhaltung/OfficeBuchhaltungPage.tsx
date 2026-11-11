@@ -198,7 +198,7 @@ function PostenTabelle({
 function Th({ children, rechts = false }: { children: React.ReactNode; rechts?: boolean }) {
   return (
     <th
-      className={`border-b border-sep px-3.5 py-2 text-meta font-bold tracking-wider text-label2 uppercase 0 ${
+      className={`border-b border-sep px-3.5 py-2 text-meta font-bold tracking-wide text-label2 uppercase 0 ${
         rechts ? "text-right" : "text-left"
       }`}
     >

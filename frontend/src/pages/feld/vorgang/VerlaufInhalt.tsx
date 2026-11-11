@@ -93,7 +93,7 @@ export function VerlaufInhalt({
       />
 
       <div className="scroll-mt-4 flex items-center justify-between gap-2">
-        <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Verlauf</h2>
+        <h2 className="font-heading text-fliess font-semibold text-label">Verlauf</h2>
         <span className="text-sekundaer text-label2">{kundenansicht ? "Kundenansicht" : "Interne Ansicht"}</span>
         <button
           onClick={() => setKundenansicht((v) => !v)}

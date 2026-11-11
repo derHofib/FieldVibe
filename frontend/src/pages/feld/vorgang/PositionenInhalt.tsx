@@ -112,7 +112,7 @@ export function PositionenInhalt({
   return (
     <>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Positionen</h2>
+          <h2 className="font-heading text-fliess font-semibold text-label">Positionen</h2>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowBedarfForm((v) => !v)}

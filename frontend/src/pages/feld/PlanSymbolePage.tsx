@@ -128,7 +128,7 @@ export function PlanSymbolePage() {
       </div>
 
       <div className="space-y-2 card-ap p-4">
-        <p className="text-meta font-bold tracking-wide text-label2 uppercase">Neues Symbol</p>
+        <p className="text-meta font-bold text-label2">Neues Symbol</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="btn-touch flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong px-3 py-2 text-sekundaer text-label hover:bg-fill">
             <Upload size={15} strokeWidth={1.5} />

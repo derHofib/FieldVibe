@@ -452,7 +452,7 @@ export function ZeitenBuchenPage() {
       </div>
 
       <div className="card-ap p-3">
-        <h2 className="mb-2 flex items-center gap-1.5 font-heading text-fliess font-semibold uppercase tracking-wide text-label">
+        <h2 className="mb-2 flex items-center gap-1.5 font-heading text-fliess font-semibold text-label">
           <Clock size={15} strokeWidth={2} />
           Laufende Timer
         </h2>

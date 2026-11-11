@@ -109,7 +109,7 @@ export function AngebotLvUebernahme({
 
         {[...gruppen].map(([lvId, liste]) => (
           <section key={lvId}>
-            <h3 className="mb-1 text-meta font-semibold uppercase text-label2">
+            <h3 className="mb-1 text-meta font-semibold text-label2">
               {lvs?.find((l) => l.id === lvId)?.name ?? "Leistungsverzeichnis"}
             </h3>
             <ul className="divide-y-[0.5px] divide-sep">

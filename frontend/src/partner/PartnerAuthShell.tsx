@@ -11,7 +11,7 @@ export function PartnerAuthShell({ titel, untertitel, children }: { titel: strin
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2">
           <Logo variante="wortmarke" hoehe={30} />
-          <p className="text-sekundaer font-semibold tracking-wide text-label2 uppercase">Partnerportal</p>
+          <p className="text-sekundaer font-semibold text-label2">Partnerportal</p>
         </div>
         <div className="card-ap p-6">
           <h1 className="ap-heading mb-1 text-titel-mobil font-bold text-label">{titel}</h1>

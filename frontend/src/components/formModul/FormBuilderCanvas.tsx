@@ -108,7 +108,7 @@ function FeldTypPalette({ ohneStruktur = false }: { ohneStruktur?: boolean }) {
 
   return (
     <div className="w-64 shrink-0 space-y-1.5 border-r border-sep pr-4">
-      <p className="text-meta font-bold tracking-wide text-label2 uppercase">Feldtypen — ziehen &amp; ablegen</p>
+      <p className="text-meta font-bold text-label2">Feldtypen — ziehen &amp; ablegen</p>
       {kategorien.map((kat) => {
         const offen = offeneKategorien.has(kat.name);
         return (
@@ -367,7 +367,7 @@ function InspectorFeld({
   return (
     <div className="space-y-4 p-4">
       <div>
-        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Ausgewähltes Feld</p>
+        <p className="mb-1 text-meta font-bold text-label2">Ausgewähltes Feld</p>
         <p className="text-fliess font-semibold text-label">{FELD_TYP_LABEL[feld.feld_typ]}</p>
       </div>
       <div>
@@ -423,7 +423,7 @@ function InspectorFeld({
         </div>
       )}
       <div>
-        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Regeln &amp; Formel</p>
+        <p className="mb-1 text-meta font-bold text-label2">Regeln &amp; Formel</p>
         <button
           onClick={onRegelnOeffnen}
           className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sekundaer text-label hover:bg-fill"
@@ -471,7 +471,7 @@ function InspectorGruppe({
   return (
     <div className="space-y-4 p-4">
       <div>
-        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Ausgewählte Gruppe</p>
+        <p className="mb-1 text-meta font-bold text-label2">Ausgewählte Gruppe</p>
         <p className="text-fliess font-semibold text-label">{gruppe.repeatable ? "Unterformular" : "Abschnitt"}</p>
       </div>
       <div>
@@ -516,7 +516,7 @@ function InspectorGruppe({
         </div>
       )}
       <div>
-        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Regeln</p>
+        <p className="mb-1 text-meta font-bold text-label2">Regeln</p>
         <button
           onClick={onRegelnOeffnen}
           className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sekundaer text-label hover:bg-fill"
@@ -1025,7 +1025,7 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     // transform auf einem Vorfahren macht diesen zum Containing-Block fuer
     // position:fixed und hat den Overlay weit vom Cursor weg gerissen.
     <div className="mx-[calc(50%-50vw)] w-screen max-w-none space-y-2 px-3 sm:px-6">
-      <p className="mx-auto max-w-[1400px] text-meta font-bold tracking-wide text-label2 uppercase">Formular</p>
+      <p className="mx-auto max-w-[1400px] text-meta font-bold text-label2">Formular</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="mx-auto flex max-w-[1400px] gap-4 card-ap" style={{ minHeight: 520 }}>

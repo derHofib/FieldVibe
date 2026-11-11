@@ -655,7 +655,7 @@ export function FeedPage() {
                 <div key={gruppe} className="space-y-3">
                   <div className="flex items-baseline gap-1.5 px-1">
                     <h2
-                      className={`text-meta font-medium tracking-[0.14em] uppercase ${
+                      className={`text-meta font-medium tracking-wide uppercase ${
                         gruppe === "ueberfaellig"
                           ? "text-st-fehlt"
                           : gruppe === "heute"

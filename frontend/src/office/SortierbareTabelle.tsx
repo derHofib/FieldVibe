@@ -76,7 +76,7 @@ export function SortierbareTabelle<T>({
                   {spalte.sortWert ? (
                     <button
                       onClick={() => umschalten(spalte.key)}
-                      className={`inline-flex items-center gap-1 rounded-sm uppercase hover:text-label ${
+                      className={`inline-flex items-center gap-1 rounded-sm tracking-wide uppercase hover:text-label ${
                         aktiv ? "text-label" : ""
                       }`}
                     >

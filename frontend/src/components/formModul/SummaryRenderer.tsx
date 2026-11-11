@@ -141,7 +141,7 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-fliess">
                   <thead>
-                    <tr className="border-b border-sepstrong text-left text-meta font-medium uppercase text-label2">
+                    <tr className="border-b border-sepstrong text-left text-meta font-medium tracking-wide uppercase text-label2">
                       {gruppenFelder.map((f) => (
                         <th key={f.id} className="py-1.5 pr-3">
                           {f.label.de ?? f.key}

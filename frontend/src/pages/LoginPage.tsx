@@ -59,7 +59,7 @@ export function LoginPage() {
         </div>
 
         <Blueprint className="bg-card p-8">
-          <h1 className="mb-6 text-center font-heading text-zeile font-semibold uppercase tracking-[0.14em] text-label2">
+          <h1 className="mb-6 text-center font-heading text-zeile font-semibold tracking-[0.14em] text-label2">
             Anmeldung
           </h1>
 
