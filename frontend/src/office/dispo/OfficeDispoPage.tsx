@@ -264,7 +264,7 @@ export function OfficeDispoPage() {
       </SeitenKopf>
 
       {fehler && (
-        <div className="mb-4 flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div className="mb-4 flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
           </span>
@@ -275,7 +275,7 @@ export function OfficeDispoPage() {
       )}
 
       {warnungen.length > 0 && (
-        <div className="mb-4 border border-st-arbeit p-3 text-sm text-st-arbeit">
+        <div className="mb-4 border rounded-[var(--radius-ap-card)] border-st-arbeit p-3 text-sm text-st-arbeit">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -520,7 +520,7 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-sep px-2 text-left text-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border rounded-[var(--radius-ap-md)] border-sep px-2 text-left text-xs ${
                                 abgesagt
                                   ? "text-label2 line-through"
                                   : "bg-fill text-label"
@@ -656,7 +656,7 @@ function TerminBearbeitenPanel({
             ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
@@ -681,7 +681,7 @@ function TerminBearbeitenPanel({
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
@@ -690,7 +690,7 @@ function TerminBearbeitenPanel({
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
@@ -706,7 +706,7 @@ function TerminBearbeitenPanel({
               value={fahrzeit}
               onChange={(e) => setFahrzeit(e.target.value)}
               placeholder="0"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
@@ -719,7 +719,7 @@ function TerminBearbeitenPanel({
               value={pause}
               onChange={(e) => setPause(e.target.value)}
               placeholder="0"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
@@ -730,7 +730,7 @@ function TerminBearbeitenPanel({
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
@@ -832,7 +832,7 @@ function BacklogPlanenPanel({
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
@@ -841,7 +841,7 @@ function BacklogPlanenPanel({
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>

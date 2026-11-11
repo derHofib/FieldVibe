@@ -285,7 +285,7 @@ function MangelMeldenMiniform({
         onChange={(e) => setBeschreibung(e.target.value)}
         rows={2}
         placeholder="Beschreibung des Mangels…"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-xs text-label"
       />
       {melden.isError && <p className="text-[11px] text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">

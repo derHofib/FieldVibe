@@ -84,7 +84,7 @@ export function OfficeBoardsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z. B. Projektplanung Rheinblick"
-                className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
               />
             </div>
             <div>

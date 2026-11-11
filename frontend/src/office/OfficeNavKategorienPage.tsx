@@ -155,7 +155,7 @@ export function OfficeNavKategorienPage() {
               <input
                 value={k.name}
                 onChange={(e) => kategorieUmbenennen(k.localId, e.target.value)}
-                className="min-w-0 flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 onClick={() => kategorieVerschieben(i, -1)}

@@ -207,7 +207,7 @@ export function ProjektDetailPanel({
             ) : (
               <div className="space-y-1.5">
                 {auftraege.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-sm">
+                  <div key={a.id} className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-sm">
                     <span className="min-w-0 flex-1 truncate text-label">{a.titel}</span>
                     <span className="shrink-0 text-xs text-label2">{AUFTRAG_STATUS_LABEL[a.status]}</span>
                   </div>
@@ -236,7 +236,7 @@ export function ProjektDetailPanel({
                   <button
                     key={v.id}
                     onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
-                    className="flex w-full items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
+                    className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
                   >
                     <span className="min-w-0 flex-1 truncate text-label">
                       {v.vorgangsnummer} · {v.titel}
@@ -330,7 +330,7 @@ export function ProjektDetailPanel({
                   <button
                     type="button"
                     onClick={() => setTerminWocheOffset((o) => o - 1)}
-                    className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
                   >
                     ← Vorherige Woche
                   </button>
@@ -338,14 +338,14 @@ export function ProjektDetailPanel({
                     type="button"
                     onClick={() => setTerminWocheOffset(0)}
                     disabled={terminWocheOffset === 0}
-                    className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
                   >
                     Diese Woche
                   </button>
                   <button
                     type="button"
                     onClick={() => setTerminWocheOffset((o) => o + 1)}
-                    className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
                   >
                     Nächste Woche →
                   </button>
@@ -358,7 +358,7 @@ export function ProjektDetailPanel({
               {sortiert.length === 0 ? (
                 <p className="text-sm text-label2">Keine Termine in diesem Projekt.</p>
               ) : (
-                <div className="grid grid-cols-7 gap-px overflow-hidden border border-sep bg-sep">
+                <div className="grid grid-cols-7 gap-px overflow-hidden border rounded-[var(--radius-ap-md)] border-sep bg-sep">
                   {wocheTage.map((tag, i) => {
                     const heuteFlag = tagesSchluessel(tag) === tagesSchluessel(heute);
                     const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
