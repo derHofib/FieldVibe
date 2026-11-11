@@ -24,6 +24,7 @@ import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
@@ -206,10 +207,9 @@ export function OfficeVorgaengePage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-            <select
+            <Select groesse="kompakt"
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -217,12 +217,11 @@ export function OfficeVorgaengePage() {
                   {k.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.anlage_id ?? ""}
               onChange={(e) => setField("anlage_id", e.target.value)}
               disabled={!filter.kunde_id}
-              className="field-ap disabled:opacity-50"
             >
               <option value="">{filter.kunde_id ? "Alle Anlagen" : "Erst Kunden wählen"}</option>
               {(anlagenFuerKunde ?? []).map((a) => (
@@ -230,11 +229,10 @@ export function OfficeVorgaengePage() {
                   {a.bezeichnung}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.projekt_id ?? ""}
               onChange={(e) => setField("projekt_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Projekte</option>
               {(projekte ?? []).map((p) => (
@@ -242,11 +240,10 @@ export function OfficeVorgaengePage() {
                   {p.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select groesse="kompakt"
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -254,7 +251,7 @@ export function OfficeVorgaengePage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
             <input
               type="date"
               value={filter.faellig_von ?? ""}
@@ -275,14 +272,13 @@ export function OfficeVorgaengePage() {
               placeholder="#Tag"
               className="field-ap"
             />
-            <select
+            <Select groesse="kompakt"
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
-            </select>
+            </Select>
           </div>
         </div>
       )}

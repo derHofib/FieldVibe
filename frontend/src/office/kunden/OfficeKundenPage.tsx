@@ -17,6 +17,7 @@ import type { Kunde, KundeTyp } from "../../types";
 import { filtereKunden } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { SeitenKopf } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 
 const TYP_LABEL: Record<KundeTyp, string> = {
@@ -238,14 +239,14 @@ function NeuerKundeFormular({
           <label htmlFor="kunde-typ" className={LABEL}>
             Typ
           </label>
-          <select id="kunde-typ" value={form.typ} onChange={(e) => setze({ typ: e.target.value })} className={FELD}>
+          <Select id="kunde-typ" value={form.typ} onChange={(e) => setze({ typ: e.target.value })}>
             <option value="">Bitte wählen…</option>
             {(Object.keys(TYP_LABEL) as KundeTyp[]).map((typ) => (
               <option key={typ} value={typ}>
                 {TYP_LABEL[typ]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
       {(form.typ === "gewerbe" || form.typ === "oeffentlich") && (

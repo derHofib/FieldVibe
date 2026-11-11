@@ -11,6 +11,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 import { Layers } from "lucide-react";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
@@ -74,17 +75,16 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
 
         <div>
           <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Status</label>
-          <select id={`${uid}-1`}
+          <Select id={`${uid}-1`}
             value={aktuell?.status ?? auftrag.status}
             onChange={(e) => aktualisieren.mutate({ status: e.target.value as AuftragStatus })}
-            className="field-ap"
           >
             {AUFTRAG_STATUS_OPTIONEN.map((s) => (
               <option key={s} value={s}>
                 {AUFTRAG_STATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>

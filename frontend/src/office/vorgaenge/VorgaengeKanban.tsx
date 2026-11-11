@@ -12,6 +12,7 @@ import {
   istUeberfaellig,
   tageSeit,
 } from "../../config/vorgangDarstellung";
+import { Select } from "../../components/apple/Select";
 import type { FeedCard, VorgangStatus } from "../../types";
 
 /** Spalten nach Status, per Drag&Drop verschiebbar. Ein Statuswechsel kann im
@@ -150,18 +151,17 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                       <label htmlFor={`kanban-status-${v.id}`} className="sr-only">
                         Status von „{v.titel}“ ändern
                       </label>
-                      <select
+                      <Select className="mt-1.5 w-full" groesse="kompakt"
                         id={`kanban-status-${v.id}`}
                         value={effektiverStatus(v)}
                         onChange={(e) => handleDrop(e.target.value as VorgangStatus, v.id)}
-                        className="field-ap mt-1.5 h-auto px-1 py-0.5 text-[10px]"
                       >
                         {KANBAN_SPALTEN.map((s) => (
                           <option key={s} value={s}>
                             {STATUS_LABEL[s]}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   );
                 })}
