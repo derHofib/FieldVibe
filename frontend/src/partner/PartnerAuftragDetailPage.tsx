@@ -9,6 +9,7 @@ import { AbschnittskopfB } from "../components/apple/AbschnittsKopf";
 import { GroupedList, GroupedListValueRow } from "../components/apple/GroupedList";
 import { Sheet } from "../components/apple/Sheet";
 import { StatusPille } from "../components/apple/StatusPille";
+import { FehlerZustand } from "../components/FehlerZustand";
 import { LEISTUNGSTYP_LABEL } from "../config/vorgangDarstellung";
 import { SkeletonList } from "../components/Skeleton";
 import type { Adresse, PartnerKommentar, PartnerStatusSetzbar, PartnerVorgang } from "../types";
@@ -57,7 +58,7 @@ export function PartnerAuftragDetailPage() {
   const [abschliessenOffen, setAbschliessenOffen] = useState(false);
   const [kommentar, setKommentar] = useState("");
 
-  const { data: auftrag, isLoading, error } = useQuery({
+  const { data: auftrag, isLoading, error, refetch } = useQuery({
     queryKey: ["partnerportal-auftrag", id],
     queryFn: () => partnerPortalApi.auftrag(id),
     enabled: !!id,
@@ -79,6 +80,7 @@ export function PartnerAuftragDetailPage() {
   }
 
   const antwort = useMutation({
+    meta: { erfolg: "Antwort gesendet" },
     mutationFn: (v: { status: "angenommen" | "abgelehnt"; grund?: string }) =>
       partnerPortalApi.antworten(id, v.status, v.grund),
     onSuccess: (neu) => {
@@ -89,6 +91,7 @@ export function PartnerAuftragDetailPage() {
     onError: bei,
   });
   const statusWechsel = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: PartnerStatusSetzbar) => partnerPortalApi.statusSetzen(id, status),
     onSuccess: (neu) => {
       setFehler(null);
@@ -101,6 +104,7 @@ export function PartnerAuftragDetailPage() {
     },
   });
   const senden = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: (text: string) => partnerPortalApi.kommentieren(id, text),
     onSuccess: () => {
       setFehler(null);
@@ -130,11 +134,7 @@ export function PartnerAuftragDetailPage() {
     return (
       <main className="mx-auto max-w-2xl px-3 py-4">
         {zurueck}
-        <p role="alert" className="px-5 pt-4 text-sm text-st-fehlt">
-          {error instanceof ApiError && error.status === 404
-            ? "Dieser Auftrag existiert nicht (mehr) oder ist Ihnen nicht zugewiesen."
-            : "Der Auftrag konnte nicht geladen werden."}
-        </p>
+        <FehlerZustand fehler={error ?? new ApiError(404, "")} was="Der Auftrag" onErneut={() => void refetch()} className="px-4 pt-4" />
       </main>
     );
   }

@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings, Bug } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { fehlerberichteApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./brand/Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { SeitenGrenze } from "./ErrorBoundary";
 
 const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] = [
   { to: "/uebersicht", label: "Übersicht", icon: LayoutDashboard },
@@ -98,7 +99,7 @@ export function Layout() {
             </div>
           </header>
           <main className="flex-1 p-3 sm:p-6">
-            <Outlet />
+            <SeitenGrenze />
           </main>
         </div>
       </div>

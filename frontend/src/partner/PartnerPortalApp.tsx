@@ -1,3 +1,4 @@
+import { SkeletonList } from "../components/Skeleton";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PartnerAuthProvider, usePartnerAuth } from "../context/PartnerAuthContext";
@@ -10,11 +11,16 @@ import { PartnerProfilPage } from "./PartnerProfilPage";
 import { PartnerRegistrierenPage } from "./PartnerRegistrierenPage";
 import { PartnerResetPasswordPage } from "./PartnerResetPasswordPage";
 import { PartnerZeitplanPage } from "./PartnerZeitplanPage";
+import { NichtGefunden } from "../components/NichtGefunden";
 
 function PartnerPortalRoutes() {
   const { isAuthenticated, isLoading } = usePartnerAuth();
 
-  if (isLoading) return <div className="p-6">Lädt…</div>;
+  if (isLoading) return (
+      <div className="p-6" role="status" aria-label="Lädt">
+        <SkeletonList count={3} />
+      </div>
+    );
 
   return (
     <Routes>
@@ -34,7 +40,8 @@ function PartnerPortalRoutes() {
           <Route path="auftraege/:id" element={<PartnerAuftragDetailPage />} />
           <Route path="zeitplan" element={<PartnerZeitplanPage />} />
           <Route path="profil" element={<PartnerProfilPage />} />
-          <Route path="*" element={<Navigate to="/partnerportal/auftraege" replace />} />
+          <Route index element={<Navigate to="/partnerportal/auftraege" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/partnerportal/auftraege" alsH1 />} />
         </Route>
       )}
     </Routes>

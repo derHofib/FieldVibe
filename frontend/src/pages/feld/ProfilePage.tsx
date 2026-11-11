@@ -9,15 +9,17 @@ import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
 import { MfaKarte } from "./MfaKarte";
 import { PasswortAendernKarte } from "./PasswortAendernKarte";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 export function ProfilePage() {
+  const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht, isImpersonating, logout } = useAuth();
   const navigate = useNavigate();
   const [abmeldenLaeuft, setAbmeldenLaeuft] = useState(false);
   const [abmeldenFehler, setAbmeldenFehler] = useState<string | null>(null);
 
   const ueberallAbmelden = async () => {
-    if (!window.confirm("Auf allen Geräten abmelden? Du musst dich danach überall neu anmelden.")) {
+    if (!(await bestaetigen({ titel: "Auf allen Geräten abmelden?", text: "Du musst dich danach überall neu anmelden.", bestaetigenLabel: "Abmelden", destruktiv: false }))) {
       return;
     }
     setAbmeldenLaeuft(true);
@@ -93,7 +95,7 @@ export function ProfilePage() {
         >
           <IconBadge icon={Timer} tone="cyan" size="sm" />
           <span className="font-medium text-label">
-            {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+            {currentUser?.nur_zugewiesene_kunden ? "Meine Arbeitszeit" : "Arbeitszeit"}
           </span>
         </button>
       )}

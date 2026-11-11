@@ -14,11 +14,11 @@ import {
   kalenderRaster,
   offeneAntraege,
 } from "../../utils/abwesenheit";
-import { istModulAktiv } from "../../utils/module";
 import { monatsGrenzen, toDateInput } from "../../utils/zeiterfassung";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
 import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Tab = "offen" | "kalender" | "alle" | "anspruch";
 
@@ -37,14 +37,9 @@ function fehlerText(err: unknown): string {
 }
 
 export function OfficeAbwesenheitenPage() {
-  const { currentUser } = useAuth();
   const [tab, setTab] = useState<Tab>("offen");
   const [eintragen, setEintragen] = useState(false);
   const queryClient = useQueryClient();
-
-  if (!istModulAktiv(currentUser, "zeiterfassung") || !currentUser?.darf_abwesenheiten_verwalten) {
-    return <EmptyState icon={CalendarCheck} text="Dafür fehlt die Berechtigung „Abwesenheiten verwalten“." />;
-  }
 
   return (
     <div className="space-y-4">
@@ -96,6 +91,7 @@ function useAntragAktionen() {
   };
   const genehmigen = useMutation({ mutationFn: (id: string) => abwesenheitenApi.genehmigen(id), ...optionen });
   const ablehnen = useMutation({
+    meta: { erfolg: "Abgelehnt" },
     mutationFn: ({ id, antwort }: { id: string; antwort: string }) => abwesenheitenApi.ablehnen(id, antwort.trim()),
     ...optionen,
   });
@@ -281,6 +277,7 @@ function KalenderAnsicht() {
 }
 
 function AlleAntraege() {
+  const bestaetigen = useBestaetigung();
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [status, setStatus] = useState<AbwesenheitStatus | "">("");
   const { data, isLoading } = useQuery({
@@ -334,8 +331,8 @@ function AlleAntraege() {
                     type="button"
                     className="text-sm font-medium text-st-fehlt disabled:opacity-50"
                     disabled={aktionen.ausstehend}
-                    onClick={() => {
-                      if (a.status === "offen" || window.confirm("Genehmigte Abwesenheit stornieren? Die automatisch erzeugten Zeiteinträge werden entfernt.")) {
+                    onClick={async () => {
+                      if (a.status === "offen" || await bestaetigen({ titel: "Genehmigte Abwesenheit stornieren?", text: "Die automatisch erzeugten Zeiteinträge werden entfernt.", bestaetigenLabel: "Stornieren" })) {
                         aktionen.stornieren.mutate(a.id);
                       }
                     }}
@@ -355,7 +352,7 @@ function AlleAntraege() {
 
 function AnspruchAbschnitt() {
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [userId, setUserId] = useState(currentUser?.id ?? "");
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [tage, setTage] = useState("");
@@ -363,7 +360,7 @@ function AnspruchAbschnitt() {
   const [verfall, setVerfall] = useState("");
   const [meldung, setMeldung] = useState<{ fehler: boolean; text: string } | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: konto, isLoading } = useQuery({
     queryKey: ["abwesenheiten", "konto", userId, jahr],
     queryFn: () => abwesenheitenApi.konto({ user_id: userId, jahr }),
@@ -379,6 +376,7 @@ function AnspruchAbschnitt() {
   }, [konto]);
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       abwesenheitenApi.anspruchSetzen(userId, jahr, {
         tage: tage.trim().replace(",", ".") || "0",

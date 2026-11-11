@@ -27,6 +27,7 @@ export function GueltigkeitSheet({
   const [fehler, setFehler] = useState<string | null>(null);
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => angeboteApi.update(angebotId, { gueltig_bis: datum }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["angebot", angebotId] });

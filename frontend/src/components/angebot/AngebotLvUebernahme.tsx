@@ -39,6 +39,7 @@ export function AngebotLvUebernahme({
 
   // Backend nimmt je Aufruf genau ein LV; mehrere LVs gehen nacheinander.
   const uebernehmen = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: async () => {
       for (const [lvId, liste] of gruppen) {
         const eintraege = liste

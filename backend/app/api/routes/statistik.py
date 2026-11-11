@@ -68,8 +68,13 @@ async def vorgang_kennzahlen(
         for techniker_id, name, anzahl in je_techniker_result.all()
     ]
 
+    # Datensätze mit Abschluss vor Anlage (Altdaten/Demo-Daten) würden den Schnitt
+    # ins Negative ziehen -- sie zählen als abgeschlossen, aber nicht in die Zeit.
     durchlaufzeit_stmt = select(
-        func.avg(func.extract("epoch", Vorgang.abgeschlossen_am - Vorgang.created_at)) / 86400.0,
+        func.avg(func.extract("epoch", Vorgang.abgeschlossen_am - Vorgang.created_at)).filter(
+            Vorgang.abgeschlossen_am >= Vorgang.created_at
+        )
+        / 86400.0,
         func.count(),
     ).where(Vorgang.geloescht_am.is_(None), Vorgang.abgeschlossen_am.is_not(None))
     if projekt_id:

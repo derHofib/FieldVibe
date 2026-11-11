@@ -1,9 +1,12 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { FehlerZustand } from "../components/FehlerZustand";
+import { SkeletonList } from "../components/Skeleton";
 import { dsgvoApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { DsgvoDokument, DsgvoDokumentTyp } from "../types";
+import { useBestaetigung } from "../components/ConfirmDialog";
 
 // Muss mit DSGVO_DOKUMENT_TYPEN in backend/app/models/dsgvo_dokument.py
 // uebereinstimmen.
@@ -24,11 +27,13 @@ function formatGroesse(bytes: number): string {
 }
 
 function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: DsgvoDokument }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => dsgvoApi.upload(typ, file),
     onSuccess: () => {
       setError(null);
@@ -38,6 +43,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => dsgvoApi.remove(typ),
     onSuccess: () => {
       setError(null);
@@ -85,8 +91,8 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                 Herunterladen
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
+                onClick={async () => {
+                  if (await bestaetigen({ titel: `"${DOKUMENT_LABEL[typ]}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
                 className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
@@ -117,7 +123,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
 }
 
 export function DsgvoPage() {
-  const { data: dokumente } = useQuery({
+  const { data: dokumente, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dsgvo-dokumente"],
     queryFn: dsgvoApi.list,
   });
@@ -131,11 +137,17 @@ export function DsgvoPage() {
         Löschkonzept, TOM-Dokument, Meldeprozess, Verarbeitungsverzeichnis). Erlaubt sind PDF, Word
         (.doc/.docx) oder Bilddateien (max. 10 MB).
       </p>
+      {isLoading ? (
+        <SkeletonList count={4} />
+      ) : ladeFehler && !dokumente ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Dokumente" onErneut={() => void neuLaden()} />
+      ) : (
       <div className="space-y-3">
         {ALLE_TYPEN.map((typ) => (
           <DokumentKarte key={typ} typ={typ} dokument={dokumentByTyp.get(typ)} />
         ))}
       </div>
+      )}
     </div>
   );
 }

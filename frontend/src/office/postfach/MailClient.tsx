@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { MailAccount, MailAttachment } from "../../types";
 import { ComposePanel, type ComposeModus } from "./ComposePanel";
+import { SkeletonList } from "../../components/Skeleton";
 
 function relativesDatum(iso: string | null): string {
   if (!iso) return "";
@@ -53,7 +55,8 @@ export function MailClient({ account }: { account: MailAccount }) {
   const queryClient = useQueryClient();
   const [aktiverOrdner, setAktiverOrdner] = useState<string | null>(null);
   const [aktiveNachricht, setAktiveNachricht] = useState<string | null>(null);
-  const [suche, setSuche] = useState("");
+  const [sucheEingabe, setSuche] = useState("");
+  const suche = useDebouncedValue(sucheEingabe);
   const [compose, setCompose] = useState<ComposeModus | null>(null);
   const [gesendetHinweis, setGesendetHinweis] = useState(false);
 
@@ -154,7 +157,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-label2"
           />
           <input
-            value={suche}
+            value={sucheEingabe}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suchen…"
             className="w-full rounded-lg border border-sep bg-fill py-1.5 pr-2 pl-7 text-xs text-label "
@@ -167,7 +170,7 @@ export function MailClient({ account }: { account: MailAccount }) {
         )}
         <div className="flex-1 overflow-y-auto">
           {nachrichtenLaden ? (
-            <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+            <SkeletonList count={4} />
           ) : nachrichten.length === 0 ? (
             <EmptyState
               icon={Inbox}

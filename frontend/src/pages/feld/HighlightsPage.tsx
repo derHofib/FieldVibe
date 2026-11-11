@@ -6,18 +6,20 @@ import { highlightsApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { Skeleton } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 export function HighlightsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
 
-  const { data: highlights, isLoading } = useQuery({
+  const { data: highlights, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["highlights"],
     queryFn: highlightsApi.list,
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => highlightsApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["highlights"] }),
   });
@@ -40,6 +42,8 @@ export function HighlightsPage() {
             <Skeleton key={i} className="aspect-square rounded-lg" />
           ))}
         </div>
+      ) : ladeFehler && !highlights ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Highlights" onErneut={() => void neuLaden()} />
       ) : (highlights ?? []).length === 0 ? (
         <EmptyState
           icon={Star}

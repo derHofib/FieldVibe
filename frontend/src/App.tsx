@@ -5,6 +5,7 @@ import { AccountTypenPage } from "./pages/AccountTypenPage";
 import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
 import { MfaErzwingenSeite } from "./components/MfaErzwingenSeite";
 import { FeldLayout } from "./components/FeldLayout";
+import { RouteGuard } from "./components/RouteGuard";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
@@ -76,6 +77,7 @@ import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 import { PartnerPortalApp } from "./partner/PartnerPortalApp";
+import { NichtGefunden } from "./components/NichtGefunden";
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -162,71 +164,75 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
           <Route path="/einstellungen" element={<EinstellungenPage />} />
-          <Route path="*" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="/" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/uebersicht" startLabel="Zur Übersicht" />} />
         </Route>
       )}
 
       {isAuthenticated && !isPlatformAdmin && !istOffice && (
         <Route element={<FeldLayout />}>
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/suche" element={<SearchPage />} />
-          <Route path="/neu" element={<NewVorgangPage />} />
-          <Route path="/benachrichtigungen" element={<NotificationsPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
-          <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
-          <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
-          <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
-          <Route path="/kunden/:id" element={<KundeProfilePage />} />
-          <Route path="/partner/:id" element={<PartnerProfilePage />} />
-          <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
-          <Route path="/standorte/:id" element={<StandortDetailPage />} />
-          <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
-          <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
-          <Route path="/form-schemas" element={<FormSchemasPage />} />
-          <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
-          <Route path="/plan-symbole" element={<PlanSymbolePage />} />
-          <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
-          <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
-          <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-          <Route path="/dispo" element={<DispoBoardPage />} />
-          <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
-          <Route path="/mehr" element={<MehrPage />} />
-          <Route path="/projekte" element={<ProjektePageMobil />} />
-          <Route path="/projekte/:id/zeitplan" element={<ProjektZeitplanMobilPage />} />
-          <Route path="/boards" element={<BoardsUebersichtPage />} />
-          <Route path="/boards/:id" element={<BoardMobilePage />} />
-          <Route path="/pruefmittel" element={<PruefmittelPage />} />
-          <Route path="/kunden" element={<KundenPage />} />
-          <Route path="/partner" element={<PartnerPage />} />
-          <Route path="/material" element={<MaterialPage />} />
-          <Route path="/anfragen" element={<AnfragenPage />} />
-          <Route path="/angebote/:id" element={<AngebotDetailPage />} />
-          <Route path="/rechnungen" element={<RechnungenPage />} />
-          <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
-          <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
-          <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
-          <Route path="/auswertung" element={<AuswertungPage />} />
-          <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
-          <Route path="/material/:id" element={<MaterialDetailPage />} />
-          <Route path="/highlights" element={<HighlightsPage />} />
-          <Route path="/postfach" element={<PostfachPage />} />
-          <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/integrationen" element={<IntegrationenPage />} />
-          <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
-          <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
-          <Route path="/accounts" element={<UsersPage />} />
-          <Route path="/account-typen" element={<AccountTypenPage />} />
-          <Route path="/einstellungen" element={<SettingsPage />} />
-          <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
-          <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
-          <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
-          <Route path="/statistik" element={<StatistikPage />} />
-          <Route path="/team-zeiten" element={<TeamZeitenPage />} />
-          <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
-          <Route path="/papierkorb" element={<PapierkorbPage />} />
-          <Route path="*" element={<Navigate to={standardStartseite} replace />} />
+          <Route element={<RouteGuard oberflaeche="feld" />}>
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/suche" element={<SearchPage />} />
+            <Route path="/neu" element={<NewVorgangPage />} />
+            <Route path="/benachrichtigungen" element={<NotificationsPage />} />
+            <Route path="/profil" element={<ProfilePage />} />
+            <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
+            <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
+            <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
+            <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
+            <Route path="/kunden/:id" element={<KundeProfilePage />} />
+            <Route path="/partner/:id" element={<PartnerProfilePage />} />
+            <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+            <Route path="/standorte/:id" element={<StandortDetailPage />} />
+            <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
+            <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
+            <Route path="/form-schemas" element={<FormSchemasPage />} />
+            <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
+            <Route path="/plan-symbole" element={<PlanSymbolePage />} />
+            <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
+            <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
+            <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
+            <Route path="/dispo" element={<DispoBoardPage />} />
+            <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
+            <Route path="/mehr" element={<MehrPage />} />
+            <Route path="/projekte" element={<ProjektePageMobil />} />
+            <Route path="/projekte/:id/zeitplan" element={<ProjektZeitplanMobilPage />} />
+            <Route path="/boards" element={<BoardsUebersichtPage />} />
+            <Route path="/boards/:id" element={<BoardMobilePage />} />
+            <Route path="/pruefmittel" element={<PruefmittelPage />} />
+            <Route path="/kunden" element={<KundenPage />} />
+            <Route path="/partner" element={<PartnerPage />} />
+            <Route path="/material" element={<MaterialPage />} />
+            <Route path="/anfragen" element={<AnfragenPage />} />
+            <Route path="/angebote/:id" element={<AngebotDetailPage />} />
+            <Route path="/rechnungen" element={<RechnungenPage />} />
+            <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+            <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
+            <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
+            <Route path="/auswertung" element={<AuswertungPage />} />
+            <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
+            <Route path="/material/:id" element={<MaterialDetailPage />} />
+            <Route path="/highlights" element={<HighlightsPage />} />
+            <Route path="/postfach" element={<PostfachPage />} />
+            <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/integrationen" element={<IntegrationenPage />} />
+            <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
+            <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
+            <Route path="/accounts" element={<UsersPage />} />
+            <Route path="/account-typen" element={<AccountTypenPage />} />
+            <Route path="/einstellungen" element={<SettingsPage />} />
+            <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
+            <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
+            <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+            <Route path="/statistik" element={<StatistikPage />} />
+            <Route path="/team-zeiten" element={<TeamZeitenPage />} />
+            <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
+            <Route path="/papierkorb" element={<PapierkorbPage />} />
+            <Route path="/" element={<Navigate to={standardStartseite} replace />} />
+            <Route path="*" element={<NichtGefunden startRoute={standardStartseite} />} />
+          </Route>
         </Route>
       )}
     </Routes>

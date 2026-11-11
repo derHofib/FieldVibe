@@ -5,6 +5,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useNodesInitialized,
   useNodesState,
   useReactFlow,
   type Edge,
@@ -150,14 +151,17 @@ function Flaeche(props: OrganigrammDiagrammProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<PositionKnotenTyp>(flowKnoten);
   useEffect(() => setNodes(flowKnoten), [flowKnoten, setNodes]);
 
-  // Einmal einpassen, sobald erstmals Knoten da sind (die Daten kommen asynchron).
+  // Einmal auf den Inhalt einpassen -- erst wenn React Flow die Knoten vermessen hat. Vorher
+  // kennt fitView keine Knotenbreiten und rechnet mit 0, der Wurzelknoten liegt dann links
+  // ausserhalb des sichtbaren Bereichs. Die Daten kommen ausserdem asynchron.
+  const vermessen = useNodesInitialized();
   const eingepasst = useRef(false);
   useEffect(() => {
-    if (eingepasst.current || flowKnoten.length === 0) return;
+    if (eingepasst.current || !vermessen) return;
     eingepasst.current = true;
     const frame = requestAnimationFrame(() => fitView({ padding: 0.2, maxZoom: 1 }));
     return () => cancelAnimationFrame(frame);
-  }, [flowKnoten.length, fitView]);
+  }, [vermessen, fitView]);
 
   const kontextWert = useMemo(
     () => ({
@@ -172,8 +176,11 @@ function Flaeche(props: OrganigrammDiagrammProps) {
 
   return (
     <DiagrammKontext.Provider value={kontextWert}>
-      <div className="h-full w-full" style={FLOW_STIL}>
+      <div className="h-full w-full">
         <ReactFlow<PositionKnotenTyp>
+          // Am Flow-Element selbst: die Klasse .react-flow.light der Bibliothek setzt die Variablen dort
+          // erneut und würde sie vom umgebenden div überschreiben (Minimap/Buttons blieben im Dunkelmodus hell).
+          style={FLOW_STIL}
           nodes={nodes}
           edges={flowKanten}
           onNodesChange={onNodesChange}

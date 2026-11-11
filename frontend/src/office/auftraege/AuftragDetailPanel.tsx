@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { auftraegeApi, kundenApi, projekteApi, vorgaengeApi } from "../../api/endpoints";
@@ -11,6 +11,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 import { Layers } from "lucide-react";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
 
@@ -19,6 +20,8 @@ const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgesch
  * (rein referenziell, siehe app/models/auftrag.py), darunter die
  * verknuepften Vorgaenge (auftrag_id-Filter). */
 export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onClose: () => void }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [titel, setTitel] = useState(auftrag.titel);
@@ -60,8 +63,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
     <SeitenPanel offen titel={aktuell?.titel ?? auftrag.titel} onClose={onClose}>
       <div className="space-y-5 p-4">
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Titel</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Titel</label>
+          <input id={`${uid}-0`}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             onBlur={() => titel.trim() && titel !== aktuell?.titel && aktualisieren.mutate({ titel: titel.trim() })}
@@ -70,8 +73,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Status</label>
-          <select
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Status</label>
+          <select id={`${uid}-1`}
             value={aktuell?.status ?? auftrag.status}
             onChange={(e) => aktualisieren.mutate({ status: e.target.value as AuftragStatus })}
             className="field-ap"
@@ -85,8 +88,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Projekt</label>
-          <SearchableSelect
+          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Projekt</label>
+          <SearchableSelect id={`${uid}-2`}
             value={aktuell?.projekt_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ projekt_id: v || null })}
             placeholder="Kein Projekt"
@@ -96,8 +99,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Kunde</label>
-          <SearchableSelect
+          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Kunde</label>
+          <SearchableSelect id={`${uid}-3`}
             value={aktuell?.kunde_id ?? ""}
             onChange={(v) => aktualisieren.mutate({ kunde_id: v || null })}
             placeholder="Kein Kunde"
@@ -144,8 +147,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
 
         <div className="border-t border-sep pt-4">
           <button
-            onClick={() => {
-              if (window.confirm(`Auftrag "${aktuell?.titel ?? auftrag.titel}" wirklich löschen?`)) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: `Auftrag "${aktuell?.titel ?? auftrag.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                 loeschen.mutate();
               }
             }}

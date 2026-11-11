@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -18,6 +18,7 @@ import { QrScanner } from "../../components/QrScanner";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 const KUNDE_TYPEN: { value: KundeTyp; label: string }[] = [
   { value: "privat", label: "Privat" },
@@ -63,6 +64,7 @@ const FORM_ID = "neuer-vorgang-formular";
  * zurueck zur aufrufenden Seite (Feed oder Office-Vorgangsliste) statt zu
  * einer fest verdrahteten Route. */
 export function NewVorgangPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // "+ Neuer Vorgang" aus ProjektDetailPanel.tsx/AuftragDetailPanel.tsx
@@ -107,9 +109,12 @@ export function NewVorgangPage() {
     navigate(-1);
   }
 
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
-  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list() });
+  const { hatRecht } = useAuth();
+  // Backend: /api/projekte und /api/auftraege verlangen projekte.sehen.
+  const darfProjekte = hatRecht("projekte", "sehen");
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfProjekte });
+  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfProjekte });
   const { data: anlagenListe } = useQuery({
     queryKey: ["anlagen", kundeId, "aktiv"],
     queryFn: () => anlagenApi.list(kundeId, undefined, true),
@@ -142,6 +147,7 @@ export function NewVorgangPage() {
   }, [anlagenListe, vorbelegteAnlageId, anlage]);
 
   const createAnlageMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenApi.create({
         kunde_id: kundeId,
@@ -171,6 +177,7 @@ export function NewVorgangPage() {
   }
 
   const createKundeMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       kundenApi.create({ name: newKundeName, typ: newKundeTyp || undefined }),
     onSuccess: (kunde) => {
@@ -197,6 +204,7 @@ export function NewVorgangPage() {
   }
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: async () => {
       const payload = {
         kunde_id: kundeId,
@@ -259,17 +267,16 @@ export function NewVorgangPage() {
     }
   }
 
+  const [feldFehler, setFeldFehler] = useState<{ kunde?: string; titel?: string }>({});
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!kundeId) {
-      setError("Bitte einen Kunden auswählen");
-      return;
-    }
-    if (!titel.trim()) {
-      setError("Bitte einen Titel eingeben");
-      return;
-    }
+    const neu: { kunde?: string; titel?: string } = {};
+    if (!kundeId) neu.kunde = "Bitte einen Kunden auswählen.";
+    if (!titel.trim()) neu.titel = "Bitte einen Titel eingeben.";
+    setFeldFehler(neu);
+    if (neu.kunde || neu.titel) return;
     createMutation.mutate();
   }
 
@@ -295,7 +302,7 @@ export function NewVorgangPage() {
         </button>
       }
     >
-      <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-4 p-4">
+      <form id={FORM_ID} onSubmit={handleSubmit} noValidate className="space-y-4 p-4">
         <button
           type="button"
           onClick={() => setShowScanner(true)}
@@ -329,8 +336,13 @@ export function NewVorgangPage() {
         </p>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-label">Kunde</label>
-          <select
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+            Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
+          </label>
+          <select id={`${uid}-0`}
+            required
+            aria-invalid={!!feldFehler.kunde}
+            aria-describedby={feldFehler.kunde ? `${uid}-kunde-fehler` : undefined}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
@@ -346,9 +358,14 @@ export function NewVorgangPage() {
               </option>
             ))}
           </select>
+          {feldFehler.kunde && (
+            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              {feldFehler.kunde}
+            </p>
+          )}
           {!showNewKunde && (
-            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-xs text-tint underline">
-              + Neuen Kunden anlegen
+            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-xs font-medium text-tint">
+              + Neuer Kunde
             </button>
           )}
         </div>
@@ -356,8 +373,8 @@ export function NewVorgangPage() {
         {showNewKunde && (
           <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Name</label>
-              <input
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Name</label>
+              <input id={`${uid}-1`}
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
@@ -365,8 +382,8 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
-              <select
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
+              <select id={`${uid}-2`}
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
                 className="field-ap"
@@ -405,8 +422,8 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
-            <select value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
+            <select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -447,8 +464,8 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
-            <select
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
+            <select id={`${uid}-4`}
               value={anlage?.id ?? ""}
               onChange={(e) => setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)}
               className="field-ap"
@@ -461,8 +478,8 @@ export function NewVorgangPage() {
               ))}
             </select>
             {!showNewAnlage && (
-              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs text-tint underline">
-                + Neue Anlage anlegen
+              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs font-medium text-tint">
+                + Neue Anlage
               </button>
             )}
           </div>
@@ -471,8 +488,8 @@ export function NewVorgangPage() {
         {showNewAnlage && (
           <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
-              <input
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
+              <input id={`${uid}-5`}
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
@@ -480,8 +497,8 @@ export function NewVorgangPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
-              <input
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
+              <input id={`${uid}-6`}
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
@@ -512,10 +529,10 @@ export function NewVorgangPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        {darfProjekte && <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
-            <SearchableSelect
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
+            <SearchableSelect id={`${uid}-7`}
               value={projektId}
               onChange={setProjektId}
               placeholder="Kein Projekt"
@@ -523,24 +540,39 @@ export function NewVorgangPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Auftrag (optional)</label>
-            <SearchableSelect
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-label">Auftrag (optional)</label>
+            <SearchableSelect id={`${uid}-8`}
               value={auftragId}
               onChange={setAuftragId}
               placeholder="Kein Auftrag"
               options={(auftraege ?? []).map((a) => ({ value: a.id, label: a.titel }))}
             />
           </div>
+        </div>}
+
+        <div>
+          <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-label">
+            Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
+          </label>
+          <input
+            id={`${uid}-9`}
+            required
+            aria-invalid={!!feldFehler.titel}
+            aria-describedby={feldFehler.titel ? `${uid}-titel-fehler` : undefined}
+            value={titel}
+            onChange={(e) => setTitel(e.target.value)}
+            className="field-ap"
+          />
+          {feldFehler.titel && (
+            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+              {feldFehler.titel}
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-label">Titel</label>
-          <input required value={titel} onChange={(e) => setTitel(e.target.value)} className="field-ap" />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
-          <textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
+          <label htmlFor={`${uid}-10`} className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <textarea id={`${uid}-10`} value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
         </div>
 
         <div>
@@ -562,8 +594,8 @@ export function NewVorgangPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
-            <select
+            <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
+            <select id={`${uid}-11`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
               className="field-ap"
@@ -576,8 +608,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
-            <select
+            <label htmlFor={`${uid}-12`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
+            <select id={`${uid}-12`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
               className="field-ap"
@@ -590,8 +622,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Priorität</label>
-            <select value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
+            <label htmlFor={`${uid}-13`} className="mb-1 block text-sm font-medium text-label">Priorität</label>
+            <select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}

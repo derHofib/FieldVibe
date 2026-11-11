@@ -1,3 +1,4 @@
+import { SkeletonList } from "../components/Skeleton";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PortalLayout } from "../components/PortalLayout";
@@ -13,11 +14,16 @@ import { PortalRegistrierenPage } from "../pages/portal/PortalRegistrierenPage";
 import { PortalResetPasswordPage } from "../pages/portal/PortalResetPasswordPage";
 import { PortalVorgangDetailPage } from "../pages/portal/PortalVorgangDetailPage";
 import { PortalVorgaengePage } from "../pages/portal/PortalVorgaengePage";
+import { NichtGefunden } from "../components/NichtGefunden";
 
 function KundenPortalRoutes() {
   const { isAuthenticated, isLoading } = useKundenAuth();
 
-  if (isLoading) return <div className="p-6">Lädt…</div>;
+  if (isLoading) return (
+      <div className="p-6" role="status" aria-label="Lädt">
+        <SkeletonList count={3} />
+      </div>
+    );
 
   return (
     <Routes>
@@ -44,7 +50,8 @@ function KundenPortalRoutes() {
           <Route path="angebote/:id" element={<PortalAngebotDetailPage />} />
           <Route path="angebote/:id/widerruf" element={<PortalAngebotWiderrufPage />} />
           <Route path="rechnungen" element={<PortalRechnungenPage />} />
-          <Route path="*" element={<Navigate to="/portal/vorgaenge" replace />} />
+          <Route index element={<Navigate to="/portal/vorgaenge" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/portal/vorgaenge" alsH1 />} />
         </Route>
       )}
     </Routes>

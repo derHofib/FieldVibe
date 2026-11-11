@@ -67,6 +67,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   }, [geordnete, fokus, navigate]);
 
   const statusSetzen = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: async (status: "geplant" | "in_arbeit") => {
       for (const id of ausgewaehlt) {
         await vorgaengeApi.update(id, { status });
@@ -81,7 +82,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   return (
     <div>
       {ausgewaehlt.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-tintbg px-3 py-2 text-xs font-semibold text-tint">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-tintbg px-3 py-2 text-xs font-semibold text-tint-text">
           <span>{ausgewaehlt.size} ausgewählt</span>
           <button onClick={() => statusSetzen.mutate("geplant")} disabled={statusSetzen.isPending} className="btn-ap text-xs">
             Auf „Geplant" setzen

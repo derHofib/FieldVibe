@@ -17,12 +17,14 @@ export function SearchableSelect({
   onChange,
   placeholder = "Auswählen…",
   className = "",
+  id,
 }: {
   options: SearchableSelectOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  id?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -48,6 +50,7 @@ export function SearchableSelect({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <input
+        id={id}
         type="text"
         value={open ? query : (selected?.label ?? "")}
         onChange={(e) => {
@@ -60,6 +63,8 @@ export function SearchableSelect({
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
+            // Nur die Auswahl schließen, nicht ein umgebendes Panel
+            e.stopPropagation();
             setOpen(false);
             setQuery("");
             e.currentTarget.blur();

@@ -51,6 +51,8 @@ import {
   type Zoom,
   type ZiehArt,
 } from "./zeitplanLogik";
+import { useAuth } from "../../../context/AuthContext";
+import { useBestaetigung } from "../../../components/ConfirmDialog";
 
 const ZOOM_OPTIONEN: { wert: Zoom; label: string }[] = [
   { wert: "tag", label: "Tag" },
@@ -134,6 +136,7 @@ function useSchmalerViewport(): boolean {
  * Backend bleibt fuer die Verschiebe-Regeln massgeblich, die Vorschau beim
  * Ziehen (zeitplanLogik.ts) spiegelt sie nur fuer sofortiges Feedback. */
 export function ZeitplanTab({ projektId }: { projektId: string }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [basisplanId, setBasisplanId] = useState<string | null>(null);
@@ -147,7 +150,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     isLoading,
     error,
   } = useQuery({ queryKey, queryFn: () => zeitplanApi.get(projektId, basisplanId), placeholderData: keepPreviousData });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { hatRecht } = useAuth();
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: basisplaene } = useQuery({ queryKey: ["projekt-basisplaene", projektId], queryFn: () => zeitplanApi.basisplaene(projektId) });
 
   const [zoom, setZoom] = useState<Zoom>("tag");
@@ -405,9 +409,9 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     );
   }
 
-  function loeschen(e: ZeitplanElement) {
-    const text = e.typ === "phase" ? `Phase „${e.titel}“ wirklich löschen?` : `„${e.titel}“ wirklich löschen?`;
-    if (!window.confirm(text)) return;
+  async function loeschen(e: ZeitplanElement) {
+    const titel = e.typ === "phase" ? `Phase „${e.titel}“ löschen?` : `„${e.titel}“ löschen?`;
+    if (!(await bestaetigen({ titel, bestaetigenLabel: "Löschen" }))) return;
     setFehler(null);
     aendern.mutate(() => zeitplanApi.removeElement(projektId, e.id));
   }

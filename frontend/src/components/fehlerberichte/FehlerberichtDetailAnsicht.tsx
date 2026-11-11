@@ -10,6 +10,8 @@ import { SegmentedControl } from "../apple/SegmentedControl";
 import { FehlerStatusPille, SchweregradBadge } from "./Badges";
 import { KontextTabs } from "./KontextTabs";
 import { FEHLER_STATUS, datumZeit, istHttpUrl, kurzCommit, statusLabel } from "./darstellung";
+import { useBestaetigung } from "../ConfirmDialog";
+import { DetailSkeleton } from "../Skeleton";
 
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
@@ -238,6 +240,7 @@ export function FehlerberichtDetailAnsicht({
   listenPfad: string;
   detailPfad: (id: string) => string;
 }) {
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [hinweis, setHinweis] = useState<string | null>(null);
@@ -302,7 +305,7 @@ export function FehlerberichtDetailAnsicht({
     </Link>
   );
 
-  if (isLoading) return <p className="text-label2">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
   if (isError || !detail) {
     return (
       <div className="space-y-2">
@@ -392,8 +395,8 @@ export function FehlerberichtDetailAnsicht({
           {kannLoeschen && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(`${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`)) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen({ titel: `${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`, bestaetigenLabel: "Endgültig löschen" })) loeschen.mutate();
               }}
               className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm text-st-fehlt hover:bg-st-fehlt-bg"
             >

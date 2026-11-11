@@ -33,6 +33,7 @@ export function OfficeNavSettingsPage() {
   }, [currentUser?.id]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (praeferenz: OfficeNavPraeferenz) => usersApi.updateOwnOfficeNav(praeferenz),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["me"] });

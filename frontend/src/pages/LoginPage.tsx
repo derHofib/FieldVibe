@@ -31,9 +31,9 @@ export function LoginPage() {
           return;
         }
       }
-      // Fuer Nicht-Platform-Admins faengt das Catch-All in App.tsx diesen
-      // Pfad ab und leitet zur echten Startseite (Feed/Papierkorb) um.
-      navigate("/uebersicht", { replace: true });
+      // "/" leitet je Rolle zur Startseite um (Plattform-Dashboard, Feed, Papierkorb);
+      // ein fester Pfad landet fuer Mandanten-Nutzer seit der 404-Seite dort.
+      navigate("/", { replace: true });
     } catch (err) {
       // Abgelaufener Zwischen-Token (401): zurueck zur Passwort-Eingabe.
       if (mfaToken && err instanceof ApiError && err.status === 401 && !/Code/.test(err.message)) {

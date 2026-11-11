@@ -17,7 +17,7 @@
 // eine Handvoll Regeln hatte.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -30,6 +30,7 @@ import { SeitenPanel } from "../../components/SeitenPanel";
 import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormViewTyp, Leistungstyp } from "../../types";
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
@@ -80,6 +81,7 @@ function RegelForm({
   submitting: boolean;
   error: string | null;
 }) {
+  const uid = useId();
   const [effect, setEffect] = useState<FormLogicEffekt>(initial?.effect ?? "show");
   const [condition, setCondition] = useState<unknown>(initial?.condition ?? true);
   const [value, setValue] = useState<unknown>(initial?.value ?? "");
@@ -145,8 +147,8 @@ function RegelForm({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Gültig in</label>
-        <select value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Gültig in</label>
+        <select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
             <option key={v.id} value={v.id}>
@@ -320,7 +322,7 @@ export function FormSchemaEditorPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [tab, setTab] = useState<EditorTab>("felder");
 
-  const { data: schema, isLoading } = useQuery({
+  const { data: schema, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["form-schema", id],
     queryFn: () => formModulApi.getSchema(id!),
     enabled: !!id,
@@ -353,6 +355,7 @@ export function FormSchemaEditorPage() {
   const [viewName, setViewName] = useState("");
 
   const createViewMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formModulApi.createView(id!, { type: viewTyp, name: viewName.trim() }),
     onSuccess: () => {
       setViewName("");
@@ -361,6 +364,7 @@ export function FormSchemaEditorPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "View konnte nicht angelegt werden"),
   });
   const deleteViewMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (viewId: string) => formModulApi.deleteView(id!, viewId),
     onSuccess: invalidate,
   });
@@ -390,15 +394,18 @@ export function FormSchemaEditorPage() {
   const [zuPflicht, setZuPflicht] = useState(false);
 
   const createZuordnungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formModulApi.createZuordnung(id!, { leistungstyp: zuLeistungstyp, pflicht_vor_abschluss: zuPflicht }),
     onSuccess: invalidate,
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Zuordnung konnte nicht angelegt werden"),
   });
   const deleteZuordnungMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (zuordnungId: string) => formModulApi.deleteZuordnung(id!, zuordnungId),
     onSuccess: invalidate,
   });
 
+  if (ladeFehler && !schema) return <FehlerZustand fehler={ladeFehler} was="Das Formular" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 

@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Receipt } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { auswertungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
@@ -47,8 +47,6 @@ export function AuswertungPage() {
   });
 
   const datevMeldung = datevMutation.error instanceof ApiError ? datevMutation.error.message : null;
-
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   if (eingeschraenkt) {
     return (

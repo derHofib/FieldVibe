@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpCircle, CheckCircle2 } from "lucide-react";
 
 import { versionApi } from "../api/endpoints";
+import { FehlerZustand } from "../components/FehlerZustand";
+import { SkeletonList } from "../components/Skeleton";
 
 function formatDatum(iso: string | null): string {
   if (!iso) return "unbekannt";
@@ -9,7 +11,7 @@ function formatDatum(iso: string | null): string {
 }
 
 export function UpdatePage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["version-info"],
     queryFn: versionApi.get,
     retry: 1,
@@ -25,7 +27,8 @@ export function UpdatePage() {
         ausgeführt werden.
       </p>
 
-      {isLoading && <p className="text-sm text-label2">Lädt…</p>}
+      {isLoading && <SkeletonList count={2} />}
+      {error && !data && <FehlerZustand fehler={error} was="Die Versionsinfo" onErneut={() => void refetch()} />}
 
       {data && (
         <div className="space-y-4">

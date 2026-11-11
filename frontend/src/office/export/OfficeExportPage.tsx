@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, FileSpreadsheet } from "lucide-react";
-import { Navigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { exporteApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { IconBadge } from "../../components/IconBadge";
-import { useAuth } from "../../context/AuthContext";
 import { dateigroesseText } from "../datenimport/datenimportUtils";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -31,7 +29,6 @@ function zeitText(iso: string): string {
 }
 
 export function OfficeExportPage() {
-  const { currentUser } = useAuth();
   const queryClient = useQueryClient();
   const standard = standardZeitraum();
   const [von, setVon] = useState(standard.von);
@@ -53,10 +50,6 @@ export function OfficeExportPage() {
     },
     onError: (err) => setFehler(fehlerText(err)),
   });
-
-  if (currentUser && currentUser.role !== "mandant_admin") {
-    return <Navigate to="/vorgaenge" replace />;
-  }
 
   async function herunterladen(e: MandantExport) {
     try {

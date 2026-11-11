@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { navKategorienApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import { IconBadge } from "../components/IconBadge";
-import { useAuth } from "../context/AuthContext";
 import { NAV_KATEGORIE_REIHENFOLGE, NAV_SEITEN } from "../config/navSeiten";
 import type { NavKategorienRead } from "../types";
 
@@ -20,7 +19,6 @@ const OHNE_KATEGORIE = "__ohne__";
 export function OfficeNavKategorienPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["nav-kategorien"],
@@ -66,6 +64,7 @@ export function OfficeNavKategorienPage() {
   }, [data, initialisiert]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: NavKategorienRead) => navKategorienApi.set(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["nav-kategorien"] });
@@ -73,10 +72,6 @@ export function OfficeNavKategorienPage() {
     },
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Fehler beim Speichern"),
   });
-
-  if (currentUser && currentUser.role !== "mandant_admin") {
-    return <Navigate to="/vorgaenge" replace />;
-  }
 
   function kategorieUmbenennen(localId: string, name: string) {
     setKategorien((bisher) => bisher.map((k) => (k.localId === localId ? { ...k, name } : k)));

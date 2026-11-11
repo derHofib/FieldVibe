@@ -9,6 +9,7 @@ import { Sheet } from "../../components/apple/Sheet";
 import { EmptyState } from "../../components/EmptyState";
 import type { ProjektVorlage, ProjektVorlageDetail, ProjektVorlageElement } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 function fehlerText(e: unknown): string {
   return e instanceof ApiError ? e.message : "Die Aktion ist fehlgeschlagen.";
@@ -97,6 +98,7 @@ function BearbeitenSheet({ vorlage, onClose }: { vorlage: ProjektVorlage; onClos
   const [name, setName] = useState(vorlage.name);
   const [beschreibung, setBeschreibung] = useState(vorlage.beschreibung ?? "");
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => projektVorlagenApi.update(vorlage.id, { name: name.trim(), beschreibung: beschreibung.trim() || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projekt-vorlagen"] });
@@ -141,6 +143,7 @@ function BearbeitenSheet({ vorlage, onClose }: { vorlage: ProjektVorlage; onClos
 /** Verwaltung der Projektvorlagen (Zeitplan-Vorlagen): Liste links, Vorschau rechts, umbenennen und
  * loeschen. Angelegt werden Vorlagen aus dem Zeitplan-Tab eines Projekts ("Als Vorlage speichern"). */
 export function OfficeProjektVorlagenPage() {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { data: vorlagen, isLoading, error } = useQuery({ queryKey: ["projekt-vorlagen"], queryFn: projektVorlagenApi.list });
   const [auswahlId, setAuswahlId] = useState<string | null>(null);
@@ -221,8 +224,8 @@ export function OfficeProjektVorlagenPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(`Vorlage „${aktiv.name}“ wirklich löschen? Bereits angewendete Zeitpläne bleiben unverändert.`)) {
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Vorlage „${aktiv.name}“ löschen?`, text: `Bereits angewendete Zeitpläne bleiben unverändert.`, bestaetigenLabel: "Löschen" })) {
                       setFehler(null);
                       loeschen.mutate(aktiv.id);
                     }

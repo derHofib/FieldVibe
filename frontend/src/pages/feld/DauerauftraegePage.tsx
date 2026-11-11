@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 export function DauerauftraegePage() {
   const navigate = useNavigate();
-  const { data: dauerauftraege, isLoading } = useQuery({
+  const { data: dauerauftraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftraege"],
     queryFn: () => dauerauftraegeApi.list(),
   });
@@ -21,7 +23,9 @@ export function DauerauftraegePage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-label2">Lädt…</p>
+        <SkeletonList count={4} />
+      ) : ladeFehler && !dauerauftraege ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Daueraufträge" onErneut={() => void neuLaden()} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
         <p className="text-sm text-label2">Noch keine Dauer-Aufträge angelegt.</p>
       ) : (

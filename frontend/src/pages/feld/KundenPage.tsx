@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
 import { Users } from "lucide-react";
-import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
@@ -11,13 +12,17 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
+import { filtereKunden } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
  * inzwischen aufgeteilten GeschaeftPage (siehe Git-Historie). Rechnungen/
  * Angebote haben ihre eigenen Seiten (RechnungenPage/AngebotDetailPage-
  * Uebersicht), Material lebt jetzt in MaterialPage. */
 export function KundenPage() {
+  const uid = useId();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -25,6 +30,7 @@ export function KundenPage() {
   const kannSehen = istModulAktiv(currentUser, "kundenverwaltung") && hatRecht("kunden", "sehen");
 
   const [showForm, setShowForm] = useState(false);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [kundeFehler, setKundeFehler] = useState<string | null>(null);
   const [kundenSuche, setKundenSuche] = useState("");
   const [neuerKunde, setNeuerKunde] = useState({
@@ -41,18 +47,15 @@ export function KundenPage() {
     eRechnungFormat: "" as ERechnungFormat | "",
   });
 
-  const { data: kunden, isLoading: kundenLoading } = useQuery({
+  const { data: kunden, isLoading: kundenLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
     enabled: kannSehen,
   });
-  const kundenGefiltert = (kunden ?? []).filter((k) => {
-    if (!kundenSuche.trim()) return true;
-    const q = kundenSuche.trim().toLowerCase();
-    return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
-  });
+  const kundenGefiltert = filtereKunden(kunden ?? [], kundenSuche);
 
   const createKundeMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => {
       const adresse =
         neuerKunde.strasse || neuerKunde.plz || neuerKunde.ort
@@ -93,8 +96,6 @@ export function KundenPage() {
       setKundeFehler(err instanceof ApiError ? err.message : "Kunde konnte nicht angelegt werden."),
   });
 
-  if (!kannSehen) return <Navigate to="/feed" replace />;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -110,29 +111,39 @@ export function KundenPage() {
       </div>
 
       <button
-        onClick={() => setShowForm((v) => !v)}
+        onClick={() => setShowForm(true)}
         className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
       >
-        {showForm ? "Abbrechen" : "+ Neuer Kunde"}
+        + Neuer Kunde
       </button>
 
-      {showForm && (
-        <div className="space-y-3 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neuer Kunde" onClose={() => setShowForm(false)}>
+        <div className="space-y-3 p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Name *</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+              Name <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
+            <input id={`${uid}-0`}
               autoFocus
+              required
+              aria-invalid={!!nameFehler}
+              aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
+            {nameFehler && (
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {nameFehler}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">
                 Kundennummer (optional)
               </label>
-              <input
+              <input id={`${uid}-1`}
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
@@ -140,8 +151,8 @@ export function KundenPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">Typ</label>
-              <select
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Typ</label>
+              <select id={`${uid}-2`}
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -156,8 +167,8 @@ export function KundenPage() {
           </div>
           {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
             <div>
-              <label className="mb-1 block text-xs text-label2">USt-IdNr.</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">USt-IdNr.</label>
+              <input id={`${uid}-3`}
                 value={neuerKunde.ustIdnr}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
                 placeholder="DE123456789"
@@ -181,8 +192,8 @@ export function KundenPage() {
             />
           )}
           <div>
-            <label className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>
-            <input
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>
+            <input id={`${uid}-4`}
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -190,16 +201,16 @@ export function KundenPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-label2">PLZ</label>
-              <input
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">PLZ</label>
+              <input id={`${uid}-5`}
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">Ort</label>
-              <input
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-label2">Ort</label>
+              <input id={`${uid}-6`}
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -207,8 +218,8 @@ export function KundenPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-label2">Notiz</label>
-            <textarea
+            <label htmlFor={`${uid}-7`} className="mb-1 block text-xs text-label2">Notiz</label>
+            <textarea id={`${uid}-7`}
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
@@ -220,14 +231,20 @@ export function KundenPage() {
           </p>
           {kundeFehler && <p className="text-sm text-st-fehlt ">{kundeFehler}</p>}
           <button
-            disabled={!neuerKunde.name.trim() || leitwegIdFehler(neuerKunde.leitwegId) !== null || createKundeMutation.isPending}
-            onClick={() => createKundeMutation.mutate()}
+            disabled={createKundeMutation.isPending}
+            onClick={() => {
+              const leitwegFehler = leitwegIdFehler(neuerKunde.leitwegId);
+              setNameFehler(neuerKunde.name.trim() ? null : "Bitte einen Namen eingeben.");
+              setKundeFehler(leitwegFehler);
+              if (!neuerKunde.name.trim() || leitwegFehler !== null) return;
+              createKundeMutation.mutate();
+            }}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       <div className="space-y-2">
         {(kunden ?? []).length > 0 && (
@@ -240,6 +257,8 @@ export function KundenPage() {
         )}
         {kundenLoading ? (
           <SkeletonList count={3} />
+        ) : ladeFehler && !kunden ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Kunden" onErneut={() => void neuLaden()} />
         ) : (kunden ?? []).length === 0 ? (
           <EmptyState icon={Users} text="Keine Kunden vorhanden." />
         ) : kundenGefiltert.length === 0 ? (
@@ -259,7 +278,7 @@ export function KundenPage() {
               </div>
               {k.typ && (
                 <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
-                  {k.typ}
+                  {kundeTypLabel(k.typ)}
                 </span>
               )}
             </button>

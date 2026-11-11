@@ -64,7 +64,7 @@
   --st-fehlt-text: #c4000f;
   --st-fehlt-bg: rgba(255, 59, 48, 0.12);
   --st-fehlt-dot: #ff3b30;
-  --st-erledigt-text: #1b7431;
+  --st-erledigt-text: #17692b;
   --st-erledigt-bg: rgba(52, 199, 89, 0.17);
   --st-erledigt-dot: #34c759;
   --st-wartet-text: #6e3ba8;
@@ -315,7 +315,7 @@ body {
   --st-neu-text: #6ab1ff;
   --st-neu-bg: rgba(10, 132, 255, 0.22);
   --st-neu-dot: #0a84ff;
-  --st-geplant-text: #aeaeb2;
+  --st-geplant-text: #d1d1d6;
   --st-geplant-bg: rgba(142, 142, 147, 0.22);
   --st-geplant-dot: #48484a;
   --st-arbeit-text: #ffb340;

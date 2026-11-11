@@ -6,6 +6,9 @@ export interface PulldownEintrag {
   label: string;
   icon?: LucideIcon;
   kuerzel?: string;
+  /** Destruktive Aktion: rot statt Tint-Hover, steht üblicherweise am Ende. */
+  destruktiv?: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 export type PulldownItem = PulldownEintrag | "trenner";
@@ -105,11 +108,17 @@ export function PulldownMenu({
                   }}
                   role="menuitem"
                   type="button"
+                  disabled={item.disabled}
                   onClick={() => {
                     item.onSelect();
                     schliessen(true);
                   }}
-                  className="group flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-label hover:bg-tint-solid hover:text-white focus-visible:bg-tint-solid focus-visible:text-white focus-visible:outline-none"
+                  // min-h-11: Touch-Ziel auf dem Handy (Accounts-Kartenliste), am Desktop kompakt
+                  className={`group flex min-h-11 w-full items-center gap-2 rounded-[6px] px-2 text-left focus-visible:outline-none disabled:opacity-40 md:min-h-[30px] ${
+                    item.destruktiv
+                      ? "text-st-fehlt hover:bg-st-fehlt-bg focus-visible:bg-st-fehlt-bg"
+                      : "text-label hover:bg-tint-solid hover:text-white focus-visible:bg-tint-solid focus-visible:text-white"
+                  }`}
                 >
                   {Icon && <Icon size={15} strokeWidth={2} className="shrink-0" />}
                   <span className="flex-1 text-[13px]">{item.label}</span>

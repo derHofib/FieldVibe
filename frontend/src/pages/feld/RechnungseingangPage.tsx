@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
@@ -10,6 +11,8 @@ import { useAuth } from "../../context/AuthContext";
 import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -43,7 +46,7 @@ export function RechnungseingangPage() {
     lieferantId: "",
     lieferantName: "",
     rechnungsnummerLieferant: "",
-    rechnungsdatum: new Date().toISOString().slice(0, 10),
+    rechnungsdatum: heuteIso(),
     faelligAm: "",
     betragNetto: "",
     kategorie: "",
@@ -54,7 +57,7 @@ export function RechnungseingangPage() {
   const [importFehler, setImportFehler] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: eingangsrechnungen } = useQuery({
+  const { data: eingangsrechnungen, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["eingangsrechnungen", statusFilter],
     queryFn: () => eingangsrechnungenApi.list(statusFilter ? { status: statusFilter } : {}),
     enabled: abrechnungAktiv && kannSehen,
@@ -66,6 +69,7 @@ export function RechnungseingangPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       eingangsrechnungenApi.create({
         lieferant_id: form.lieferantId || null,
@@ -84,7 +88,7 @@ export function RechnungseingangPage() {
         lieferantId: "",
         lieferantName: "",
         rechnungsnummerLieferant: "",
-        rechnungsdatum: new Date().toISOString().slice(0, 10),
+        rechnungsdatum: heuteIso(),
         skontoProzent: "",
         skontoTage: "",
         faelligAm: "",
@@ -121,8 +125,6 @@ export function RechnungseingangPage() {
     eRechnungMutation.mutate(datei);
   }
 
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -145,10 +147,10 @@ export function RechnungseingangPage() {
               {eRechnungMutation.isPending ? "Importiert…" : "E-Rechnung importieren"}
             </button>
             <button
-              onClick={() => setShowForm((v) => !v)}
+              onClick={() => setShowForm(true)}
               className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
             >
-              {showForm ? "Abbrechen" : "+ Neu"}
+              + Neue Eingangsrechnung
             </button>
           </div>
         )}
@@ -160,8 +162,8 @@ export function RechnungseingangPage() {
         </Hinweiskasten>
       )}
 
-      {showForm && (
-        <div className="space-y-2 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neue Eingangsrechnung" onClose={() => setShowForm(false)}>
+        <div className="space-y-2 p-4">
           <select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
@@ -262,7 +264,7 @@ export function RechnungseingangPage() {
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       <div className="flex gap-2 text-xs">
         {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (
@@ -281,7 +283,10 @@ export function RechnungseingangPage() {
       </div>
 
       <div className="space-y-2">
-        {(eingangsrechnungen ?? []).length === 0 && (
+        {ladeFehler && !eingangsrechnungen && (
+          <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnungen" onErneut={() => void neuLaden()} />
+        )}
+        {!ladeFehler && (eingangsrechnungen ?? []).length === 0 && (
           <p className="text-sm text-label2">Keine Eingangsrechnungen.</p>
         )}
         {(eingangsrechnungen ?? []).map((e) => (

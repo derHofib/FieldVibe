@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { authApi } from "../api/endpoints";
@@ -10,6 +10,7 @@ import { RechtlicheLinks } from "../components/RechtlicheLinks";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 export function RegistrierenPage() {
+  const uid = useId();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const { loginMitToken } = useAuth();
@@ -59,16 +60,16 @@ export function RegistrierenPage() {
               </div>
             )}
 
-            <label className="mb-1 block text-sm font-medium text-label">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <input id={`${uid}-0`}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="field-ap btn-touch mb-4"
             />
 
-            <label className="mb-1 block text-sm font-medium text-label">Passwort</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Passwort</label>
+            <input id={`${uid}-1`}
               type="password"
               required
               minLength={MIN_PASSWORT_LAENGE}

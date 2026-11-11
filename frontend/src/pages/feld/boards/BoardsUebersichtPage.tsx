@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { boardsApi } from "../../../api/endpoints";
 import { EmptyState } from "../../../components/EmptyState";
 import type { BoardTyp } from "../../../types";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { useBestaetigung } from "../../../components/ConfirmDialog";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
   frei: LayoutGrid,
@@ -47,6 +49,7 @@ function relativeZeit(iso: string): string {
  * (boardsApi). Das Anlegen bleibt bewusst simpel (nur Name + Art), volles
  * Bearbeiten/Werkzeuge gibt es erst nach dem Oeffnen. */
 export function BoardsUebersichtPage() {
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"alle" | BoardTyp>("alle");
@@ -54,7 +57,7 @@ export function BoardsUebersichtPage() {
   const [name, setName] = useState("");
   const [typ, setTyp] = useState<BoardTyp>("frei");
 
-  const { data: boards, isLoading } = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
+  const { data: boards, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
 
   const erstellen = useMutation({
     mutationFn: () => boardsApi.create({ name: name.trim(), board_typ: typ }),
@@ -141,6 +144,8 @@ export function BoardsUebersichtPage() {
 
       {isLoading ? (
         <p className="py-8 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !boards ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : gefiltert.length === 0 ? (
         <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
       ) : (
@@ -166,9 +171,9 @@ export function BoardsUebersichtPage() {
                   role="button"
                   tabIndex={0}
                   aria-label={`${b.name} löschen`}
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
+                    if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
                   }}
                   className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-label3 hover:text-st-fehlt dark:hover:text-st-fehlt"
                 >

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, Star, UserPlus, X } from "lucide-react";
-import { Suspense, lazy, useCallback, useState } from "react";
+import { heuteIso } from "../../utils/format";
+import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
+import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
@@ -12,6 +13,7 @@ import { StatusPille } from "../../components/apple/StatusPille";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
+import { QrScanner } from "../../components/QrScanner";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
 import { GRUPPEN_LABEL, STATUS_LABEL, filterChipLabel, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
@@ -19,6 +21,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -35,12 +38,6 @@ const LEISTUNGSTYP_LABEL: Record<string, string> = {
   beratung: "Beratung",
   planung: "Planung",
 };
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
 
 // Ampel-Symbol der Story-Kacheln -- kein Vorgangs-Status, sondern eine
 // eigene Dringlichkeits-Ampel (siehe stories-Endpoint), deshalb ueber die
@@ -107,6 +104,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
     onSuccess: invalidateFeed,
   });
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: VorgangStatus) => vorgaengeApi.update(card.id, { status }),
     onSuccess: invalidateFeed,
   });
@@ -194,7 +192,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {card.tags.map((tag) => (
-              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label2">
+              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label">
                 #{tag}
               </span>
             ))}
@@ -259,6 +257,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
 
 const LEER_FILTER: Record<string, string> = {};
 
+// Erledigte Vorgänge (abgeschlossen/abgerechnet/storniert) verdrängen sonst
+// die offenen aus dem oberen Feed-Bereich; sie bleiben per Chip oder
+// explizitem Status-Filter erreichbar.
+const OFFENE_STATUS_FILTER = "neu,geplant,in_arbeit,wartet_kunde";
+
 export function FeedPage() {
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
@@ -277,9 +280,12 @@ export function FeedPage() {
   });
   const [zeigeFilter, setZeigeFilter] = useState(false);
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
+  const [erledigteZeigen, setErledigteZeigen] = useState(false);
+  const [zeigeScanner, setZeigeScanner] = useState(false);
+  const [scanFehler, setScanFehler] = useState<string | null>(null);
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
 
   function setField(key: string, value: string) {
     setFilter((f) => {
@@ -300,8 +306,24 @@ export function FeedPage() {
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useVorgangsListe(filter);
+  const wirksamerFilter = useMemo(
+    () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS_FILTER }),
+    [filter, erledigteZeigen],
+  );
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error: ladeFehler, refetch: neuLaden } =
+    useVorgangsListe(wirksamerFilter);
+
+  async function handleScan(code: string) {
+    setZeigeScanner(false);
+    setScanFehler(null);
+    try {
+      const anlage = await anlagenApi.byQrCode(code);
+      navigate(`/anlagen/${anlage.id}`);
+    } catch {
+      setScanFehler(`Keine Anlage mit dem Code "${code}" gefunden.`);
+    }
+  }
 
   // Die Liste zeigt bewusst nur Seite fuer Seite ("Mehr laden"), aber die
   // Kartenansicht braucht alle zum aktuellen Filter passenden Vorgaenge auf
@@ -334,8 +356,46 @@ export function FeedPage() {
     }));
   const ohneKoordinatenAnzahl = cards.length - punkte.length;
 
+  const keinKundeZugewiesen =
+    !!currentUser?.nur_zugewiesene_kunden && kunden !== undefined && kunden.length === 0;
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        {hatRecht("vorgaenge", "erstellen") ? (
+          <button onClick={() => navigate("/neu")} className="btn-touch btn-ap-primary px-4">
+            <Plus size={16} strokeWidth={2} aria-hidden="true" /> Neuer Vorgang
+          </button>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate("/suche")}
+            aria-label="Suchen"
+            title="Suchen"
+            className="btn-touch btn-ap-toolbar"
+          >
+            <Search size={18} strokeWidth={2} aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => setZeigeScanner(true)}
+            aria-label="QR-Code scannen"
+            title="QR-Code scannen"
+            className="btn-touch btn-ap-toolbar"
+          >
+            <ScanLine size={18} strokeWidth={2} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {zeigeScanner && <QrScanner onScan={handleScan} onClose={() => setZeigeScanner(false)} />}
+      {scanFehler && (
+        <p role="alert" className="text-sm text-st-fehlt">
+          {scanFehler}
+        </p>
+      )}
+
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
@@ -371,7 +431,7 @@ export function FeedPage() {
           Formular explizit geoeffnet wird (siehe Design-Vorschlag
           "Filterleiste Varianten"). */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <FilterChip
             label="Überfällig"
             aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
@@ -382,18 +442,15 @@ export function FeedPage() {
             aktiv={filter.faellig_bis === heuteIso(7)}
             onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso(7) ? "" : heuteIso(7))}
           />
+          {!filter.status && (
+            <FilterChip
+              label="Erledigte anzeigen"
+              aktiv={erledigteZeigen}
+              onClick={() => setErledigteZeigen((v) => !v)}
+            />
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {hatRecht("vorgaenge", "erstellen") && (
-            <button
-              onClick={() => navigate("/neu")}
-              title="Neuer Vorgang"
-              aria-label="Neuer Vorgang"
-              className="btn-ap-toolbar text-tint"
-            >
-              <Plus size={14} strokeWidth={2} aria-hidden="true" />
-            </button>
-          )}
           <button
             onClick={() => setZeigeFilter((v) => !v)}
             title="Filter"
@@ -527,6 +584,8 @@ export function FeedPage() {
       {ansicht === "karte" ? (
         isLoading ? (
           <div className="h-[65vh] w-full animate-pulse rounded-lg bg-fill" />
+        ) : ladeFehler && !data ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
         ) : punkte.length === 0 ? (
           <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
         ) : (
@@ -550,18 +609,37 @@ export function FeedPage() {
         <>
           {isLoading ? (
             <SkeletonList count={4} />
+          ) : ladeFehler && !data ? (
+            <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
+          ) : cards.length === 0 && keinKundeZugewiesen ? (
+            <EmptyState
+              icon={Users}
+              text="Dir sind noch keine Kunden zugewiesen. Sobald das Büro dir Kunden zuweist, erscheinen hier deren Vorgänge."
+            />
           ) : cards.length === 0 ? (
             <EmptyState
               icon={Inbox}
-              text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
+              text={
+                aktiveFilterAnzahl > 0
+                  ? "Keine Vorgänge für die aktuellen Filter."
+                  : !erledigteZeigen
+                    ? "Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet."
+                    : "Noch keine Vorgänge angelegt."
+              }
               action={
-                aktiveFilterAnzahl > 0 && (
+                aktiveFilterAnzahl === 0 && !erledigteZeigen ? (
+                  <button onClick={() => setErledigteZeigen(true)} className="btn-touch btn-ap mt-1">
+                    Erledigte anzeigen
+                  </button>
+                ) : (
+                  aktiveFilterAnzahl > 0 && (
                   <button
                     onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
                     className="btn-ap mt-1 text-xs"
                   >
                     Filter zurücksetzen
                   </button>
+                  )
                 )
               }
             />
@@ -570,7 +648,7 @@ export function FeedPage() {
               {gruppiereNachFaelligkeit(cards).map(({ gruppe, cards: gruppenCards }) => (
                 <div key={gruppe} className="space-y-3">
                   <div className="flex items-baseline gap-1.5 px-1">
-                    <h3
+                    <h2
                       className={`text-[10px] font-medium tracking-[0.14em] uppercase ${
                         gruppe === "ueberfaellig"
                           ? "text-st-fehlt"
@@ -580,7 +658,7 @@ export function FeedPage() {
                       }`}
                     >
                       {GRUPPEN_LABEL[gruppe]}
-                    </h3>
+                    </h2>
                     <span className="text-xs text-label2">{gruppenCards.length}</span>
                   </div>
                   <div className="space-y-3">

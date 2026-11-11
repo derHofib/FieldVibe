@@ -139,7 +139,7 @@ export function VorgaengeListe({
       >
         {gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe}>
-            <p className="border-b border-sep bg-fill/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-label2 uppercase">
+            <p className="border-b border-sep bg-fill/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-label uppercase">
               {GRUPPEN_LABEL[gruppe]} <span className="font-medium normal-case">{cards.length}</span>
             </p>
             {cards.map((v) => {

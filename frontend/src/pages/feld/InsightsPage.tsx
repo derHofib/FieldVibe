@@ -1,12 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { exportApi, insightsApi } from "../../api/endpoints";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -28,10 +29,9 @@ function Kachel({ label, wert }: { label: string; wert: string }) {
 }
 
 export function InsightsPage() {
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["insights"],
     queryFn: insightsApi.get,
   });
@@ -53,9 +53,8 @@ export function InsightsPage() {
     onSuccess: (blob) => downloadBlob(blob, "Eingangsrechnungen.csv"),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
-    return <Navigate to="/feed" replace />;
-  if (isLoading || !insights) return <p className="text-center text-label2">Lädt…</p>;
+  if (ladeFehler && !insights) return <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
+  if (isLoading || !insights) return <DetailSkeleton />;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);
 
@@ -140,7 +139,7 @@ export function InsightsPage() {
             disabled={zeiterfassungExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
-            <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Arbeitszeit (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}

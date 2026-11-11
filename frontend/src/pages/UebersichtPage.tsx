@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { auditLogApi, mandantenApi, systemApi, usersApi } from "../api/endpoints";
 import { Sparkline } from "../components/Sparkline";
 import { useAuth } from "../context/AuthContext";
+import { auditLabel } from "../utils/auditLabel";
 
 function SystemStatus() {
   const { data: health, isLoading, isError } = useQuery({
@@ -197,7 +198,7 @@ export function UebersichtPage() {
           <ul className="divide-y divide-sep rounded-lg bg-card text-sm shadow-xs dark:shadow-none dark:ring-1 ">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-label">{e.aktion}</span>
+                <span className="font-medium text-label">{auditLabel(e.aktion)}</span>
                 <span className="text-label2">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </span>

@@ -11,6 +11,10 @@ import { aktionsSpalten, bereichKennt } from "../office/organigramm/rechteMatrix
 import type { AccountTyp } from "../types";
 import type { RechteRegistry } from "../types/organigramm";
 import { AccountTypVorlageSheet } from "./AccountTypVorlageSheet";
+import { AnlegenPanel } from "../components/AnlegenPanel";
+import { useBestaetigung } from "../components/ConfirmDialog";
+import { FehlerZustand } from "../components/FehlerZustand";
+import { SkeletonList } from "../components/Skeleton";
 
 // Hinweise zu Aktionen, die nicht selbsterklaerend sind (Spaltenkopf-Tooltip).
 const AKTION_HINWEIS: Record<string, string> = {
@@ -24,7 +28,7 @@ const AKTION_HINWEIS: Record<string, string> = {
 function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; registry: RechteRegistry }) {
   const queryClient = useQueryClient();
   const [fehler, setFehler] = useState<string | null>(null);
-  const { data: rechte, isLoading } = useQuery({
+  const { data: rechte, isLoading, error: rechteFehler, refetch: rechteNeu } = useQuery({
     queryKey: ["account-typ-rechte", accountTypId],
     queryFn: () => accountTypenApi.getRechte(accountTypId),
   });
@@ -47,7 +51,8 @@ function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; 
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-label2">Lädt…</p>;
+  if (isLoading) return <SkeletonList count={4} />;
+  if (rechteFehler && !rechte) return <FehlerZustand fehler={rechteFehler} was="Die Rechte" onErneut={() => void rechteNeu()} />;
 
   return (
     <div className="border-t border-sep">
@@ -118,9 +123,10 @@ function FlagZeile({ checked, onChange, children }: { checked: boolean; onChange
 }
 
 export function AccountTypenPage() {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
-  const { data: typen, isLoading } = useQuery({
+  const { data: typen, isLoading, error: typenFehler, refetch: typenNeu } = useQuery({
     queryKey: ["account-typen"],
     queryFn: accountTypenApi.list,
   });
@@ -140,6 +146,7 @@ export function AccountTypenPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [zeigeVorlage, setZeigeVorlage] = useState(false);
+  const [zeigeNeu, setZeigeNeu] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
   const [nurZugewieseneKunden, setNurZugewieseneKunden] = useState(false);
@@ -148,6 +155,7 @@ export function AccountTypenPage() {
   const [darfAbwesenheiten, setDarfAbwesenheiten] = useState(false);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: accountTypenApi.create,
     onSuccess: (typ: AccountTyp) => {
       queryClient.invalidateQueries({ queryKey: ["account-typen"] });
@@ -159,12 +167,14 @@ export function AccountTypenPage() {
       setDarfZeitenBuchen(false);
       setDarfAbwesenheiten(false);
       setExpandedId(typ.id);
+      setZeigeNeu(false);
     },
     onError: (err) => setFormError(err instanceof ApiError ? verstaendlicherFehler(err) : "Fehler"),
   });
 
   const [updateError, setUpdateError] = useState<string | null>(null);
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({
       id,
       ...body
@@ -185,6 +195,7 @@ export function AccountTypenPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: accountTypenApi.remove,
     onSuccess: () => {
       setDeleteError(null);
@@ -217,57 +228,61 @@ export function AccountTypenPage() {
           <h1 className="mt-2 text-lg font-bold text-label">Account-Typen & Rechte</h1>
           <p className="mt-1 text-sm text-label2">
             Ein Account-Typ ist die Rechte-Vorlage für Positionen im Organigramm: Er legt je Bereich fest, was sehen, erstellen, bearbeiten, löschen,
-            exportieren oder freigeben darf. Einzelne Positionen und Nutzer können davon abweichen. mandant_admin ist von dieser Matrix nicht betroffen
-            und hat immer vollen Zugriff.
+            exportieren oder freigeben darf. Einzelne Positionen und Nutzer können davon abweichen. Mandanten-Administratoren sind von dieser Matrix nicht betroffen
+            und haben immer vollen Zugriff.
           </p>
         </div>
-        <button type="button" className="btn-ap" onClick={() => setZeigeVorlage(true)}>
-          <LayoutTemplate size={14} strokeWidth={2} aria-hidden="true" />
-          Vorlage anlegen
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-touch btn-ap px-4 py-2 text-sm font-medium" onClick={() => setZeigeNeu(true)}>
+            + Neuer Account-Typ
+          </button>
+          <button type="button" className="btn-touch btn-ap px-4 py-2 text-sm font-medium" onClick={() => setZeigeVorlage(true)}>
+            <LayoutTemplate size={14} strokeWidth={2} aria-hidden="true" />
+            Aus Vorlage
+          </button>
+        </div>
       </div>
 
-      <section className="card-ap p-4">
-        <h2 className="mb-3 text-sm font-bold text-label">Neuen Account-Typ anlegen</h2>
-        <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
+      <AnlegenPanel offen={zeigeNeu} titel="Neuer Account-Typ" onClose={() => setZeigeNeu(false)}>
+        <form onSubmit={handleCreate} className="space-y-3 p-4">
           <div>
             <label htmlFor="at-name" className="mb-1 block text-sm font-medium text-label">
-              Name
+              Name <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
-            <input id="at-name" required placeholder="z.B. Techniker" value={name} onChange={(e) => setName(e.target.value)} className="field-ap w-56" />
+            <input id="at-name" required autoFocus placeholder="z.B. Techniker" value={name} onChange={(e) => setName(e.target.value)} className="field-ap" />
           </div>
           <div>
             <label htmlFor="at-icon" className="mb-1 block text-sm font-medium text-label">
               Icon (optional)
             </label>
-            <input id="at-icon" placeholder="🔧" value={icon} onChange={(e) => setIcon(e.target.value)} className="field-ap w-20" />
+            <input id="at-icon" placeholder="🔧" value={icon} onChange={(e) => setIcon(e.target.value)} className="field-ap" />
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-sm text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={nurZugewieseneKunden} onChange={(e) => setNurZugewieseneKunden(e.target.checked)} />
             Sieht nur zugewiesene Kunden
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-sm text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfSelbstUebernehmen} onChange={(e) => setDarfSelbstUebernehmen(e.target.checked)} />
-            Darf Aufträge selbst übernehmen
+            Darf Vorgänge selbst übernehmen
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-sm text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfZeitenBuchen} onChange={(e) => setDarfZeitenBuchen(e.target.checked)} />
             Darf Zeiten buchen
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-sm text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfAbwesenheiten} onChange={(e) => setDarfAbwesenheiten(e.target.checked)} />
             Abwesenheiten verwalten
           </label>
-          <button type="submit" disabled={createMutation.isPending} className="btn-ap-primary">
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full">
             Anlegen
           </button>
         </form>
         {formError && (
-          <p role="alert" className="mt-2 text-sm text-st-fehlt">
+          <p role="alert" className="mx-4 mb-4 text-sm text-st-fehlt">
             {formError}
           </p>
         )}
-      </section>
+      </AnlegenPanel>
 
       <section className="space-y-3">
         {deleteError && (
@@ -281,7 +296,9 @@ export function AccountTypenPage() {
           </p>
         )}
         {isLoading ? (
-          <p className="text-label2">Lädt…</p>
+          <SkeletonList count={4} />
+        ) : typenFehler && !typen ? (
+          <FehlerZustand fehler={typenFehler} was="Die Account-Typen" onErneut={() => void typenNeu()} />
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => {
             const offen = expandedId === typ.id;
@@ -309,7 +326,7 @@ export function AccountTypenPage() {
                         {typ.anzahl_nutzer} Nutzer
                         {positionen && ` · von ${anzahlPositionen} ${anzahlPositionen === 1 ? "Position" : "Positionen"} genutzt`}
                         {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
-                        {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
+                        {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Vorgänge selbst übernehmen"}
                         {typ.darf_zeiten_buchen && " · darf Zeiten buchen"}
                         {typ.darf_abwesenheiten_verwalten && " · verwaltet Abwesenheiten"}
                       </span>
@@ -318,8 +335,8 @@ export function AccountTypenPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Account-Typ "${typ.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                    onClick={async () => {
+                      if (await bestaetigen({ titel: `Account-Typ "${typ.name}" löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })) {
                         setDeleteError(null);
                         deleteMutation.mutate(typ.id);
                       }
@@ -343,7 +360,7 @@ export function AccountTypenPage() {
                       checked={typ.darf_vorgaenge_selbst_uebernehmen}
                       onChange={(v) => updateMutation.mutate({ id: typ.id, darf_vorgaenge_selbst_uebernehmen: v })}
                     >
-                      Darf Aufträge selbst übernehmen ("Ticket übernehmen"-Button)
+                      Darf Vorgänge selbst übernehmen ("Vorgang übernehmen"-Button)
                     </FlagZeile>
                     <FlagZeile checked={typ.darf_zeiten_buchen} onChange={(v) => updateMutation.mutate({ id: typ.id, darf_zeiten_buchen: v })}>
                       Darf Zeiten buchen (Vormerken/Buchen im Zeit-Tab, unabhängig von Rolle/Gerät)

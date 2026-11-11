@@ -8,6 +8,7 @@ import { STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, VorgangStatus } from "../../types";
 import { KennzahlKarte } from "../OfficeUi";
+import { SkeletonList } from "../../components/Skeleton";
 
 // Reihenfolge der Status-Gruppen -- Endzustaende (abgerechnet/storniert)
 // zuletzt, damit die aktiven Vorgaenge oben stehen.
@@ -48,7 +49,7 @@ export function ProjektUebersicht({ projektId }: { projektId: string }) {
   })).filter((g) => g.vorgaenge.length > 0);
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
+    return <SkeletonList count={4} />;
   }
 
   if (alle.length === 0) {

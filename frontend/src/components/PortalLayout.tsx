@@ -1,8 +1,9 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import { useKundenAuth } from "../context/KundenAuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { RechtlicheLinks } from "./RechtlicheLinks";
+import { SeitenGrenze } from "./ErrorBoundary";
 
 const NAV_ITEMS = [
   { to: "/portal/vorgaenge", label: "Aufträge" },
@@ -35,7 +36,7 @@ export function PortalLayout() {
         </div>
       </header>
       <main id="portal-inhalt" tabIndex={-1} className="mx-auto max-w-2xl px-3 py-4 outline-none">
-        <Outlet />
+        <SeitenGrenze />
       </main>
       <footer>
         <RechtlicheLinks className="px-3 pb-4" portalSlug={currentKunde?.portal_slug ?? undefined} barrierefreiheit />

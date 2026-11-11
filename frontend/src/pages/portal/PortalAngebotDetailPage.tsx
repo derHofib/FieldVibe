@@ -7,12 +7,14 @@ import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { SkeletonCard } from "../../components/Skeleton";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 import { datumZeit, widerrufFristLetzterTag } from "../../utils/portalAngebot";
 import { openPdfBlob } from "../../utils/pdf";
 import type { PortalAngebot, PortalVerbraucherschutz } from "../../types";
 import { BelehrungBlock } from "./BelehrungBlock";
 import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_ERKLAERUNG, ANGEBOT_STATUS_LABEL } from "./status";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 /** Button-Loesung (§ 312j Abs. 3 BGB): Zusammenfassung, Belehrung, Kenntnisnahme
  * und der Button mit dem gesetzlich vorgegebenen Wortlaut. */
@@ -126,6 +128,7 @@ function WiderrufBereich({ angebot, verbraucher }: { angebot: PortalAngebot; ver
 }
 
 export function PortalAngebotDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -138,7 +141,7 @@ export function PortalAngebotDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["portal-verbraucherschutz"] });
   };
 
-  const { data: angebot } = useQuery({
+  const { data: angebot, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-angebot", id],
     queryFn: () => kundenportalApi.angebot(id!),
     enabled: !!id,
@@ -152,6 +155,7 @@ export function PortalAngebotDetailPage() {
   const b2cAblauf = !!angebot && angebot.status === "versendet" && angebot.verbraucherschutz && !!verbraucher?.belehrung;
 
   const antwortMutation = useMutation({
+    meta: { erfolg: "Antwort gesendet" },
     mutationFn: (status: "angenommen" | "abgelehnt") =>
       kundenportalApi.antwortAufAngebot(
         id!,
@@ -174,10 +178,11 @@ export function PortalAngebotDetailPage() {
     onError: meldeFehler,
   });
 
-  if (!angebot) return <SkeletonCard />;
+  if (isLoading) return <SkeletonCard />;
+  if (!angebot) return <FehlerZustand fehler={ladeFehler} was="Das Angebot" zurueck onErneut={() => void neuLaden()} />;
 
-  function ablehnen() {
-    if (window.confirm("Angebot wirklich ablehnen? Der Betrieb wird darüber benachrichtigt.")) {
+  async function ablehnen() {
+    if (await bestaetigen({ titel: "Angebot ablehnen?", text: "Der Betrieb wird darüber benachrichtigt.", bestaetigenLabel: "Ablehnen" })) {
       antwortMutation.mutate("abgelehnt");
     }
   }

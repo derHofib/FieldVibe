@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { rechnungenApi } from "../../api/endpoints";
 import type { RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { formatStunden } from "../../utils/rechnungAbrechnung";
 import { Sheet } from "../apple/Sheet";
+import { useBestaetigung } from "../ConfirmDialog";
 
 const GRUPPEN: { titel: string; quellen: RechnungPositionQuelle[] }[] = [
   { titel: "Arbeitszeit", quellen: ["zeit"] },
@@ -33,6 +34,8 @@ export function VorgangHinzufuegen({
   offen: boolean;
   onClose: () => void;
 }) {
+  const uid = useId();
+  const frageBestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [vorgangId, setVorgangId] = useState<string | null>(null);
   const [abgewaehlt, setAbgewaehlt] = useState<Set<number>>(new Set());
@@ -63,6 +66,7 @@ export function VorgangHinzufuegen({
   const zeitGewaehlt = gewaehlt.some((v) => v.quelle === "zeit");
 
   const uebernehmen = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: () =>
       rechnungenApi.vorgangUebernehmen(rechnungId, {
         vorgang_id: vorgangId!,
@@ -80,11 +84,11 @@ export function VorgangHinzufuegen({
     },
   });
 
-  const bestaetigen = () => {
+  const bestaetigen = async () => {
     if (
       zeitGewaehlt &&
       !(Number(stundensatz) > 0) &&
-      !window.confirm("Kein Stundensatz eingetragen. Mit 0 € übernehmen? Du kannst ihn später in der Rechnung eintragen.")
+      !(await frageBestaetigen({ titel: "Kein Stundensatz eingetragen. Mit 0 € übernehmen?", text: "Du kannst ihn später in der Rechnung eintragen.", bestaetigenLabel: "Mit 0 € übernehmen", destruktiv: false }))
     ) {
       return;
     }
@@ -182,8 +186,8 @@ export function VorgangHinzufuegen({
 
             {zeitGewaehlt && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-label2">Stundensatz (€/Std)</label>
-                <input
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Stundensatz (€/Std)</label>
+                <input id={`${uid}-0`}
                   type="number"
                   step="0.01"
                   min="0"

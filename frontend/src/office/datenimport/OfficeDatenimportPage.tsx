@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Undo2 } from "lucide-react";
-import { Navigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { datenimportApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { KennzahlKarte, Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -40,6 +38,7 @@ import type {
   ImportModus,
   ZeilenStatus,
 } from "./typen";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_KLASSE: Record<ZeilenStatus, string> = {
   neu: "bg-st-neu-bg text-st-neu-text",
@@ -57,7 +56,7 @@ function fehlerText(err: unknown): string {
 }
 
 export function OfficeDatenimportPage() {
-  const { currentUser } = useAuth();
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
 
   const [schritt, setSchritt] = useState<Schritt>(1);
@@ -130,10 +129,6 @@ export function OfficeDatenimportPage() {
     },
     onError: (err) => setFehler(fehlerText(err)),
   });
-
-  if (currentUser && currentUser.role !== "mandant_admin") {
-    return <Navigate to="/vorgaenge" replace />;
-  }
 
   async function herunterladen(laden: () => Promise<Blob>, name: string) {
     try {
@@ -550,8 +545,8 @@ export function OfficeDatenimportPage() {
                 type="button"
                 className="btn-ap inline-flex h-9 items-center gap-1.5 px-4 text-sm"
                 disabled={rueckgaengigMutation.isPending}
-                onClick={() => {
-                  if (window.confirm("Alle durch diesen Import angelegten, seither unveränderten Datensätze in den Papierkorb legen?")) {
+                onClick={async () => {
+                  if (await bestaetigen({ titel: "Alle durch diesen Import angelegten, seither unveränderten Datensätze in den Papierkorb legen?", bestaetigenLabel: "In den Papierkorb" })) {
                     rueckgaengigMutation.mutate(analyse.import_lauf_id);
                   }
                 }}
@@ -608,8 +603,8 @@ export function OfficeDatenimportPage() {
                         <button
                           type="button"
                           className="text-[13px] font-medium text-tint-text underline"
-                          onClick={() => {
-                            if (window.confirm("Diesen Import rückgängig machen?")) rueckgaengigMutation.mutate(l.id);
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: "Diesen Import rückgängig machen?", bestaetigenLabel: "Rückgängig machen" })) rueckgaengigMutation.mutate(l.id);
                           }}
                         >
                           Rückgängig

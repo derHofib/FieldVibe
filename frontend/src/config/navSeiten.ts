@@ -36,6 +36,7 @@ import {
 
 import type { IconTone } from "../components/IconBadge";
 import { istModulAktiv } from "../utils/module";
+import { darfRechteVerwalten, istAdminOderCustom, istAdminRolle } from "../utils/rollen";
 import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
 
 // Einzige Quelle der Wahrheit fuer jede Seite in der Office-Seitenleiste
@@ -78,7 +79,7 @@ export interface NavSeite {
 export const NAV_SEITEN: NavSeite[] = [
   {
     key: "feed",
-    label: "Feed",
+    label: "Vorgänge",
     icon: Rss,
     tone: "sky",
     route: "/feed",
@@ -194,12 +195,14 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "zeiterfassung",
-    label: "Zeiterfassung",
+    label: "Arbeitszeit",
     icon: Timer,
     tone: "cyan",
     route: "/statistik",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "zeiterfassung"),
+    // Backend: /api/zeiterfassung = mandant_admin|custom plus vorgaenge.sehen.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && hatRecht("vorgaenge", "sehen") && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "zeiten_buchen",
@@ -220,7 +223,9 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "sky",
     route: "/pruefmittel",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "pruefzyklen"),
+    // Backend: mandant_admin|custom plus material.sehen.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && hatRecht("material", "sehen") && istModulAktiv(currentUser, "pruefzyklen"),
   },
   {
     key: "anfragen",
@@ -229,7 +234,9 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "amber",
     route: "/anfragen",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "kundenportal"),
+    // Backend: mandant_admin|custom plus vorgaenge.bearbeiten.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && hatRecht("vorgaenge", "bearbeiten") && istModulAktiv(currentUser, "kundenportal"),
   },
   {
     key: "rechnungen",
@@ -283,7 +290,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "sky",
     route: "/insights",
     kategorie: "Finanzen",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "statistik"),
+    // Backend: /api/insights nur mandant_admin (+loesch_operativ).
+    sichtbar: ({ currentUser }) => istAdminRolle(currentUser) && istModulAktiv(currentUser, "statistik"),
   },
   {
     key: "meldungen",
@@ -304,7 +312,7 @@ export const NAV_SEITEN: NavSeite[] = [
     // Kein Rechte-Check wie bei den Business-Bereichen -- das eigene
     // Postfach ist persoenlich, nicht rollenabhaengig (nur der
     // Modul-Schalter des Mandanten kann es fuer alle abschalten).
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "postfach"),
+    sichtbar: ({ currentUser }) => istAdminOderCustom(currentUser) && istModulAktiv(currentUser, "postfach"),
   },
   {
     key: "highlights",
@@ -313,7 +321,9 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/highlights",
     kategorie: "Kommunikation",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "highlights"),
+    // Backend: mandant_admin|custom plus vorgaenge.sehen.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && hatRecht("vorgaenge", "sehen") && istModulAktiv(currentUser, "highlights"),
   },
   {
     key: "nutzer",
@@ -322,7 +332,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "amber",
     route: "/accounts",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // Backend: /api/users (Liste/Einladen/Loeschen) nur super_admin|mandant_admin.
+    sichtbar: ({ currentUser }) => istAdminRolle(currentUser),
   },
   {
     key: "account_typen",
@@ -331,7 +342,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/account-typen",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // Backend: /api/account-typen = mandant_admin, oder custom mit Recht "rechte_verwalten".
+    sichtbar: ({ currentUser, hatRecht }) => darfRechteVerwalten(currentUser, hatRecht),
   },
   {
     key: "organigramm",
@@ -351,7 +363,9 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "emerald",
     route: "/techniker-zuweisungen",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("dispo", "bearbeiten"),
+    // Backend: mandant_admin|custom plus kunden.bearbeiten (zusaetzlich zum bisherigen dispo.bearbeiten).
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten"),
   },
   {
     key: "abwesenheiten",
@@ -380,7 +394,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "rose",
     route: "/anlagen-felder",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // Backend: mandant_admin|custom plus Recht kunden.sehen.
+    sichtbar: ({ currentUser, hatRecht }) => istAdminOderCustom(currentUser) && hatRecht("kunden", "sehen"),
   },
   {
     key: "formulare",
@@ -389,7 +404,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/form-schemas",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("formulare", "sehen"),
+    // Backend: /api/form-schemas = mandant_admin|custom plus formulare.sehen.
+    sichtbar: ({ currentUser, hatRecht }) => istAdminOderCustom(currentUser) && hatRecht("formulare", "sehen"),
   },
   {
     key: "integrationen",
@@ -398,7 +414,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "indigo",
     route: "/integrationen",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // Backend: /api/integrationen und Firmendaten nur mandant_admin (+loesch_operativ).
+    sichtbar: ({ currentUser }) => istAdminRolle(currentUser),
   },
   {
     key: "protokoll",

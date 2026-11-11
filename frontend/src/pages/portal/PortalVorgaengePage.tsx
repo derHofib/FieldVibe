@@ -6,21 +6,24 @@ import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 export function PortalVorgaengePage() {
   const navigate = useNavigate();
-  const { data: vorgaenge, isLoading } = useQuery({
+  const { data: vorgaenge, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-vorgaenge"],
     queryFn: kundenportalApi.vorgaenge,
   });
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Vorgänge</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Aufträge</h1>
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !vorgaenge ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Aufträge" onErneut={() => void neuLaden()} />
       ) : !vorgaenge || vorgaenge.length === 0 ? (
-        <EmptyState icon={Inbox} text="Keine Vorgänge vorhanden." />
+        <EmptyState icon={Inbox} text="Keine Aufträge vorhanden." />
       ) : (
         <div className="space-y-2">
           {vorgaenge.map((v) => (
@@ -31,7 +34,7 @@ export function PortalVorgaengePage() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-label2">Vorgang Nr. {v.vorgangsnummer}</div>
+                  <div className="text-xs text-label2">Auftrag Nr. {v.vorgangsnummer}</div>
                   <div className="font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>

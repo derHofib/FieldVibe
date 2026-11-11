@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Link2, MapPin, Plus, Users, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,6 +14,8 @@ import {
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SymbolKachel, type KachelFarbe } from "../../components/apple/SymbolKachel";
 import type { ChecklistenPunkt, ProjektAufgabe, ProjektAufgabePrioritaet, ProjektSpalte } from "../../types";
+import { useAuth } from "../../context/AuthContext";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const PRIORITAET_OPTIONEN: { wert: ProjektAufgabePrioritaet; label: string }[] = [
   { wert: "niedrig", label: "Niedrig" },
@@ -107,6 +109,8 @@ export function ProjektAufgabeDetailPanel({
   vorbelegteElternId?: string;
   onClose: () => void;
 }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const istNeu = aufgabe === null;
@@ -128,7 +132,8 @@ export function ProjektAufgabeDetailPanel({
   const [neuerPunkt, setNeuerPunkt] = useState("");
   const [neueUnteraufgabe, setNeueUnteraufgabe] = useState("");
 
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: () => usersApi.auswahl() });
+  const { hatRecht } = useAuth();
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: () => usersApi.auswahl(), enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: alleVorgaenge } = useQuery({ queryKey: ["vorgaenge-alle"], queryFn: () => vorgaengeApi.list() });
   const { data: alleKunden } = useQuery({ queryKey: ["kunden-alle"], queryFn: () => kundenApi.list() });
   const { data: alleAnlagen } = useQuery({ queryKey: ["anlagen-alle"], queryFn: () => anlagenApi.list() });
@@ -174,6 +179,7 @@ export function ProjektAufgabeDetailPanel({
   };
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => {
       const body = {
         spalte_id: istPrivat ? undefined : spalteId || undefined,
@@ -287,10 +293,10 @@ export function ProjektAufgabeDetailPanel({
 
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
               Beschreibung
             </label>
-            <textarea
+            <textarea id={`${uid}-0`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={3}
@@ -300,10 +306,10 @@ export function ProjektAufgabeDetailPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
                 Fälligkeit
               </label>
-              <input
+              <input id={`${uid}-1`}
                 type="date"
                 value={faelligkeitAm}
                 onChange={(e) => setFaelligkeitAm(e.target.value)}
@@ -334,10 +340,10 @@ export function ProjektAufgabeDetailPanel({
 
           {!istPrivat && istEigenstaendig && (
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
                 Spalte
               </label>
-              <select
+              <select id={`${uid}-2`}
                 value={spalteId}
                 onChange={(e) => setSpalteId(e.target.value)}
                 className="w-full field-ap h-auto py-1.5 text-sm"
@@ -352,10 +358,10 @@ export function ProjektAufgabeDetailPanel({
           )}
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-3`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
               Zuständiger
             </label>
-            <SearchableSelect
+            <SearchableSelect id={`${uid}-3`}
               value={zugewiesenAn}
               onChange={setZugewiesenAn}
               placeholder="Nicht zugewiesen"
@@ -555,8 +561,8 @@ export function ProjektAufgabeDetailPanel({
             <span />
           ) : (
             <button
-              onClick={() => {
-                if (window.confirm("Aufgabe wirklich löschen?")) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Aufgabe löschen?", bestaetigenLabel: "Löschen" })) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
               className="text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50"

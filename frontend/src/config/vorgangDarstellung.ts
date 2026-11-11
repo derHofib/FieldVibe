@@ -1,4 +1,5 @@
 import type { FeedCard, Kunde, Projekt, VorgangStatus } from "../types";
+import { heuteIso } from "../utils/format";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
  * Feld-App (pages/feld/FeedPage.tsx) und Desktop-Oberflaeche (office/). Zwei
@@ -27,6 +28,12 @@ export const STATUS_BADGE: Record<VorgangStatus, string> = {
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
+/** Für Stellen, die den Status nur als String kennen (z. B. Suchtreffer,
+ * Auswertungen nach Status) -- unbekannte Werte werden unverändert gezeigt. */
+export function statusLabel(status: string): string {
+  return (STATUS_LABEL as Record<string, string>)[status] ?? status;
+}
+
 export const LEISTUNGSTYP_LABEL: Record<string, string> = {
   installation: "Installation",
   pruefung: "Prüfung",
@@ -48,7 +55,7 @@ export const KANBAN_SPALTEN: VorgangStatus[] = [
 
 export function istUeberfaellig(faelligkeitAm: string | null): boolean {
   if (!faelligkeitAm) return false;
-  return faelligkeitAm < new Date().toISOString().slice(0, 10);
+  return faelligkeitAm < heuteIso();
 }
 
 export function tageSeit(iso: string): number {
@@ -69,10 +76,6 @@ export const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
 };
 
 export const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "ohne_frist"];
-
-function heuteIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function faelligkeitsGruppe(card: Pick<FeedCard, "faelligkeit_am">): FaelligkeitsGruppe {
   const iso = card.faelligkeit_am?.slice(0, 10);

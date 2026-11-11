@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useId, useState } from "react";
 
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { useAuth } from "../../context/AuthContext";
+import { SkeletonList } from "../../components/Skeleton";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -25,6 +26,7 @@ const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
 ];
 
 function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigeAnnehmen, setZeigeAnnehmen] = useState(false);
   const [zeigeAblehnen, setZeigeAblehnen] = useState(false);
@@ -32,7 +34,8 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   const [ablehnungsgrund, setAblehnungsgrund] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const { data: kunde } = useQuery({ queryKey: ["kunde", anfrage.kunde_id], queryFn: () => kundenApi.get(anfrage.kunde_id) });
+  const { hatRecht } = useAuth();
+  const { data: kunde } = useQuery({ queryKey: ["kunde", anfrage.kunde_id], queryFn: () => kundenApi.get(anfrage.kunde_id), enabled: hatRecht("kunden", "sehen") });
   const { data: anlage } = useQuery({
     queryKey: ["anlage", anfrage.anlage_id],
     queryFn: () => anlagenApi.get(anfrage.anlage_id!),
@@ -47,12 +50,14 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["vorgang-anfragen"] });
 
   const annehmenMutation = useMutation({
+    meta: { erfolg: "Angenommen" },
     mutationFn: () => vorgangAnfragenApi.annehmen(anfrage.id, { abrechnungsart }),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Annehmen"),
   });
 
   const ablehnenMutation = useMutation({
+    meta: { erfolg: "Abgelehnt" },
     mutationFn: () => vorgangAnfragenApi.ablehnen(anfrage.id, ablehnungsgrund || undefined),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Ablehnen"),
@@ -114,8 +119,8 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 
           {zeigeAnnehmen && (
             <div className="space-y-2 border border-sepstrong p-3">
-              <label className="block text-xs font-medium text-label2">Abrechnungsart</label>
-              <select
+              <label htmlFor={`${uid}-0`} className="block text-xs font-medium text-label2">Abrechnungsart</label>
+              <select id={`${uid}-0`}
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
                 className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
@@ -177,17 +182,12 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 }
 
 export function AnfragenPage() {
-  const { currentUser, hatRecht } = useAuth();
   const [statusFilter, setStatusFilter] = useState<"offen" | "alle">("offen");
 
-  const { data: anfragen, isLoading } = useQuery({
+  const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["vorgang-anfragen", statusFilter],
     queryFn: () => vorgangAnfragenApi.list(statusFilter === "offen" ? "offen" : undefined),
   });
-
-  if (currentUser && !hatRecht("vorgaenge", "bearbeiten")) {
-    return <Navigate to="/feed" replace />;
-  }
 
   return (
     <div className="space-y-4">
@@ -209,7 +209,9 @@ export function AnfragenPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-label2">Lädt…</p>
+        <SkeletonList count={4} />
+      ) : ladeFehler && !anfragen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
         <p className="text-center text-sm text-label2">Keine Anfragen vorhanden.</p>
       ) : (

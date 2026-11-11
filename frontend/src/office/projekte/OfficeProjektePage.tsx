@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Table2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -14,6 +14,7 @@ import { ProjektAufgabeDetailPanel } from "./ProjektAufgabeDetailPanel";
 import { ProjektDetailPanel } from "./ProjektDetailPanel";
 import { ProjekteTabelle } from "./ProjekteTabelle";
 import { ProjektUebersicht } from "./ProjektUebersicht";
+import { SkeletonList } from "../../components/Skeleton";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-fill text-label2",
@@ -40,6 +41,7 @@ const ANSICHT_UMSCHALTER = [
 ];
 
 export function OfficeProjektePage() {
+  const uid = useId();
   const queryClient = useQueryClient();
   // "Tabelle" (alle Projekte) ist der neue Standard-Einstieg -- Uebersicht/
   // Kanban bleiben fuer die Detailarbeit an einem einzelnen Projekt.
@@ -152,7 +154,7 @@ export function OfficeProjektePage() {
   };
 
   if (projekteLaden) {
-    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
+    return <SkeletonList count={4} />;
   }
 
   return (
@@ -185,8 +187,8 @@ export function OfficeProjektePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Name</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Name</label>
+              <input id={`${uid}-0`}
                 autoFocus
                 value={neuerProjektName}
                 onChange={(e) => setNeuerProjektName(e.target.value)}

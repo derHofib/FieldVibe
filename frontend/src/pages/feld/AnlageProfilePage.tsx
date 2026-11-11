@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { Inbox, Repeat } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -11,11 +13,16 @@ import {
   pruefzyklenApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -35,11 +42,9 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
+  const heute = heuteIso();
   if (datum < heute) return "text-st-fehlt ";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  if (datum <= heuteIso(7)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -61,6 +66,7 @@ function AdresseBearbeiten({
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       anlagenApi.update(anlageId, {
         adresse: { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined },
@@ -142,6 +148,7 @@ function AdresseBearbeiten({
 const FELD_TYP_INPUT: Record<string, string> = { text: "text", zahl: "number", datum: "date" };
 
 function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; kannVerwalten: boolean }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [bearbeiten, setBearbeiten] = useState(false);
   const [form, setForm] = useState({
@@ -162,6 +169,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       anlagenApi.update(profil.id, {
         hersteller: form.hersteller || null,
@@ -267,8 +275,8 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
           </p>
           {felder!.map((f) => (
             <div key={f.id}>
-              <label className="mb-0.5 block text-xs text-label2">{f.feld_name}</label>
-              <input
+              <label htmlFor={`${uid}-f${f.id}`} className="mb-0.5 block text-xs text-label2">{f.feld_name}</label>
+              <input id={`${uid}-f${f.id}`}
                 type={FELD_TYP_INPUT[f.feld_typ]}
                 value={zusatzwerte[f.feld_name] ?? ""}
                 onChange={(e) => setZusatzwerte({ ...zusatzwerte, [f.feld_name]: e.target.value })}
@@ -336,6 +344,8 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
 }
 
 export function AnlageProfilePage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -344,11 +354,12 @@ export function AnlageProfilePage() {
 
   const [showForm, setShowForm] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
+  const [bezeichnungFehler, setBezeichnungFehler] = useState<string | null>(null);
   const [intervallWert, setIntervallWert] = useState("12");
   const [intervallEinheit, setIntervallEinheit] = useState<PruefzyklusEinheit>("monat");
   const [inventurIntervallTage, setInventurIntervallTage] = useState("90");
 
-  const { data: profil, isLoading } = useQuery({
+  const { data: profil, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["anlage-profil", id],
     queryFn: () => anlagenApi.profil(id!),
     enabled: !!id,
@@ -370,6 +381,7 @@ export function AnlageProfilePage() {
   const inventurzyklus = inventurzyklen?.[0];
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: pruefzyklenApi.create,
     onSuccess: () => {
       setShowForm(false);
@@ -383,12 +395,13 @@ export function AnlageProfilePage() {
   const markiereGeprueftMutation = useMutation({
     mutationFn: (pruefzyklusId: string) =>
       pruefzyklenApi.update(pruefzyklusId, {
-        letzte_pruefung_am: new Date().toISOString().slice(0, 10),
+        letzte_pruefung_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
 
   const inventurAnlegenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       inventurzyklenApi.create({ lager_id: id!, intervall_tage: Number(inventurIntervallTage) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
@@ -397,7 +410,7 @@ export function AnlageProfilePage() {
   const inventurDurchgefuehrtMutation = useMutation({
     mutationFn: () =>
       inventurzyklenApi.update(inventurzyklus!.id, {
-        letzte_inventur_am: new Date().toISOString().slice(0, 10),
+        letzte_inventur_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
@@ -408,11 +421,13 @@ export function AnlageProfilePage() {
   });
 
   const deletePruefzyklusMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (pruefzyklusId: string) => pruefzyklenApi.remove(pruefzyklusId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
 
   const deleteInventurzyklusMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => inventurzyklenApi.remove(inventurzyklus!.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
@@ -421,12 +436,15 @@ export function AnlageProfilePage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => anlagenApi.remove(id!),
     onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/material"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
-  if (isLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+  if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Die Anlage" zurueck onErneut={() => void neuLaden()} className="py-6" />;
+  if (isLoading || !profil) return <DetailSkeleton />;
+
 
   return (
     <div className="space-y-4">
@@ -439,11 +457,9 @@ export function AnlageProfilePage() {
           <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm(
-                    `${profil.bezeichnung} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                  )
+                  await bestaetigen({ titel: `${profil.bezeichnung} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
                 ) {
                   deleteMutation.mutate();
                 }
@@ -495,7 +511,7 @@ export function AnlageProfilePage() {
                 STATUS_BADGE[status] ?? "border border-sep text-label"
               }`}
             >
-              {anzahl}× {status}
+              {anzahl}× {statusLabel(status)}
             </span>
           ))}
         </div>
@@ -536,7 +552,7 @@ export function AnlageProfilePage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}
@@ -549,60 +565,64 @@ export function AnlageProfilePage() {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Prüfzyklen</h2>
           {kannVerwalten && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint "
-            >
-              {showForm ? "Abbrechen" : "+ Neuer Zyklus"}
+            <button onClick={() => setShowForm(true)} className={NEU_BUTTON_KLASSE}>
+              + Neuer Prüfzyklus
             </button>
           )}
         </div>
 
-        {showForm && (
-          <div className="mb-2 space-y-2 card-ap p-3">
-            <input
-              value={bezeichnung}
-              onChange={(e) => setBezeichnung(e.target.value)}
-              placeholder="z.B. E-Check ortsveränderliche Geräte"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-            />
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-label2">Intervall</label>
-              <input
-                type="number"
-                min={1}
-                value={intervallWert}
-                onChange={(e) => setIntervallWert(e.target.value)}
-                className="w-16 border border-sep bg-transparent px-2 py-1 text-sm text-label"
-              />
-              <select
-                value={intervallEinheit}
-                onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)}
-                className="border border-sep bg-transparent px-2 py-1 text-sm text-label"
-              >
-                {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <button
-                disabled={!bezeichnung || createMutation.isPending}
-                onClick={() =>
-                  createMutation.mutate({
-                    anlage_id: id!,
-                    bezeichnung,
-                    intervall_wert: Number(intervallWert),
-                    intervall_einheit: intervallEinheit,
-                  })
-                }
-                className="btn-touch ml-auto rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                Anlegen
-              </button>
+        <AnlegenPanel offen={showForm} titel="Neuer Prüfzyklus" onClose={() => setShowForm(false)}>
+          <form
+            noValidate
+            className="space-y-3 p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!bezeichnung.trim()) {
+                setBezeichnungFehler("Bitte eine Bezeichnung eingeben.");
+                return;
+              }
+              setBezeichnungFehler(null);
+              createMutation.mutate({
+                anlage_id: id!,
+                bezeichnung,
+                intervall_wert: Number(intervallWert),
+                intervall_einheit: intervallEinheit,
+              });
+            }}
+          >
+            <Feld label="Bezeichnung" pflicht fehler={bezeichnungFehler}>
+              {(p) => (
+                <input
+                  {...p}
+                  autoFocus
+                  value={bezeichnung}
+                  onChange={(e) => setBezeichnung(e.target.value)}
+                  placeholder="z.B. E-Check ortsveränderliche Geräte"
+                  className={FELD_KLASSE}
+                />
+              )}
+            </Feld>
+            <div className="grid grid-cols-2 gap-3">
+              <Feld label="Intervall">
+                {(p) => <input {...p} type="number" min={1} value={intervallWert} onChange={(e) => setIntervallWert(e.target.value)} className={FELD_KLASSE} />}
+              </Feld>
+              <Feld label="Einheit">
+                {(p) => (
+                  <select {...p} value={intervallEinheit} onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)} className={FELD_KLASSE}>
+                    {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Feld>
             </div>
-          </div>
-        )}
+            <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+              Anlegen
+            </button>
+          </form>
+        </AnlegenPanel>
 
         {(pruefzyklen ?? []).length === 0 ? (
           <p className="text-sm text-label2">Keine Prüfzyklen erfasst.</p>
@@ -636,8 +656,8 @@ export function AnlageProfilePage() {
                 </div>
                 {kannPapierkorbLoeschen && (
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Prüfzyklus "${z.bezeichnung}" wirklich löschen?`)) {
+                    onClick={async () => {
+                      if (await bestaetigen({ titel: `Prüfzyklus "${z.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
                         deletePruefzyklusMutation.mutate(z.id);
                       }
                     }}
@@ -664,8 +684,8 @@ export function AnlageProfilePage() {
                   Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-label2">Intervall (Tage)</label>
-                  <input
+                  <label htmlFor={`${uid}-1`} className="text-xs text-label2">Intervall (Tage)</label>
+                  <input id={`${uid}-1`}
                     type="number"
                     min={1}
                     value={inventurIntervallTage}
@@ -721,8 +741,8 @@ export function AnlageProfilePage() {
               )}
               {kannPapierkorbLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm("Inventurzyklus wirklich löschen?")) {
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: "Inventurzyklus löschen?", bestaetigenLabel: "Löschen" })) {
                       deleteInventurzyklusMutation.mutate();
                     }
                   }}

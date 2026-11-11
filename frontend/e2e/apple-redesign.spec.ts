@@ -59,7 +59,7 @@ for (const theme of ["light", "dark"] as const) {
     test(`Dashboard + Seitenleiste (${theme})`, async ({ page }) => {
       await setTheme(page, theme);
       await login(page, SUPER_ADMIN);
-      await expect(page.getByText("Field", { exact: false }).first()).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Übersicht", level: 1 })).toBeVisible();
       await page.screenshot({
         path: `e2e-screenshots/super-admin-dashboard-${theme}.png`,
         fullPage: false,

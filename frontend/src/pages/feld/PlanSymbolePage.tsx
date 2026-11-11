@@ -13,6 +13,7 @@ import { ApiError } from "../../api/client";
 import { planSymboleApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import type { PlanSymbol } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
@@ -81,7 +82,7 @@ export function PlanSymbolePage() {
   const [ausgewaehlteDatei, setAusgewaehlteDatei] = useState<File | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: symbole, isLoading } = useQuery({
+  const { data: symbole, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["plan-symbole"],
     queryFn: () => planSymboleApi.list(),
   });
@@ -91,6 +92,7 @@ export function PlanSymbolePage() {
   }
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: () => planSymboleApi.upload(ausgewaehlteDatei!, neuerName.trim(), ausgewaehlteDatei!.name),
     onSuccess: () => {
       setNeuerName("");
@@ -106,6 +108,7 @@ export function PlanSymbolePage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Symbol konnte nicht umbenannt werden"),
   });
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => planSymboleApi.remove(id),
     onSuccess: invalidate,
   });
@@ -161,6 +164,8 @@ export function PlanSymbolePage() {
 
       {isLoading ? (
         <p className="text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !symbole ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Plansymbole" onErneut={() => void neuLaden()} />
       ) : !symbole || symbole.length === 0 ? (
         <EmptyState icon={Shapes} text="Noch keine Plan-Symbole angelegt." />
       ) : (
