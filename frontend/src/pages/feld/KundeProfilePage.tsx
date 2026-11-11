@@ -1,17 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kundeTypLabel } from "../../config/kundeDarstellung";
-import { statusLabel } from "../../config/vorgangDarstellung";
-import { Boxes, Download, Inbox, MoreHorizontal, Repeat, Trash2 } from "lucide-react";
+import { Download, MoreHorizontal, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { kundenApi, standorteApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
-import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { PulldownMenu, type PulldownItem } from "../../components/apple/PulldownMenu";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
-import { EmailSection } from "../../components/EmailSection";
-import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { downloadBlob } from "../../utils/download";
@@ -19,22 +15,10 @@ import type { Anlage } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
-import { Stammdaten, TechnikerZuweisung } from "./kunde/KundeUebersicht";
-import { AnlageAktivToggle, NeueAnlage } from "./kunde/KundeAnlagen";
-import { StandorteVerwaltung } from "./kunde/KundeStandorte";
-import { LeistungsverzeichnisVerwaltung } from "./kunde/KundeLeistungsverzeichnis";
-import { KundenPortalLinkUndLogo, PortalZugaengeVerwaltung } from "./kunde/KundePortalZugaenge";
-import { DauerauftraegeUebersicht } from "./kunde/DauerauftraegeUebersicht";
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-tint text-tint ",
-  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border border-st-wartet text-st-wartet",
-  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-sep text-label ",
-  storniert: "border border-sep text-label2",
-};
+import { KundeUebersichtTab } from "./kunde/KundeUebersichtTab";
+import { KundeKommunikationTab } from "./kunde/KundeKommunikationTab";
+import { KundeAnlagenTab } from "./kunde/KundeAnlagenTab";
+import { KundeVorgaengeTab } from "./kunde/KundeVorgaengeTab";
 
 type KundeTab = "uebersicht" | "vorgaenge" | "anlagen" | "kommunikation";
 const KUNDE_TABS: KundeTab[] = ["uebersicht", "vorgaenge", "anlagen", "kommunikation"];
@@ -215,158 +199,44 @@ export function KundeProfilePage({
       />
 
       {tab === "uebersicht" && (
-      <>
-      <Stammdaten
-        kundeId={id!}
-        adresse={profil.adresse}
-        notiz={profil.notiz}
-        typ={profil.typ}
-        ustIdnr={profil.ust_idnr}
-        ust13bBis={profil.ust_13b_nachweis_bis ?? null}
-        leitwegId={profil.leitweg_id ?? null}
-        eRechnungFormat={profil.e_rechnung_format ?? null}
-        debitorenkonto={profil.debitorenkonto ?? null}
+      <KundeUebersichtTab
+        id={id}
+        profil={profil}
         kannVerwalten={kannVerwalten}
       />
-
-      {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
-      </>
       )}
 
       {tab === "kommunikation" && (
-      <>
-      <AnsprechpartnerVerwaltung
-        liste={profil.ansprechpartner}
+      <KundeKommunikationTab
+        profil={profil}
         kannVerwalten={kannVerwalten}
-        onSpeichern={async (naechsteListe) => {
-          await kundenApi.update(id!, { ansprechpartner: naechsteListe });
-          queryClient.invalidateQueries({ queryKey: ["kunde-profil", id] });
-        }}
+        id={id}
+        queryClient={queryClient}
+        currentUser={currentUser}
       />
-
-      {kannVerwalten && (
-        <EmailSection
-          queryKey={["kunde-emails", id]}
-          listEmails={() => kundenApi.emails(id!)}
-          sendEmail={(body) =>
-            kundenApi.sendEmail(id!, {
-              empfaenger: body.empfaenger,
-              betreff: body.betreff ?? "",
-              inhalt: body.inhalt ?? "",
-            })
-          }
-          defaultEmpfaenger={profil.ansprechpartner.find((a) => a.email)?.email ?? undefined}
-        />
-      )}
-
-      {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
-        <>
-          <KundenPortalLinkUndLogo kunde={profil} />
-          <PortalZugaengeVerwaltung kundeId={id!} />
-        </>
-      )}
-      </>
       )}
 
       {tab === "anlagen" && (
-      <>
-      <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
-
-      <LeistungsverzeichnisVerwaltung kundeId={id!} kundeName={profil.name} kannVerwalten={kannVerwalten} />
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-label2">Anlagen</h2>
-        {profil.anlagen.length === 0 ? (
-          <EmptyState icon={Boxes} text="Keine Anlagen." className="py-4" />
-        ) : (
-          <div className="space-y-2">
-            {profil.anlagen.map((a) => (
-              <div
-                key={a.id}
-                className={`flex items-center justify-between card-ap p-3 ${
-                  a.aktiv ? "" : "opacity-60"
-                }`}
-              >
-                <button onClick={() => navigate(`/anlagen/${a.id}`)} className="btn-touch flex-1 text-left">
-                  <div className="text-sm font-medium text-label">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
-                </button>
-                {kannVerwalten && (
-                  <AnlageAktivToggle anlage={a} kundeId={id!} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {kannVerwalten && (
-          <div className="mt-2">
-            <NeueAnlage
-              kundeId={id!}
-              standorte={(standorteFuerAnlagen ?? []).filter((s) => s.aktiv)}
-            />
-          </div>
-        )}
-      </div>
-
-      </>
+      <KundeAnlagenTab
+        id={id}
+        kannVerwalten={kannVerwalten}
+        profil={profil}
+        navigate={navigate}
+        standorteFuerAnlagen={standorteFuerAnlagen}
+      />
       )}
 
       {tab === "vorgaenge" && (
-      <>
-      {kannVerwalten && <DauerauftraegeUebersicht kundeId={id!} />}
-
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-label2">Vorgänge</h2>
-          {profil.anlagen.length > 0 && (
-            <select
-              value={anlageFilter}
-              onChange={(e) => setAnlageFilter(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-2 py-1 text-xs text-label"
-            >
-              <option value="">Alle Anlagen</option>
-              {profil.anlagen.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.bezeichnung}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        {sichtbareVorgaenge.length === 0 ? (
-          <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
-        ) : (
-          <div className="space-y-2">
-            {sichtbareVorgaenge.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
-                  v.status === "storniert" ? "opacity-60 grayscale" : ""
-                }`}
-              >
-                <div>
-                  <div className="text-xs text-label2">
-                    {v.vorgangsnummer}
-                    {v.anlage_id && anlageNameById.get(v.anlage_id) && ` · ${anlageNameById.get(v.anlage_id)}`}
-                    {v.dauerauftrag_id && (
-                      <>
-                        {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
-                      </>
-                    )}
-                  </div>
-                  <div className="text-sm font-medium text-label">{v.titel}</div>
-                </div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {statusLabel(v.status)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      </>
+      <KundeVorgaengeTab
+        kannVerwalten={kannVerwalten}
+        id={id}
+        profil={profil}
+        anlageFilter={anlageFilter}
+        setAnlageFilter={setAnlageFilter}
+        sichtbareVorgaenge={sichtbareVorgaenge}
+        navigate={navigate}
+        anlageNameById={anlageNameById}
+      />
       )}
     </div>
   );
