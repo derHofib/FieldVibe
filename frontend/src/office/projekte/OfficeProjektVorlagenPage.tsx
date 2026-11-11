@@ -59,7 +59,7 @@ function MiniGantt({ detail }: { detail: ProjektVorlageDetail }) {
         const breite = Math.max((dauer / gesamt) * 100, 1.5);
         return (
           <li key={e.ref} className="grid grid-cols-[minmax(120px,200px)_1fr] items-center gap-3" style={{ paddingLeft: ebene * 14 }}>
-            <span className={`truncate text-[13px] ${e.typ === "phase" ? "font-semibold text-label" : "text-label"}`} title={e.titel}>
+            <span className={`truncate text-sekundaer ${e.typ === "phase" ? "font-semibold text-label" : "text-label"}`} title={e.titel}>
               {e.titel}
             </span>
             <span className="relative h-4 rounded-[4px] bg-fill" title={`Tag ${von + 1}${dauer > 1 ? ` – ${von + dauer}` : ""}`}>
@@ -81,14 +81,14 @@ function MiniGantt({ detail }: { detail: ProjektVorlageDetail }) {
 
 function VorlagenVorschau({ vorlage }: { vorlage: ProjektVorlage }) {
   const { data, isLoading, error } = useQuery({ queryKey: ["projekt-vorlage", vorlage.id], queryFn: () => projektVorlagenApi.get(vorlage.id) });
-  if (isLoading) return <p className="text-sm text-label2">Vorschau wird geladen …</p>;
-  if (error || !data) return <p role="alert" className="text-sm text-st-fehlt">Vorschau konnte nicht geladen werden.</p>;
+  if (isLoading) return <p className="text-sekundaer text-label2">Vorschau wird geladen …</p>;
+  if (error || !data) return <p role="alert" className="text-fliess text-st-fehlt">Vorschau konnte nicht geladen werden.</p>;
   return (
     <div className="space-y-3">
-      <p className="text-xs text-label2">
+      <p className="text-sekundaer text-label2">
         {data.anzahl_elemente} Elemente · {data.dauer_tage} Tage · {data.abhaengigkeiten.length} {data.abhaengigkeiten.length === 1 ? "Verbindung" : "Verbindungen"}
       </p>
-      {data.elemente.length === 0 ? <p className="text-sm text-label2">Die Vorlage enthält keine Elemente.</p> : <MiniGantt detail={data} />}
+      {data.elemente.length === 0 ? <p className="text-sekundaer text-label2">Die Vorlage enthält keine Elemente.</p> : <MiniGantt detail={data} />}
     </div>
   );
 }
@@ -111,27 +111,27 @@ function BearbeitenSheet({ vorlage, onClose }: { vorlage: ProjektVorlage; onClos
       onClose={onClose}
       titel="Vorlage bearbeiten"
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }
       rechts={
-        <button type="button" onClick={() => speichern.mutate()} disabled={!name.trim() || speichern.isPending} className="text-[17px] font-semibold text-tint-text disabled:opacity-40">
+        <button type="button" onClick={() => speichern.mutate()} disabled={!name.trim() || speichern.isPending} className="text-zeile font-semibold text-tint-text disabled:opacity-40">
           Sichern
         </button>
       }
     >
       <div className="space-y-3 p-4">
-        <label className="block text-sm text-label2">
+        <label className="block text-sekundaer text-label2">
           Name
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="field-ap mt-1" />
         </label>
-        <label className="block text-sm text-label2">
+        <label className="block text-sekundaer text-label2">
           Beschreibung
           <textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap mt-1" />
         </label>
         {speichern.error && (
-          <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+          <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
             {fehlerText(speichern.error)}
           </div>
         )}
@@ -163,22 +163,22 @@ export function OfficeProjektVorlagenPage() {
 
   return (
     <div>
-      <Link to="/projekte" className="mb-2 inline-flex items-center gap-0.5 text-sm text-tint-text">
+      <Link to="/projekte" className="mb-2 inline-flex items-center gap-0.5 text-fliess text-tint-text">
         <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
         Projekte
       </Link>
       <SeitenKopf titel="Projektvorlagen" anzahl={vorlagen?.length} />
 
       {fehler && (
-        <div role="alert" className="mb-3 flex items-start gap-2 rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <div role="alert" className="mb-3 flex items-start gap-2 rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex-1">{fehler}</span>
           <button type="button" onClick={() => setFehler(null)} aria-label="Meldung schließen">
             ×
           </button>
         </div>
       )}
-      {isLoading && <p className="text-sm text-label2">Vorlagen werden geladen …</p>}
-      {error && <p role="alert" className="text-sm text-st-fehlt">Vorlagen konnten nicht geladen werden.</p>}
+      {isLoading && <p className="text-sekundaer text-label2">Vorlagen werden geladen …</p>}
+      {error && <p role="alert" className="text-fliess text-st-fehlt">Vorlagen konnten nicht geladen werden.</p>}
 
       {vorlagen && vorlagen.length === 0 && (
         <Karte className="p-4">
@@ -200,9 +200,9 @@ export function OfficeProjektVorlagenPage() {
                     className="card-ap w-full px-3 py-2.5 text-left"
                     style={gewaehlt ? { borderColor: "var(--tint)", boxShadow: "0 0 0 1px var(--tint)" } : undefined}
                   >
-                    <p className="truncate text-[15px] font-semibold text-label">{v.name}</p>
-                    {v.beschreibung && <p className="truncate text-[13px] text-label2">{v.beschreibung}</p>}
-                    <p className="text-xs text-label2">
+                    <p className="truncate text-fliess font-semibold text-label">{v.name}</p>
+                    {v.beschreibung && <p className="truncate text-sekundaer text-label2">{v.beschreibung}</p>}
+                    <p className="text-sekundaer text-label2">
                       {v.anzahl_elemente} Schritte · {v.dauer_tage} Tage
                     </p>
                   </button>
@@ -215,10 +215,10 @@ export function OfficeProjektVorlagenPage() {
             <Karte className="p-4">
               <div className="mb-3 flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-lg font-semibold text-label">{aktiv.name}</h2>
-                  {aktiv.beschreibung && <p className="text-sm text-label2">{aktiv.beschreibung}</p>}
+                  <h2 className="truncate text-zeile font-semibold text-label">{aktiv.name}</h2>
+                  {aktiv.beschreibung && <p className="text-sekundaer text-label2">{aktiv.beschreibung}</p>}
                 </div>
-                <button type="button" onClick={() => setBearbeiten(aktiv)} className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm">
+                <button type="button" onClick={() => setBearbeiten(aktiv)} className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer">
                   <Pencil size={14} strokeWidth={2} aria-hidden="true" />
                   Umbenennen
                 </button>
@@ -230,7 +230,7 @@ export function OfficeProjektVorlagenPage() {
                       loeschen.mutate(aktiv.id);
                     }
                   }}
-                  className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg"
+                  className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg"
                 >
                   <Trash2 size={14} strokeWidth={2} aria-hidden="true" />
                   Löschen

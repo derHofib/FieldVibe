@@ -24,9 +24,9 @@ export function EffektiveRechteTabelle({
 
   return (
     <div className="overflow-x-auto rounded-[12px] bg-cell">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-fliess">
         <caption className="sr-only">Effektive Rechte je Bereich und Aktion</caption>
-        <thead className="text-xs text-label2">
+        <thead className="text-sekundaer text-label2">
           <tr>
             <th scope="col" className="px-3 py-2">
               Bereich
@@ -58,7 +58,7 @@ export function EffektiveRechteTabelle({
                 if (daten.alle_rechte) {
                   return (
                     <td key={a} className="px-2 py-2 text-st-erledigt" title={`Rolle „${daten.rolle}“ hat alle Rechte`}>
-                      <span className="text-[13px] font-medium">{scopeLabel("mandant")}</span>
+                      <span className="text-sekundaer font-medium">{scopeLabel("mandant")}</span>
                     </td>
                   );
                 }
@@ -67,15 +67,15 @@ export function EffektiveRechteTabelle({
                   const kurz = [...new Set(r.herkunft.map((h) => KURZ[h.art] ?? h.art))].join(" + ");
                   return (
                     <td key={a} className="px-2 py-1.5" title={texte.join("\n")}>
-                      <span className="block text-[13px] font-medium text-st-erledigt">{scopeLabel(r.scope)}</span>
-                      <span className="block text-[10px] text-label2">{kurz}</span>
+                      <span className="block text-sekundaer font-medium text-st-erledigt">{scopeLabel(r.scope)}</span>
+                      <span className="block text-meta text-label2">{kurz}</span>
                     </td>
                   );
                 }
                 if (v) {
                   return (
                     <td key={a} className="px-2 py-1.5" title={herkunftTexte(v.herkunft, aufloeser).join("\n")}>
-                      <span className="block text-[13px] font-medium text-st-fehlt">Verweigert</span>
+                      <span className="block text-sekundaer font-medium text-st-fehlt">Verweigert</span>
                     </td>
                   );
                 }

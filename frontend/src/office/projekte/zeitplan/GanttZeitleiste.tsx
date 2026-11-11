@@ -116,7 +116,7 @@ export function GanttZeitleiste({
           {kopf.oben.map((s) => (
             <div
               key={s.von}
-              className="absolute top-0.5 truncate rounded-[5px] bg-fill px-2 text-[11px] leading-4 font-semibold text-label"
+              className="absolute top-0.5 truncate rounded-[5px] bg-fill px-2 text-meta leading-4 font-semibold text-label"
               style={{ left: (s.von - bereich.ursprung) * px + 1, width: (s.bis - s.von) * px - 2, height: KOPF_ZEILE_HOEHE - 4 }}
             >
               {s.label}
@@ -130,7 +130,7 @@ export function GanttZeitleiste({
             return (
               <div
                 key={s.von}
-                className={`absolute top-0 flex items-center justify-center text-[11px] tabular-nums ${wochenendTag ? "text-label3" : "text-label2"}`}
+                className={`absolute top-0 flex items-center justify-center text-meta tabular-nums ${wochenendTag ? "text-label3" : "text-label2"}`}
                 style={{ left: (s.von - bereich.ursprung) * px, width: (s.bis - s.von) * px, height: KOPF_ZEILE_HOEHE }}
               >
                 {istHeute ? <span className="rounded-full bg-tint-solid px-1.5 leading-[16px] font-semibold text-white">{s.label}</span> : s.label}

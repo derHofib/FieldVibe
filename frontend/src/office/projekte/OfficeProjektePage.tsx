@@ -186,7 +186,7 @@ export function OfficeProjektePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Name</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Name</label>
               <input id={`${uid}-0`}
                 autoFocus
                 value={neuerProjektName}
@@ -211,11 +211,11 @@ export function OfficeProjektePage() {
       )}
 
       {fehler && (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {fehler}
           </span>
-          <button onClick={() => setFehler(null)} className="text-xs underline">
+          <button onClick={() => setFehler(null)} className="text-sekundaer underline">
             Ausblenden
           </button>
         </div>
@@ -247,8 +247,8 @@ export function OfficeProjektePage() {
                 className="w-72 shrink-0 rounded-lg"
               >
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-bold text-label2">{spalte.name}</span>
-                  <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label3">
+                  <span className="text-sekundaer font-bold text-label2">{spalte.name}</span>
+                  <span className="rounded-full bg-fill px-1.5 text-meta font-bold text-label3">
                     {karten.length}
                   </span>
                 </div>
@@ -272,30 +272,30 @@ export function OfficeProjektePage() {
                         style={ueberfaellig ? { borderColor: "var(--st-fehlt-dot)" } : undefined}
                       >
                         <button type="button" onClick={() => setPanel({ aufgabe: a })} className="block w-full text-left">
-                          <p className="text-[13px] font-semibold text-label">{a.titel}</p>
+                          <p className="text-sekundaer font-semibold text-label">{a.titel}</p>
                           {a.vorgang_vorgangsnummer && (
-                            <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-tint">
+                            <p className="mt-1 flex items-center gap-1 truncate text-meta text-tint">
                               <Link2 size={11} strokeWidth={2} aria-hidden="true" />
                               {a.vorgang_vorgangsnummer}
                             </p>
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-meta font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
                               {PRIORITAET_LABEL[a.prioritaet]}
                             </span>
                             {ueberfaellig && a.faelligkeit_am && (
-                              <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
+                              <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-meta font-semibold text-st-fehlt">
                                 {tageSeit(a.faelligkeit_am)} Tage überfällig
                               </span>
                             )}
                             {checklisteGesamt > 0 && (
-                              <span className="flex items-center gap-1 text-[10px] font-medium text-label2">
+                              <span className="flex items-center gap-1 text-meta font-medium text-label2">
                                 <CheckSquare size={11} strokeWidth={2} aria-hidden="true" />
                                 {checklisteErledigt}/{checklisteGesamt}
                               </span>
                             )}
                             {!!a.unteraufgaben_gesamt && (
-                              <span className="flex items-center gap-1 text-[10px] font-medium text-label2">
+                              <span className="flex items-center gap-1 text-meta font-medium text-label2">
                                 <ListTree size={11} strokeWidth={2} aria-hidden="true" />
                                 {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
                               </span>
@@ -330,7 +330,7 @@ export function OfficeProjektePage() {
 
                   <button
                     onClick={() => setPanel({ aufgabe: null, spalteId: spalte.id })}
-                    className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-label3 hover:bg-fill"
+                    className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-meta font-medium text-label3 hover:bg-fill"
                   >
                     <Plus size={13} strokeWidth={2} aria-hidden="true" />
                     Aufgabe hinzufügen
@@ -344,7 +344,7 @@ export function OfficeProjektePage() {
             {neueSpalteName === null ? (
               <button
                 onClick={() => setNeueSpalteName("")}
-                className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-label3 hover:bg-fill"
+                className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-meta font-medium text-label3 hover:bg-fill"
               >
                 <Plus size={13} strokeWidth={2} aria-hidden="true" />
                 Spalte hinzufügen
@@ -358,7 +358,7 @@ export function OfficeProjektePage() {
                   onChange={(e) => setNeueSpalteName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && spalteAnlegen()}
                   placeholder="Name der Spalte"
-                  className="w-full border-none bg-transparent px-1 py-1 text-sm text-label outline-none disabled:opacity-50"
+                  className="w-full border-none bg-transparent px-1 py-1 text-zeile text-label outline-none disabled:opacity-50"
                 />
                 <button
                   onClick={spalteAnlegen}

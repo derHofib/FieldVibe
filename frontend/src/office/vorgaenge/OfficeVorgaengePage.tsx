@@ -151,14 +151,14 @@ export function OfficeVorgaengePage() {
         <button
           onClick={() => setZeigeFilter((v) => !v)}
           aria-pressed={zeigeFilter || aktiveFilterAnzahl > 0}
-          className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-xs font-medium ${
+          className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-sekundaer font-medium ${
             zeigeFilter || aktiveFilterAnzahl > 0 ? "bg-tint-solid text-white" : "bg-fill text-label"
           }`}
         >
           <Filter size={13} strokeWidth={2} aria-hidden="true" />
           Weitere Filter
           {aktiveFilterAnzahl > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] font-bold">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-meta font-bold">
               {aktiveFilterAnzahl}
             </span>
           )}
@@ -170,7 +170,7 @@ export function OfficeVorgaengePage() {
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-sekundaer font-medium text-label"
             >
               {c.label}
               <button
@@ -182,7 +182,7 @@ export function OfficeVorgaengePage() {
               </button>
             </span>
           ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint-text">
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-sekundaer font-semibold text-tint-text">
             Bearbeiten
           </button>
         </div>
@@ -191,7 +191,7 @@ export function OfficeVorgaengePage() {
       {zeigeFilter && (
         <div className="card-ap mb-4 space-y-3 p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-label2">
+            <div className="mb-1 text-sekundaer font-medium text-label2">
               Status (Mehrfachauswahl möglich)
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -297,7 +297,7 @@ export function OfficeVorgaengePage() {
           text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
           action={
             aktiveFilterAnzahl > 0 && (
-              <button onClick={() => setFilter(LEER_FILTER)} className="btn-ap mt-1 text-xs">
+              <button onClick={() => setFilter(LEER_FILTER)} className="btn-ap mt-1 text-sekundaer">
                 Filter zurücksetzen
               </button>
             )

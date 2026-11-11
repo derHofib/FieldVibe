@@ -38,7 +38,7 @@ const SPALTEN = [
   spalten.accessor("status", {
     header: "Status",
     cell: (info) => (
-      <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
+      <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
         {AUFTRAG_STATUS_LABEL[info.getValue()]}
       </span>
     ),
@@ -75,7 +75,7 @@ export function AuftraegeTabelle({
 
   return (
     <Karte className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-fliess">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b border-sepstrong">
@@ -85,7 +85,7 @@ export function AuftraegeTabelle({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
+                    className="cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}

@@ -74,7 +74,7 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
   return (
     <Karte className="mb-4 space-y-3 p-4">
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Kunde</label>
         <SearchableSelect id={`${uid}-0`}
           value={kundeId}
           onChange={setKundeId}
@@ -86,11 +86,11 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
         <button
           disabled={!kundeId || erstellen.isPending}
           onClick={() => erstellen.mutate()}
-          className="btn-ap-primary flex-1 px-4 py-2 text-sm"
+          className="btn-ap-primary flex-1 px-4 py-2 text-sekundaer"
         >
           Angebot anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
+        <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -177,7 +177,7 @@ export function OfficeRechnungenPage() {
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
         <button
           onClick={() => setZeigeNeu((v) => !v)}
-          className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
+          className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-semibold"
         >
           <Plus size={13} strokeWidth={2.5} />
           {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
@@ -195,7 +195,7 @@ export function OfficeRechnungenPage() {
 
       {bereich === "rechnungen" && (
         <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
-          <span className="text-xs text-label2">Art</span>
+          <span className="text-sekundaer text-label2">Art</span>
           {RECHNUNGSART_FILTER.map((a) => (
             <FilterChip
               key={a}
@@ -208,7 +208,7 @@ export function OfficeRechnungenPage() {
       )}
 
       {rechnungen.data && bereich === "rechnungen" && (
-        <div className="mb-4 flex flex-wrap gap-4 text-xs text-label2">
+        <div className="mb-4 flex flex-wrap gap-4 text-sekundaer text-label2">
           <span>
             Summe brutto:{" "}
             <strong className="tabular-nums text-label">
@@ -250,13 +250,13 @@ export function OfficeRechnungenPage() {
                     : "hover:bg-fill"
                 }`}
               >
-                <p className="truncate text-[13px] font-semibold text-label">
+                <p className="truncate text-sekundaer font-semibold text-label">
                   {e.nummer} ·{" "}
                   <span className={`tabular-nums ${e.negativ ? "text-st-fehlt" : ""}`}>{e.betrag}</span>
                 </p>
                 {e.zusatz && (
                   <p
-                    className={`mt-0.5 truncate text-[11.5px] ${
+                    className={`mt-0.5 truncate text-meta ${
                       e.warnung
                         ? "font-bold text-st-fehlt "
                         : "text-label2"
@@ -267,7 +267,7 @@ export function OfficeRechnungenPage() {
                 )}
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {e.art && <StatusBadge label={RECHNUNGSART_LABEL[e.art]} tone={RECHNUNGSART_TONE[e.art]} />}
-                  <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold ${e.badge}`}>{e.label}</span>
+                  <span className={`inline-block px-2 py-0.5 text-meta font-semibold ${e.badge}`}>{e.label}</span>
                 </div>
               </button>
             ))}
@@ -283,7 +283,7 @@ export function OfficeRechnungenPage() {
                         bereich === "rechnungen" ? `/rechnungen/${aktiv}` : `/angebote/${aktiv}`,
                       )
                     }
-                    className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label2 hover:text-label dark:hover:text-label3"
+                    className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-meta font-medium text-label2 hover:text-label dark:hover:text-label3"
                   >
                     <ExternalLink size={13} strokeWidth={2} />
                     Ganze Seite

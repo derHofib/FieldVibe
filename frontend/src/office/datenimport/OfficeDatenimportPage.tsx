@@ -164,7 +164,7 @@ export function OfficeDatenimportPage() {
       <SeitenKopf titel="Datenimport">
         <button
           type="button"
-          className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-[13px]"
+          className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-sekundaer"
           onClick={() => herunterladen(() => datenimportApi.vorlage(entitaet), `Vorlage-${ENTITAET_LABEL[entitaet]}.csv`)}
         >
           <Download size={14} aria-hidden="true" /> Vorlage herunterladen
@@ -182,7 +182,7 @@ export function OfficeDatenimportPage() {
                   aria-current={aktiv ? "step" : undefined}
                   disabled={!erreichbar(s) || beschaeftigt}
                   onClick={() => setSchritt(s)}
-                  className={`h-8 rounded-full px-3 text-[13px] font-semibold disabled:opacity-50 ${
+                  className={`h-8 rounded-full px-3 text-sekundaer font-semibold disabled:opacity-50 ${
                     aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
                   }`}
                 >
@@ -202,14 +202,14 @@ export function OfficeDatenimportPage() {
 
       {schritt === 1 && (
         <Karte className="space-y-4 p-5">
-          <h2 className="ap-heading text-lg font-semibold text-label">1. Datei und Typ wählen</h2>
+          <h2 className="ap-heading text-zeile font-semibold text-label">1. Datei und Typ wählen</h2>
           <fieldset>
-            <legend className="mb-2 text-sm font-semibold text-label">Was soll importiert werden?</legend>
+            <legend className="mb-2 text-fliess font-semibold text-label">Was soll importiert werden?</legend>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(ENTITAET_LABEL) as ImportEntitaet[]).map((key) => (
                 <label
                   key={key}
-                  className={`flex cursor-pointer items-center gap-2 rounded-[var(--radius-ap-md)] px-3 py-2 text-sm ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-[var(--radius-ap-md)] px-3 py-2 text-fliess ${
                     entitaet === key ? "bg-tint-solid text-white" : "bg-fill text-label"
                   }`}
                 >
@@ -225,12 +225,12 @@ export function OfficeDatenimportPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-xs text-label2">
+            <p className="mt-2 text-meta text-label2">
               Reihenfolge-Tipp: zuerst Kunden, danach Standorte & Anlagen (die den Kunden brauchen), Material ist unabhängig.
             </p>
           </fieldset>
           <div>
-            <label htmlFor="import-datei" className="mb-1 block text-sm font-semibold text-label">
+            <label htmlFor="import-datei" className="mb-1 block text-fliess font-semibold text-label">
               Datei (CSV oder XLSX, max. 10 MB / 20.000 Zeilen)
             </label>
             <input
@@ -238,17 +238,17 @@ export function OfficeDatenimportPage() {
               type="file"
               accept=".csv,.txt,.tsv,.xlsx"
               onChange={(e) => setDatei(e.target.files?.[0] ?? null)}
-              className="field-ap w-full text-sm"
+              className="field-ap w-full text-zeile"
             />
             {datei && (
-              <p className="mt-1 text-xs text-label2">
+              <p className="mt-1 text-sekundaer text-label2">
                 {datei.name} · {dateigroesseText(datei.size)}
               </p>
             )}
           </div>
           <button
             type="button"
-            className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sm font-semibold disabled:opacity-50"
+            className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sekundaer font-semibold disabled:opacity-50"
             disabled={!datei || analyseMutation.isPending}
             onClick={() => analyseMutation.mutate(undefined)}
           >
@@ -260,15 +260,15 @@ export function OfficeDatenimportPage() {
 
       {schritt === 2 && analyse && (
         <Karte className="space-y-4 p-5">
-          <h2 className="ap-heading text-lg font-semibold text-label">2. Spalten zuordnen</h2>
-          <p className="text-sm text-label2">
+          <h2 className="ap-heading text-zeile font-semibold text-label">2. Spalten zuordnen</h2>
+          <p className="text-sekundaer text-label2">
             {analyse.dateiname} · {analyse.zeilen_gesamt.toLocaleString("de-DE")} Zeilen · {analyse.format.toUpperCase()}
             {analyse.kodierung ? ` · ${analyse.kodierung}` : ""}
             {analyse.trennzeichen ? ` · Trennzeichen ${analyse.trennzeichen === "\t" ? "Tab" : analyse.trennzeichen}` : ""}
           </p>
           {analyse.blaetter.length > 1 && (
             <div>
-              <label htmlFor="import-blatt" className="mb-1 block text-sm font-semibold text-label">
+              <label htmlFor="import-blatt" className="mb-1 block text-fliess font-semibold text-label">
                 Tabellenblatt
               </label>
               <Select
@@ -297,9 +297,9 @@ export function OfficeDatenimportPage() {
             </Hinweiskasten>
           )}
           <TabellenRahmen>
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-fliess">
               <caption className="sr-only">Zuordnung der Dateispalten zu den Feldern</caption>
-              <thead className="bg-fill text-xs text-label2">
+              <thead className="bg-fill text-sekundaer text-label2">
                 <tr>
                   <th scope="col" className="px-3 py-2">Feld</th>
                   <th scope="col" className="px-3 py-2">Spalte in der Datei</th>
@@ -318,7 +318,7 @@ export function OfficeDatenimportPage() {
                           {feld.label}
                           {feld.pflicht && <span aria-hidden="true"> *</span>}
                         </label>
-                        {feld.hinweis && <p className="text-xs font-normal text-label2">{feld.hinweis}</p>}
+                        {feld.hinweis && <p className="text-sekundaer font-normal text-label2">{feld.hinweis}</p>}
                       </th>
                       <td className="px-3 py-2">
                         <Select className="w-full max-w-xs" groesse="kompakt"
@@ -336,10 +336,10 @@ export function OfficeDatenimportPage() {
                           ))}
                         </Select>
                         {vorschlag?.sicherheit === "vermutet" && spalte === vorschlag.spalte && (
-                          <p className="mt-1 text-xs text-label2">Vermutete Zuordnung – bitte prüfen</p>
+                          <p className="mt-1 text-sekundaer text-label2">Vermutete Zuordnung – bitte prüfen</p>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-label2">
+                      <td className="px-3 py-2 text-sekundaer text-label2">
                         {beispiele.length > 0 ? beispiele.join(" · ") : "–"}
                       </td>
                     </tr>
@@ -350,11 +350,11 @@ export function OfficeDatenimportPage() {
           </TabellenRahmen>
 
           <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold text-label">Dubletten</legend>
+            <legend className="text-fliess font-semibold text-label">Dubletten</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {analyse.dubletten_arten.map((art) => (
                 <div key={art.key}>
-                  <label htmlFor={`dublette-${art.key}`} className="mb-1 block text-xs text-label2">
+                  <label htmlFor={`dublette-${art.key}`} className="mb-1 block text-sekundaer text-label2">
                     {art.label}
                   </label>
                   <Select
@@ -375,12 +375,12 @@ export function OfficeDatenimportPage() {
           </fieldset>
 
           <fieldset>
-            <legend className="mb-1 text-sm font-semibold text-label">Bei fehlerhaften Zeilen</legend>
-            <label className="mr-4 inline-flex items-center gap-2 text-sm">
+            <legend className="mb-1 text-fliess font-semibold text-label">Bei fehlerhaften Zeilen</legend>
+            <label className="mr-4 inline-flex items-center gap-2 text-fliess">
               <input type="radio" name="modus" checked={modus === "gueltige"} onChange={() => setModus("gueltige")} />
               Gültige Zeilen importieren, Fehler als Bericht ausgeben
             </label>
-            <label className="inline-flex items-center gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-fliess">
               <input
                 type="radio"
                 name="modus"
@@ -392,12 +392,12 @@ export function OfficeDatenimportPage() {
           </fieldset>
 
           <div className="flex gap-2">
-            <button type="button" className="btn-ap h-9 px-4 text-sm" onClick={() => setSchritt(1)}>
+            <button type="button" className="btn-ap h-9 px-4 text-sekundaer" onClick={() => setSchritt(1)}>
               Zurück
             </button>
             <button
               type="button"
-              className="btn-ap-primary h-9 px-4 text-sm font-semibold disabled:opacity-50"
+              className="btn-ap-primary h-9 px-4 text-sekundaer font-semibold disabled:opacity-50"
               disabled={offeneGruppen.length > 0 || probeMutation.isPending}
               onClick={() => probeMutation.mutate()}
             >
@@ -409,14 +409,14 @@ export function OfficeDatenimportPage() {
 
       {schritt === 3 && analyse && probe && (
         <Karte className="space-y-4 p-5">
-          <h2 className="ap-heading text-lg font-semibold text-label">3. Probelauf – es wurde noch nichts importiert</h2>
+          <h2 className="ap-heading text-zeile font-semibold text-label">3. Probelauf – es wurde noch nichts importiert</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <KennzahlKarte label="Neu" wert={String(probe.zusammenfassung.neu)} />
             <KennzahlKarte label="Mit Warnung" wert={String(probe.zusammenfassung.warnung)} ton={probe.zusammenfassung.warnung ? "warnung" : "neutral"} />
             <KennzahlKarte label="Dubletten" wert={String(probe.zusammenfassung.dublette)} />
             <KennzahlKarte label="Fehler" wert={String(probe.zusammenfassung.fehler)} ton={probe.zusammenfassung.fehler ? "warnung" : "gut"} />
           </div>
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Der Import würde {probe.zusammenfassung.anlegen} Datensätze anlegen
             {probe.zusammenfassung.aktualisieren > 0 ? `, ${probe.zusammenfassung.aktualisieren} ergänzen` : ""} und{" "}
             {probe.zusammenfassung.ueberspringen + probe.zusammenfassung.fehler} Zeilen auslassen.
@@ -438,9 +438,9 @@ export function OfficeDatenimportPage() {
             ))}
           </div>
           <TabellenRahmen>
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-fliess">
               <caption className="sr-only">Ergebnis des Probelaufs je Zeile</caption>
-              <thead className="bg-fill text-xs text-label2">
+              <thead className="bg-fill text-sekundaer text-label2">
                 <tr>
                   <th scope="col" className="px-3 py-2">Zeile</th>
                   <th scope="col" className="px-3 py-2">Status</th>
@@ -453,12 +453,12 @@ export function OfficeDatenimportPage() {
                   <tr key={z.zeile} className="border-t border-sep align-top">
                     <td className="px-3 py-2 tabular-nums">{z.zeile}</td>
                     <td className="px-3 py-2">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_KLASSE[z.status]}`}>
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-meta font-semibold ${STATUS_KLASSE[z.status]}`}>
                         {STATUS_LABEL[z.status]}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-label2">{Object.values(z.vorschau).join(" · ") || "–"}</td>
-                    <td className="px-3 py-2 text-xs">{z.meldungen.join(" · ") || "–"}</td>
+                    <td className="px-3 py-2 text-sekundaer text-label2">{Object.values(z.vorschau).join(" · ") || "–"}</td>
+                    <td className="px-3 py-2 text-sekundaer">{z.meldungen.join(" · ") || "–"}</td>
                   </tr>
                 ))}
                 {zeilenFiltern(probe.zeilen, filter).length === 0 && (
@@ -472,18 +472,18 @@ export function OfficeDatenimportPage() {
             </table>
           </TabellenRahmen>
           {probe.zeilen_gekuerzt && (
-            <p className="text-xs text-label2">
+            <p className="text-sekundaer text-label2">
               Aus Platzgründen werden je Status nur die ersten Zeilen angezeigt; der vollständige Bericht steht als CSV bereit.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-ap h-9 px-4 text-sm" onClick={() => setSchritt(2)}>
+            <button type="button" className="btn-ap h-9 px-4 text-sekundaer" onClick={() => setSchritt(2)}>
               Zuordnung ändern
             </button>
             {probe.zusammenfassung.fehler > 0 && (
               <button
                 type="button"
-                className="btn-ap h-9 px-4 text-sm"
+                className="btn-ap h-9 px-4 text-sekundaer"
                 onClick={() => herunterladen(() => datenimportApi.fehlerbericht(analyse.import_lauf_id), "Fehlerbericht.csv")}
               >
                 Fehlerbericht (CSV)
@@ -491,7 +491,7 @@ export function OfficeDatenimportPage() {
             )}
             <button
               type="button"
-              className="btn-ap-primary h-9 px-4 text-sm font-semibold disabled:opacity-50"
+              className="btn-ap-primary h-9 px-4 text-sekundaer font-semibold disabled:opacity-50"
               disabled={!darfAusfuehren(probe.zusammenfassung, modus) || ausfuehrenMutation.isPending}
               onClick={() => ausfuehrenMutation.mutate()}
             >
@@ -503,7 +503,7 @@ export function OfficeDatenimportPage() {
 
       {schritt === 4 && analyse && ergebnis && (
         <Karte className="space-y-4 p-5">
-          <h2 className="ap-heading text-lg font-semibold text-label">4. Ergebnis</h2>
+          <h2 className="ap-heading text-zeile font-semibold text-label">4. Ergebnis</h2>
           {ergebnis.status === "abgeschlossen" ? (
             <Hinweiskasten ton="info" titel="Import abgeschlossen">
               <p>
@@ -533,7 +533,7 @@ export function OfficeDatenimportPage() {
             {ergebnis.zusammenfassung.fehler > 0 && (
               <button
                 type="button"
-                className="btn-ap h-9 px-4 text-sm"
+                className="btn-ap h-9 px-4 text-sekundaer"
                 onClick={() => herunterladen(() => datenimportApi.fehlerbericht(analyse.import_lauf_id), "Fehlerbericht.csv")}
               >
                 Fehlerliste herunterladen (CSV)
@@ -542,7 +542,7 @@ export function OfficeDatenimportPage() {
             {ergebnis.status === "abgeschlossen" && !rueckgaengigErgebnis && (
               <button
                 type="button"
-                className="btn-ap inline-flex h-9 items-center gap-1.5 px-4 text-sm"
+                className="btn-ap inline-flex h-9 items-center gap-1.5 px-4 text-sekundaer"
                 disabled={rueckgaengigMutation.isPending}
                 onClick={async () => {
                   if (await bestaetigen({ titel: "Alle durch diesen Import angelegten, seither unveränderten Datensätze in den Papierkorb legen?", bestaetigenLabel: "In den Papierkorb" })) {
@@ -553,7 +553,7 @@ export function OfficeDatenimportPage() {
                 <Undo2 size={14} aria-hidden="true" /> Import rückgängig machen
               </button>
             )}
-            <button type="button" className="btn-ap-primary h-9 px-4 text-sm font-semibold" onClick={neuerImport}>
+            <button type="button" className="btn-ap-primary h-9 px-4 text-sekundaer font-semibold" onClick={neuerImport}>
               Weiteren Import starten
             </button>
           </div>
@@ -561,13 +561,13 @@ export function OfficeDatenimportPage() {
       )}
 
       <section aria-labelledby="import-laeufe-titel" className="space-y-2">
-        <h2 id="import-laeufe-titel" className="ap-heading text-lg font-semibold text-label">
+        <h2 id="import-laeufe-titel" className="ap-heading text-zeile font-semibold text-label">
           Bisherige Importe
         </h2>
         <TabellenRahmen>
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-fliess">
             <caption className="sr-only">Liste der bisherigen Importläufe</caption>
-            <thead className="bg-fill text-xs text-label2">
+            <thead className="bg-fill text-meta text-label2">
               <tr>
                 <th scope="col" className="px-3 py-2">Datum</th>
                 <th scope="col" className="px-3 py-2">Typ</th>
@@ -592,7 +592,7 @@ export function OfficeDatenimportPage() {
                       {l.fehlerbericht_verfuegbar && (
                         <button
                           type="button"
-                          className="text-[13px] font-medium text-tint-text underline"
+                          className="text-sekundaer font-medium text-tint-text underline"
                           onClick={() => herunterladen(() => datenimportApi.fehlerbericht(l.id), `Fehlerbericht-${l.dateiname}.csv`)}
                         >
                           Fehlerliste
@@ -601,7 +601,7 @@ export function OfficeDatenimportPage() {
                       {l.kann_rueckgaengig && (
                         <button
                           type="button"
-                          className="text-[13px] font-medium text-tint-text underline"
+                          className="text-sekundaer font-medium text-tint-text underline"
                           onClick={async () => {
                             if (await bestaetigen({ titel: "Diesen Import rückgängig machen?", bestaetigenLabel: "Rückgängig machen" })) rueckgaengigMutation.mutate(l.id);
                           }}

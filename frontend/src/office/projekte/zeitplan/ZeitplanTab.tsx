@@ -458,10 +458,10 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
 
   // --- Darstellung ------------------------------------------------------------------
 
-  if (isLoading) return <p className="p-4 text-sm text-label2">Zeitplan wird geladen …</p>;
+  if (isLoading) return <p className="p-4 text-sekundaer text-label2">Zeitplan wird geladen …</p>;
   if (error || !zeitplan) {
     return (
-      <p role="alert" className="p-4 text-sm text-st-fehlt">
+      <p role="alert" className="p-4 text-fliess text-st-fehlt">
         Zeitplan konnte nicht geladen werden.
       </p>
     );
@@ -527,7 +527,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <SegmentedControl ariaLabel="Zoomstufe" optionen={ZOOM_OPTIONEN} wert={zoom} onChange={zoomWechsel} />
         <div className="flex items-center gap-2" title={MODUS_ERKLAERUNG}>
-          <span className="text-xs text-label2">Verschieben:</span>
+          <span className="text-sekundaer text-label2">Verschieben:</span>
           <SegmentedControl
             ariaLabel="Verschiebe-Modus"
             optionen={MODUS_OPTIONEN}
@@ -541,7 +541,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           <Info size={15} strokeWidth={2} className="text-label2" aria-label={MODUS_ERKLAERUNG} role="img" />
         </div>
         {/* Immer im Fluss vorhanden (leer = unsichtbar), damit die Zeile beim Ziehen nicht springt. */}
-        <p aria-live="polite" className="min-h-5 min-w-0 flex-1 text-right text-xs text-label2">
+        <p aria-live="polite" className="min-h-5 min-w-0 flex-1 text-right text-sekundaer text-label2">
           {zieh?.art === "verbinden" ? hinweisText(zieh) : ""}
         </p>
       </div>
@@ -552,7 +552,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           role="switch"
           aria-checked={kritischModus}
           onClick={() => kritischUmschalten(!kritischModus)}
-          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm ${kritischModus ? "text-st-fehlt" : ""}`}
+          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer ${kritischModus ? "text-st-fehlt" : ""}`}
           style={kritischModus ? { borderColor: "var(--st-fehlt-dot)" } : undefined}
           title="Hebt Schritte hervor, deren Verzögerung das Projektende verschiebt"
         >
@@ -571,7 +571,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
               onClick={toggeln}
               aria-haspopup="menu"
               aria-expanded={offen}
-              className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm"
+              className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer"
             >
               <Scaling size={14} strokeWidth={2} aria-hidden="true" />
               <span>Vergleich:</span>
@@ -583,7 +583,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
         <button
           type="button"
           onClick={() => setOffenerDialog("antraege")}
-          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm ${offeneGesamt > 0 ? "text-st-arbeit" : ""}`}
+          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer ${offeneGesamt > 0 ? "text-st-arbeit" : ""}`}
           style={offeneGesamt > 0 ? { borderColor: "var(--st-arbeit-dot)" } : undefined}
           title="Änderungsanträge der Techniker"
         >
@@ -595,7 +595,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           type="button"
           onClick={() => setOffenerDialog("straffen")}
           disabled={leer}
-          className="btn-ap px-3 py-1.5 text-sm disabled:opacity-50"
+          className="btn-ap px-3 py-1.5 text-sekundaer disabled:opacity-50"
           title="Schritte auf den frühesten möglichen Termin ziehen"
         >
           Plan straffen
@@ -618,11 +618,11 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
             </button>
           )}
         />
-        {pdfExport.isPending && <span className="text-xs text-label2">PDF wird erstellt …</span>}
+        {pdfExport.isPending && <span className="text-sekundaer text-label2">PDF wird erstellt …</span>}
       </div>
 
       {fehler && (
-        <div role="alert" className="flex items-start gap-2 rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <div role="alert" className="flex items-start gap-2 rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex-1">{fehler}</span>
           <button type="button" onClick={() => setFehler(null)} aria-label="Meldung schließen" className="shrink-0">
             <X size={15} strokeWidth={2} aria-hidden="true" />
@@ -636,10 +636,10 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           text="Noch kein Zeitplan — lege die erste Phase an"
           action={
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setEntwurf({ typ: "phase", phaseId: null })} className="btn-ap btn-ap-primary px-3 py-1.5 text-sm">
+              <button type="button" onClick={() => setEntwurf({ typ: "phase", phaseId: null })} className="btn-ap btn-ap-primary px-3 py-1.5 text-sekundaer">
                 + Phase
               </button>
-              <button type="button" onClick={() => setOffenerDialog("vorlage-einfuegen")} className="btn-ap px-3 py-1.5 text-sm">
+              <button type="button" onClick={() => setOffenerDialog("vorlage-einfuegen")} className="btn-ap px-3 py-1.5 text-sekundaer">
                 Aus Vorlage starten
               </button>
             </div>
@@ -802,18 +802,18 @@ function ZeilenDialog({
       onClose={onClose}
       titel={art === "fortschritt" ? "Fortschritt setzen" : "Zuweisen"}
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }
       rechts={
-        <button type="button" onClick={speichern} className="text-[17px] font-semibold text-tint-text">
+        <button type="button" onClick={speichern} className="text-zeile font-semibold text-tint-text">
           Sichern
         </button>
       }
     >
       <div className="space-y-3 p-4">
-        <p className="truncate text-sm text-label2">{element.titel}</p>
+        <p className="truncate text-sekundaer text-label2">{element.titel}</p>
         {art === "fortschritt" ? (
           <div className="flex items-center gap-3">
             <input
@@ -826,7 +826,7 @@ function ZeilenDialog({
               aria-label="Fortschritt in Prozent"
               className="flex-1"
             />
-            <span className="w-12 text-right text-[17px] text-label tabular-nums">{fortschritt} %</span>
+            <span className="w-12 text-right text-zeile text-label tabular-nums">{fortschritt} %</span>
           </div>
         ) : (
           <SearchableSelect value={nutzer} onChange={setNutzer} placeholder="Nicht zugewiesen" options={users} />
@@ -842,7 +842,7 @@ function ZeitplanSchmal({ elemente }: { elemente: ZeitplanElement[] }) {
   const pos = anzeigeZeitraeume(elemente);
   return (
     <div id="projekt-tabpanel-zeitplan" role="tabpanel" aria-labelledby="projekt-tab-zeitplan" className="space-y-3 p-4 pt-0">
-      <p className="text-sm text-label2">Zeitplan ist für größere Bildschirme ausgelegt</p>
+      <p className="text-sekundaer text-label2">Zeitplan ist für größere Bildschirme ausgelegt</p>
       <ul className="space-y-1.5">
         {zeilen.map((z) => {
           if (z.art !== "element") return null;
@@ -850,8 +850,8 @@ function ZeitplanSchmal({ elemente }: { elemente: ZeitplanElement[] }) {
           const p = pos.get(e.id);
           return (
             <li key={e.id} className="card-ap px-3 py-2" style={{ marginLeft: z.ebene * 16 }}>
-              <p className={`text-[15px] text-label ${e.typ === "phase" ? "font-semibold" : ""}`}>{e.titel}</p>
-              <p className="text-xs text-label2">
+              <p className={`text-fliess text-label ${e.typ === "phase" ? "font-semibold" : ""}`}>{e.titel}</p>
+              <p className="text-sekundaer text-label2">
                 {p ? (e.typ === "meilenstein" ? formatKurz(p.start) : formatBereich(formatTag(p.start), formatTag(p.ende))) : "Ohne Datum"}
               </p>
             </li>

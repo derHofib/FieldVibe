@@ -67,8 +67,8 @@ export function ExportPanel({
         className="flex h-full w-[420px] flex-col bg-card shadow-2xl"
       >
         <div className="relative border-b border-sep px-6 py-5 ">
-          <h2 className="text-base font-bold text-label">Board exportieren</h2>
-          <p className="mt-1 text-xs text-label2">
+          <h2 className="text-zeile font-bold text-label">Board exportieren</h2>
+          <p className="mt-1 text-sekundaer text-label2">
             „{board.name}“ · {notizen.length} {notizen.length === 1 ? "Notiz" : "Notizen"}
           </p>
           <button
@@ -80,7 +80,7 @@ export function ExportPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase">
+          <p className="mb-2.5 text-meta font-bold tracking-wide text-label2 uppercase">
             Format
           </p>
           <div className="mb-6 grid grid-cols-3 gap-2.5">
@@ -101,8 +101,8 @@ export function ExportPanel({
                 }`}
               >
                 <f.icon size={20} strokeWidth={2} className="mx-auto" />
-                <div className="mt-2 text-xs font-bold">{f.label}</div>
-                <div className={`mt-0.5 text-[10px] ${format === f.key ? "text-white/85" : "text-label2"}`}>
+                <div className="mt-2 text-sekundaer font-bold">{f.label}</div>
+                <div className={`mt-0.5 text-meta ${format === f.key ? "text-white/85" : "text-label2"}`}>
                   {f.sub}
                 </div>
               </button>
@@ -110,16 +110,16 @@ export function ExportPanel({
           </div>
           <button
             onClick={() => (format === "png" ? onExportPng() : format === "pdf" ? onExportPdf() : onExportCsv())}
-            className="btn-ap-primary mb-6 w-full py-2.5 text-xs"
+            className="btn-ap-primary mb-6 w-full py-2.5 text-sekundaer"
           >
             {format.toUpperCase()} herunterladen
           </button>
 
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase">
+          <p className="mb-2.5 text-meta font-bold tracking-wide text-label2 uppercase">
             In FieldVibe übernehmen
           </p>
           {notizen.length === 0 ? (
-            <p className="text-xs text-label2">Keine Klebezettel/Notizen auf diesem Board.</p>
+            <p className="text-sekundaer text-label2">Keine Klebezettel/Notizen auf diesem Board.</p>
           ) : (
             <div className="space-y-2">
               {notizen.map((n) => (
@@ -159,13 +159,13 @@ function NotizUebernahme({
   const text = notizText(node) ?? "";
   return (
     <div className="rounded-xl border border-sep p-3 ">
-      <p className="line-clamp-2 text-xs font-medium text-label">{text || "(leer)"}</p>
+      <p className="line-clamp-2 text-sekundaer font-medium text-label">{text || "(leer)"}</p>
       {offen === null && (
         <div className="mt-2 flex items-center gap-3">
-          <button onClick={() => onOeffnen("vorgang")} className="text-xs font-semibold text-tint ">
+          <button onClick={() => onOeffnen("vorgang")} className="text-sekundaer font-semibold text-tint ">
             → Neuer Vorgang
           </button>
-          <button onClick={() => onOeffnen("mangel")} className="text-xs font-semibold text-st-arbeit ">
+          <button onClick={() => onOeffnen("mangel")} className="text-sekundaer font-semibold text-st-arbeit ">
             → Mangel melden
           </button>
         </div>
@@ -233,16 +233,16 @@ function NeuerVorgangMiniform({
           ))}
         </Select>
       </div>
-      {erstellen.isError && <p className="text-[11px] text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
+      {erstellen.isError && <p className="text-meta text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-xs"
+          className="btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-sekundaer"
         >
           <Link2 size={11} strokeWidth={2.5} /> Vorgang anlegen
         </button>
-        <button onClick={onAbbrechen} className="text-xs font-medium text-label2">
+        <button onClick={onAbbrechen} className="text-sekundaer font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -285,18 +285,18 @@ function MangelMeldenMiniform({
         onChange={(e) => setBeschreibung(e.target.value)}
         rows={2}
         placeholder="Beschreibung des Mangels…"
-        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sekundaer text-label"
       />
-      {melden.isError && <p className="text-[11px] text-st-fehlt ">Melden fehlgeschlagen.</p>}
+      {melden.isError && <p className="text-meta text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={() => melden.mutate()}
           disabled={!vorgangId || !beschreibung.trim() || melden.isPending}
-          className="rounded-md bg-st-arbeit-dot px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          className="rounded-md bg-st-arbeit-dot px-3 py-1.5 text-sekundaer font-semibold text-white disabled:opacity-40"
         >
           Mangel melden
         </button>
-        <button onClick={onAbbrechen} className="text-xs font-medium text-label2">
+        <button onClick={onAbbrechen} className="text-sekundaer font-medium text-label2">
           Abbrechen
         </button>
       </div>

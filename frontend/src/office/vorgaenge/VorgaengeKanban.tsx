@@ -66,11 +66,11 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   return (
     <div>
       {fehler && (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {fehler}
           </span>
-          <button onClick={() => setFehler(null)} className="text-xs underline">
+          <button onClick={() => setFehler(null)} className="text-sekundaer underline">
             Ausblenden
           </button>
         </div>
@@ -90,10 +90,10 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
               className="min-w-0 rounded-lg"
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-label2">
+                <span className="text-sekundaer font-bold text-label2">
                   {STATUS_LABEL[status]}
                 </span>
-                <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label3">
+                <span className="rounded-full bg-fill px-1.5 text-meta font-bold text-label3">
                   {spalte.length}
                 </span>
               </div>
@@ -121,18 +121,18 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                         onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
                         className="block w-full text-left"
                       >
-                        <p className="text-[10.5px] font-bold text-label2">
+                        <p className="text-meta font-bold text-label2">
                           {v.vorgangsnummer}
                         </p>
-                        <p className="mt-0.5 text-[13px] font-semibold text-label">
+                        <p className="mt-0.5 text-sekundaer font-semibold text-label">
                           {v.titel}
                         </p>
-                        <p className="mt-2 truncate text-[11.5px] text-label2">
+                        <p className="mt-2 truncate text-meta text-label2">
                           {v.kunde_name}
                         </p>
                         <div className="mt-1.5 flex items-center justify-between gap-2">
                           {ueberfaellig ? (
-                            <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
+                            <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-meta font-semibold text-st-fehlt">
                               {tageSeit(v.faelligkeit_am!)} Tage
                             </span>
                           ) : (

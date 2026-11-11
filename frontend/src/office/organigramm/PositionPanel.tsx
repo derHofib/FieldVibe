@@ -64,22 +64,22 @@ export function PositionPanel({
       }
     >
       {error ? (
-        <p role="alert" className="p-4 text-sm text-st-fehlt">
+        <p role="alert" className="p-4 text-fliess text-st-fehlt">
           {verstaendlicherFehler(error, "Position konnte nicht geladen werden")}
         </p>
       ) : !detail ? (
-        <p className="p-4 text-sm text-label2">Lädt…</p>
+        <p className="p-4 text-sekundaer text-label2">Lädt…</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
             {detail.status && <StatusPille status={POSITION_STATUS_TOKEN[detail.status]} label={POSITION_STATUS_LABEL[detail.status]} />}
-            {detail.typ === "stabsstelle" && <span className="rounded-full bg-tintbg px-2 py-0.5 text-xs font-semibold text-tint-text">Stabsstelle</span>}
-            {detail.archiviert_am && <span className="rounded-full bg-fill px-2 py-0.5 text-xs font-semibold text-label2">Archiviert</span>}
-            <span className="text-xs text-label2">
+            {detail.typ === "stabsstelle" && <span className="rounded-full bg-tintbg px-2 py-0.5 text-meta font-semibold text-tint-text">Stabsstelle</span>}
+            {detail.archiviert_am && <span className="rounded-full bg-fill px-2 py-0.5 text-meta font-semibold text-label2">Archiviert</span>}
+            <span className="text-sekundaer text-label2">
               {detail.unterpositionen} Unterposition{detail.unterpositionen === 1 ? "" : "en"}
             </span>
           </div>
-          <div role="tablist" aria-label="Abschnitte der Position" className="mb-1 flex gap-1 border-b border-sep px-4 pt-3 pb-2 text-sm">
+          <div role="tablist" aria-label="Abschnitte der Position" className="mb-1 flex gap-1 border-b border-sep px-4 pt-3 pb-2 text-fliess">
             {TABS.map((t) => (
               <button
                 key={t.key}
@@ -121,7 +121,7 @@ export function PositionPanel({
                 onGespeichert={neuLaden}
               />
             ) : (
-              <p className="p-4 text-sm text-label2">Rechte-Registry lädt…</p>
+              <p className="p-4 text-sekundaer text-label2">Rechte-Registry lädt…</p>
             ))}
         </>
       )}

@@ -106,7 +106,7 @@ export function OfficeBuchhaltungPage() {
             />
           </div>
           {alleNull && (
-            <p className="-mt-2 mb-5 flex items-center gap-1.5 text-xs text-st-erledigt">
+            <p className="-mt-2 mb-5 flex items-center gap-1.5 text-sekundaer text-st-erledigt">
               <CheckCircle2 size={14} strokeWidth={2} aria-hidden="true" />
               Nichts überfällig
             </p>
@@ -142,12 +142,12 @@ function PostenTabelle({
 }) {
   return (
     <div>
-      <h2 className="mb-2 text-sm font-bold text-label">{titel}</h2>
+      <h2 className="mb-2 text-fliess font-bold text-label">{titel}</h2>
       {eintraege.length === 0 ? (
         <EmptyState icon={Wallet} text="Nichts offen." />
       ) : (
         <TabellenRahmen>
-          <table className="w-full border-collapse text-[12.5px]">
+          <table className="w-full border-collapse text-sekundaer">
             <thead>
               <tr className="bg-fill">
                 <Th>Nummer</Th>
@@ -178,7 +178,7 @@ function PostenTabelle({
                   </td>
                   <td className="px-3.5 py-2.5 text-right">
                     {e.tage_ueberfaellig > 0 ? (
-                      <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt ">
+                      <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-meta font-semibold text-st-fehlt ">
                         {e.tage_ueberfaellig} Tage
                       </span>
                     ) : (
@@ -198,7 +198,7 @@ function PostenTabelle({
 function Th({ children, rechts = false }: { children: React.ReactNode; rechts?: boolean }) {
   return (
     <th
-      className={`border-b border-sep px-3.5 py-2 text-[10.5px] font-bold tracking-wider text-label2 uppercase 0 ${
+      className={`border-b border-sep px-3.5 py-2 text-meta font-bold tracking-wider text-label2 uppercase 0 ${
         rechts ? "text-right" : "text-left"
       }`}
     >

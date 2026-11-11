@@ -96,7 +96,7 @@ export function OfficeMaterialPage() {
       <MaterialDetailPage key={id} id={id} eingebettet />
       {gewaehltesMaterial && (
         <div>
-          <h3 className="mb-2 text-xs font-bold tracking-wider text-label2 uppercase">
+          <h3 className="mb-2 text-meta font-bold tracking-wider text-label2 uppercase">
             Bestände je Lager
           </h3>
           <MaterialZeile
@@ -140,7 +140,7 @@ export function OfficeMaterialPage() {
               setAnsicht("material");
               setNeu(true);
             }}
-            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neues Material
@@ -193,7 +193,7 @@ export function OfficeMaterialPage() {
                 type="button"
                 onClick={() => setLagerorteZeigen((v) => !v)}
                 aria-expanded={lagerorteZeigen}
-                className="ml-auto text-xs font-medium text-tint-text hover:underline"
+                className="ml-auto text-sekundaer font-medium text-tint-text hover:underline"
               >
                 Lagerorte verwalten
               </button>
@@ -251,7 +251,7 @@ export function OfficeMaterialPage() {
 }
 
 const FELD = "field-ap";
-const LABEL = "mb-1 block text-xs font-medium text-label2";
+const LABEL = "mb-1 block text-sekundaer font-medium text-label2";
 
 function NeuesMaterialFormular({
   lagerorte,
@@ -368,7 +368,7 @@ function NeuesMaterialFormular({
         </Select>
       </div>
       {anlegen.isError && (
-        <p role="alert" className="text-xs text-st-fehlt">
+        <p role="alert" className="text-sekundaer text-st-fehlt">
           {anlegen.error instanceof ApiError ? anlegen.error.message : "Anlegen fehlgeschlagen."}
         </p>
       )}
@@ -376,14 +376,14 @@ function NeuesMaterialFormular({
         <button
           type="button"
           onClick={onAbbrechen}
-          className="btn-ap px-3 py-2 text-xs font-semibold"
+          className="btn-ap px-3 py-2 text-sekundaer font-semibold"
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={anlegen.isPending}
-          className="btn-ap-primary px-4 py-2 text-xs font-semibold disabled:opacity-50"
+          className="btn-ap-primary px-4 py-2 text-sekundaer font-semibold disabled:opacity-50"
         >
           {anlegen.isPending ? "Legt an…" : "Material anlegen"}
         </button>

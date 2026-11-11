@@ -31,7 +31,7 @@ function ArtSymbol({ art }: { art: "ende_anfang" | "anfang_anfang" | "ende_ende"
 export function GanttLegende() {
   const [offen, setOffen] = useState(false);
   return (
-    <div className="rounded-[10px] bg-fill px-3 py-2 text-xs text-label2">
+    <div className="rounded-[10px] bg-fill px-3 py-2 text-sekundaer text-label2">
       <button
         type="button"
         onClick={() => setOffen((o) => !o)}

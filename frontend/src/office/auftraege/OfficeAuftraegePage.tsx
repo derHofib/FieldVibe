@@ -71,7 +71,7 @@ export function OfficeAuftraegePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Titel</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Titel</label>
               <input id={`${uid}-0`}
                 autoFocus
                 value={neuerTitel}
@@ -82,7 +82,7 @@ export function OfficeAuftraegePage() {
               />
             </div>
             <div className="min-w-[200px] flex-1">
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Projekt (optional)</label>
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Projekt (optional)</label>
               <SearchableSelect id={`${uid}-1`}
                 value={neuerProjektId}
                 onChange={setNeuerProjektId}
@@ -91,7 +91,7 @@ export function OfficeAuftraegePage() {
               />
             </div>
             <div className="min-w-[200px] flex-1">
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Kunde (optional)</label>
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Kunde (optional)</label>
               <SearchableSelect id={`${uid}-2`}
                 value={neuerKundeId}
                 onChange={setNeuerKundeId}

@@ -25,14 +25,14 @@ function BesetzungZeile({
   return (
     <li className="flex items-center gap-2 px-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-medium text-label">{b.name ?? "Person (Name ausgeblendet)"}</p>
-        <p className="text-xs text-label2">
+        <p className="truncate text-fliess font-medium text-label">{b.name ?? "Person (Name ausgeblendet)"}</p>
+        <p className="text-sekundaer text-label2">
           <span className="mr-1.5 rounded-full bg-fill px-1.5 py-0.5 font-medium text-label">{ART_LABEL[b.art]}</span>
           {besetzungZeitraum(b)}
         </p>
       </div>
       {onBeenden && darfBeenden && (
-        <button type="button" onClick={onBeenden} disabled={beendenLaeuft} className="btn-ap shrink-0 text-xs">
+        <button type="button" onClick={onBeenden} disabled={beendenLaeuft} className="btn-ap shrink-0 text-sekundaer">
           Freistellen
         </button>
       )}
@@ -114,7 +114,7 @@ export function BesetzungTab({
   return (
     <div role="tabpanel" id="org-tabpanel-besetzung" aria-labelledby="org-tab-besetzung" className="space-y-5 p-4">
       <div
-        className={`flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm ${
+        className={`flex items-center gap-2 rounded-[10px] px-3 py-2 text-fliess ${
           istUnterbesetzt(detail) ? "bg-st-arbeit-bg text-st-arbeit" : "bg-fill text-label"
         }`}
         role={istUnterbesetzt(detail) ? "status" : undefined}
@@ -127,19 +127,19 @@ export function BesetzungTab({
       </div>
 
       {warnung && (
-        <p role="status" className="flex items-start gap-2 rounded-[10px] bg-st-arbeit-bg px-3 py-2 text-sm text-st-arbeit">
+        <p role="status" className="flex items-start gap-2 rounded-[10px] bg-st-arbeit-bg px-3 py-2 text-fliess text-st-arbeit">
           <AlertTriangle size={15} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden="true" />
           {warnung}
         </p>
       )}
       {fehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
 
       <section>
-        <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-label2 uppercase">Aktuell besetzt</h3>
+        <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Aktuell besetzt</h3>
         {aktive.length > 0 ? (
           <ul className="divide-y divide-sep overflow-hidden rounded-[12px] bg-cell">
             {aktive.map((b) => (
@@ -157,7 +157,7 @@ export function BesetzungTab({
             ))}
           </ul>
         ) : (
-          <p className="rounded-[12px] bg-cell px-3 py-3 text-sm text-label2">
+          <p className="rounded-[12px] bg-cell px-3 py-3 text-sekundaer text-label2">
             {detail.status === "geplant" ? "Platzhalter – keine Besetzung vorgesehen." : "Vakant – niemand zugewiesen."}
           </p>
         )}
@@ -165,10 +165,10 @@ export function BesetzungTab({
 
       {darfBearbeiten && !archiviert && (
         <section>
-          <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-label2 uppercase">Person zuweisen</h3>
+          <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Person zuweisen</h3>
           <form onSubmit={absenden} className="card-ap space-y-3 p-3">
             <div>
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Mitarbeiter</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Mitarbeiter</label>
               <SearchableSelect id={`${uid}-0`} options={optionen} value={userId} onChange={setUserId} placeholder="Mitarbeiter suchen…" />
             </div>
             <SegmentedControl
@@ -182,13 +182,13 @@ export function BesetzungTab({
             />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="bes-von" className="mb-1 block text-sm font-medium text-label">
+                <label htmlFor="bes-von" className="mb-1 block text-fliess font-medium text-label">
                   Von (optional)
                 </label>
                 <input id="bes-von" type="datetime-local" value={von} onChange={(e) => setVon(e.target.value)} className="field-ap" />
               </div>
               <div>
-                <label htmlFor="bes-bis" className="mb-1 block text-sm font-medium text-label">
+                <label htmlFor="bes-bis" className="mb-1 block text-fliess font-medium text-label">
                   Bis {art === "vertretung" ? "(Pflicht)" : "(optional)"}
                 </label>
                 <input id="bes-bis" type="datetime-local" value={bis} onChange={(e) => setBis(e.target.value)} className="field-ap" required={art === "vertretung"} />
@@ -203,7 +203,7 @@ export function BesetzungTab({
 
       {historie.length > 0 && (
         <section>
-          <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-label2 uppercase">Historie</h3>
+          <h3 className="mb-1.5 text-meta font-semibold tracking-wide text-label2 uppercase">Historie</h3>
           <ul className="divide-y divide-sep overflow-hidden rounded-[12px] bg-cell">
             {historie.map((b) => (
               <BesetzungZeile key={b.id} b={b} darfBeenden={false} beendenLaeuft={false} />

@@ -261,7 +261,7 @@ export function OrganigrammPage() {
             onClick={() => setFilter((f) => ({ ...f, status: f.status === s ? "alle" : s }))}
           />
         ))}
-        <label className="flex items-center gap-1.5 text-xs text-label2">
+        <label className="flex items-center gap-1.5 text-sekundaer text-label2">
           Einheit
           <Select className="w-auto" groesse="kompakt"
             value={filter.orgEinheitId}
@@ -276,7 +276,7 @@ export function OrganigrammPage() {
           </Select>
         </label>
         {aktiv && (
-          <button type="button" className="text-xs font-medium text-tint-text hover:underline" onClick={() => setFilter(KEIN_FILTER)}>
+          <button type="button" className="text-sekundaer font-medium text-tint-text hover:underline" onClick={() => setFilter(KEIN_FILTER)}>
             Filter zurücksetzen
           </button>
         )}
@@ -300,7 +300,7 @@ export function OrganigrammPage() {
       {meldung && (
         <div
           role={meldung.art === "fehler" ? "alert" : "status"}
-          className={`mb-3 flex items-start justify-between gap-3 rounded-[10px] px-3 py-2 text-sm ${
+          className={`mb-3 flex items-start justify-between gap-3 rounded-[10px] px-3 py-2 text-fliess ${
             meldung.art === "fehler" ? "bg-st-fehlt-bg text-st-fehlt" : "bg-st-erledigt-bg text-st-erledigt"
           }`}
         >
@@ -312,11 +312,11 @@ export function OrganigrammPage() {
       )}
 
       {fehlerText ? (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {fehlerText}
         </p>
       ) : isLoading ? (
-        <p className="text-sm text-label2">Lädt…</p>
+        <p className="text-sekundaer text-label2">Lädt…</p>
       ) : alle.length === 0 ? (
         <EmptyState icon={Network} text="Noch keine Positionen im Organigramm – oder Sie haben keinen Zugriff auf einen Bereich." />
       ) : ansicht === "diagramm" ? (
@@ -341,7 +341,7 @@ export function OrganigrammPage() {
               />
             </div>
           )}
-          <p className="mt-2 text-xs text-label2">
+          <p className="mt-2 text-sekundaer text-label2">
             Zum Umhängen eine Position auf die neue übergeordnete Position ziehen. Rechtsklick oder „…“ öffnet die Aktionen. Gestrichelte
             Verbindungen führen zu Stabsstellen.
           </p>

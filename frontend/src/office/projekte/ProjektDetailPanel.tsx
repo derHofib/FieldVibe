@@ -137,7 +137,7 @@ export function ProjektDetailPanel({
       onClose={onClose}
       minBreite={tab === "zeitplan" ? 1100 : undefined}
       aktionen={
-        <button onClick={onKanbanOeffnen} className="btn-ap flex items-center gap-1.5 text-xs">
+        <button onClick={onKanbanOeffnen} className="btn-ap flex items-center gap-1.5 text-sekundaer">
           <KanbanSquare size={14} strokeWidth={2} aria-hidden="true" />
           Kanban öffnen
         </button>
@@ -146,7 +146,7 @@ export function ProjektDetailPanel({
       <div
         role="tablist"
         aria-label="Projekt-Abschnitte"
-        className="mb-3 flex gap-1 overflow-x-auto border-b border-sep px-4 pt-3 pb-2 text-sm"
+        className="mb-3 flex gap-1 overflow-x-auto border-b border-sep px-4 pt-3 pb-2 text-fliess"
       >
         {TABS.map((t) => (
           <button
@@ -179,7 +179,7 @@ export function ProjektDetailPanel({
           </div>
 
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Name</label>
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">Name</label>
             <input id={`${uid}-0`}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -188,7 +188,7 @@ export function ProjektDetailPanel({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input
               type="checkbox"
               checked={aktuell?.archiviert ?? projekt.archiviert}
@@ -199,7 +199,7 @@ export function ProjektDetailPanel({
           </label>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
               Aufträge ({auftraege?.length ?? 0})
             </label>
             {!auftraege || auftraege.length === 0 ? (
@@ -207,9 +207,9 @@ export function ProjektDetailPanel({
             ) : (
               <div className="space-y-1.5">
                 {auftraege.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-sm">
+                  <div key={a.id} className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-fliess">
                     <span className="min-w-0 flex-1 truncate text-label">{a.titel}</span>
-                    <span className="shrink-0 text-xs text-label2">{AUFTRAG_STATUS_LABEL[a.status]}</span>
+                    <span className="shrink-0 text-sekundaer text-label2">{AUFTRAG_STATUS_LABEL[a.status]}</span>
                   </div>
                 ))}
               </div>
@@ -218,30 +218,30 @@ export function ProjektDetailPanel({
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label className="block text-meta font-bold tracking-wide text-label3 uppercase">
                 Vorgänge direkt am Projekt ({vorgaenge?.length ?? 0})
               </label>
               <button
                 onClick={() => navigate(`/neu?projekt_id=${projekt.id}`)}
-                className="text-xs font-medium text-tint hover:underline"
+                className="text-sekundaer font-medium text-tint hover:underline"
               >
                 + Neuer Vorgang
               </button>
             </div>
             {!vorgaenge || vorgaenge.length === 0 ? (
-              <p className="text-sm text-label2">Keine Vorgänge direkt zugeordnet.</p>
+              <p className="text-sekundaer text-label2">Keine Vorgänge direkt zugeordnet.</p>
             ) : (
               <div className="space-y-1.5">
                 {vorgaenge.map((v) => (
                   <button
                     key={v.id}
                     onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
-                    className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
+                    className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sekundaer hover:bg-fill"
                   >
                     <span className="min-w-0 flex-1 truncate text-label">
                       {v.vorgangsnummer} · {v.titel}
                     </span>
-                    <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE[v.status]}`}>
+                    <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${STATUS_BADGE[v.status]}`}>
                       {STATUS_LABEL[v.status]}
                     </span>
                   </button>
@@ -257,17 +257,17 @@ export function ProjektDetailPanel({
           <ZeitSummenBlock filter={{ projekt_id: projekt.id }} />
 
           {zeitEintraegeAbgeschlossen.length === 0 ? (
-            <p className="text-sm text-label2">Keine Zeiteinträge in diesem Projekt.</p>
+            <p className="text-sekundaer text-label2">Keine Zeiteinträge in diesem Projekt.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full border-collapse text-fliess">
                 <thead>
                   <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Techniker</th>
-                    <th className="px-2 py-1 text-xs font-medium">Tätigkeit</th>
-                    <th className="px-2 py-1 text-xs font-medium">Datum</th>
-                    <th className="px-2 py-1 text-right text-xs font-medium">Dauer</th>
-                    <th className="px-2 py-1 text-xs font-medium">Status</th>
+                    <th className="px-2 py-1 text-meta font-medium">Techniker</th>
+                    <th className="px-2 py-1 text-meta font-medium">Tätigkeit</th>
+                    <th className="px-2 py-1 text-meta font-medium">Datum</th>
+                    <th className="px-2 py-1 text-right text-meta font-medium">Dauer</th>
+                    <th className="px-2 py-1 text-meta font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -330,7 +330,7 @@ export function ProjektDetailPanel({
                   <button
                     type="button"
                     onClick={() => setTerminWocheOffset((o) => o - 1)}
-                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill"
                   >
                     ← Vorherige Woche
                   </button>
@@ -338,25 +338,25 @@ export function ProjektDetailPanel({
                     type="button"
                     onClick={() => setTerminWocheOffset(0)}
                     disabled={terminWocheOffset === 0}
-                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill disabled:opacity-50"
                   >
                     Diese Woche
                   </button>
                   <button
                     type="button"
                     onClick={() => setTerminWocheOffset((o) => o + 1)}
-                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill"
                   >
                     Nächste Woche →
                   </button>
                 </div>
-                <span className="text-xs text-label2">
+                <span className="text-meta text-label2">
                   {wocheStart.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}–
                   {wocheEnde.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                 </span>
               </div>
               {sortiert.length === 0 ? (
-                <p className="text-sm text-label2">Keine Termine in diesem Projekt.</p>
+                <p className="text-sekundaer text-label2">Keine Termine in diesem Projekt.</p>
               ) : (
                 <div className="grid grid-cols-7 gap-px overflow-hidden border rounded-[var(--radius-ap-md)] border-sep bg-sep">
                   {wocheTage.map((tag, i) => {
@@ -364,7 +364,7 @@ export function ProjektDetailPanel({
                     const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
                     return (
                       <div key={i} className="min-h-[110px] bg-card p-1.5">
-                        <div className={`mb-1 text-[11px] font-medium ${heuteFlag ? "text-tint" : "text-label2"}`}>
+                        <div className={`mb-1 text-meta font-medium ${heuteFlag ? "text-tint" : "text-label2"}`}>
                           {WOCHENTAGE[i]} {tag.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                         </div>
                         <div className="space-y-1">
@@ -374,7 +374,7 @@ export function ProjektDetailPanel({
                               type="button"
                               title={t.titel}
                               onClick={() => navigate(`/vorgaenge/${t.vorgang_id}/vollbild`)}
-                              className={`w-full rounded-[5px] border p-1 text-left text-[11px] ${
+                              className={`w-full rounded-[5px] border p-1 text-left text-meta ${
                                 t.status === "abgesagt" ? "border-sep text-label2 line-through" : "border-tint text-tint"
                               }`}
                             >
@@ -401,17 +401,17 @@ export function ProjektDetailPanel({
       {tab === "positionen" && (
         <div id="projekt-tabpanel-positionen" role="tabpanel" aria-labelledby="projekt-tab-positionen" className="p-4 pt-0">
           {!materialBedarfe || materialBedarfe.length === 0 ? (
-            <p className="text-sm text-label2">Keine Material-Bedarfe in diesem Projekt.</p>
+            <p className="text-sekundaer text-label2">Keine Material-Bedarfe in diesem Projekt.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full border-collapse text-fliess">
                 <thead>
                   <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
-                    <th className="px-2 py-1 text-xs font-medium">Material</th>
-                    <th className="px-2 py-1 text-xs font-medium">Vorgang</th>
-                    <th className="px-2 py-1 text-xs font-medium">Zweck</th>
-                    <th className="px-2 py-1 text-xs font-medium">Status</th>
+                    <th className="px-2 py-1 text-meta font-medium">Menge</th>
+                    <th className="px-2 py-1 text-meta font-medium">Material</th>
+                    <th className="px-2 py-1 text-meta font-medium">Vorgang</th>
+                    <th className="px-2 py-1 text-meta font-medium">Zweck</th>
+                    <th className="px-2 py-1 text-meta font-medium">Status</th>
                     <th className="px-2 py-1"></th>
                   </tr>
                 </thead>
@@ -434,7 +434,7 @@ export function ProjektDetailPanel({
                         {b.status === "offen" && (
                           <button
                             onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                            className="btn-touch text-xs text-st-fehlt"
+                            className="btn-touch text-sekundaer text-st-fehlt"
                           >
                             Entfernen
                           </button>

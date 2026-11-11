@@ -139,7 +139,7 @@ export function VorgaengeListe({
       >
         {gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe}>
-            <p className="border-b border-sep bg-fill/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-label uppercase">
+            <p className="border-b border-sep bg-fill/70 px-3 py-1 text-meta font-bold tracking-wide text-label uppercase">
               {GRUPPEN_LABEL[gruppe]} <span className="font-medium normal-case">{cards.length}</span>
             </p>
             {cards.map((v) => {
@@ -153,14 +153,14 @@ export function VorgaengeListe({
                     ausgewaehlt ? "border-l-2 border-l-tint bg-tintbg pl-[10px]" : "hover:bg-fill"
                   }`}
                 >
-                  <p className="truncate text-[13px] font-semibold text-label">
+                  <p className="truncate text-sekundaer font-semibold text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </p>
                   {/* text-label statt text-label2 im ausgewaehlten Zustand:
                    * auf bg-tintbg (helle Akzent-Flaeche) faellt text-label2
                    * bei 11.5px unter 4.5:1 Kontrast (axe-core). */}
                   <p
-                    className={`mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] ${ausgewaehlt ? "text-label" : "text-label2"}`}
+                    className={`mt-0.5 flex items-center gap-1.5 truncate text-meta ${ausgewaehlt ? "text-label" : "text-label2"}`}
                   >
                     <span className="truncate">{v.kunde_name}</span>
                     {istUeberfaellig(v.faelligkeit_am) && (
@@ -180,7 +180,7 @@ export function VorgaengeListe({
           <button
             onClick={onMehr}
             disabled={isFetchingNextPage}
-            className="w-full py-3 text-xs font-semibold text-label2 hover:bg-fill disabled:opacity-50"
+            className="w-full py-3 text-sekundaer font-semibold text-label2 hover:bg-fill disabled:opacity-50"
           >
             {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
           </button>
@@ -203,14 +203,14 @@ export function VorgaengeListe({
             id={aktiv}
             layout="dicht"
             kopfAktionen={
-              <button onClick={() => navigate(`/vorgaenge/${aktiv}/vollbild`)} className="btn-ap text-xs">
+              <button onClick={() => navigate(`/vorgaenge/${aktiv}/vollbild`)} className="btn-ap text-sekundaer">
                 <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
                 Ganze Seite
               </button>
             }
           />
         ) : (
-          <p className="py-10 text-center text-sm text-label2">Links einen Vorgang auswählen.</p>
+          <p className="py-10 text-center text-sekundaer text-label2">Links einen Vorgang auswählen.</p>
         )}
       </Karte>
     </div>

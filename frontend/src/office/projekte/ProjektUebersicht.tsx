@@ -73,7 +73,7 @@ export function ProjektUebersicht({ projektId }: { projektId: string }) {
         <div key={status}>
           <div className="mb-1.5 flex items-center gap-2 px-1">
             <StatusPille status={vorgangStatusZuToken(status)} label={STATUS_LABEL[status]} />
-            <span className="text-xs text-label2">{vorgaenge.length}</span>
+            <span className="text-sekundaer text-label2">{vorgaenge.length}</span>
           </div>
           <div className="card-ap divide-y divide-sep">
             {vorgaenge.map((v) => (
@@ -83,13 +83,13 @@ export function ProjektUebersicht({ projektId }: { projektId: string }) {
                 className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-fill"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-label">
+                  <p className="truncate text-sekundaer font-semibold text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </p>
-                  <p className="truncate text-[11.5px] text-label2">{v.kunde_name}</p>
+                  <p className="truncate text-meta text-label2">{v.kunde_name}</p>
                 </div>
                 {istUeberfaellig(v.faelligkeit_am) && (
-                  <span className="shrink-0 text-[11px] font-bold text-st-fehlt">überfällig</span>
+                  <span className="shrink-0 text-meta font-bold text-st-fehlt">überfällig</span>
                 )}
               </button>
             ))}

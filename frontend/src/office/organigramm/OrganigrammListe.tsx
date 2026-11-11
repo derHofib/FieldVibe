@@ -46,9 +46,9 @@ export function OrganigrammListe({
 }) {
   return (
     <TabellenRahmen>
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-fliess">
         <caption className="sr-only">Positionen des Organigramms, sortierbar</caption>
-        <thead className="bg-fill text-xs text-label2">
+        <thead className="bg-fill text-sekundaer text-label2">
           <tr>
             {SPALTEN.map((s) => {
               const aktiv = sortierung === s.key;
@@ -97,7 +97,7 @@ export function OrganigrammListe({
                         {p.titel}
                       </button>
                     )}
-                    {!eingerueckt && <span className="block text-xs text-label2">{pfad}</span>}
+                    {!eingerueckt && <span className="block text-sekundaer text-label2">{pfad}</span>}
                   </div>
                 </th>
                 <td className="px-3 py-2">{kontext ? "" : typText(p)}</td>

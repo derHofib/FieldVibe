@@ -118,11 +118,11 @@ function SchnellfilterKachel({
     >
       <div className="flex w-full items-start justify-between">
         <Icon size={15} strokeWidth={2} className="text-label2" aria-hidden="true" />
-        <span className={`text-[19px] font-bold tabular-nums ${zahlKlasse}`}>
+        <span className={`text-zeile font-bold tabular-nums ${zahlKlasse}`}>
           {anzahl === undefined ? "–" : gekappt ? `${ZAEHL_LIMIT}+` : anzahl}
         </span>
       </div>
-      <span className="text-xs font-semibold text-label2">{label}</span>
+      <span className="text-sekundaer font-semibold text-label2">{label}</span>
     </button>
   );
 }
@@ -277,7 +277,7 @@ export function OfficeLayout() {
     <div className="office-flaechen min-h-screen bg-gbg text-label" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
       <ImpersonationBanner />
       {!isOnline && (
-        <div className="bg-st-arbeit-bg px-4 py-1.5 text-center text-xs font-medium text-st-arbeit">
+        <div className="bg-st-arbeit-bg px-4 py-1.5 text-center text-sekundaer font-medium text-st-arbeit">
           Offline – Änderungen werden gespeichert und später synchronisiert
         </div>
       )}
@@ -324,7 +324,7 @@ export function OfficeLayout() {
                     aria-selected={aktiv}
                     title={eingeklappt ? w.label : undefined}
                     onClick={() => workspaceWechseln(w.key)}
-                    className={`flex h-[28px] items-center justify-center rounded-[7px] text-xs font-medium ${
+                    className={`flex h-[28px] items-center justify-center rounded-[7px] text-sekundaer font-medium ${
                       eingeklappt ? "px-0" : "gap-1.5 px-2.5"
                     } ${aktiv ? "bg-fill2 text-label" : "text-label2 hover:bg-fill hover:text-label"}`}
                   >
@@ -381,7 +381,7 @@ export function OfficeLayout() {
                     <button
                       onClick={() => kategorieUmschalten(gruppe.name)}
                       aria-expanded={!kollabiert}
-                      className="flex w-full items-center justify-between px-2 pb-1.5 text-[11px] font-semibold text-label2 uppercase hover:text-label"
+                      className="flex w-full items-center justify-between px-2 pb-1.5 text-meta font-semibold text-label2 uppercase hover:text-label"
                     >
                       <span>{gruppe.name}</span>
                       <ChevronDown
@@ -398,7 +398,7 @@ export function OfficeLayout() {
                         to={seite.route}
                         aria-current={seite.key === aktiverKey ? "page" : undefined}
                         title={eingeklappt ? seite.label : undefined}
-                        className={`relative mb-0.5 flex h-[30px] items-center rounded-[7px] text-[13px] ${
+                        className={`relative mb-0.5 flex h-[30px] items-center rounded-[7px] text-sekundaer ${
                           eingeklappt ? "justify-center px-0" : "gap-2.5 px-2.5"
                         } ${seite.key === aktiverKey ? "bg-fill2 font-semibold text-label" : "text-label2 hover:bg-fill hover:text-label"}`}
                       >
@@ -413,7 +413,7 @@ export function OfficeLayout() {
                             className={
                               eingeklappt
                                 ? "absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-st-fehlt-dot"
-                                : "ml-auto flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-[10px] font-bold text-white"
+                                : "ml-auto flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-meta font-bold text-white"
                             }
                           >
                             {!eingeklappt && (vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl)}
@@ -427,12 +427,12 @@ export function OfficeLayout() {
 
             {!eingeklappt && aktiveProjekte.length > 0 && (
               <div>
-                <p className="px-2 pb-1.5 text-[11px] font-semibold text-label2 uppercase">Aktive Projekte</p>
+                <p className="px-2 pb-1.5 text-meta font-semibold text-label2 uppercase">Aktive Projekte</p>
                 {aktiveProjekte.map((p) => (
                   <NavLink
                     key={p.id}
                     to={`/vorgaenge?projekt_id=${p.id}`}
-                    className="mb-0.5 flex h-[30px] items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] text-label2 hover:bg-fill hover:text-label"
+                    className="mb-0.5 flex h-[30px] items-center gap-2.5 rounded-[7px] px-2.5 text-sekundaer text-label2 hover:bg-fill hover:text-label"
                   >
                     <Folder size={15} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />
                     <span className="truncate">{p.name}</span>
@@ -457,8 +457,8 @@ export function OfficeLayout() {
                   {!eingeklappt && (
                     <>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-label">{currentUser?.name}</span>
-                        <span className="block truncate text-[11px] text-label2">
+                        <span className="block truncate text-sekundaer font-semibold text-label">{currentUser?.name}</span>
+                        <span className="block truncate text-meta text-label2">
                           {currentUser?.account_typ_name ?? (currentUser ? ROLLE_LABEL[currentUser.role] : "")}
                         </span>
                       </span>
@@ -479,7 +479,7 @@ export function OfficeLayout() {
             {outboxCount > 0 && (
               <span
                 title={`${outboxCount} noch nicht synchronisiert`}
-                className="flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-st-arbeit-bg px-2 py-1 text-xs font-medium text-st-arbeit"
+                className="flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-st-arbeit-bg px-2 py-1 text-sekundaer font-medium text-st-arbeit"
               >
                 <Clock size={13} strokeWidth={2} /> {outboxCount}
               </span>

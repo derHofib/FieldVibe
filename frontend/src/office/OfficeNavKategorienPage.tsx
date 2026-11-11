@@ -131,23 +131,23 @@ export function OfficeNavKategorienPage() {
   }
 
   if (isLoading || !initialisiert) {
-    return <p className="p-4 text-sm text-label2">Lädt…</p>;
+    return <p className="p-4 text-sekundaer text-label2">Lädt…</p>;
   }
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <button onClick={() => navigate(-1)} className="mb-1 text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="mb-1 text-sekundaer text-label2">
           ‹ Zurück
         </button>
         <SeitenKopf titel="Menü-Kategorien" />
-        <p className="-mt-2 text-sm text-label2">
+        <p className="-mt-2 text-sekundaer text-label2">
           Bestimmt, wie die Office-Seitenleiste gruppiert. Gilt für alle Nutzer dieses Mandanten.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+        <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
           Kategorien
         </h2>
         <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
@@ -156,7 +156,7 @@ export function OfficeNavKategorienPage() {
               <input
                 value={k.name}
                 onChange={(e) => kategorieUmbenennen(k.localId, e.target.value)}
-                className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <button
                 onClick={() => kategorieVerschieben(i, -1)}
@@ -186,14 +186,14 @@ export function OfficeNavKategorienPage() {
         </div>
         <button
           onClick={kategorieHinzufuegen}
-          className="btn-touch flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-tint "
+          className="btn-touch flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sekundaer font-medium text-tint "
         >
           <Plus size={16} /> Kategorie hinzufügen
         </button>
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+        <h2 className="px-1 text-meta font-semibold uppercase tracking-wide text-label2">
           Zuordnung
         </h2>
         <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
@@ -228,7 +228,7 @@ export function OfficeNavKategorienPage() {
         </div>
       </section>
 
-      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
+      {fehler && <p className="text-fliess text-st-fehlt ">{fehler}</p>}
 
       <button
         onClick={speichern}

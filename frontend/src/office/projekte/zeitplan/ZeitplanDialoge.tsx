@@ -18,7 +18,7 @@ function fehlerText(e: unknown): string {
 function Fehler({ text }: { text: string | null }) {
   if (!text) return null;
   return (
-    <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+    <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
       {text}
     </div>
   );
@@ -26,7 +26,7 @@ function Fehler({ text }: { text: string | null }) {
 
 function Abbrechen({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+    <button type="button" onClick={onClose} className="text-zeile text-tint-text">
       Abbrechen
     </button>
   );
@@ -34,7 +34,7 @@ function Abbrechen({ onClose }: { onClose: () => void }) {
 
 function Aktion({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className="text-[17px] font-semibold text-tint-text disabled:opacity-40">
+    <button type="button" onClick={onClick} disabled={disabled} className="text-zeile font-semibold text-tint-text disabled:opacity-40">
       {label}
     </button>
   );
@@ -72,8 +72,8 @@ export function BasisplanSpeichernSheet({ projektId, onClose }: { projektId: str
           if (name.trim() && !speichern.isPending) speichern.mutate();
         }}
       >
-        <p className="text-sm text-label2">Hält den aktuellen Stand aller Termine als Referenz fest. Spätere Verschiebungen lassen sich dagegen vergleichen.</p>
-        <label className="block text-sm text-label2">
+        <p className="text-sekundaer text-label2">Hält den aktuellen Stand aller Termine als Referenz fest. Spätere Verschiebungen lassen sich dagegen vergleichen.</p>
+        <label className="block text-sekundaer text-label2">
           Name
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="field-ap mt-1" />
         </label>
@@ -110,21 +110,21 @@ export function BasisplaeneVerwaltenSheet({
       onClose={onClose}
       titel="Basispläne verwalten"
       rechts={
-        <button type="button" onClick={onClose} className="text-[17px] font-semibold text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile font-semibold text-tint-text">
           Fertig
         </button>
       }
     >
       <div className="space-y-3 p-4">
-        {isLoading && <p className="text-sm text-label2">Wird geladen …</p>}
-        {data && data.length === 0 && <p className="text-sm text-label2">Noch kein Basisplan gespeichert.</p>}
+        {isLoading && <p className="text-sekundaer text-label2">Wird geladen …</p>}
+        {data && data.length === 0 && <p className="text-sekundaer text-label2">Noch kein Basisplan gespeichert.</p>}
         {data && data.length > 0 && (
           <GroupedList>
             {data.map((b, i) => (
               <GroupedListRow key={b.id} last={i === data.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[17px] text-label">{b.name}</p>
-                  <p className="truncate text-[13px] text-label2">
+                  <p className="truncate text-zeile text-label">{b.name}</p>
+                  <p className="truncate text-sekundaer text-label2">
                     {datumDe(b.erstellt_am)}
                     {b.erstellt_von_name ? ` · ${b.erstellt_von_name}` : ""} · {b.anzahl_elemente} Elemente
                   </p>
@@ -194,28 +194,28 @@ export function StraffenSheet({
       rechts={<Aktion label="Übernehmen" onClick={() => uebernehmen.mutate()} disabled={aenderungen.length === 0 || vorschau.isFetching || uebernehmen.isPending} />}
     >
       <div className="space-y-3 p-4">
-        <p className="text-sm text-label2">Zieht Schritte auf den frühesten Termin, den ihre Vorgänger zulassen. Vorab siehst du, was sich ändern würde.</p>
+        <p className="text-sekundaer text-label2">Zieht Schritte auf den frühesten Termin, den ihre Vorgänger zulassen. Vorab siehst du, was sich ändern würde.</p>
         <SearchableSelect value={phaseId} onChange={setPhaseId} options={optionen} placeholder="Ganzes Projekt" />
 
-        {vorschau.isFetching && <p className="text-sm text-label2">Vorschau wird berechnet …</p>}
+        {vorschau.isFetching && <p className="text-sekundaer text-label2">Vorschau wird berechnet …</p>}
         {!vorschau.isFetching && vorschau.data && aenderungen.length === 0 && (
-          <p className="rounded-[10px] bg-fill px-3 py-3 text-sm text-label">Nichts zu straffen – alle Schritte liegen bereits auf dem frühesten Termin.</p>
+          <p className="rounded-[10px] bg-fill px-3 py-3 text-fliess text-label">Nichts zu straffen – alle Schritte liegen bereits auf dem frühesten Termin.</p>
         )}
         {!vorschau.isFetching && aenderungen.length > 0 && (
           <>
-            <p className="text-[13px] font-semibold text-label2">
+            <p className="text-sekundaer font-semibold text-label2">
               {aenderungen.length} {aenderungen.length === 1 ? "Änderung" : "Änderungen"}
             </p>
             <GroupedList>
               {aenderungen.map((a, i) => (
                 <GroupedListRow key={a.element_id} last={i === aenderungen.length - 1}>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] text-label">{a.titel}</p>
-                    <p className="text-[13px] text-label2 tabular-nums">
+                    <p className="truncate text-fliess text-label">{a.titel}</p>
+                    <p className="text-sekundaer text-label2 tabular-nums">
                       {formatBereich(a.alt_start_am, a.alt_ende_am)} → {formatBereich(a.neu_start_am, a.neu_ende_am)}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-st-erledigt-bg px-2 py-0.5 text-[12px] font-semibold text-st-erledigt tabular-nums">{formatStraffenDelta(a)}</span>
+                  <span className="shrink-0 rounded-full bg-st-erledigt-bg px-2 py-0.5 text-meta font-semibold text-st-erledigt tabular-nums">{formatStraffenDelta(a)}</span>
                 </GroupedListRow>
               ))}
             </GroupedList>
@@ -261,10 +261,10 @@ export function VorlageEinfuegenSheet({
       rechts={<Aktion label="Einfügen" onClick={() => anwenden.mutate()} disabled={!vorlageId || !gueltigerStart || anwenden.isPending} />}
     >
       <div className="space-y-4 p-4">
-        {isLoading && <p className="text-sm text-label2">Vorlagen werden geladen …</p>}
+        {isLoading && <p className="text-sekundaer text-label2">Vorlagen werden geladen …</p>}
         {error && <Fehler text="Vorlagen konnten nicht geladen werden." />}
         {vorlagen && vorlagen.length === 0 && (
-          <p className="rounded-[10px] bg-fill px-3 py-3 text-sm text-label2">
+          <p className="rounded-[10px] bg-fill px-3 py-3 text-sekundaer text-label2">
             Noch keine Vorlagen. Speichere einen bestehenden Zeitplan über „Als Vorlage speichern …“.
           </p>
         )}
@@ -273,9 +273,9 @@ export function VorlageEinfuegenSheet({
             {vorlagen.map((v, i) => (
               <GroupedListRow key={v.id} onClick={() => setVorlageId(v.id)} last={i === vorlagen.length - 1}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[17px] text-label">{v.name}</p>
-                  {v.beschreibung && <p className="truncate text-[13px] text-label2">{v.beschreibung}</p>}
-                  <p className="text-[13px] text-label2">
+                  <p className="truncate text-zeile text-label">{v.name}</p>
+                  {v.beschreibung && <p className="truncate text-sekundaer text-label2">{v.beschreibung}</p>}
+                  <p className="text-sekundaer text-label2">
                     {v.anzahl_elemente} Schritte · {v.dauer_tage} Tage
                   </p>
                 </div>
@@ -288,7 +288,7 @@ export function VorlageEinfuegenSheet({
             ))}
           </GroupedList>
         )}
-        <label className="block text-sm text-label2">
+        <label className="block text-sekundaer text-label2">
           Startdatum
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="field-ap mt-1" />
         </label>
@@ -327,12 +327,12 @@ export function VorlageSpeichernSheet({ projektId, onClose }: { projektId: strin
           if (name.trim() && !speichern.isPending) speichern.mutate();
         }}
       >
-        <p className="text-sm text-label2">Übernimmt Phasen, Schritte, Meilensteine und Verbindungen als relative Termine (Tage ab Start).</p>
-        <label className="block text-sm text-label2">
+        <p className="text-sekundaer text-label2">Übernimmt Phasen, Schritte, Meilensteine und Verbindungen als relative Termine (Tage ab Start).</p>
+        <label className="block text-sekundaer text-label2">
           Name
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="field-ap mt-1" />
         </label>
-        <label className="block text-sm text-label2">
+        <label className="block text-sekundaer text-label2">
           Beschreibung (optional)
           <textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap mt-1" />
         </label>

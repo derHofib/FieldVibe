@@ -61,14 +61,14 @@ function VerknuepfungsZeile({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">{label}</label>
+      <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">{label}</label>
       {anzeige ? (
         <div className="flex items-center gap-2.5 rounded-md bg-fill px-2.5 py-2">
           <SymbolKachel icon={Icon} farbe={farbe} groesse={26} />
           <button
             onClick={() => route && navigate(route)}
             disabled={!route}
-            className="min-w-0 flex-1 truncate text-left text-xs font-bold text-label"
+            className="min-w-0 flex-1 truncate text-left text-sekundaer font-bold text-label"
           >
             {anzeige}
           </button>
@@ -279,7 +279,7 @@ export function ProjektAufgabeDetailPanel({
               value={titel}
               onChange={(e) => setTitel(e.target.value)}
               placeholder="Titel der Aufgabe"
-              className={`w-full border-none bg-transparent p-0 text-base font-bold outline-none ${
+              className={`w-full border-none bg-transparent p-0 text-zeile font-bold outline-none ${
                 erledigt ? "text-label3 line-through" : "text-label"
               }`}
             />
@@ -294,31 +294,31 @@ export function ProjektAufgabeDetailPanel({
 
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
               Beschreibung
             </label>
             <textarea id={`${uid}-0`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={3}
-              className="w-full resize-none field-ap h-auto py-1.5 text-sm"
+              className="w-full resize-none field-ap h-auto py-1.5 text-zeile"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
                 Fälligkeit
               </label>
               <input id={`${uid}-1`}
                 type="date"
                 value={faelligkeitAm}
                 onChange={(e) => setFaelligkeitAm(e.target.value)}
-                className="w-full field-ap h-auto py-1.5 text-sm"
+                className="w-full field-ap h-auto py-1.5 text-zeile"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
                 Priorität
               </label>
               <div className="flex gap-0.5 rounded-lg bg-fill p-0.5">
@@ -326,7 +326,7 @@ export function ProjektAufgabeDetailPanel({
                   <button
                     key={option.wert}
                     onClick={() => setPrioritaet(option.wert)}
-                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold ${
+                    className={`flex-1 rounded-md px-2 py-1.5 text-sekundaer font-semibold ${
                       prioritaet === option.wert
                         ? PRIORITAET_AKTIV_KLASSE[option.wert]
                         : "text-label2 hover:text-label"
@@ -341,7 +341,7 @@ export function ProjektAufgabeDetailPanel({
 
           {!istPrivat && istEigenstaendig && (
             <div>
-              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
                 Spalte
               </label>
               <Select id={`${uid}-2`}
@@ -358,7 +358,7 @@ export function ProjektAufgabeDetailPanel({
           )}
 
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
               Zuständiger
             </label>
             <SearchableSelect id={`${uid}-3`}
@@ -403,7 +403,7 @@ export function ProjektAufgabeDetailPanel({
                     params.set("aufgabe_id", aufgabe!.id);
                     navigate(`/neu?${params.toString()}`);
                   }}
-                  className="mt-1.5 text-xs font-medium text-tint hover:underline"
+                  className="mt-1.5 text-sekundaer font-medium text-tint hover:underline"
                 >
                   + Neuen Vorgang aus dieser Aufgabe anlegen
                 </button>
@@ -451,7 +451,7 @@ export function ProjektAufgabeDetailPanel({
           />
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+            <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
               Checkliste{checkliste.length > 0 && ` · ${checkliste.filter((p) => p.erledigt).length}/${checkliste.length}`}
             </label>
             <div className="space-y-0.5">
@@ -468,7 +468,7 @@ export function ProjektAufgabeDetailPanel({
                     className="h-4 w-4 rounded border-sepstrong text-tint"
                   />
                   <span
-                    className={`flex-1 text-sm ${
+                    className={`flex-1 text-sekundaer ${
                       punkt.erledigt
                         ? "text-label3 line-through"
                         : "text-label"
@@ -497,7 +497,7 @@ export function ProjektAufgabeDetailPanel({
                   }}
                   onBlur={checklistePunktHinzufuegen}
                   placeholder="Punkt hinzufügen"
-                  className="flex-1 border-none bg-transparent p-0 text-sm text-label2 outline-none placeholder:text-label3"
+                  className="flex-1 border-none bg-transparent p-0 text-zeile text-label2 outline-none placeholder:text-label3"
                 />
               </div>
             </div>
@@ -505,7 +505,7 @@ export function ProjektAufgabeDetailPanel({
 
           {!istNeu && istEigenstaendig && (
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              <label className="mb-1.5 block text-meta font-bold tracking-wide text-label3 uppercase">
                 Unteraufgaben
                 {unteraufgaben && unteraufgaben.length > 0 &&
                   ` · ${unteraufgaben.filter((u) => u.erledigt_am).length}/${unteraufgaben.length}`}
@@ -520,7 +520,7 @@ export function ProjektAufgabeDetailPanel({
                       className="h-4 w-4 rounded border-sepstrong text-tint"
                     />
                     <span
-                      className={`flex-1 text-sm ${
+                      className={`flex-1 text-sekundaer ${
                         u.erledigt_am
                           ? "text-label3 line-through"
                           : "text-label"
@@ -548,7 +548,7 @@ export function ProjektAufgabeDetailPanel({
                       }
                     }}
                     placeholder="Unteraufgabe hinzufügen"
-                    className="flex-1 border-none bg-transparent p-0 text-sm text-label2 outline-none placeholder:text-label3"
+                    className="flex-1 border-none bg-transparent p-0 text-zeile text-label2 outline-none placeholder:text-label3"
                   />
                 </div>
               </div>
@@ -565,7 +565,7 @@ export function ProjektAufgabeDetailPanel({
                 if (await bestaetigen({ titel: "Aufgabe löschen?", bestaetigenLabel: "Löschen" })) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
-              className="text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50"
+              className="text-sekundaer font-medium text-label2 hover:text-st-fehlt disabled:opacity-50"
             >
               Aufgabe löschen
             </button>

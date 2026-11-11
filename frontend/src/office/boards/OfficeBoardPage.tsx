@@ -310,7 +310,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   };
 
   if (!board) {
-    return <p className="p-8 text-center text-sm text-label2">Lädt…</p>;
+    return <p className="p-8 text-center text-sekundaer text-label2">Lädt…</p>;
   }
 
   return (
@@ -318,13 +318,13 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sep bg-card px-5">
         <button
           onClick={() => navigate("/boards")}
-          className="text-xs font-semibold text-label2 hover:text-label dark:hover:text-label3"
+          className="text-meta font-semibold text-label2 hover:text-label dark:hover:text-label3"
         >
           ← Boards
         </button>
         <div className="h-5 w-px bg-fill2" />
-        <p className="text-sm font-bold text-label">{board.name}</p>
-        <span className="text-xs text-label2">
+        <p className="text-fliess font-bold text-label">{board.name}</p>
+        <span className="text-sekundaer text-label2">
           {speichern.isPending ? "Speichert…" : "Gespeichert"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -343,7 +343,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               />
               <button
                 onClick={() => grundrissInputRef.current?.click()}
-                className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-xs font-semibold text-label "
+                className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-sekundaer font-semibold text-label "
               >
                 <Upload size={13} strokeWidth={2} /> Grundriss
               </button>
@@ -351,13 +351,13 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
           )}
           <button
             onClick={() => setZeigeExport(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-xs font-semibold text-label "
+            className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-sekundaer font-semibold text-label "
           >
             <Share2 size={13} strokeWidth={2} /> Exportieren
           </button>
           <button
             onClick={() => speichern.mutate({ nodes, edges })}
-            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer"
           >
             <Save size={13} strokeWidth={2} /> Speichern
           </button>
@@ -366,7 +366,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-xs font-semibold text-st-fehlt disabled:opacity-50 "
+            className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt disabled:opacity-50 "
           >
             <Trash2 size={13} strokeWidth={2} /> Löschen
           </button>
@@ -398,7 +398,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
 
         {kontextMenu && (
           <div
-            className="fixed z-30 w-44 rounded-lg border border-sep bg-card py-1 text-sm shadow-xl"
+            className="fixed z-30 w-44 rounded-lg border border-sep bg-card py-1 text-fliess shadow-xl"
             style={{ left: kontextMenu.x, top: kontextMenu.y }}
             onMouseLeave={() => setKontextMenu(null)}
           >

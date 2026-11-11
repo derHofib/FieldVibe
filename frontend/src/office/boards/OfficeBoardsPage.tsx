@@ -67,7 +67,7 @@ export function OfficeBoardsPage() {
       <SeitenKopf titel="Boards" anzahl={boards?.length}>
         <button
           onClick={() => setZeigeNeu(true)}
-          className="btn-ap-primary flex items-center gap-1.5 px-3 py-2 text-xs"
+          className="btn-ap-primary flex items-center gap-1.5 px-3 py-2 text-sekundaer"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neues Board
@@ -78,17 +78,17 @@ export function OfficeBoardsPage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Name</label>
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Name</label>
               <input id={`${uid}-0`}
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z. B. Projektplanung Rheinblick"
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Art</label>
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Art</label>
               <Select className="w-auto" id={`${uid}-1`}
                 value={typ}
                 onChange={(e) => setTyp(e.target.value as BoardTyp)}
@@ -103,13 +103,13 @@ export function OfficeBoardsPage() {
             <button
               onClick={() => erstellen.mutate()}
               disabled={!name.trim() || erstellen.isPending}
-              className="btn-ap-primary px-4 py-2 text-xs"
+              className="btn-ap-primary px-4 py-2 text-sekundaer"
             >
               Anlegen
             </button>
             <button
               onClick={() => setZeigeNeu(false)}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-label2"
+              className="rounded-lg px-3 py-2 text-sekundaer font-medium text-label2"
             >
               Abbrechen
             </button>
@@ -150,12 +150,12 @@ export function OfficeBoardsPage() {
                     </span>
                   </div>
                   <div className="p-3.5">
-                    <p className="truncate text-sm font-bold text-label">{b.name}</p>
+                    <p className="truncate text-fliess font-bold text-label">{b.name}</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium text-label2">
+                      <span className="text-meta font-medium text-label2">
                         {TYP_LABEL[b.board_typ]}
                       </span>
-                      <span className="text-[11px] text-label2">
+                      <span className="text-meta text-label2">
                         {relativeZeit(b.updated_at)}
                       </span>
                     </div>

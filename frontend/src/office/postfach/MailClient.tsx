@@ -41,12 +41,12 @@ function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAtt
             setLaedt(false);
           }
         }}
-        className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill disabled:opacity-50"
       >
         {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
         {anhang.dateiname}
       </button>
-      {fehler && <span className="text-xs text-st-fehlt ">Anhang konnte nicht geöffnet werden.</span>}
+      {fehler && <span className="text-sekundaer text-st-fehlt ">Anhang konnte nicht geöffnet werden.</span>}
     </div>
   );
 }
@@ -129,7 +129,7 @@ export function MailClient({ account }: { account: MailAccount }) {
               setAktiveNachricht(null);
               setCompose(null);
             }}
-            className={`block w-full truncate px-3 py-1.5 text-left text-[13px] font-medium ${
+            className={`block w-full truncate px-3 py-1.5 text-left text-sekundaer font-medium ${
               o.id === aktiverOrdner
                 ? "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300"
                 : "text-label hover:bg-fill"
@@ -143,7 +143,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             setCompose({ art: "neu", accountId: account.id });
             setAktiveNachricht(null);
           }}
-          className="btn-ap-primary mx-3 mt-2 w-[calc(100%-1.5rem)] py-2 text-xs"
+          className="btn-ap-primary mx-3 mt-2 w-[calc(100%-1.5rem)] py-2 text-sekundaer"
         >
           Neu
         </button>
@@ -160,11 +160,11 @@ export function MailClient({ account }: { account: MailAccount }) {
             value={sucheEingabe}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suchen…"
-            className="w-full rounded-lg border border-sep bg-fill py-1.5 pr-2 pl-7 text-xs text-label "
+            className="w-full rounded-lg border border-sep bg-fill py-1.5 pr-2 pl-7 text-sekundaer text-label "
           />
         </div>
         {gesendetHinweis && (
-          <p className="border-b border-st-erledigt bg-st-erledigt-bg px-3 py-1.5 text-xs font-medium text-st-erledigt ">
+          <p className="border-b border-st-erledigt bg-st-erledigt-bg px-3 py-1.5 text-sekundaer font-medium text-st-erledigt ">
             Nachricht gesendet.
           </p>
         )}
@@ -177,7 +177,7 @@ export function MailClient({ account }: { account: MailAccount }) {
               text={suche ? `Keine Treffer für „${suche}“.` : "Keine Nachrichten."}
               action={
                 suche && (
-                  <button onClick={() => setSuche("")} className="btn-touch text-xs font-medium text-tint ">
+                  <button onClick={() => setSuche("")} className="btn-touch text-sekundaer font-medium text-tint ">
                     Suche zurücksetzen
                   </button>
                 )
@@ -196,20 +196,20 @@ export function MailClient({ account }: { account: MailAccount }) {
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <p
-                    className={`truncate text-[13px] ${n.gelesen ? "font-medium text-label" : "font-bold text-label dark:text-white"}`}
+                    className={`truncate text-sekundaer ${n.gelesen ? "font-medium text-label" : "font-bold text-label dark:text-white"}`}
                   >
                     {n.von_name || n.von_adresse || "Unbekannt"}
                   </p>
-                  <span className="shrink-0 text-[10.5px] text-label2">
+                  <span className="shrink-0 text-meta text-label2">
                     {relativesDatum(n.datum)}
                   </span>
                 </div>
                 <p
-                  className={`truncate text-[12.5px] ${n.gelesen ? "text-label2" : "font-semibold text-label"}`}
+                  className={`truncate text-sekundaer ${n.gelesen ? "text-label2" : "font-semibold text-label"}`}
                 >
                   {n.betreff || "(kein Betreff)"}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-label2">
+                <p className="mt-0.5 flex items-center gap-1 truncate text-meta text-label2">
                   {n.hat_anhang && <Paperclip size={11} strokeWidth={2} />}
                   {n.ausschnitt}
                 </p>
@@ -220,7 +220,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="w-full py-2.5 text-center text-xs font-medium text-label2 hover:bg-fill"
+              className="w-full py-2.5 text-center text-sekundaer font-medium text-label2 hover:bg-fill"
             >
               {isFetchingNextPage ? "Lädt…" : "Weitere laden"}
             </button>
@@ -245,7 +245,7 @@ export function MailClient({ account }: { account: MailAccount }) {
           <div className="flex h-full flex-col">
             <div className="border-b border-sep p-4 ">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-[15px] font-bold text-label dark:text-white">
+                <h2 className="text-fliess font-bold text-label dark:text-white">
                   {detail.betreff || "(kein Betreff)"}
                 </h2>
                 <div className="flex shrink-0 gap-1.5">
@@ -258,19 +258,19 @@ export function MailClient({ account }: { account: MailAccount }) {
                         betreff: detail.betreff,
                       })
                     }
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                   >
                     <Reply size={13} strokeWidth={2} /> Antworten
                   </button>
                   <button
                     onClick={() => setCompose({ art: "weiterleiten", messageId: detail.id, betreff: detail.betreff })}
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                   >
                     <Forward size={13} strokeWidth={2} /> Weiterleiten
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-label2">
+              <p className="text-sekundaer text-label2">
                 Von <span className="font-medium text-label">{detail.von_name || detail.von_adresse}</span>
                 {detail.an.length > 0 && <> · An {detail.an.join(", ")}</>}
               </p>
@@ -291,7 +291,7 @@ export function MailClient({ account }: { account: MailAccount }) {
                   className="h-full w-full rounded-lg border border-sep "
                 />
               ) : (
-                <p className="text-sm whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
+                <p className="text-fliess whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
               )}
             </div>
           </div>

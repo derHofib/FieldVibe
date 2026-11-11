@@ -110,7 +110,7 @@ function OffeneAntraege() {
   const [antwort, setAntwort] = useState("");
   const liste = useMemo(() => offeneAntraege(data ?? []), [data]);
 
-  if (isLoading) return <p className="text-sm text-label2">Lädt…</p>;
+  if (isLoading) return <p className="text-sekundaer text-label2">Lädt…</p>;
   if (liste.length === 0) return <EmptyState icon={ClipboardList} text="Keine offenen Anträge." />;
 
   return (
@@ -165,7 +165,7 @@ function OffeneAntraege() {
           ))}
         </ul>
       </Karte>
-      {aktionen.fehler && <p className="text-sm text-st-fehlt">{aktionen.fehler}</p>}
+      {aktionen.fehler && <p className="text-fliess text-st-fehlt">{aktionen.fehler}</p>}
     </div>
   );
 }
@@ -196,14 +196,14 @@ function KalenderAnsicht() {
         <button type="button" onClick={() => wechseln(-1)} className="btn-ap px-3 py-1.5">
           ← Monat
         </button>
-        <span className="min-w-36 text-center text-sm font-semibold text-label">{monatsName}</span>
+        <span className="min-w-36 text-center text-fliess font-semibold text-label">{monatsName}</span>
         <button type="button" onClick={() => wechseln(1)} className="btn-ap px-3 py-1.5">
           Monat →
         </button>
-        <span className="ml-auto flex flex-wrap gap-3 text-xs text-label2">
+        <span className="ml-auto flex flex-wrap gap-3 text-sekundaer text-label2">
           {(Object.keys(ART_ZELLE) as AbwesenheitArt[]).map((art) => (
             <span key={art} className="inline-flex items-center gap-1">
-              <span className={`inline-block h-4 w-4 rounded-[4px] text-center text-[10px] font-semibold leading-4 text-label ${ART_ZELLE[art].klasse}`}>
+              <span className={`inline-block h-4 w-4 rounded-[4px] text-center text-meta font-semibold leading-4 text-label ${ART_ZELLE[art].klasse}`}>
                 {ART_ZELLE[art].kuerzel}
               </span>
               {ABWESENHEIT_ART_LABEL[art]}
@@ -212,15 +212,15 @@ function KalenderAnsicht() {
         </span>
       </div>
       {isLoading ? (
-        <p className="text-sm text-label2">Lädt…</p>
+        <p className="text-sekundaer text-label2">Lädt…</p>
       ) : error ? (
-        <p className="text-sm text-st-fehlt">{fehlerText(error)}</p>
+        <p className="text-fliess text-st-fehlt">{fehlerText(error)}</p>
       ) : zeilen.length === 0 ? (
         <EmptyState icon={CalendarDays} text="In diesem Monat gibt es keine genehmigten Abwesenheiten." />
       ) : (
         <Karte className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0 text-xs">
+            <table className="w-full border-separate border-spacing-0 text-sekundaer">
               <thead>
                 <tr>
                   <th scope="col" className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium text-label2">
@@ -246,7 +246,7 @@ function KalenderAnsicht() {
               <tbody>
                 {zeilen.map((z) => (
                   <tr key={z.user_id}>
-                    <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-1.5 text-left text-sm font-medium text-label">
+                    <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-1.5 text-left text-sekundaer font-medium text-label">
                       {z.user_name}
                     </th>
                     {tage.map((t) => {
@@ -256,7 +256,7 @@ function KalenderAnsicht() {
                           {zelle && (
                             <span
                               title={`${ABWESENHEIT_ART_LABEL[zelle.art]}${zelle.halb ? " (halber Tag)" : ""}`}
-                              className={`block rounded-[4px] py-1 text-[11px] font-semibold text-label ${ART_ZELLE[zelle.art].klasse}`}
+                              className={`block rounded-[4px] py-1 text-meta font-semibold text-label ${ART_ZELLE[zelle.art].klasse}`}
                             >
                               {ART_ZELLE[zelle.art].kuerzel}
                               {zelle.halb && "½"}
@@ -291,18 +291,18 @@ function AlleAntraege() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Jahr
           <input
             type="number"
-            className="mt-1 block w-24 rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-sm tabular-nums text-label"
+            className="mt-1 block w-24 rounded-[var(--radius-ap-input)] border border-sep bg-card px-2.5 py-1.5 text-zeile tabular-nums text-label"
             value={jahr}
             min={2000}
             max={2100}
             onChange={(e) => setJahr(Number(e.target.value) || jahr)}
           />
         </label>
-        <label className="text-xs font-medium text-label2">
+        <label className="text-sekundaer font-medium text-label2">
           Status
           <Select className="mt-1 w-auto" groesse="kompakt"
             value={status}
@@ -318,7 +318,7 @@ function AlleAntraege() {
         </label>
       </div>
       {isLoading ? (
-        <p className="text-sm text-label2">Lädt…</p>
+        <p className="text-sekundaer text-label2">Lädt…</p>
       ) : !data || data.length === 0 ? (
         <EmptyState icon={CalendarCheck} text="Keine Anträge im gewählten Zeitraum." />
       ) : (
@@ -329,7 +329,7 @@ function AlleAntraege() {
                 {(a.status === "genehmigt" || a.status === "offen") && (
                   <button
                     type="button"
-                    className="text-sm font-medium text-st-fehlt disabled:opacity-50"
+                    className="text-sekundaer font-medium text-st-fehlt disabled:opacity-50"
                     disabled={aktionen.ausstehend}
                     onClick={async () => {
                       if (a.status === "offen" || await bestaetigen({ titel: "Genehmigte Abwesenheit stornieren?", text: "Die automatisch erzeugten Zeiteinträge werden entfernt.", bestaetigenLabel: "Stornieren" })) {
@@ -345,7 +345,7 @@ function AlleAntraege() {
           </ul>
         </Karte>
       )}
-      {aktionen.fehler && <p className="text-sm text-st-fehlt">{aktionen.fehler}</p>}
+      {aktionen.fehler && <p className="text-fliess text-st-fehlt">{aktionen.fehler}</p>}
     </div>
   );
 }
@@ -394,7 +394,7 @@ function AnspruchAbschnitt() {
     <div className="space-y-4">
       <Karte className="space-y-3 p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-medium text-label2">
+          <label className="text-sekundaer font-medium text-label2">
             Mitarbeiter
             <Select
               className="mt-1 min-w-48"
@@ -411,7 +411,7 @@ function AnspruchAbschnitt() {
               ))}
             </Select>
           </label>
-          <label className="text-xs font-medium text-label2">
+          <label className="text-sekundaer font-medium text-label2">
             Jahr
             <input
               type="number"
@@ -434,15 +434,15 @@ function AnspruchAbschnitt() {
             speichern.mutate();
           }}
         >
-          <label className="text-xs font-medium text-label2">
+          <label className="text-sekundaer font-medium text-label2">
             Anspruch (Tage)
             <input className="field-ap mt-1 w-28 text-right tabular-nums" inputMode="decimal" value={tage} onChange={(e) => setTage(e.target.value)} />
           </label>
-          <label className="text-xs font-medium text-label2">
+          <label className="text-sekundaer font-medium text-label2">
             Resturlaub (Tage)
             <input className="field-ap mt-1 w-28 text-right tabular-nums" inputMode="decimal" value={rest} onChange={(e) => setRest(e.target.value)} />
           </label>
-          <label className="text-xs font-medium text-label2">
+          <label className="text-sekundaer font-medium text-label2">
             Resturlaub verfällt am
             <input type="date" className="field-ap mt-1 w-44" value={verfall} onChange={(e) => setVerfall(e.target.value)} />
           </label>
@@ -451,12 +451,12 @@ function AnspruchAbschnitt() {
           </button>
         </form>
         {meldung && (
-          <p role={meldung.fehler ? "alert" : "status"} className={`text-sm ${meldung.fehler ? "text-st-fehlt" : "text-label2"}`}>
+          <p role={meldung.fehler ? "alert" : "status"} className={`text-sekundaer ${meldung.fehler ? "text-st-fehlt" : "text-label2"}`}>
             {meldung.text}
           </p>
         )}
       </Karte>
-      {isLoading ? <p className="text-sm text-label2">Lädt…</p> : konto && <UrlaubskontoKacheln konto={konto} />}
+      {isLoading ? <p className="text-sekundaer text-label2">Lädt…</p> : konto && <UrlaubskontoKacheln konto={konto} />}
     </div>
   );
 }

@@ -73,7 +73,7 @@ export function OfficeExportPage() {
     <div className="mx-auto max-w-[1000px] space-y-5">
       <SeitenKopf titel="Daten exportieren" />
 
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         Exportieren Sie Ihre Daten als ZIP – zur Datenübernahme, zur Übergabe an Ihren Steuerberater oder für die
         Finanzverwaltung. Die Erstellung läuft im Hintergrund; das fertige ZIP ist 7 Tage abrufbar und wird danach
         automatisch entfernt. Jeder Export wird im Protokoll vermerkt.
@@ -94,16 +94,16 @@ export function OfficeExportPage() {
         <Karte className="space-y-3 p-5">
           <div className="flex items-center gap-3">
             <IconBadge icon={Archive} tone="teal" />
-            <h2 className="ap-heading text-lg font-semibold text-label">Vollexport</h2>
+            <h2 className="ap-heading text-zeile font-semibold text-label">Vollexport</h2>
           </div>
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Alle Daten Ihres Betriebs (Kunden, Anlagen, Vorgänge, Angebote, Rechnungen, Zeiten, Material, Nutzer ohne
             Passwörter, Einstellungen ohne Zugangsdaten) als CSV und JSON, dazu alle archivierten Belege, Fotos und
             Dokumente. Mit Prüfsummen und Beschreibung (Art. 20 DSGVO).
           </p>
           <button
             type="button"
-            className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sm font-semibold disabled:opacity-50"
+            className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sekundaer font-semibold disabled:opacity-50"
             disabled={laeuft || anfordern.isPending}
             onClick={() => anfordern.mutate("vollexport")}
           >
@@ -115,29 +115,29 @@ export function OfficeExportPage() {
         <Karte className="space-y-3 p-5">
           <div className="flex items-center gap-3">
             <IconBadge icon={FileSpreadsheet} tone="indigo" />
-            <h2 className="ap-heading text-lg font-semibold text-label">Z3-Export (Finanzverwaltung)</h2>
+            <h2 className="ap-heading text-zeile font-semibold text-label">Z3-Export (Finanzverwaltung)</h2>
           </div>
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Datenträgerüberlassung für eine Außenprüfung: Rechnungen, Positionen, Zahlungen, Kunden,
             Eingangsrechnungen und Kontenbezüge mit Beschreibungsdatei (index.xml) für IDEA. Bitte vor der Übergabe
             mit Ihrem Steuerberater abstimmen.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label htmlFor="z3-von" className="mb-1 block text-xs font-semibold text-label2">
+              <label htmlFor="z3-von" className="mb-1 block text-sekundaer font-semibold text-label2">
                 Von
               </label>
               <input id="z3-von" type="date" className="field-ap" value={von} onChange={(e) => setVon(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="z3-bis" className="mb-1 block text-xs font-semibold text-label2">
+              <label htmlFor="z3-bis" className="mb-1 block text-sekundaer font-semibold text-label2">
                 Bis
               </label>
               <input id="z3-bis" type="date" className="field-ap" value={bis} onChange={(e) => setBis(e.target.value)} />
             </div>
             <button
               type="button"
-              className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sm font-semibold disabled:opacity-50"
+              className="btn-ap-primary inline-flex h-9 items-center gap-2 px-4 text-sekundaer font-semibold disabled:opacity-50"
               disabled={laeuft || anfordern.isPending || zeitraumFehler !== null}
               onClick={() => anfordern.mutate("z3")}
             >
@@ -145,15 +145,15 @@ export function OfficeExportPage() {
               Z3-Export anfordern
             </button>
           </div>
-          {zeitraumFehler && <p className="text-xs text-st-fehlt">{zeitraumFehler}</p>}
+          {zeitraumFehler && <p className="text-sekundaer text-st-fehlt">{zeitraumFehler}</p>}
         </Karte>
       </div>
 
-      <h2 className="ap-heading text-lg font-semibold text-label">Letzte Exporte</h2>
+      <h2 className="ap-heading text-zeile font-semibold text-label">Letzte Exporte</h2>
       <TabellenRahmen>
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-fliess">
           <caption className="sr-only">Angeforderte Exporte, neueste zuerst</caption>
-          <thead className="bg-fill text-xs text-label2">
+          <thead className="bg-fill text-sekundaer text-label2">
             <tr>
               <th scope="col" className="px-3 py-2">Art</th>
               <th scope="col" className="px-3 py-2">Angefordert</th>
@@ -170,18 +170,18 @@ export function OfficeExportPage() {
                 <tr key={e.id} className="border-t border-sep align-top">
                   <td className="px-3 py-2 font-medium text-label">
                     {ART_LABEL[e.art]}
-                    {parameterText(e) && <span className="block text-xs font-normal text-label2">{parameterText(e)}</span>}
+                    {parameterText(e) && <span className="block text-sekundaer font-normal text-label2">{parameterText(e)}</span>}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 tabular-nums text-label2">{zeitText(e.angefordert_am)}</td>
                   <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_KLASSE[e.status]}`}>
+                    <span className={`rounded-full px-2 py-1 text-meta font-semibold ${STATUS_KLASSE[e.status]}`}>
                       {STATUS_LABEL[e.status]}
                     </span>
-                    {e.fehler && <span className="mt-1 block text-xs text-st-fehlt">{e.fehler}</span>}
+                    {e.fehler && <span className="mt-1 block text-sekundaer text-st-fehlt">{e.fehler}</span>}
                   </td>
                   <td className="px-3 py-2 tabular-nums text-label2">
                     {e.groesse_bytes != null ? dateigroesseText(e.groesse_bytes) : "–"}
-                    {e.anzahl_dateien != null && <span className="block text-xs">{e.anzahl_dateien} Dateien</span>}
+                    {e.anzahl_dateien != null && <span className="block text-sekundaer">{e.anzahl_dateien} Dateien</span>}
                   </td>
                   <td className="px-3 py-2 text-label2">
                     {e.status === "fertig" && rest != null ? (rest === 1 ? "1 Tag" : `${rest} Tage`) : "–"}
@@ -190,7 +190,7 @@ export function OfficeExportPage() {
                     {e.status === "fertig" && (
                       <button
                         type="button"
-                        className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-[13px]"
+                        className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-sekundaer"
                         onClick={() => herunterladen(e)}
                       >
                         <Download size={14} aria-hidden="true" /> Herunterladen
@@ -210,7 +210,7 @@ export function OfficeExportPage() {
           </tbody>
         </table>
       </TabellenRahmen>
-      <p className="text-xs text-label2">
+      <p className="text-sekundaer text-label2">
         Prüfsumme (SHA-256) und Dateiliste stehen im ZIP in <code>manifest.json</code>; die Summe des gesamten ZIP
         steht im Protokoll.
       </p>

@@ -13,11 +13,11 @@ import { formAusPosition, updateAusFormular, type StammdatenForm } from "./stamm
 function Feld({ id, label, hinweis, children }: { id: string; label: string; hinweis?: string; children: ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-label">
+      <label htmlFor={id} className="mb-1 block text-fliess font-medium text-label">
         {label}
       </label>
       {children}
-      {hinweis && <p className="mt-1 text-xs text-label2">{hinweis}</p>}
+      {hinweis && <p className="mt-1 text-sekundaer text-label2">{hinweis}</p>}
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function StammdatenTab({
         </Feld>
 
         <div>
-          <span className="mb-1 block text-sm font-medium text-label">Typ</span>
+          <span className="mb-1 block text-fliess font-medium text-label">Typ</span>
           <SegmentedControl<PositionTyp>
             ariaLabel="Positionstyp"
             optionen={[
@@ -99,7 +99,7 @@ export function StammdatenTab({
             wert={form.typ}
             onChange={(t) => !istWurzel && set("typ", t)}
           />
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-sekundaer text-label2">
             {istWurzel
               ? "Die Wurzel bleibt immer eine Linienposition."
               : "Stabsstellen stehen seitlich neben ihrer übergeordneten Position, außerhalb der Linie."}
@@ -148,8 +148,8 @@ export function StammdatenTab({
 
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-label">Platzhalter (geplant)</p>
-            <p className="text-xs text-label2">Geplante Position ohne Besetzung; dient als Vorlage.</p>
+            <p className="text-fliess font-medium text-label">Platzhalter (geplant)</p>
+            <p className="text-sekundaer text-label2">Geplante Position ohne Besetzung; dient als Vorlage.</p>
           </div>
           <Switch checked={form.geplant} onChange={(v) => set("geplant", v)} ariaLabel="Platzhalter (geplant)" />
         </div>
@@ -168,9 +168,9 @@ export function StammdatenTab({
         </div>
       </fieldset>
 
-      {detail.archiviert_am && <p className="text-sm text-label2">Archivierte Positionen können nicht bearbeitet werden.</p>}
+      {detail.archiviert_am && <p className="text-sekundaer text-label2">Archivierte Positionen können nicht bearbeitet werden.</p>}
       {fehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
@@ -180,7 +180,7 @@ export function StammdatenTab({
             Speichern
           </button>
           {gespeichert && !dirty && (
-            <span role="status" className="text-sm text-st-erledigt">
+            <span role="status" className="text-fliess text-st-erledigt">
               Gespeichert
             </span>
           )}
