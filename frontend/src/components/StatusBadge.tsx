@@ -1,25 +1,27 @@
-import type { IconTone } from "./IconBadge";
+import { TONE_FILL, type IconTone } from "./IconBadge";
 
-// Ersetzt die in GeschaeftPage.tsx/RechnungDetailPage.tsx/
-// RechnungseingangPage.tsx dreifach kopierte, immer neutral graue Pill-
-// Klassenkette -- macht Status erstmals farblich unterscheidbar. Dieselbe
-// Palette wie IconBadge (TONE_BADGE), hier aber lokal dupliziert, weil dort
-// nicht exportiert. Rahmen-Tag statt Pastell-Flaeche, feste Bereichs-Toene
-// (--tone-*) statt Tailwind-Palettenfarben.
-const TONE_PILL: Record<IconTone, string> = {
-  sky: "border-tone-sky text-tone-sky",
-  violet: "border-tone-violet text-tone-violet",
-  amber: "border-tone-amber text-tone-amber",
-  rose: "border-tone-rose text-tone-rose",
-  emerald: "border-tone-emerald text-tone-emerald",
-  indigo: "border-tone-indigo text-tone-indigo",
-  cyan: "border-tone-cyan text-tone-cyan",
-  slate: "border-sep text-label",
-  teal: "border-tone-teal text-tone-teal",
+// Getoente Pille wie StatusPille: Text bleibt neutral (text-label, 4.5:1 in
+// beiden Modi auf der Toenung), die Farbe traegt nur Flaeche und Punkt --
+// Rohtoene als Text wuerden bei amber/emerald/cyan/teal auf Hell reissen.
+const TONE_FLAECHE: Record<IconTone, string> = {
+  sky: "bg-tone-sky/15",
+  violet: "bg-tone-violet/15",
+  amber: "bg-tone-amber/15",
+  rose: "bg-tone-rose/15",
+  emerald: "bg-tone-emerald/15",
+  indigo: "bg-tone-indigo/15",
+  cyan: "bg-tone-cyan/15",
+  slate: "bg-fill",
+  teal: "bg-tone-teal/15",
 };
 
 export function StatusBadge({ label, tone }: { label: string; tone: IconTone }) {
   return (
-    <span className={`border px-2 py-1 text-xs font-semibold ${TONE_PILL[tone]}`}>{label}</span>
+    <span
+      className={`inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold text-label ${TONE_FLAECHE[tone]}`}
+    >
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${TONE_FILL[tone]}`} aria-hidden="true" />
+      {label}
+    </span>
   );
 }

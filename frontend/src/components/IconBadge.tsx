@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-// Icons stecken in einem getonten Badge, um fachlich unabhaengige Bereiche
+// Icons stecken in einer gefuellten Kachel (Form wie SymbolKachel), um fachlich unabhaengige Bereiche
 // (Kunden/Partner/Material/...) optisch zu unterscheiden -- reine
 // Kategorie-Farbe, kein Status/keine Herkunft (Abschnitt 3.3-Ausnahme wie
 // die Symbol-Kacheln: feste Bereichs-Toene, in beiden Modi identisch,
@@ -16,16 +16,18 @@ export type IconTone =
   | "slate"
   | "teal";
 
-const TONE_BADGE: Record<IconTone, string> = {
-  sky: "border-tone-sky text-tone-sky",
-  violet: "border-tone-violet text-tone-violet",
-  amber: "border-tone-amber text-tone-amber",
-  rose: "border-tone-rose text-tone-rose",
-  emerald: "border-tone-emerald text-tone-emerald",
-  indigo: "border-tone-indigo text-tone-indigo",
-  cyan: "border-tone-cyan text-tone-cyan",
-  slate: "border-sep text-label",
-  teal: "border-tone-teal text-tone-teal",
+// Weisses Icon braucht >=3:1 auf der Flaeche -- deshalb --tone-*-fill statt
+// der Rohtoene (amber/emerald/cyan/teal waeren zu hell).
+export const TONE_FILL: Record<IconTone, string> = {
+  sky: "bg-tone-sky-fill",
+  violet: "bg-tone-violet-fill",
+  amber: "bg-tone-amber-fill",
+  rose: "bg-tone-rose-fill",
+  emerald: "bg-tone-emerald-fill",
+  indigo: "bg-tone-indigo-fill",
+  cyan: "bg-tone-cyan-fill",
+  slate: "bg-tone-slate-fill",
+  teal: "bg-tone-teal-fill",
 };
 
 export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
@@ -41,8 +43,8 @@ export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
 };
 
 const SIZE_BOX: Record<"sm" | "md", string> = {
-  sm: "h-7 w-7 rounded-none",
-  md: "h-9 w-9 rounded-none",
+  sm: "h-7 w-7 rounded-[7px]",
+  md: "h-9 w-9 rounded-[7px]",
 };
 
 const SIZE_ICON: Record<"sm" | "md", number> = {
@@ -50,7 +52,7 @@ const SIZE_ICON: Record<"sm" | "md", number> = {
   md: 18,
 };
 
-const MUTED = "border-sep text-label3";
+const MUTED = "bg-fill text-label2";
 
 export function IconBadge({
   icon: Icon,
@@ -69,11 +71,11 @@ export function IconBadge({
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center border bg-transparent transition-colors duration-200 ${SIZE_BOX[size]} ${
-        active ? TONE_BADGE[tone] : MUTED
+      className={`flex shrink-0 items-center justify-center transition-colors duration-200 ${SIZE_BOX[size]} ${
+        active ? `${TONE_FILL[tone]} text-white` : MUTED
       }`}
     >
-      <Icon size={SIZE_ICON[size]} strokeWidth={1.5} />
+      <Icon size={SIZE_ICON[size]} strokeWidth={2} />
     </span>
   );
 }
