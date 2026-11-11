@@ -16,6 +16,7 @@ import { filtereKunden } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { SearchField } from "../../components/apple/SearchField";
 import { Select } from "../../components/apple/Select";
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
@@ -248,11 +249,12 @@ export function KundenPage() {
 
       <div className="space-y-2">
         {(kunden ?? []).length > 0 && (
-          <input
+          <SearchField
             value={kundenSuche}
-            onChange={(e) => setKundenSuche(e.target.value)}
-            placeholder="Suche nach Name oder Kundennummer…"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            onChange={setKundenSuche}
+            placeholder="Name oder Kundennummer…"
+            ariaLabel="Kunden suchen"
+            groesse="mobil"
           />
         )}
         {kundenLoading ? (
@@ -287,7 +289,7 @@ export function KundenPage() {
                 <div className="text-sm font-medium text-label">{k.name}</div>
               </div>
               {k.typ && (
-                <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+                <span className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-xs font-semibold text-label">
                   {kundeTypLabel(k.typ)}
                 </span>
               )}

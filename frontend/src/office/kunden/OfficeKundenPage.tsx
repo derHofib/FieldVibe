@@ -36,7 +36,7 @@ const SPALTEN: Spalte<Kunde>[] = [
     key: "typ",
     label: "Typ",
     render: (k) =>
-      k.typ ? <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
+      k.typ ? <span className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-xs font-semibold text-label">{TYP_LABEL[k.typ]}</span> : "–",
     sortWert: (k) => (k.typ ? TYP_LABEL[k.typ] : ""),
   },
   { key: "ort", label: "Ort", render: (k) => <span className="whitespace-nowrap">{ORT(k) || "–"}</span>, sortWert: ORT },

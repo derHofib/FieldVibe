@@ -71,10 +71,10 @@ export function SearchableSelect({
           }
         }}
         placeholder={placeholder}
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="field-ap"
       />
       {open && (
-        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-sep bg-white shadow-lg dark:bg-stone-800">
+        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius-ap-md)] border border-sep bg-card shadow-lg">
           {gefiltert.length === 0 ? (
             <p className="px-2 py-1.5 text-sm text-label2">Keine Treffer</p>
           ) : (
@@ -87,8 +87,8 @@ export function SearchableSelect({
                   setOpen(false);
                   setQuery("");
                 }}
-                className={`btn-touch block w-full px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-stone-700 ${
-                  o.value === value ? "bg-slate-50 font-medium dark:bg-stone-700/60" : ""
+                className={`btn-touch block w-full px-2 py-1.5 text-left text-sm hover:bg-fill ${
+                  o.value === value ? "bg-fill font-medium" : ""
                 }`}
               >
                 {o.label}
