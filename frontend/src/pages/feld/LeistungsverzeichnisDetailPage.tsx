@@ -448,7 +448,7 @@ function LvPositionFelder({
           ) : (
             <button
               onClick={() => setNeuerUnterpunktOffen(true)}
-              className="flex w-full items-center gap-1.5 border border-dashed border-sep px-2 py-2 text-xs font-medium text-label2 hover:bg-fill"
+              className="flex w-full items-center gap-1.5 rounded-[var(--radius-ap-md)] bg-fill px-2 py-2 text-xs font-medium text-label2 hover:bg-fill2"
             >
               <Plus size={13} strokeWidth={1.5} /> Unterpunkt hinzufügen
             </button>

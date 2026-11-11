@@ -106,7 +106,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
   if (!vorgangId || (vorschlaege && vorschlaege.length === 0)) return null;
 
   return (
-    <div className="mb-3 rounded-lg border border-dashed border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
+    <div className="mb-3 rounded-[var(--radius-ap-md)] bg-cyan-50/60 p-3 dark:bg-cyan-500/10">
       <div className="mb-2 flex items-center gap-1.5">
         <ListChecks size={13} strokeWidth={2} className="text-cyan-700 dark:text-cyan-300" />
         <p className="text-xs font-bold text-cyan-800 dark:text-cyan-200">Vorschläge aus dem Vorgang</p>

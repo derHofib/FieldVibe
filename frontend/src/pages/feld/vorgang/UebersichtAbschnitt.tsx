@@ -278,7 +278,7 @@ export function UebersichtAbschnitt({
                   />
                 </Suspense>
               ) : (
-                <div className="mt-2 flex h-40 w-full items-center justify-center border border-dashed border-sepstrong text-center text-xs text-label2">
+                <div className="mt-2 flex h-40 w-full items-center justify-center rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong text-center text-xs text-label2">
                   Keine Kartenposition verfügbar
                 </div>
               )}

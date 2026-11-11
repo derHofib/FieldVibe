@@ -148,7 +148,7 @@ export function PositionenInhalt({
             />
 
             {bedarfMaterialId === NEU_MATERIAL && (
-              <div className="space-y-2 border border-dashed border-sepstrong p-2">
+              <div className="space-y-2 rounded-[var(--radius-ap-md)] bg-fill p-2">
                 <input
                   type="text"
                   value={bedarfNeuBezeichnung}

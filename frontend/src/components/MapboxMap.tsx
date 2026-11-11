@@ -75,7 +75,7 @@ export function MapboxMap({
   if (!MAPBOX_TOKEN) {
     return (
       <div
-        className={`flex items-center justify-center border border-dashed border-sepstrong text-center text-xs text-label2 ${className}`}
+        className={`flex items-center justify-center rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong text-center text-xs text-label2 ${className}`}
       >
         Karte nicht verfügbar (kein Mapbox-Token konfiguriert)
       </div>

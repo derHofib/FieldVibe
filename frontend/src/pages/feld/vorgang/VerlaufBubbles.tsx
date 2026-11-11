@@ -139,10 +139,10 @@ export function EmailBubble({ email }: { email: EmailLog }) {
 export function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clientUuid: string) => void }) {
   return (
     <div
-      className={`mb-3 rounded-lg border border-dashed p-3 ${
+      className={`mb-3 rounded-[var(--radius-ap-md)] p-3 ${
         item.failed
-          ? "border-st-fehlt bg-st-fehlt-bg"
-          : "border-sepstrong"
+          ? "border border-st-fehlt bg-st-fehlt-bg"
+          : "bg-fill"
       }`}
     >
       <div className="mb-1 flex items-center justify-between gap-1 text-xs">

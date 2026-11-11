@@ -43,7 +43,7 @@ export function ProfilePage() {
     <div className="space-y-4">
       <div className="card-ap p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-lg font-bold text-label">
+          <div className="flex h-12 w-12 items-center justify-center border rounded-full border-sep text-lg font-bold text-label">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>

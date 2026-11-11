@@ -102,7 +102,7 @@ export function NeueRechnungForm({
         </>
       ) : (
         <>
-          <div className="flex items-start gap-2 rounded-lg border border-dashed border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
+          <div className="flex items-start gap-2 rounded-[var(--radius-ap-md)] bg-cyan-50/60 p-3 dark:bg-cyan-500/10">
             <ListChecks size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-cyan-700 dark:text-cyan-300" />
             <p className="text-xs text-cyan-800 dark:text-cyan-200">
               Nach dem Anlegen fügst du Vorgänge oder einzelne Positionen hinzu.

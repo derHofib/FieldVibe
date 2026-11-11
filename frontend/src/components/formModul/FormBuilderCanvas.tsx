@@ -41,7 +41,7 @@ import type { FormFeldTyp, FormField, FormGroup, FormSchemaDetail, PlanSymbol } 
 import { FELD_TYP_KATALOG, FELD_TYP_LABEL } from "../../utils/feldTypKatalog";
 import { FormFieldRenderer } from "./FormFieldRenderer";
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 type Auswahl = { art: "feld"; id: string } | { art: "gruppe"; id: string } | null;
 type RootEintrag =
@@ -270,7 +270,7 @@ function GruppenKoerper({
         ))}
       </SortableContext>
       {felder.length === 0 && (
-        <div className="border border-dashed border-sepstrong p-3 text-center text-xs text-label2">Feld hierher ziehen</div>
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-3 text-center text-xs text-label2">Feld hierher ziehen</div>
       )}
     </div>
   );
@@ -320,7 +320,7 @@ function Canvas({
         )}
       </SortableContext>
       {rootEntries.length === 0 && (
-        <div className="border border-dashed border-sepstrong p-10 text-center text-sm text-label2">
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-10 text-center text-sm text-label2">
           Feldtyp aus der Palette hierher ziehen
         </div>
       )}
@@ -629,7 +629,7 @@ function UnterformularFeldListe({
         ))}
       </SortableContext>
       {felder.length === 0 && (
-        <div className="border border-dashed border-sepstrong p-8 text-center text-sm text-label2">
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-8 text-center text-sm text-label2">
           Feldtyp aus der Palette hierher ziehen
         </div>
       )}
