@@ -1702,7 +1702,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
             <span className="text-[11px] text-label2">Zeit</span>
             <span className="text-sm font-semibold text-label">
@@ -1711,7 +1711,7 @@ export function VorgangDetailPage({
           </button>
           <a
             href="#abschnitt-termine"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
             <span className="text-[11px] text-label2">Nächster Termin</span>
             <span className="text-sm font-semibold text-label">
@@ -1722,7 +1722,7 @@ export function VorgangDetailPage({
           </a>
           <a
             href="#abschnitt-maengel"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
             <span className="text-[11px] text-label2">Mängel</span>
             <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
@@ -1732,7 +1732,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
             <span className="text-[11px] text-label2">Positionen</span>
             <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
@@ -1740,7 +1740,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
             <span className="text-[11px] text-label2">Verlauf</span>
             <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
