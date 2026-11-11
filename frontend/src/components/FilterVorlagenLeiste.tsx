@@ -181,13 +181,15 @@ export function FilterVorlagenLeiste(props: FilterVorlagenProps) {
             Filter zurücksetzen
           </button>
         )}
-        <button
-          onClick={() => setZeigeSpeichern((v) => !v)}
-          disabled={!hatAktivenFilter}
-          className="btn-touch text-xs text-tint-text disabled:opacity-40 hover:underline"
-        >
-          {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
-        </button>
+        {/* Ohne aktiven Filter gibt es nichts zu speichern: ausblenden statt blass zu deaktivieren (Kontrast). */}
+        {(hatAktivenFilter || zeigeSpeichern) && (
+          <button
+            onClick={() => setZeigeSpeichern((v) => !v)}
+            className="btn-touch text-xs font-medium text-tint-text"
+          >
+            {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
+          </button>
+        )}
       </div>
 
       <SpeichernForm v={h} />
