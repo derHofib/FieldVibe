@@ -5,6 +5,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { fehlerberichteApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./brand/Logo";
+import { rolleLabel } from "../utils/anzeigeNamen";
 import { ThemeToggle } from "./ThemeToggle";
 import { SeitenGrenze } from "./ErrorBoundary";
 
@@ -90,7 +91,7 @@ export function Layout() {
             <h1 className="truncate text-sm font-semibold text-label">{seitentitel}</h1>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-label sm:inline">
-                Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})
+                Angemeldet als <strong>{currentUser?.name}</strong> ({rolleLabel(currentUser?.role)})
               </span>
               <ThemeToggle />
               <button onClick={logout} className="btn-touch btn-ap px-3 py-2 text-sm">
