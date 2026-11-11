@@ -24,6 +24,7 @@ import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { useAuth } from "../../context/AuthContext";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 const START_STUNDE = 7;
@@ -248,11 +249,10 @@ export function OfficeDispoPage() {
   return (
     <div>
       <SeitenKopf titel="Dispo">
-        <select
+        <Select className="w-auto" groesse="kompakt"
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
           aria-label="Nach Projekt filtern"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -260,7 +260,7 @@ export function OfficeDispoPage() {
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
       </SeitenKopf>
 
       {fehler && (
@@ -662,17 +662,16 @@ function TerminBearbeitenPanel({
 
         <div>
           <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-1`}
+          <Select id={`${uid}-1`}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-3">
@@ -813,18 +812,17 @@ function BacklogPlanenPanel({
 
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-0`}
+          <Select id={`${uid}-0`}
             ref={technikerRef}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-3">

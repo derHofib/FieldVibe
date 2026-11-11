@@ -14,6 +14,7 @@ import { ProjektAufgabeDetailPanel } from "./ProjektAufgabeDetailPanel";
 import { ProjektDetailPanel } from "./ProjektDetailPanel";
 import { ProjekteTabelle } from "./ProjekteTabelle";
 import { ProjektUebersicht } from "./ProjektUebersicht";
+import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
@@ -164,18 +165,16 @@ export function OfficeProjektePage() {
           <AnsichtUmschalter wert={ansicht} optionen={ANSICHT_UMSCHALTER} onWechsel={setAnsicht} />
         )}
         {ansicht !== "tabelle" && projekte && projekte.length > 0 && (
-          <select
+          <Select className="w-auto" groesse="kompakt"
             value={aktivesProjekt ?? ""}
             onChange={(e) => setProjektId(e.target.value)}
-            className="field-ap"
-            style={{ width: "auto", minHeight: 0 }}
           >
             {projekte.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <button onClick={() => setZeigeNeuesProjekt(true)} className="btn-ap-primary">
           <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
@@ -314,18 +313,17 @@ export function OfficeProjektePage() {
                         <label htmlFor={`projekt-spalte-${a.id}`} className="sr-only">
                           Spalte von „{a.titel}“ ändern
                         </label>
-                        <select
+                        <Select className="mt-1.5 w-full" groesse="kompakt"
                           id={`projekt-spalte-${a.id}`}
                           value={a.spalte_id ?? ""}
                           onChange={(e) => handleDrop(e.target.value, a.id)}
-                          className="field-ap mt-1.5 h-auto px-1 py-0.5 text-[10px]"
                         >
                           {(spalten ?? []).map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                     );
                   })}

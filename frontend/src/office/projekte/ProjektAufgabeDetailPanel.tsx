@@ -15,6 +15,7 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { SymbolKachel, type KachelFarbe } from "../../components/apple/SymbolKachel";
 import type { ChecklistenPunkt, ProjektAufgabe, ProjektAufgabePrioritaet, ProjektSpalte } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const PRIORITAET_OPTIONEN: { wert: ProjektAufgabePrioritaet; label: string }[] = [
@@ -343,17 +344,16 @@ export function ProjektAufgabeDetailPanel({
               <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
                 Spalte
               </label>
-              <select id={`${uid}-2`}
+              <Select id={`${uid}-2`}
                 value={spalteId}
                 onChange={(e) => setSpalteId(e.target.value)}
-                className="w-full field-ap h-auto py-1.5 text-sm"
               >
                 {spalten.map((spalte) => (
                   <option key={spalte.id} value={spalte.id}>
                     {spalte.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
 

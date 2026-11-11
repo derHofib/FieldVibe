@@ -18,6 +18,7 @@ import type { Material } from "../../types";
 import { filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
+import { Select } from "../../components/apple/Select";
 import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 
 const EURO = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -161,11 +162,10 @@ export function OfficeMaterialPage() {
               <label className="sr-only" htmlFor="material-lieferant">
                 Lieferant filtern
               </label>
-              <select
+              <Select className="w-auto" groesse="kompakt"
                 id="material-lieferant"
                 value={lieferantId}
                 onChange={(e) => setLieferantId(e.target.value)}
-                className="h-[26px] rounded-[13px] bg-fill px-2.5 text-xs font-medium text-label"
               >
                 <option value="">Alle Lieferanten</option>
                 {(lieferanten ?? []).map((l) => (
@@ -173,15 +173,14 @@ export function OfficeMaterialPage() {
                     {l.name}
                   </option>
                 ))}
-              </select>
+              </Select>
               <label className="sr-only" htmlFor="material-tag">
                 Tag filtern
               </label>
-              <select
+              <Select className="w-auto" groesse="kompakt"
                 id="material-tag"
                 value={tagId}
                 onChange={(e) => setTagId(e.target.value)}
-                className="h-[26px] rounded-[13px] bg-fill px-2.5 text-xs font-medium text-label"
               >
                 <option value="">Alle Tags</option>
                 {(tags ?? []).map((t) => (
@@ -189,7 +188,7 @@ export function OfficeMaterialPage() {
                     #{t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <button
                 type="button"
                 onClick={() => setLagerorteZeigen((v) => !v)}
@@ -346,27 +345,27 @@ function NeuesMaterialFormular({
         <label htmlFor="material-lieferant-neu" className={LABEL}>
           Standard-Lieferant
         </label>
-        <select id="material-lieferant-neu" value={form.lieferantId} onChange={(e) => setze({ lieferantId: e.target.value })} className={FELD}>
+        <Select id="material-lieferant-neu" value={form.lieferantId} onChange={(e) => setze({ lieferantId: e.target.value })}>
           <option value="">Kein Lieferant hinterlegt</option>
           {lieferanten.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div>
         <label htmlFor="material-lager" className={LABEL}>
           Lagerort für Anfangsbestand
         </label>
-        <select id="material-lager" value={form.lagerId} onChange={(e) => setze({ lagerId: e.target.value })} className={FELD}>
+        <Select id="material-lager" value={form.lagerId} onChange={(e) => setze({ lagerId: e.target.value })}>
           <option value="">Zentrallager (Standard)</option>
           {lagerorte.map((l) => (
             <option key={l.id} value={l.id}>
               {l.bezeichnung}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       {anlegen.isError && (
         <p role="alert" className="text-xs text-st-fehlt">
