@@ -221,6 +221,13 @@ kein natives `<select>`. `.field-ap` für Standard-Eingabefelder (siehe
 Bausteine oben); bei Feldern mit eigener Breite (`w-20` etc.) die
 Klassen einzeln setzen statt `.field-ap` (setzt `width: 100%`).
 
+Anlegen: Button `+ Neuer X` (`NEU_BUTTON_KLASSE`) öffnet ein `AnlegenPanel`
+(Sheet mobil, Seitenpanel Office), kein inline aufklappendes Formular. Felder
+über `Feld` (`components/FormularFeld.tsx`): Label per htmlFor, Pflichtstern,
+Feldfehler mit `role="alert"` statt nativer Tooltips (`noValidate`). Der
+Absende-Button ist nur während der Anfrage deaktiviert; fehlende Pflichtfelder
+melden sich beim Absenden am Feld.
+
 ## Freie Inhalte bleiben unangetastet
 
 Whiteboard/Board-Feature (`office/boards/nodes/*`, `pages/feld/boards/*`):
@@ -241,6 +248,38 @@ behalten ihre eigene Rundung/Farbe. Nur die Bedienelemente drumherum
   Tabelle, Detail mit Seitenspalte, `layout="dicht"`) und `/statistik`
   (eigene Office-Seite `office/zeit/OfficeArbeitszeitPage.tsx`: Monatsliste
   mit allen Kalendertagen statt der Feld-Wochenansicht)
+
+## Interaktionsmuster (UX-Überarbeitung Nov. 2026)
+
+Je Interaktion genau ein Muster; vor einem neuen Baustein hier nachsehen.
+
+- **Rückmeldung (Toast)**: `components/Toast.tsx`, `useToast()` mit `erfolg`/`fehler`/`info`. Erfolg/Info
+  als `role="status"` (4 s), Fehler als `role="alert"` (8 s). Für Mutationen genügt `meta: { erfolg: "Gespeichert" }`;
+  Fehler meldet der zentrale `MutationCache` in `main.tsx` automatisch, solange die Mutation kein eigenes
+  `onError` hat (`meta.stumm` unterdrückt ihn).
+- **Bestätigen**: kein `window.confirm`. `useBestaetigung()` (`components/ConfirmDialog.tsx`):
+  `if (!(await bestaetigen({ titel, text, bestaetigenLabel, destruktiv }))) return;`. Titel nennt die Aktion,
+  Text die Folge, der Button das Verb ("Löschen", "Stornieren"); destruktiv = roter Button, Fokus startet auf "Abbrechen".
+- **Anlegen**: `components/AnlegenPanel.tsx` -- Sheet in der Feld-App, Seitenpanel im Office (`istOfficeHost()`).
+  Auslöser ist ein Textbutton "+ Neuer X" (ohne Unterstreichung, `font-medium`); kein Inline-Formular über der
+  Liste, kein zweiter "Abbrechen"-Toggle. Schließen per X, Escape oder Hintergrund.
+- **Zustände einer Datenansicht**: Laden (`SkeletonList`/`DetailSkeleton`, kein "Lädt…"-Text), Inhalt, leer
+  (erklärt, warum, und bietet den nächsten Schritt an), Fehler (`components/FehlerZustand.tsx`, unterscheidet
+  403/404/Netz, "Erneut versuchen" nur wo sinnvoll). Ein Fehler darf nie wie "leer" oder Dauerladen aussehen.
+  Abfragen ohne Recht gar nicht starten (`enabled: hatRecht(...)`) und das zugehörige Feld ausblenden.
+- **Kein Zugriff / 404**: Rechte laufen zentral über `RouteGuard` (`config/routenRechte.ts`, abgeleitet aus
+  `NAV_SEITEN[].sichtbar`) und zeigen `components/KeinZugriff.tsx`; unbekannte Routen `components/NichtGefunden.tsx`.
+  Keine stillen Redirects und keine seiteneigenen "Keine Berechtigung"-Texte. Menüeinträge nur anzeigen, wenn die
+  Seite erreichbar ist (gleiche Regel wie das Backend).
+- **Fehlerbehandlung**: `SeitenGrenze`/`ErrorBoundary` je Shell mit "Neu laden" und "Fehler melden".
+- **Formulare**: Label per `htmlFor`/`useId`; Pflichtfeld mit rotem `*` (`aria-hidden`) und `noValidate`;
+  eigene deutsche Fehlermeldung direkt am Feld (`role="alert"`, `aria-invalid`, `aria-describedby`);
+  Absende-Button nur während der Anfrage deaktiviert (Muster: `NewVorgangPage`).
+- **Suche**: Server-Suchfelder mit `useDebouncedValue` (300 ms).
+- **Aktionsmenüs**: seltene/destruktive Aktionen in `AktionsMenue`/`apple/PulldownMenu` (Tippfläche 44 px mobil),
+  nicht neben den Seitentitel. Die häufigste Aktion einer Seite ist ein beschrifteter Primärbutton.
+- **Office-Navigation**: aktiver Eintrag und Workspace folgen der Route (`office/navAktiv.ts`); Hilfslinks
+  (Seitenleiste anpassen, Fehler melden, mobile Ansicht, Abmelden) liegen im Nutzermenü.
 
 ## Was offen bleibt (ehrlich dokumentiert, siehe `docs/ui-redesign/REVIEW.md`)
 

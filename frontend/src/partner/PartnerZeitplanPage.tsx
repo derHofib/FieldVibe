@@ -5,6 +5,7 @@ import { partnerPortalApi } from "../api/endpoints";
 import { AbschnittskopfB } from "../components/apple/AbschnittsKopf";
 import { GroupedList, GroupedListRow } from "../components/apple/GroupedList";
 import { EmptyState } from "../components/EmptyState";
+import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 import type { PartnerZeitplanEintrag } from "../types";
 import { formatKurz, heuteTag, montagVon, parseTag } from "../office/projekte/zeitplan/zeitplanLogik";
@@ -28,7 +29,7 @@ export function liegtDieseWoche(e: PartnerZeitplanEintrag, heute: number): boole
 /** Zeitplan des Partnerportals (Route /partnerportal/zeitplan): die dem
  * Partner zugewiesenen Schritte (Fremdgewerk) je Projekt, rein lesend. */
 export function PartnerZeitplanPage() {
-  const { data, isLoading, error } = useQuery({ queryKey: ["partnerportal-zeitplan"], queryFn: () => partnerPortalApi.zeitplan() });
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: ["partnerportal-zeitplan"], queryFn: () => partnerPortalApi.zeitplan() });
   const heute = heuteTag();
 
   const nachProjekt = new Map<string, PartnerZeitplanEintrag[]>();
@@ -46,9 +47,7 @@ export function PartnerZeitplanPage() {
           <SkeletonList count={4} />
         </div>
       ) : error ? (
-        <p role="alert" className="px-5 pt-4 text-sm text-st-fehlt">
-          Der Zeitplan konnte nicht geladen werden.
-        </p>
+        <FehlerZustand fehler={error} was="Der Zeitplan" onErneut={() => void refetch()} className="px-4 pt-4" />
       ) : nachProjekt.size === 0 ? (
         <div className="px-4 pt-4">
           <EmptyState icon={CalendarRange} text="Ihnen sind noch keine Schritte zugewiesen." />

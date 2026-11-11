@@ -18,14 +18,15 @@ import {
   Smartphone,
 } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { navKategorienApi, projekteApi, statistikApi } from "../api/endpoints";
 import { useFehlerbericht } from "../bugreport/ui";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { Monogramm } from "../components/apple/Monogramm";
 import { Logo } from "../components/brand/Logo";
+import { AktionsMenue, type AktionsMenueEintrag } from "../components/AktionsMenue";
 import { ThemeToggle } from "../components/ThemeToggle";
 import {
   effektiveNavGruppen,
@@ -40,6 +41,7 @@ import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
+import { aktiverNavKey, fuerOffice, workspaceFuerRoute } from "./navAktiv";
 import { SeitenGrenze } from "../components/ErrorBoundary";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
@@ -101,6 +103,7 @@ function SchnellfilterKachel({
 export function OfficeLayout() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const fehlerbericht = useFehlerbericht();
   const { outboxCount, isOnline } = useAppLiveDaten();
   const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
@@ -137,7 +140,7 @@ export function OfficeLayout() {
     });
   };
 
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht));
   // null = keine Auswahl gespeichert -> unveraendertes Verhalten (alles zeigen)
   const eigeneAuswahl = currentUser?.office_nav_items?.items;
   const angezeigt = eigeneAuswahl
@@ -154,7 +157,14 @@ export function OfficeLayout() {
   // Workspace-Filter greift vor den Menue-Kategorien; nicht verfuegbarer oder
   // nie gewaehlter Workspace -> erster verfuegbarer.
   const workspaces = verfuegbareWorkspaces(angezeigt);
-  const aktiverWorkspace = workspaces.find((w) => w.key === workspaceKey) ?? workspaces[0];
+  // Aktiver Eintrag und Workspace folgen der Route (Reload, Deep-Link); der
+  // gemerkte Workspace gilt nur, wo die Route nichts vorgibt.
+  const aktiverKey = aktiverNavKey(pathname, angezeigt);
+  const aktiveSeite = angezeigt.find((seite) => seite.key === aktiverKey);
+  const aktiverWorkspace = workspaceFuerRoute(aktiveSeite, workspaces, workspaceKey);
+  useEffect(() => {
+    document.title = aktiveSeite ? `${aktiveSeite.label} – FieldVibe` : "FieldVibe";
+  }, [aktiveSeite]);
   const imWorkspace = aktiverWorkspace
     ? angezeigt.filter((seite) => seiteInWorkspace(seite, aktiverWorkspace))
     : angezeigt;
@@ -195,6 +205,43 @@ export function OfficeLayout() {
     weicheAus();
     window.location.href = ziel;
   };
+
+  // Die früheren Hilfslinks am Fuß der Seitenleiste plus Abmelden -- selten
+  // gebraucht, deshalb gebündelt statt dauerhaft sichtbar.
+  const nutzerMenue: (AktionsMenueEintrag | "trenner")[] = [
+    { label: "Seitenleiste anpassen", icon: Settings, onClick: () => navigate("/einstellungen/seitenleiste") },
+    ...(currentUser?.role === "mandant_admin"
+      ? [{ label: "Menü-Kategorien", icon: FolderCog, onClick: () => navigate("/einstellungen/kategorien") }]
+      : []),
+    "trenner",
+    ...(hatRecht("fehlerberichte", "sehen")
+      ? [{ label: "Fehler & Ideen", icon: ClipboardList, onClick: () => navigate("/fehlerberichte") }]
+      : []),
+    ...(fehlerbericht.verfuegbar
+      ? [
+          { label: "Fehler melden", icon: Bug, onClick: () => fehlerbericht.aufnehmen() },
+          { label: "Idee einreichen", icon: Lightbulb, onClick: () => fehlerbericht.aufnehmen({ art: "idee" }) },
+        ]
+      : []),
+    "trenner",
+    { label: "Zur mobilen Ansicht", icon: Smartphone, onClick: zurMobilenAnsicht },
+    { label: "Abmelden", icon: LogOut, onClick: logout, destruktiv: true },
+  ];
+
+  // "/" und Strg/Cmd+K öffnen die Suche -- "/" nur außerhalb von Eingabefeldern
+  useEffect(() => {
+    const beiTaste = (e: KeyboardEvent) => {
+      const ziel = e.target as HTMLElement | null;
+      const tippt = ziel?.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(ziel?.tagName ?? "");
+      const strgK = e.key === "k" && (e.ctrlKey || e.metaKey);
+      const schraeg = e.key === "/" && !tippt && !e.ctrlKey && !e.metaKey && !e.altKey;
+      if (!strgK && !schraeg) return;
+      e.preventDefault();
+      navigate("/suche");
+    };
+    document.addEventListener("keydown", beiTaste);
+    return () => document.removeEventListener("keydown", beiTaste);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-win text-label" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
@@ -312,15 +359,14 @@ export function OfficeLayout() {
                   )}
                   {!kollabiert &&
                     gruppe.seiten.map((seite) => (
-                      <NavLink
+                      <Link
                         key={seite.key}
                         to={seite.route}
+                        aria-current={seite.key === aktiverKey ? "page" : undefined}
                         title={eingeklappt ? seite.label : undefined}
-                        className={({ isActive }) =>
-                          `relative mb-0.5 flex h-[30px] items-center rounded-[7px] text-[13px] ${
-                            eingeklappt ? "justify-center px-0" : "gap-2.5 px-2.5"
-                          } ${isActive ? "bg-fill2 font-semibold text-label" : "text-label2 hover:bg-fill hover:text-label"}`
-                        }
+                        className={`relative mb-0.5 flex h-[30px] items-center rounded-[7px] text-[13px] ${
+                          eingeklappt ? "justify-center px-0" : "gap-2.5 px-2.5"
+                        } ${seite.key === aktiverKey ? "bg-fill2 font-semibold text-label" : "text-label2 hover:bg-fill hover:text-label"}`}
                       >
                         <seite.icon
                           size={17}
@@ -339,7 +385,7 @@ export function OfficeLayout() {
                             {!eingeklappt && (vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl)}
                           </span>
                         )}
-                      </NavLink>
+                      </Link>
                     ))}
                 </div>
               );
@@ -365,77 +411,6 @@ export function OfficeLayout() {
               </div>
             )}
           </nav>
-
-          <button
-            onClick={() => navigate("/einstellungen/seitenleiste")}
-            title={eingeklappt ? "Seitenleiste anpassen" : undefined}
-            className={`mt-2 flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
-              eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
-            }`}
-          >
-            <Settings size={14} strokeWidth={2} className="shrink-0" />
-            {!eingeklappt && "Seitenleiste anpassen"}
-          </button>
-          {currentUser?.role === "mandant_admin" && (
-            <button
-              onClick={() => navigate("/einstellungen/kategorien")}
-              title={eingeklappt ? "Menü-Kategorien" : undefined}
-              className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
-                eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
-              }`}
-            >
-              <FolderCog size={14} strokeWidth={2} className="shrink-0" />
-              {!eingeklappt && "Menü-Kategorien"}
-            </button>
-          )}
-          {hatRecht("fehlerberichte", "sehen") && (
-            <NavLink
-              to="/fehlerberichte"
-              title={eingeklappt ? "Fehler & Ideen" : undefined}
-              className={({ isActive }) =>
-                `flex h-[30px] items-center rounded-[7px] text-xs font-medium hover:bg-fill hover:text-label ${
-                  isActive ? "bg-fill text-label" : "text-label2"
-                } ${eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"}`
-              }
-            >
-              <ClipboardList size={14} strokeWidth={2} className="shrink-0" />
-              {!eingeklappt && "Fehler & Ideen"}
-            </NavLink>
-          )}
-          {fehlerbericht.verfuegbar && (
-            <button
-              onClick={() => fehlerbericht.aufnehmen()}
-              title={eingeklappt ? "Fehler melden (Strg+Umschalt+B)" : "Strg+Umschalt+B (Mac: Cmd+Umschalt+B)"}
-              className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
-                eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
-              }`}
-            >
-              <Bug size={14} strokeWidth={2} className="shrink-0" />
-              {!eingeklappt && "Fehler melden"}
-            </button>
-          )}
-          {fehlerbericht.verfuegbar && (
-            <button
-              onClick={() => fehlerbericht.aufnehmen({ art: "idee" })}
-              title={eingeklappt ? "Idee einreichen" : undefined}
-              className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
-                eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
-              }`}
-            >
-              <Lightbulb size={14} strokeWidth={2} className="shrink-0" />
-              {!eingeklappt && "Idee einreichen"}
-            </button>
-          )}
-          <button
-            onClick={zurMobilenAnsicht}
-            title={eingeklappt ? "Zur mobilen Ansicht" : undefined}
-            className={`mb-2 flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
-              eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
-            }`}
-          >
-            <Smartphone size={14} strokeWidth={2} className="shrink-0" />
-            {!eingeklappt && "Zur mobilen Ansicht"}
-          </button>
 
           <div className={`flex items-center gap-2.5 border-t-[0.5px] border-sep pt-2.5 ${eingeklappt ? "justify-center" : "px-1"}`}>
             <Monogramm name={currentUser?.name ?? "?"} groesse={28} />
@@ -463,14 +438,29 @@ export function OfficeLayout() {
                 <Clock size={13} strokeWidth={2} /> {outboxCount}
               </span>
             )}
-            <span className="text-sm text-label2">{currentUser?.name}</span>
-            <button onClick={() => navigate("/suche")} aria-label="Suche" title="Suche" className="btn-ap-toolbar">
+            <button
+              onClick={() => navigate("/suche")}
+              aria-label="Suche"
+              title="Suche (/ oder Strg+K)"
+              className="btn-ap-toolbar"
+            >
               <Search size={17} strokeWidth={2} />
             </button>
             <ThemeToggle />
-            <button onClick={logout} aria-label="Abmelden" title="Abmelden" className="btn-ap-toolbar">
-              <LogOut size={17} strokeWidth={2} />
-            </button>
+            <AktionsMenue
+              label="Benutzermenü"
+              eintraege={nutzerMenue}
+              ausloeser={({ offen }) => (
+                <span
+                  className={`flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-sm text-label2 hover:bg-fill hover:text-label ${
+                    offen ? "bg-fill text-label" : ""
+                  }`}
+                >
+                  {currentUser?.name}
+                  <ChevronDown size={14} strokeWidth={2} />
+                </span>
+              )}
+            />
           </header>
 
           <main className="px-5 py-5">

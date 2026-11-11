@@ -23,10 +23,6 @@ import { OfficeAbwesenheitenPage } from "./zeit/OfficeAbwesenheitenPage";
 import { OfficeArbeitszeitPage } from "./zeit/OfficeArbeitszeitPage";
 import { LeistungsverzeichnisDetailPage } from "../pages/feld/LeistungsverzeichnisDetailPage";
 import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage";
-import { KundenPage } from "../pages/feld/KundenPage";
-import { KundeProfilePage } from "../pages/feld/KundeProfilePage";
-import { MaterialDetailPage } from "../pages/feld/MaterialDetailPage";
-import { MaterialPage } from "../pages/feld/MaterialPage";
 import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
@@ -45,7 +41,9 @@ import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
 import { RouteGuard } from "../components/RouteGuard";
+import { OfficeKundenPage } from "./kunden/OfficeKundenPage";
 import { OfficeLayout } from "./OfficeLayout";
+import { OfficeMaterialPage } from "./material/OfficeMaterialPage";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
 import { OfficeBoardPage } from "./boards/OfficeBoardPage";
@@ -89,6 +87,10 @@ export function OfficeApp() {
           <Route path="/angebote" element={<OfficeRechnungenPage />} />
           <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
           <Route path="/postfach" element={<OfficePostfachPage />} />
+          <Route path="/kunden" element={<OfficeKundenPage />} />
+          <Route path="/kunden/:id" element={<OfficeKundenPage />} />
+          <Route path="/material" element={<OfficeMaterialPage />} />
+          <Route path="/material/:id" element={<OfficeMaterialPage />} />
           <Route path="/boards" element={<OfficeBoardsPage />} />
           <Route path="/boards/:id" element={<OfficeBoardPage />} />
           <Route path="/projekte" element={<OfficeProjektePage />} />
@@ -166,7 +168,6 @@ export function OfficeApp() {
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/benachrichtigungen" element={<NotificationsPage />} />
           <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/partner/:id" element={<PartnerProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
@@ -178,9 +179,7 @@ export function OfficeApp() {
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
-          <Route path="/kunden" element={<KundenPage />} />
           <Route path="/partner" element={<PartnerPage />} />
-          <Route path="/material" element={<MaterialPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
@@ -188,7 +187,6 @@ export function OfficeApp() {
           <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
           <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
-          <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />

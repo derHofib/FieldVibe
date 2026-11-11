@@ -62,7 +62,7 @@ export function MandantDetailPage() {
   const [name, setName] = useState("");
   const [branche, setBranche] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [gespeichertHinweis, setGespeichertHinweis] = useState(false);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
 
   // Formularfelder erst nach dem Laden mit den echten Werten fuellen -- beim
   // ersten Render ist der Query noch nicht zurueck.
@@ -79,8 +79,6 @@ export function MandantDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });
       setFormError(null);
-      setGespeichertHinweis(true);
-      setTimeout(() => setGespeichertHinweis(false), 2000);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
   });
@@ -100,6 +98,11 @@ export function MandantDetailPage() {
 
   function handleSaveStammdaten(e: FormEvent) {
     e.preventDefault();
+    if (!name.trim()) {
+      setNameFehler("Bitte einen Namen eingeben.");
+      return;
+    }
+    setNameFehler(null);
     stammdatenMutation.mutate();
   }
 
@@ -133,15 +136,23 @@ export function MandantDetailPage() {
 
       <section>
         <h2 className="mb-4 text-lg font-bold text-label">Stammdaten</h2>
-        <form onSubmit={handleSaveStammdaten} className="space-y-3">
+        <form onSubmit={handleSaveStammdaten} className="space-y-3" noValidate>
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+              Name <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
             <input id={`${uid}-0`}
-              required
               value={name}
               onChange={(e) => setName(e.target.value)}
+              aria-invalid={!!nameFehler}
+              aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
+            {nameFehler && (
+              <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+                {nameFehler}
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">
@@ -170,9 +181,6 @@ export function MandantDetailPage() {
             >
               Speichern
             </button>
-            {gespeichertHinweis && (
-              <span className="text-sm text-st-erledigt ">✓ Gespeichert</span>
-            )}
           </div>
           {formError && <p className="text-sm text-st-fehlt ">{formError}</p>}
         </form>
@@ -181,6 +189,7 @@ export function MandantDetailPage() {
       <section>
         <h2 className="mb-4 text-lg font-bold text-label">Status</h2>
         <select
+          aria-label="Status des Mandanten"
           value={mandant.status}
           disabled={statusMutation.isPending}
           onChange={(e) => handleStatusChange(e.target.value as MandantStatus)}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { accountTypenApi } from "../api/endpoints";
 import { Sheet } from "../components/apple/Sheet";
 import { ACCOUNT_TYP_VORLAGEN, vorlagenRechte, type AccountTypVorlage } from "../config/accountTypVorlagen";
-import { verstaendlicherFehler } from "../office/organigramm/darstellung";
+import { aktionLabel, verstaendlicherFehler } from "../office/organigramm/darstellung";
 import type { AccountTyp } from "../types";
 import type { RechteRegistry } from "../types/organigramm";
 
@@ -48,6 +48,7 @@ export function AccountTypVorlageSheet({
 }) {
   const queryClient = useQueryClient();
   const [auswahl, setAuswahl] = useState<AccountTypVorlage>(ACCOUNT_TYP_VORLAGEN[0]);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [name, setName] = useState(ACCOUNT_TYP_VORLAGEN[0].name);
   const [fortschritt, setFortschritt] = useState<[number, number] | null>(null);
   const [ergebnis, setErgebnis] = useState<Ergebnis | null>(null);
@@ -90,8 +91,15 @@ export function AccountTypVorlageSheet({
         ) : (
           <button
             type="button"
-            onClick={() => anlegen.mutate()}
-            disabled={!registry || !name.trim() || anlegen.isPending}
+            onClick={() => {
+              if (!name.trim()) {
+                setNameFehler("Bitte einen Namen eingeben.");
+                return;
+              }
+              setNameFehler(null);
+              anlegen.mutate();
+            }}
+            disabled={!registry || anlegen.isPending}
             className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
           >
             Anlegen
@@ -109,7 +117,7 @@ export function AccountTypVorlageSheet({
             <ul className="list-disc pl-5 text-label2">
               {ergebnis.fehlgeschlagen.slice(0, 10).map((f) => (
                 <li key={`${f.bereich}.${f.aktion}`}>
-                  {registry?.bereiche.find((b) => b.key === f.bereich)?.label ?? f.bereich} – {f.aktion}
+                  {registry?.bereiche.find((b) => b.key === f.bereich)?.label ?? f.bereich} – {aktionLabel(f.aktion)}
                 </li>
               ))}
               {ergebnis.fehlgeschlagen.length > 10 && <li>… und {ergebnis.fehlgeschlagen.length - 10} weitere</li>}
@@ -146,9 +154,21 @@ export function AccountTypVorlageSheet({
             </fieldset>
             <div>
               <label htmlFor="vorlage-name" className="mb-1 block text-sm font-medium text-label">
-                Name des Account-Typs
+                Name des Account-Typs <span aria-hidden="true" className="text-st-fehlt">*</span>
               </label>
-              <input id="vorlage-name" value={name} onChange={(e) => setName(e.target.value)} className="field-ap" />
+              <input
+                id="vorlage-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-invalid={!!nameFehler}
+                aria-describedby={nameFehler ? "vorlage-name-fehler" : undefined}
+                className="field-ap"
+              />
+              {nameFehler && (
+                <p id="vorlage-name-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                  {nameFehler}
+                </p>
+              )}
               <p className="mt-1 text-xs text-label2">{registry ? `${anzahlRechte} Rechte werden gesetzt.` : "Rechte-Registry lädt…"}</p>
             </div>
             {anlegen.isPending && fortschritt && (

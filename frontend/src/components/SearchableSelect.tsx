@@ -63,6 +63,8 @@ export function SearchableSelect({
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
+            // Nur die Auswahl schließen, nicht ein umgebendes Panel
+            e.stopPropagation();
             setOpen(false);
             setQuery("");
             e.currentTarget.blur();

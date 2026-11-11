@@ -13,6 +13,8 @@ import {
   pruefzyklenApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
@@ -352,6 +354,7 @@ export function AnlageProfilePage() {
 
   const [showForm, setShowForm] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
+  const [bezeichnungFehler, setBezeichnungFehler] = useState<string | null>(null);
   const [intervallWert, setIntervallWert] = useState("12");
   const [intervallEinheit, setIntervallEinheit] = useState<PruefzyklusEinheit>("monat");
   const [inventurIntervallTage, setInventurIntervallTage] = useState("90");
@@ -562,60 +565,64 @@ export function AnlageProfilePage() {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Prüfzyklen</h2>
           {kannVerwalten && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint "
-            >
-              {showForm ? "Abbrechen" : "+ Neuer Zyklus"}
+            <button onClick={() => setShowForm(true)} className={NEU_BUTTON_KLASSE}>
+              + Neuer Prüfzyklus
             </button>
           )}
         </div>
 
-        {showForm && (
-          <div className="mb-2 space-y-2 card-ap p-3">
-            <input
-              value={bezeichnung}
-              onChange={(e) => setBezeichnung(e.target.value)}
-              placeholder="z.B. E-Check ortsveränderliche Geräte"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-            />
-            <div className="flex items-center gap-2">
-              <label htmlFor={`${uid}-0`} className="text-xs text-label2">Intervall</label>
-              <input id={`${uid}-0`}
-                type="number"
-                min={1}
-                value={intervallWert}
-                onChange={(e) => setIntervallWert(e.target.value)}
-                className="w-16 border border-sep bg-transparent px-2 py-1 text-sm text-label"
-              />
-              <select
-                value={intervallEinheit}
-                onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)}
-                className="border border-sep bg-transparent px-2 py-1 text-sm text-label"
-              >
-                {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <button
-                disabled={!bezeichnung || createMutation.isPending}
-                onClick={() =>
-                  createMutation.mutate({
-                    anlage_id: id!,
-                    bezeichnung,
-                    intervall_wert: Number(intervallWert),
-                    intervall_einheit: intervallEinheit,
-                  })
-                }
-                className="btn-touch ml-auto rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                Anlegen
-              </button>
+        <AnlegenPanel offen={showForm} titel="Neuer Prüfzyklus" onClose={() => setShowForm(false)}>
+          <form
+            noValidate
+            className="space-y-3 p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!bezeichnung.trim()) {
+                setBezeichnungFehler("Bitte eine Bezeichnung eingeben.");
+                return;
+              }
+              setBezeichnungFehler(null);
+              createMutation.mutate({
+                anlage_id: id!,
+                bezeichnung,
+                intervall_wert: Number(intervallWert),
+                intervall_einheit: intervallEinheit,
+              });
+            }}
+          >
+            <Feld label="Bezeichnung" pflicht fehler={bezeichnungFehler}>
+              {(p) => (
+                <input
+                  {...p}
+                  autoFocus
+                  value={bezeichnung}
+                  onChange={(e) => setBezeichnung(e.target.value)}
+                  placeholder="z.B. E-Check ortsveränderliche Geräte"
+                  className={FELD_KLASSE}
+                />
+              )}
+            </Feld>
+            <div className="grid grid-cols-2 gap-3">
+              <Feld label="Intervall">
+                {(p) => <input {...p} type="number" min={1} value={intervallWert} onChange={(e) => setIntervallWert(e.target.value)} className={FELD_KLASSE} />}
+              </Feld>
+              <Feld label="Einheit">
+                {(p) => (
+                  <select {...p} value={intervallEinheit} onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)} className={FELD_KLASSE}>
+                    {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Feld>
             </div>
-          </div>
-        )}
+            <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+              Anlegen
+            </button>
+          </form>
+        </AnlegenPanel>
 
         {(pruefzyklen ?? []).length === 0 ? (
           <p className="text-sm text-label2">Keine Prüfzyklen erfasst.</p>

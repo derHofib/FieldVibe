@@ -10,7 +10,7 @@ Fehlermeldungen. Bezeichner im Code und URLs bleiben unverändert
 | Auftrag / Aufträge | Nur die separate Entität Auftrag (Office `/auftraege`) | nicht für Vorgänge |
 | Dauerauftrag / Dauer-Aufträge | Wiederkehrender Auftrag, der Vorgänge erzeugt | bleibt, ist ein eigener Begriff |
 | Arbeitszeit | Erfasste Zeiten (Seite `/statistik`, Menüpunkt, CSV-Export) | "Zeiterfassung" in sichtbaren Texten |
-| Kunden & Material | Bereich `/geschaeft` (Kunden, Angebote, Rechnungen, Material, Bestellwesen) | "Geschäft" (zu vage, BACKLOG 7) |
+| Kunden, Material, Rechnungen | Eigene Seiten (`GeschaeftPage` entfällt, BACKLOG 7 damit erledigt) | "Geschäft" |
 | Anlage | Betriebsmittel beim Kunden | |
 | Standort | Site eines Kunden | |
 | Mandant | Tenant (Betrieb, der FieldVibe nutzt) | |
