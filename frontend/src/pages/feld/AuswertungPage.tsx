@@ -255,7 +255,7 @@ export function AuswertungPage() {
       <div className="card-ap p-4">
         <h2 className="mb-1 text-sm font-semibold text-label2">DATEV-Export</h2>
         <p className="mb-3 text-xs text-label2">
-          Buchungsstapel (CSV, Windows-1252) mit den DATEV-Stammdaten und Konten aus den Einstellungen -- vor dem
+          Buchungsstapel (CSV, Windows-1252) mit den DATEV-Stammdaten und Konten aus den Einstellungen – vor dem
           ersten echten Import bitte mit dem Steuerberater abstimmen.
         </p>
         <button

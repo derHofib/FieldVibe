@@ -81,7 +81,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
 
   return (
     <div className="space-y-1.5">
-      {terme.length === 0 && <p className="text-xs text-label2">Kein Term -- Formel hinzufügen.</p>}
+      {terme.length === 0 && <p className="text-xs text-label2">Kein Term – Formel hinzufügen.</p>}
       {terme.map((term, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           {idx > 0 && (

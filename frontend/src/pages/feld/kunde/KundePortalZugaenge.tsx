@@ -81,7 +81,7 @@ export function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
         Portal-Link für {kunde.name}
       </h2>
       <p className="mb-2 text-xs text-label2">
-        Ein Link für den ganzen Kunden -- jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
+        Ein Link für den ganzen Kunden – jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
         sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
       </p>
       <div className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5">

@@ -84,7 +84,7 @@ export function PapierkorbPage() {
       setFehler(
         err instanceof ApiError
           ? err.message
-          : "Endgültiges Löschen fehlgeschlagen -- vermutlich verweisen noch andere Daten darauf.",
+          : "Endgültiges Löschen fehlgeschlagen – vermutlich verweisen noch andere Daten darauf.",
       ),
   });
 

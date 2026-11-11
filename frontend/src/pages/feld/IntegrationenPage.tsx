@@ -386,7 +386,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
         Wiedervorlage-Standardfrist
       </h2>
       <p className="mb-2 text-xs text-label2">
-        Vorschlag (in Tagen), wenn ein Vorgang auf "Wartet auf Kunde" gesetzt wird -- pro Vorgang
+        Vorschlag (in Tagen), wenn ein Vorgang auf "Wartet auf Kunde" gesetzt wird – pro Vorgang
         beim Setzen weiterhin änderbar.
       </p>
       <div className="flex items-center gap-2">

@@ -18,7 +18,7 @@ export function DauerauftraegePage() {
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-label">Dauer-Aufträge</h1>
       <p className="text-sm text-label2">
-        Wiederkehrende Aufträge im Überblick -- die daraus erzeugten Vorgänge erscheinen zusätzlich
+        Wiederkehrende Aufträge im Überblick – die daraus erzeugten Vorgänge erscheinen zusätzlich
         ganz normal im Feed.
       </p>
 

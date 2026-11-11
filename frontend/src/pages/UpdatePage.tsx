@@ -23,7 +23,7 @@ export function UpdatePage() {
       <p className="text-sm text-label">
         Diese Ansicht zeigt nur an, ob eine neuere Version verfügbar ist. Ein
         Update wird bewusst nicht automatisch aus der Web-App heraus
-        ausgeführt -- die Befehle unten müssen manuell auf dem Server
+        ausgeführt – die Befehle unten müssen manuell auf dem Server
         ausgeführt werden.
       </p>
 

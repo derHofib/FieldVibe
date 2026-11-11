@@ -61,7 +61,7 @@ export function PartnerAbschnitt({
 
           {partnerWarnung && (
             <p className="mb-2 rounded-md bg-st-arbeit-bg px-3 py-2 text-xs text-st-arbeit">
-              Für diesen Partner liegt keine gültige Freistellungsbescheinigung vor -- ohne sie greift bei
+              Für diesen Partner liegt keine gültige Freistellungsbescheinigung vor – ohne sie greift bei
               Zahlungen für Bauleistungen grundsätzlich die 15%-Bauabzugsteuer nach § 48 EStG.
             </p>
           )}

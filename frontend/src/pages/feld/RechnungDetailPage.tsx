@@ -890,7 +890,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {rechnung.positionen.length === 0 ? (
           <p className="text-sm text-label2">
-            Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
+            Keine eigenen Positionen – Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
           <div className="space-y-1.5">

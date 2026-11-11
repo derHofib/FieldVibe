@@ -259,7 +259,7 @@ function LvPositionFelder({
 
       {hatUnterpunkte ? (
         <p className="border border-sepstrong bg-fill/40 p-3 text-sm text-label2">
-          Diese Position hat Unterpositionen -- ihr Preis ergibt sich automatisch aus deren Summe (siehe
+          Diese Position hat Unterpositionen – ihr Preis ergibt sich automatisch aus deren Summe (siehe
           Summen-Rechnung unten). Um die Kalkulation zu ändern, bitte die Unterpositionen bearbeiten.
         </p>
       ) : (

@@ -298,7 +298,7 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             <option value="baustelle">Baustelle</option>
           </select>
           <p className="text-xs text-label2">
-            Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material -- keine Kunde-
+            Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material – keine Kunde-
             Zuordnung nötig.
           </p>
           <button

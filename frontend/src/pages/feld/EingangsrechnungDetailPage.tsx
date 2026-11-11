@@ -107,7 +107,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
       <div className="flex items-start gap-1.5 rounded-lg bg-st-arbeit-bg px-4 py-3 text-sm text-st-arbeit ">
         <Inbox size={15} strokeWidth={2} className="mt-0.5 shrink-0" />
         Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
-        {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
+        {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} – bitte Angaben gegen den
         Beleg prüfen und bestätigen.
       </div>
       <ImportHinweise hinweis={eingangsrechnung.import_hinweis} />
@@ -506,7 +506,7 @@ export function EingangsrechnungDetailPage() {
 
         {eingangsrechnung.positionen.length === 0 ? (
           <p className="text-sm text-label2">
-            Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
+            Keine eigenen Positionen – Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
           <div className="space-y-1.5">

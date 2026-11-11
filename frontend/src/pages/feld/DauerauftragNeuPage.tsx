@@ -133,7 +133,7 @@ export function DauerauftragNeuPage() {
             <p className="mb-1 text-xs text-label2">
               Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
               ausgewählt: ein Bündel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
-              anlegt -- statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
+              anlegt – statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
             </p>
             {!anlagenListe || anlagenListe.length === 0 ? (
               <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
@@ -251,9 +251,9 @@ export function DauerauftragNeuPage() {
             className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="rollierend">
-              Rollierend -- ab dem tatsächlichen Abschlussdatum (empfohlen)
+              Rollierend – ab dem tatsächlichen Abschlussdatum (empfohlen)
             </option>
-            <option value="fest">Fest -- ab dem ursprünglich geplanten Termin</option>
+            <option value="fest">Fest – ab dem ursprünglich geplanten Termin</option>
           </select>
           <p className="mt-1 text-xs text-label2">
             {modus === "rollierend"
@@ -292,7 +292,7 @@ export function DauerauftragNeuPage() {
         </div>
         <p className="-mt-2 text-xs text-label2">
           Wird außerhalb dieser Toleranz abgeschlossen, entsteht dazu nur ein Hinweis im
-          Vorgangs-Chat -- der Abschluss selbst wird nie blockiert.
+          Vorgangs-Chat – der Abschluss selbst wird nie blockiert.
         </p>
 
         {error && <p className="text-sm text-st-fehlt ">{error}</p>}

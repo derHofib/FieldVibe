@@ -204,7 +204,7 @@ export function BestellungDetailPage() {
       {wareneingangOffen && (
         <div className="card-ap p-4">
           <h2 className="mb-1 text-sm font-semibold text-label2">
-            Wareneingang -- Preise prüfen
+            Wareneingang – Preise prüfen
           </h2>
           <p className="mb-3 text-xs text-label2">
             Der bisherige Preis war nur ein Richtwert zum Bestellzeitpunkt. Bei Abweichung hier
@@ -284,7 +284,7 @@ export function BestellungDetailPage() {
       )}
       {bestellung.status === "eingegangen" && (
         <p className="text-center text-sm text-label2">
-          Wareneingang gebucht -- Bestand wurde entsprechend erhöht.
+          Wareneingang gebucht – Bestand wurde entsprechend erhöht.
         </p>
       )}
     </div>
