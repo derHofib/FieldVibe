@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { datumZuIso, heuteIso } from "../../utils/format";
-import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, MoreHorizontal, Package, Paperclip, PenLine, Star, Trash2, UserCheck, UserPlus } from "lucide-react";
+import { heuteIso } from "../../utils/format";
+import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, MoreHorizontal, Package, Paperclip, PenLine, Trash2, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -31,7 +31,6 @@ import {
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
 import { FormularAbschnitt } from "../../components/FormularAbschnitt";
-import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { Sheet } from "../../components/apple/Sheet";
@@ -53,7 +52,6 @@ import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
 import { openPdfBlob } from "../../utils/pdf";
-import type { OutboxItem } from "../../offline/db";
 import type {
   Adresse,
   EmailLog,
@@ -61,374 +59,45 @@ import type {
   MangelSchweregrad,
   MangelStatus,
   MaterialBedarfZweck,
-  PartnerFreigabeStatus,
-  TerminStatus,
   TerminWarnung,
-  VorgangAbrechnungsart,
   VorgangEvent,
   VorgangStatus,
   Zeiterfassung,
 } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import {
+  ANCHOR_ABSCHNITTE,
+  ABSCHNITT_ROUTE,
+  NEU_MATERIAL,
+  VORGANG_STATUS_GESCHLOSSEN,
+  VORGANG_STATUS_ZEIT_GESPERRT,
+  PRIORITAET_OPTIONEN,
+  LEISTUNGSTYPEN,
+  STATUS_LABEL,
+  TERMIN_STATUS_LABEL,
+  SCHWEREGRAD_OPTIONEN,
+  SCHWEREGRAD_BADGE,
+  SCHWEREGRAD_LABEL,
+  MANGEL_STATUS_LABEL,
+  FREIGABE_FARBE,
+  FREIGABE_LABEL,
+  LEISTUNGSTYP_LABEL,
+  ABRECHNUNGSART_LABEL,
+  WOCHENTAGE,
+  toLocalInputValue,
+  startOfWoche,
+  addTage,
+  tagesSchluessel,
+  leereAdresse,
+  adresseAlsZeile,
+} from "./vorgang/konstanten";
+import { EmailBubble, EventBubble, OutboxBubble } from "./vorgang/VerlaufBubbles";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
 // (und den PWA-Precache-Limit von 2 MiB sprengen).
 const MapboxMap = lazy(() => import("../../components/MapboxMap").then((m) => ({ default: m.MapboxMap })));
-
-const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
-  { value: "niedrig", label: "Niedrig" },
-  { value: "mittel", label: "Mittel" },
-  { value: "hoch", label: "Hoch" },
-  { value: "kritisch", label: "Kritisch" },
-];
-
-const SCHWEREGRAD_LABEL: Record<MangelSchweregrad, string> = Object.fromEntries(
-  SCHWEREGRAD_OPTIONEN.map((o) => [o.value, o.label]),
-) as Record<MangelSchweregrad, string>;
-
-// Hervorhebung bei kritisch/hoch statt neutralem border-sep -- sonst
-// sieht ein kritischer Mangel unter Zeitdruck optisch identisch zu einem
-// niedrigen aus (Status-Token st-arbeit/st-fehlt statt eigener Farben).
-const SCHWEREGRAD_BADGE: Record<MangelSchweregrad, string> = {
-  niedrig: "border-sep text-label",
-  mittel: "border-sep text-label",
-  hoch: "border-st-arbeit text-st-arbeit",
-  kritisch: "border-st-fehlt text-st-fehlt",
-};
-
-const MANGEL_STATUS_LABEL: Record<MangelStatus, string> = {
-  offen: "Offen",
-  in_angebot: "Im Angebot",
-  in_bearbeitung: "In Bearbeitung",
-  behoben: "Behoben",
-  abgelehnt: "Abgelehnt",
-};
-
-const TERMIN_STATUS_LABEL: Record<TerminStatus, string> = {
-  geplant: "Geplant",
-  bestaetigt: "Bestätigt",
-  abgeschlossen: "Abgeschlossen",
-  abgesagt: "Abgesagt",
-};
-
-const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
-  { value: "stoerung", label: "Störung" },
-  { value: "installation", label: "Installation" },
-  { value: "wartung", label: "Wartung" },
-  { value: "pruefung", label: "Prüfung" },
-  { value: "beratung", label: "Beratung" },
-  { value: "planung", label: "Planung" },
-];
-
-const STATUS_LABEL: Record<VorgangStatus, string> = {
-  neu: "Neu",
-  geplant: "Geplant",
-  in_arbeit: "In Arbeit",
-  wartet_kunde: "Wartet auf Kunde",
-  abgeschlossen: "Abgeschlossen",
-  abgerechnet: "Abgerechnet",
-  storniert: "Storniert",
-};
-
-// Fuer die Kurzuebersicht-Spalte im Desktop-Layout (layout="dicht") --
-// Leistungstyp/Abrechnungsart stehen sonst nirgends auf dieser Seite.
-const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
-  stoerung: "Störung",
-  installation: "Installation",
-  wartung: "Wartung",
-  pruefung: "Prüfung",
-  beratung: "Beratung",
-  planung: "Planung",
-};
-
-const ABRECHNUNGSART_LABEL: Record<VorgangAbrechnungsart, string> = {
-  pauschale: "Pauschale",
-  aufwand: "Nach Aufwand",
-  festpreis: "Festpreis",
-  wartungsvertrag: "Wartungsvertrag",
-  gewaehrleistung: "Gewährleistung",
-};
-
-// Spiegelt app/services/vorgang_completion_service.py:VORGANG_STATUS_GESCHLOSSEN
-// -- "Vorgang übernehmen" ergibt fuer bereits geschlossene Vorgaenge keinen
-// Sinn mehr (das Backend lehnt es dort ohnehin mit 409 ab).
-const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
-
-// Spiegelt app/api/routes/zeiterfassung.py:_VORGANG_STATUS_ZEIT_GESPERRT --
-// enger als VORGANG_STATUS_GESCHLOSSEN: Zeit nachtragen/bearbeiten bleibt
-// nach "abgeschlossen" bewusst moeglich, nur nach Abrechnung/Stornierung
-// nicht mehr (das Backend lehnt es sonst ohnehin mit 409 ab).
-const VORGANG_STATUS_ZEIT_GESPERRT: VorgangStatus[] = ["abgerechnet", "storniert"];
-
-const PRIORITAET_OPTIONEN = [1, 2, 3, 4, 5];
-
-const FREIGABE_LABEL: Record<PartnerFreigabeStatus, string> = {
-  vorgeschlagen: "Wartet auf Rückmeldung",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-};
-
-const FREIGABE_FARBE: Record<PartnerFreigabeStatus, string> = {
-  vorgeschlagen: "bg-st-arbeit-bg text-st-arbeit",
-  angenommen: "bg-st-erledigt-bg text-st-erledigt",
-  abgelehnt: "bg-st-fehlt-bg text-st-fehlt",
-};
-
-const EVENT_LABEL: Partial<Record<string, string>> = {
-  status_change: "Status geändert",
-  foto: "Foto hinzugefügt",
-  dokument: "Dokument hinzugefügt",
-  mangel: "Mangel erfasst",
-  angebot: "Angebot aktualisiert",
-  material: "Material erfasst",
-  zeit_start: "Zeit gestartet",
-  zeit_stop: "Zeit gestoppt",
-  termin: "Termin",
-  rechnung_status: "Rechnungsstatus aktualisiert",
-  unterschrift: "Unterschrift erfasst",
-  leistung: "Leistung erfasst",
-};
-
-const NEU_MATERIAL = "__neu__";
-
-const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
-  { ziel: "abschnitt-uebersicht", label: "Übersicht" },
-  { ziel: "abschnitt-zeit", label: "Zeit" },
-  { ziel: "abschnitt-termine", label: "Termine" },
-  { ziel: "abschnitt-maengel", label: "Mängel" },
-  { ziel: "abschnitt-material", label: "Positionen" },
-  { ziel: "abschnitt-verlauf", label: "Verlauf" },
-];
-
-// Abschnitte, die im "kompakt"-Layout als eigene Unterseite statt als Teil
-// der durchlaufenden Seite existieren (siehe arbeitszeitInhalt/
-// verlaufInhalt/positionenInhalt weiter unten) -- Wert ist das Route-Suffix
-// hinter /vorgaenge/:id/.
-const ABSCHNITT_ROUTE: Record<string, string> = {
-  "abschnitt-zeit": "zeit",
-  "abschnitt-verlauf": "verlauf",
-  "abschnitt-material": "positionen",
-};
-
-// Unauffaellige, transparente Pill zur Unterscheidung der Eintragsart im
-// gemeinsamen Verlauf (Kommentar/E-Mail laufen dort jetzt durcheinander) --
-// bewusst zurueckhaltend statt eines vollflaechigen Badges, siehe
-// Design-Vorschlag "Feed und Detail neu gedacht".
-function VerlaufTypTag({ children }: { children: string }) {
-  return (
-    <span className="border border-sep px-1.5 py-0.5 text-[10px] font-medium text-label2">
-      {children}
-    </span>
-  );
-}
-
-function EventBubble({
-  event,
-  onHighlight,
-}: {
-  event: VorgangEvent;
-  onHighlight: (eventId: number) => void;
-}) {
-  if (event.is_system || event.event_type === "status_change") {
-    const label =
-      event.event_type === "status_change"
-        ? `Status: ${(event.payload as { von?: string }).von ?? "?"} → ${(event.payload as { nach?: string }).nach ?? "?"}`
-        : event.body ?? EVENT_LABEL[event.event_type] ?? event.event_type;
-    return (
-      <div className="my-2 text-center text-xs text-label2">
-        {label} · {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-3 card-ap p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
-        <div className="flex items-center gap-1.5">
-          <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
-          {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {event.partner_sichtbar && event.author_user_id !== null && (
-            <span className="border border-tint px-2 py-0.5 text-tint">Partner sieht das</span>
-          )}
-          {event.kundensichtbar && (
-            <span className="border border-tint px-2 py-0.5 text-tint">
-              Kundensichtbar
-            </span>
-          )}
-        </div>
-      </div>
-      {event.event_type === "foto" && event.foto_url && (
-        <>
-          <a href={event.foto_url} target="_blank" rel="noreferrer">
-            <img
-              src={event.foto_thumbnail_url ?? event.foto_url}
-              alt="Foto"
-              className="mb-2 max-h-64 rounded-md object-cover"
-            />
-          </a>
-          <button
-            onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-st-arbeit"
-          >
-            <Star size={13} strokeWidth={2} /> Als Highlight markieren
-          </button>
-        </>
-      )}
-      {event.event_type === "unterschrift" && event.unterschrift_url && (
-        <div className="mb-2">
-          <img
-            src={event.unterschrift_url}
-            alt="Unterschrift"
-            className="max-h-32 border border-sep bg-white"
-          />
-          {typeof event.payload.unterzeichner_name === "string" && (
-            <p className="mt-1 text-xs text-label2">
-              Unterschrieben von: {event.payload.unterzeichner_name}
-            </p>
-          )}
-        </div>
-      )}
-      {event.event_type === "dokument" && event.dokument_url && (
-        <a
-          href={event.dokument_url}
-          target="_blank"
-          rel="noreferrer"
-          className="btn-touch mb-2 flex items-center gap-2 border border-sep px-3 py-2 text-sm text-label hover:bg-fill"
-        >
-          <Paperclip size={15} strokeWidth={2} />
-          {event.dokument_dateiname ?? "Dokument"}
-        </a>
-      )}
-      {event.body && (
-        <p className="whitespace-pre-wrap break-words text-sm text-label">
-          <MentionText text={event.body} />
-        </p>
-      )}
-    </div>
-  );
-}
-
-// E-Mails werden nicht mehr in einer separaten Box gefuehrt, sondern im
-// gemeinsamen Verlauf mit den Kommentaren gemischt (siehe Design-Vorschlag
-// "Feed und Detail neu gedacht") -- gleiche Bubble-Optik wie EventBubble,
-// nur mit Betreff/Empfaenger statt Freitext-Body.
-function EmailBubble({ email }: { email: EmailLog }) {
-  return (
-    <div className="mb-3 card-ap p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
-        <div className="flex items-center gap-1.5">
-          <span>{new Date(email.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
-          <VerlaufTypTag>E-Mail</VerlaufTypTag>
-        </div>
-        {email.status === "fehler" && (
-          <span className="border border-st-fehlt px-2 py-0.5 text-st-fehlt">
-            Fehler
-          </span>
-        )}
-      </div>
-      <div className="mb-1 flex items-start gap-1.5 text-sm text-label">
-        <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-label2" />
-        <div>
-          <span className="font-medium">{email.betreff || "(ohne Betreff)"}</span>
-          <span className="text-label2"> · an {email.empfaenger}</span>
-        </div>
-      </div>
-      {email.status === "fehler" && email.fehlermeldung && (
-        <p className="text-xs text-st-fehlt">{email.fehlermeldung}</p>
-      )}
-    </div>
-  );
-}
-
-function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clientUuid: string) => void }) {
-  return (
-    <div
-      className={`mb-3 rounded-lg border border-dashed p-3 ${
-        item.failed
-          ? "border-st-fehlt bg-st-fehlt-bg"
-          : "border-sepstrong"
-      }`}
-    >
-      <div className="mb-1 flex items-center justify-between gap-1 text-xs">
-        {item.failed ? (
-          <span className="flex items-center gap-1 text-st-fehlt">
-            <AlertTriangle size={13} strokeWidth={2} /> Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}
-          </span>
-        ) : (
-          <span className="flex items-center gap-1 text-label2">
-            <Clock size={13} strokeWidth={2} />
-            <span>Nicht synchronisiert</span>
-          </span>
-        )}
-        {item.failed && (
-          <button
-            onClick={() => onDiscard(item.client_uuid)}
-            className="btn-touch text-st-fehlt underline"
-          >
-            Verwerfen
-          </button>
-        )}
-      </div>
-      {item.kind === "foto" ? (
-        <p className="flex items-center gap-1 text-sm text-label">
-          <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
-        </p>
-      ) : item.kind === "dokument" ? (
-        <p className="flex items-center gap-1 text-sm text-label">
-          <FileText size={14} strokeWidth={2} /> {item.dokumentName ?? "Dokument"} wartet auf Synchronisierung
-        </p>
-      ) : item.kind === "status" ? (
-        <p className="text-sm text-label">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
-      ) : (
-        <p className="whitespace-pre-wrap break-words text-sm text-label">{item.body}</p>
-      )}
-    </div>
-  );
-}
-
-function toLocalInputValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-// Fuer den Termine-Wochenkalender im Desktop-Layout (layout="dicht") --
-// gleiche Rechenlogik wie office/DispoBoardPage.tsx, hier aber lokal
-// kopiert statt importiert: dort ist es eine Seiten-lokale Hilfsfunktion,
-// kein geteiltes Modul.
-const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-
-function startOfWoche(d: Date): Date {
-  const date = new Date(d);
-  const tag = date.getDay(); // 0 = Sonntag
-  const diffZuMontag = tag === 0 ? -6 : 1 - tag;
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + diffZuMontag);
-  return date;
-}
-
-function addTage(d: Date, n: number): Date {
-  const date = new Date(d);
-  date.setDate(date.getDate() + n);
-  return date;
-}
-
-function tagesSchluessel(d: Date): string {
-  return datumZuIso(d);
-}
-
-function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
-  return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
-}
-
-function adresseAlsZeile(adresse: Adresse | null | undefined): string {
-  return [adresse?.strasse, [adresse?.plz, adresse?.ort].filter(Boolean).join(" ")]
-    .filter(Boolean)
-    .join(", ");
-}
 
 // id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
