@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { heuteIso } from "../../utils/format";
+import { heuteIso, statusMetaZeile } from "../../utils/format";
 import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -12,7 +12,7 @@ import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
-import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
+import { FilterVorlagenMenue, FilterVorlagenVerwaltung, useFilterVorlagen } from "../../components/FilterVorlagenLeiste";
 import { QrScanner } from "../../components/QrScanner";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
@@ -97,6 +97,8 @@ function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
+  // last_activity_at ist nur naeherungsweise der Zeitpunkt des Events (kein eigenes Feld im Feed).
+  const statusMeta = statusMetaZeile(card.letztes_event_vorschau, card.last_activity_at);
 
   const invalidateFeed = () => queryClient.invalidateQueries({ queryKey: ["feed"] });
   const zuweisenMutation = useMutation({
@@ -184,10 +186,15 @@ function FeedCardView({ card }: { card: FeedCard }) {
             </span>
           )
         )}
-        {card.letztes_event_vorschau && (
-          <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-sm text-label">
-            {card.letztes_event_vorschau}
-          </p>
+        {statusMeta ? (
+          <p className="text-xs text-label2">{statusMeta}</p>
+        ) : (
+          card.letztes_event_vorschau &&
+          card.letztes_event_vorschau !== "Status geändert" && (
+            <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-sm text-label">
+              {card.letztes_event_vorschau}
+            </p>
+          )
         )}
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -305,6 +312,7 @@ export function FeedPage() {
   }
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
+  const vorlagenState = useFilterVorlagen({ entitaet: "vorgaenge", filter, onApply: anwendenFilter });
 
   const wirksamerFilter = useMemo(
     () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS_FILTER }),
@@ -369,7 +377,16 @@ export function FeedPage() {
         ) : (
           <span />
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
+          {istModulAktiv(currentUser, "highlights") && (
+            <button
+              onClick={() => navigate("/highlights")}
+              aria-label="Highlights ansehen"
+              className="btn-touch flex items-center gap-1 rounded-[13px] bg-fill px-2.5 text-xs font-medium text-st-arbeit"
+            >
+              <Star size={14} strokeWidth={1.5} aria-hidden="true" /> Highlights
+            </button>
+          )}
           <button
             onClick={() => navigate("/suche")}
             aria-label="Suchen"
@@ -396,27 +413,6 @@ export function FeedPage() {
         </p>
       )}
 
-      {istModulAktiv(currentUser, "highlights") && (
-        <button
-          onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-[var(--radius-ap-input)] bg-fill py-2.5 text-sm font-medium text-st-arbeit"
-        >
-          <Star size={15} strokeWidth={1.5} aria-hidden="true" /> Highlights ansehen
-        </button>
-      )}
-
-      <SegmentedControl
-        ariaLabel="Vorgänge filtern"
-        groesse="mobil"
-        volleBreite
-        wert={nurMeine ? "meine" : "alle"}
-        optionen={[
-          { wert: "meine", label: "Meine Vorgänge" },
-          { wert: "alle", label: "Alle" },
-        ]}
-        onChange={(wert) => setField("nur_meine", wert === "meine" ? "true" : "")}
-      />
-
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
           {storyGroups.map((item) => (
@@ -431,7 +427,15 @@ export function FeedPage() {
           Formular explizit geoeffnet wird (siehe Design-Vorschlag
           "Filterleiste Varianten"). */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
+        {/* Einzeilig scrollbar statt Umbruch; die Maske blendet den rechten Rand weich aus. */}
+        <div
+          className="scrollbar-none flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-1 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-16px),transparent)]"
+        >
+          <FilterChip
+            label="Meine"
+            aktiv={nurMeine}
+            onClick={() => setField("nur_meine", nurMeine ? "" : "true")}
+          />
           <FilterChip
             label="Überfällig"
             aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
@@ -464,6 +468,7 @@ export function FeedPage() {
               </span>
             )}
           </button>
+          <FilterVorlagenMenue v={vorlagenState} />
           <SegmentedControl
             ariaLabel="Ansicht"
             groesse="mobil"
@@ -579,7 +584,7 @@ export function FeedPage() {
         </div>
       )}
 
-      <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
+      <FilterVorlagenVerwaltung v={vorlagenState} chipsZeigen={zeigeFilter} />
 
       {ansicht === "karte" ? (
         isLoading ? (
