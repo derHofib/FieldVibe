@@ -33,7 +33,7 @@ export function ZeitSummenBlock({ filter }: { filter: { auftrag_id: string } | {
           {zeilen.map(({ status, summe }) => (
             <div
               key={status}
-              className="flex items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-sm"
+              className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-sm"
             >
               <StatusPille status={buchungsstatusZuToken(status)} label={BUCHUNGSSTATUS_LABEL[status]} />
               <span className="text-label2">

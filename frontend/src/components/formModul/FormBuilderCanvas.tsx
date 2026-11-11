@@ -76,7 +76,7 @@ function PaletteItem({ dragId, label, icon: Icon }: { dragId: string; label: str
       {...attributes}
       type="button"
       style={{ touchAction: "none" }}
-      className={`flex flex-col items-center gap-1 border border-sep p-2 text-center text-[11px] font-medium text-label hover:bg-fill ${
+      className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] border-sep p-2 text-center text-[11px] font-medium text-label hover:bg-fill ${
         isDragging ? "opacity-30" : ""
       }`}
     >
@@ -112,7 +112,7 @@ function FeldTypPalette({ ohneStruktur = false }: { ohneStruktur?: boolean }) {
       {kategorien.map((kat) => {
         const offen = offeneKategorien.has(kat.name);
         return (
-          <div key={kat.name} className="border border-sepstrong">
+          <div key={kat.name} className="border rounded-[var(--radius-ap-md)] border-sepstrong">
             <button
               onClick={() => toggeln(kat.name)}
               className="flex w-full items-center gap-2 p-2 text-left text-[11px] font-bold tracking-wide text-label2 uppercase hover:bg-fill"
@@ -146,7 +146,7 @@ function FeldKarte({ field, ausgewaehlt, onSelect }: { field: FormField; ausgewa
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
       onClick={onSelect}
-      className={`relative flex cursor-pointer items-start gap-1.5 border p-1 ${
+      className={`relative flex cursor-pointer items-start gap-1.5 border rounded-[var(--radius-ap-md)] p-1 ${
         ausgewaehlt ? "border-tint bg-tintbg" : "border-transparent hover:border-sep"
       } ${isDragging ? "opacity-30" : ""}`}
     >
@@ -205,7 +205,7 @@ function GruppenKarte({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
-      className={`border ${ausgewaehlt ? "border-tint" : "border-sepstrong"} ${isDragging ? "opacity-30" : ""}`}
+      className={`border rounded-[var(--radius-ap-md)] ${ausgewaehlt ? "border-tint" : "border-sepstrong"} ${isDragging ? "opacity-30" : ""}`}
     >
       <div onClick={onSelect} className="flex cursor-pointer items-center gap-2 border-b border-sep p-2">
         <button
@@ -230,7 +230,7 @@ function GruppenKarte({
               e.stopPropagation();
               onUnterformularOeffnen();
             }}
-            className="flex w-full items-center justify-center gap-1.5 border border-sep py-2.5 text-sm font-medium text-label hover:bg-fill"
+            className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-2.5 text-sm font-medium text-label hover:bg-fill"
           >
             <PenLine size={15} strokeWidth={1.5} />
             Unterformular bearbeiten
@@ -384,7 +384,7 @@ function InspectorFeld({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-label">Feldschlüssel</label>
-        <p className="border border-sep bg-fill px-2 py-1.5 text-sm text-label2">{feld.key}</p>
+        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sm text-label2">{feld.key}</p>
       </div>
       <label className="flex items-center justify-between border-b border-sep py-2 text-sm text-label">
         Pflichtfeld
@@ -409,7 +409,7 @@ function InspectorFeld({
                   <button
                     key={s.id}
                     onClick={() => symbolUmschalten(s.id)}
-                    className={`flex flex-col items-center gap-1 border p-1.5 text-center text-[10px] ${
+                    className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] p-1.5 text-center text-[10px] ${
                       ausgewaehlt ? "border-tint bg-tintbg text-tint" : "border-sep text-label hover:bg-fill"
                     }`}
                   >
@@ -426,7 +426,7 @@ function InspectorFeld({
         <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Regeln &amp; Formel</p>
         <button
           onClick={onRegelnOeffnen}
-          className="flex w-full items-center justify-between border border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
+          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
         >
           <span className="flex items-center gap-1.5">
             <SlidersHorizontal size={13} strokeWidth={1.5} /> Regeln bearbeiten
@@ -436,7 +436,7 @@ function InspectorFeld({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
+        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Feld löschen
       </button>
@@ -488,7 +488,7 @@ function InspectorGruppe({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-label">Schlüssel</label>
-        <p className="border border-sep bg-fill px-2 py-1.5 text-sm text-label2">{gruppe.key}</p>
+        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sm text-label2">{gruppe.key}</p>
       </div>
       {gruppe.repeatable && (
         <div>
@@ -519,7 +519,7 @@ function InspectorGruppe({
         <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Regeln</p>
         <button
           onClick={onRegelnOeffnen}
-          className="flex w-full items-center justify-between border border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
+          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
         >
           <span className="flex items-center gap-1.5">
             <SlidersHorizontal size={13} strokeWidth={1.5} /> Regeln bearbeiten
@@ -529,7 +529,7 @@ function InspectorGruppe({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
+        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Gruppe löschen
       </button>
@@ -561,7 +561,7 @@ function UnterformularFeldZeile({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
-      className={`flex items-start gap-1.5 border border-transparent p-1 hover:border-sep ${isDragging ? "opacity-30" : ""}`}
+      className={`flex items-start gap-1.5 border rounded-[var(--radius-ap-md)] border-transparent p-1 hover:border-sep ${isDragging ? "opacity-30" : ""}`}
     >
       <button
         {...attributes}
@@ -707,14 +707,14 @@ function UnterformularPanel({
         </div>
         <DragOverlay>
           {aktivId?.startsWith("palette:") && (
-            <div className="border border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
               {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
             </div>
           )}
           {aktivId?.startsWith("field:") &&
             (() => {
               const f = felder.find((x) => x.id === aktivId.slice("field:".length));
-              return f ? <div className="border border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
+              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
             })()}
         </DragOverlay>
       </DndContext>
@@ -1090,25 +1090,25 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
         </div>
         <DragOverlay>
           {aktivId?.startsWith("struktur:") && (
-            <div className="border border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
               {aktivId === "struktur:unterformular" ? "Unterformular" : "Abschnitt"}
             </div>
           )}
           {aktivId?.startsWith("palette:") && (
-            <div className="border border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
               {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
             </div>
           )}
           {aktivId?.startsWith("field:") &&
             (() => {
               const f = schema.fields.find((x) => x.id === aktivId.slice("field:".length));
-              return f ? <div className="border border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
+              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
             })()}
           {aktivId?.startsWith("group:") &&
             (() => {
               const g = schema.groups.find((x) => x.id === aktivId.slice("group:".length));
               return g ? (
-                <div className="border border-tint bg-card px-3 py-2 text-sm font-semibold text-label shadow-lg">{g.label.de ?? g.key}</div>
+                <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm font-semibold text-label shadow-lg">{g.label.de ?? g.key}</div>
               ) : null;
             })()}
         </DragOverlay>

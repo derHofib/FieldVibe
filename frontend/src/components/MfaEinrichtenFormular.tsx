@@ -75,7 +75,7 @@ export function MfaEinrichtenFormular({ onFertig }: { onFertig?: () => void }) {
       </p>
       <p className="text-sm text-label2">2. Den 6-stelligen Code aus der App eingeben.</p>
       {fehler && (
-        <div role="alert" className="border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div role="alert" className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
           {fehler}
         </div>
       )}

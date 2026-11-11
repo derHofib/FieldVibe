@@ -33,7 +33,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
   }
 
   return (
-    <div className="space-y-2 border border-sepstrong p-2">
+    <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <canvas
         ref={(node) => {
           canvasRef.current = node;

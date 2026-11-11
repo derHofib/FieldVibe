@@ -48,7 +48,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
           {ausfuellungen!.map((fs) => (
             <div
               key={fs.id}
-              className="flex items-center justify-between gap-2 border border-sepstrong p-2"
+              className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2"
             >
               <button
                 onClick={() => navigate(`/form-submissions/${fs.id}`)}

@@ -131,7 +131,7 @@ export function CaptureRenderer({
         if (!eintrag.gruppe.repeatable) {
           const zeile = zeilen[0] ?? {};
           return (
-            <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
+            <div key={eintrag.gruppe.id} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
               <h3 className="text-sm font-semibold text-label">{label}</h3>
               {eintrag.felder.map((feld) => {
                 const path = `${eintrag.gruppe.key}[0].${feld.key}`;
@@ -153,10 +153,10 @@ export function CaptureRenderer({
         }
 
         return (
-          <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
+          <div key={eintrag.gruppe.id} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
             <h3 className="text-sm font-semibold text-label">{label}</h3>
             {zeilen.map((zeile, index) => (
-              <div key={index} className="space-y-2 border border-sep bg-fill p-2">
+              <div key={index} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sep bg-fill p-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-label2">Eintrag {index + 1}</span>
                   {!readOnly && (

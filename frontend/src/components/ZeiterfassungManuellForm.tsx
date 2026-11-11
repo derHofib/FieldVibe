@@ -112,7 +112,7 @@ export function ZeiterfassungManuellForm({
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
             required
-            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
@@ -124,7 +124,7 @@ export function ZeiterfassungManuellForm({
             value={startZeit}
             onChange={(e) => setStartZeit(e.target.value)}
             required
-            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
@@ -136,7 +136,7 @@ export function ZeiterfassungManuellForm({
             value={endeZeit}
             onChange={(e) => setEndeZeit(e.target.value)}
             required
-            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
       </div>
@@ -208,7 +208,7 @@ export function ZeiterfassungManuellForm({
           value={taetigkeit}
           onChange={(e) => setTaetigkeit(e.target.value)}
           placeholder="z.B. Materialbestellung, Ersatzteile abholen…"
-          className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
 

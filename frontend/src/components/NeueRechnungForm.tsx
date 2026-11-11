@@ -82,7 +82,7 @@ export function NeueRechnungForm({
               min="0"
               value={betragNetto}
               onChange={(e) => setBetragNetto(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -93,7 +93,7 @@ export function NeueRechnungForm({
               type="date"
               value={leistungsdatum}
               onChange={(e) => setLeistungsdatum(e.target.value)}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <p className="mt-1 text-xs text-label2">
               Nur nötig, wenn abweichend vom Rechnungsdatum.

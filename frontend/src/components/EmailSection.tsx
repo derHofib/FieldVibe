@@ -84,7 +84,7 @@ export function EmailSection({
       </div>
 
       {showForm && (
-        <div className="mb-3 space-y-2 border border-sepstrong p-2">
+        <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           {hinweis && <p className="text-xs text-label2">{hinweis}</p>}
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
@@ -94,7 +94,7 @@ export function EmailSection({
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -104,7 +104,7 @@ export function EmailSection({
             <input id={`${uid}-1`}
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -115,7 +115,7 @@ export function EmailSection({
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-sm text-label"
             />
           </div>
           {error && <FehlerMeldung meldung={error} />}

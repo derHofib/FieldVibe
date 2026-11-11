@@ -139,13 +139,13 @@ function SpeichernForm({ v: h }: { v: FilterVorlagenState }) {
   return (
     <>
       {zeigeSpeichern && (
-        <div className="flex flex-wrap items-center gap-2 border border-sepstrong p-2">
+        <div className="flex flex-wrap items-center gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name der Vorlage"
-            className="btn-touch min-w-0 flex-1 border border-sep bg-transparent px-3 py-1.5 text-sm text-label"
+            className="btn-touch min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-1.5 text-sm text-label"
           />
           <label className="flex shrink-0 items-center gap-1 text-xs text-label">
             <input type="checkbox" checked={alsStandard} onChange={(e) => setAlsStandard(e.target.checked)} />
