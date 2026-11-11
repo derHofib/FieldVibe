@@ -23,6 +23,7 @@ import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -608,13 +609,13 @@ export function AnlageProfilePage() {
               </Feld>
               <Feld label="Einheit">
                 {(p) => (
-                  <select {...p} value={intervallEinheit} onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)} className={FELD_KLASSE}>
+                  <Select {...p} value={intervallEinheit} onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)}>
                     {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
               </Feld>
             </div>

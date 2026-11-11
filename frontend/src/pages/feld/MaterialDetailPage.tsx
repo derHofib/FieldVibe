@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 /** `id`/`eingebettet` nur für das Detailpanel der Office-Materialliste
  * (office/material): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
@@ -212,10 +213,9 @@ export function MaterialDetailPage({
           </div>
           <div className="col-span-2">
             <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">Lieferant</label>
-            <select id={`${uid}-5`}
+            <Select id={`${uid}-5`}
               value={form.lieferant_id}
               onChange={(e) => setForm({ ...form, lieferant_id: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Kein Lieferant hinterlegt</option>
               {(lieferanten ?? []).map((l) => (
@@ -223,7 +223,7 @@ export function MaterialDetailPage({
                   {l.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="col-span-2">
             <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-label2">

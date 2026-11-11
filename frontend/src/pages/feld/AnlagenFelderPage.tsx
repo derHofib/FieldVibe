@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { anlagenApi, anlagenFeldDefinitionenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { AnlagenFeldTyp } from "../../types";
+import { Select } from "../../components/apple/Select";
 
 const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
   text: "Text",
@@ -119,17 +120,17 @@ export function AnlagenFelderPage() {
             placeholder="Feldname, z.B. Kennzeichen"
             className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
           />
-          <select
+          <Select
+            className="w-auto"
             value={feldTyp}
             onChange={(e) => setFeldTyp(e.target.value as AnlagenFeldTyp)}
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
           >
             {Object.entries(FELD_TYP_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <button

@@ -13,6 +13,7 @@ import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../t
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const NACHWEIS_TYP_LABEL: Record<PartnerNachweisTyp, string> = {
   freistellungsbescheinigung: "Freistellungsbescheinigung (§48 EStG)",
@@ -246,17 +247,16 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
-      <select
+      <Select
         value={typ}
         onChange={(e) => setTyp(e.target.value as PartnerNachweisTyp)}
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       >
         {Object.entries(NACHWEIS_TYP_LABEL).map(([wert, label]) => (
           <option key={wert} value={wert}>
             {label}
           </option>
         ))}
-      </select>
+      </Select>
       <div>
         <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Gültig bis (optional)</label>
         <input id={`${uid}-0`}

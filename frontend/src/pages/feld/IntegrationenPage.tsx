@@ -14,6 +14,7 @@ import { istHttpUrl } from "../../utils/rechtliches";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -451,17 +452,18 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
         Rechnungsvorschläge "Fahrzeit"/"Fahrtkosten" am Vorgang erscheinen.
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <select
+        <Select
+          className="w-auto"
           value={modus}
           onChange={(e) => setModus(e.target.value as MandantEinstellungen["fahrzeit_abrechnung"])}
-          className="btn-touch border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          groesse="kompakt"
         >
           {Object.entries(FAHRZEIT_ABRECHNUNG_LABEL).map(([wert, label]) => (
             <option key={wert} value={wert}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
         {(modus === "zeit" || modus === "zeit_und_km") && (
           <label className="flex items-center gap-1.5 text-sm text-label2">
             <input
@@ -818,12 +820,13 @@ export function IntegrationenPage() {
             geprüfte/überfällige Vorgänge und Rechnungen bearbeitet.
           </p>
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              className="w-auto"
               value={einstellungen.scheduler_stunde_utc ?? ""}
               onChange={(e) =>
                 schedulerMutation.mutate(e.target.value === "" ? null : Number(e.target.value))
               }
-              className="btn-touch border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              groesse="kompakt"
             >
               <option value="">Standard ({einstellungen.effektive_scheduler_stunde_utc.toString().padStart(2, "0")}:00 UTC)</option>
               {Array.from({ length: 24 }, (_, h) => (
@@ -831,7 +834,7 @@ export function IntegrationenPage() {
                   {h.toString().padStart(2, "0")}:00 UTC
                 </option>
               ))}
-            </select>
+            </Select>
             {schedulerMutation.isPending && (
               <span className="text-xs text-label2">Speichert…</span>
             )}

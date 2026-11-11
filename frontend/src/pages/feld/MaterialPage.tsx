@@ -16,6 +16,7 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { Select } from "../../components/apple/Select";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -175,10 +176,11 @@ export function MaterialZeile({
       {zeigeUmlagern && (
         <div className="mt-2 space-y-2 border border-sepstrong p-2">
           <div className="grid grid-cols-2 gap-2">
-            <select
+            <Select
+              className="w-auto"
               value={umlagernVon}
               onChange={(e) => setUmlagernVon(e.target.value)}
-              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              groesse="kompakt"
             >
               <option value="">Von…</option>
               {lagerorte.map((l) => (
@@ -186,11 +188,12 @@ export function MaterialZeile({
                   {l.bezeichnung}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
+              className="w-auto"
               value={umlagernNach}
               onChange={(e) => setUmlagernNach(e.target.value)}
-              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              groesse="kompakt"
             >
               <option value="">Nach…</option>
               {lagerorte.map((l) => (
@@ -198,7 +201,7 @@ export function MaterialZeile({
                   {l.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex gap-2">
             <input
@@ -288,15 +291,14 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             placeholder="Bezeichnung (z.B. Transporter VW)"
             className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
-          <select
+          <Select
             value={objekttyp}
             onChange={(e) => setObjekttyp(e.target.value as AnlagenObjekttyp)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             <option value="fahrzeug">Fahrzeug</option>
             <option value="lager">Lager</option>
             <option value="baustelle">Baustelle</option>
-          </select>
+          </Select>
           <p className="text-xs text-label2">
             Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material – keine Kunde-
             Zuordnung nötig.
@@ -561,10 +563,9 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
               <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">
                 Standard-Lieferant (optional)
               </label>
-              <select id={`${uid}-4`}
+              <Select id={`${uid}-4`}
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Kein Lieferant hinterlegt</option>
                 {(lieferanten ?? []).map((l) => (
@@ -572,16 +573,15 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                     {l.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="col-span-2">
               <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">
                 Lagerort für Anfangsbestand
               </label>
-              <select id={`${uid}-5`}
+              <Select id={`${uid}-5`}
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Zentrallager (Standard)</option>
                 {lagerorte
@@ -591,7 +591,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.bezeichnung}
                     </option>
                   ))}
-              </select>
+              </Select>
             </div>
           </div>
           <button
@@ -617,10 +617,11 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <div className="grid grid-cols-2 gap-2">
-                <select
+                <Select
+                  className="w-auto"
                   value={matFilterLieferantId}
                   onChange={(e) => setMatFilterLieferantId(e.target.value)}
-                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+                  groesse="kompakt"
                 >
                   <option value="">Alle Lieferanten</option>
                   {(lieferanten ?? []).map((l) => (
@@ -628,11 +629,12 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.name}
                     </option>
                   ))}
-                </select>
-                <select
+                </Select>
+                <Select
+                  className="w-auto"
                   value={matFilterTagId}
                   onChange={(e) => setMatFilterTagId(e.target.value)}
-                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
+                  groesse="kompakt"
                 >
                   <option value="">Alle Tags</option>
                   {(materialTags ?? []).map((t) => (
@@ -640,7 +642,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       #{t.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <label className="flex items-center gap-1.5 text-xs text-label">
                 <input
@@ -795,10 +797,9 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
 
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "bestellung" && (
               <div className="mt-2 space-y-2 border-t border-sep pt-2 ">
-                <select
+                <Select
                   value={bestellLieferantId}
                   onChange={(e) => setBestellLieferantId(e.target.value)}
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferanten ?? []).map((l) => (
@@ -806,7 +807,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <label className="flex items-center justify-between gap-2 text-sm text-label2">
                   Liefertermin (optional)
                   <input

@@ -12,6 +12,7 @@ import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 /** "offene Vorgaenge je Techniker" als schlichte horizontale Balken statt
  * einer Chart-Bibliothek -- passend zum bisher chart-freien Frontend, ein
@@ -48,10 +49,10 @@ export function TeamKennzahlen() {
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-label">
           <Users size={15} strokeWidth={2} /> Team-Kennzahlen
         </h2>
-        {darfProjekte && <select
+        {darfProjekte && <Select className="w-auto"
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
-          className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
+          groesse="kompakt"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -59,7 +60,7 @@ export function TeamKennzahlen() {
               {p.name}
             </option>
           ))}
-        </select>}
+        </Select>}
       </div>
 
       {ladeFehler && !kennzahlen ? (

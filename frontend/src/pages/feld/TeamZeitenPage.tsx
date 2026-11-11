@@ -9,6 +9,7 @@ import { usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
+import { Select } from "../../components/apple/Select";
 
 export function TeamZeitenPage() {
   const uid = useId();
@@ -52,10 +53,9 @@ export function TeamZeitenPage() {
         <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
           Techniker
         </label>
-        <select id={`${uid}-0`}
+        <Select id={`${uid}-0`}
           value={technikerId}
           onChange={(e) => setTechnikerId(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Bitte wählen…</option>
           {techniker.map((t) => (
@@ -63,7 +63,7 @@ export function TeamZeitenPage() {
               {t.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {technikerId && (

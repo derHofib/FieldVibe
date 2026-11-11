@@ -19,6 +19,7 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { Select } from "../../components/apple/Select";
 
 const KUNDE_TYPEN: { value: KundeTyp; label: string }[] = [
   { value: "privat", label: "Privat" },
@@ -354,7 +355,7 @@ export function NewVorgangPage() {
           <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
             Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
           </label>
-          <select id={`${uid}-0`}
+          <Select id={`${uid}-0`}
             required
             aria-invalid={!!feldFehler.kunde}
             aria-describedby={feldFehler.kunde ? `${uid}-kunde-fehler` : undefined}
@@ -364,7 +365,6 @@ export function NewVorgangPage() {
               setAnlage(null);
               setStandortId("");
             }}
-            className="field-ap"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -372,7 +372,7 @@ export function NewVorgangPage() {
                 {k.name} ({k.kundennummer})
               </option>
             ))}
-          </select>
+          </Select>
           {feldFehler.kunde && (
             <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
               {feldFehler.kunde}
@@ -398,10 +398,9 @@ export function NewVorgangPage() {
             </div>
             <div>
               <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
-              <select id={`${uid}-2`}
+              <Select id={`${uid}-2`}
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="field-ap"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -409,7 +408,7 @@ export function NewVorgangPage() {
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             {newKundeError && <p className="text-sm text-st-fehlt">{newKundeError}</p>}
             <div className="flex gap-2">
@@ -438,14 +437,14 @@ export function NewVorgangPage() {
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
             <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
-            <select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
+            <Select id={`${uid}-3`} value={standortId} onChange={(e) => setStandortId(e.target.value)}>
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
@@ -480,10 +479,9 @@ export function NewVorgangPage() {
         {kundeId && (
           <div>
             <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
-            <select id={`${uid}-4`}
+            <Select id={`${uid}-4`}
               value={anlage?.id ?? ""}
               onChange={(e) => setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)}
-              className="field-ap"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -491,7 +489,7 @@ export function NewVorgangPage() {
                   {a.bezeichnung}
                 </option>
               ))}
-            </select>
+            </Select>
             {!showNewAnlage && (
               <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs font-medium text-tint">
                 + Neue Anlage
@@ -610,41 +608,39 @@ export function NewVorgangPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor={`${uid}-11`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
-            <select id={`${uid}-11`}
+            <Select id={`${uid}-11`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="field-ap"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-12`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
-            <select id={`${uid}-12`}
+            <Select id={`${uid}-12`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="field-ap"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
                   {a.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-13`} className="mb-1 block text-sm font-medium text-label">Priorität</label>
-            <select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
+            <Select id={`${uid}-13`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))}>
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 

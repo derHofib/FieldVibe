@@ -7,6 +7,7 @@ import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { SkeletonList } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -120,17 +121,16 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           {zeigeAnnehmen && (
             <div className="space-y-2 border border-sepstrong p-3">
               <label htmlFor={`${uid}-0`} className="block text-xs font-medium text-label2">Abrechnungsart</label>
-              <select id={`${uid}-0`}
+              <Select id={`${uid}-0`}
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
               >
                 {ABRECHNUNGSARTEN.map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <div className="flex gap-2">
                 <button
                   onClick={() => annehmenMutation.mutate()}

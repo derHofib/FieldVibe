@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { DauerauftragModus, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { Select } from "../../components/apple/Select";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "wartung", label: "Wartung" },
@@ -108,13 +109,12 @@ export function DauerauftragNeuPage() {
       >
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Kunde</label>
-          <select id={`${uid}-0`}
+          <Select id={`${uid}-0`}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
               setAnlageIds([]);
             }}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -122,7 +122,7 @@ export function DauerauftragNeuPage() {
                 {k.name} ({k.kundennummer})
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {kundeId && (
@@ -185,31 +185,29 @@ export function DauerauftragNeuPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
-            <select id={`${uid}-3`}
+            <Select id={`${uid}-3`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
-            <select id={`${uid}-4`}
+            <Select id={`${uid}-4`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
                   {a.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -245,16 +243,15 @@ export function DauerauftragNeuPage() {
           <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">
             Wann wird die nächste Fälligkeit berechnet?
           </label>
-          <select id={`${uid}-7`}
+          <Select id={`${uid}-7`}
             value={modus}
             onChange={(e) => setModus(e.target.value as DauerauftragModus)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="rollierend">
               Rollierend – ab dem tatsächlichen Abschlussdatum (empfohlen)
             </option>
             <option value="fest">Fest – ab dem ursprünglich geplanten Termin</option>
-          </select>
+          </Select>
           <p className="mt-1 text-xs text-label2">
             {modus === "rollierend"
               ? "Wird ein Vorgang früher oder später abgeschlossen, verschiebt sich die nächste Fälligkeit entsprechend mit."

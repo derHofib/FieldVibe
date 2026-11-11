@@ -48,6 +48,7 @@ import {
 import type { RechnungZahlungsart } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
   material: "Material",
@@ -947,10 +948,9 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
               </div>
-              <select
+              <Select
                 value={zahlungsart}
                 onChange={(e) => setZahlungsart(e.target.value as RechnungZahlungsart | "")}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Zahlungsart (optional)</option>
                 {ZAHLUNGSART_OPTIONEN.map((opt) => (
@@ -958,7 +958,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               {addZahlungMutation.isError && (
                 <p className="text-xs text-st-fehlt ">
                   Zahlung übersteigt den offenen Betrag oder ist ungültig.

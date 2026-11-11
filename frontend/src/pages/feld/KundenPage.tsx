@@ -16,6 +16,7 @@ import { filtereKunden } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Select } from "../../components/apple/Select";
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
  * inzwischen aufgeteilten GeschaeftPage (siehe Git-Historie). Rechnungen/
@@ -152,17 +153,16 @@ export function KundenPage() {
             </div>
             <div>
               <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Typ</label>
-              <select id={`${uid}-2`}
+              <Select id={`${uid}-2`}
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Bitte wählen…</option>
                 <option value="privat">Privat</option>
                 <option value="gewerbe">Gewerbe</option>
                 <option value="oeffentlich">Öffentlich</option>
                 <option value="hausverwaltung">Hausverwaltung</option>
-              </select>
+              </Select>
             </div>
           </div>
           {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (

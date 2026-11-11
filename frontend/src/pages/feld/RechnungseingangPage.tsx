@@ -13,6 +13,7 @@ import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -164,10 +165,9 @@ export function RechnungseingangPage() {
 
       <AnlegenPanel offen={showForm} titel="Neue Eingangsrechnung" onClose={() => setShowForm(false)}>
         <div className="space-y-2 p-4">
-          <select
+          <Select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             <option value="">Lieferant manuell eintragen…</option>
             {(lieferanten ?? []).map((l) => (
@@ -175,7 +175,7 @@ export function RechnungseingangPage() {
                 {l.name}
               </option>
             ))}
-          </select>
+          </Select>
           {!form.lieferantId && (
             <input
               value={form.lieferantName}
@@ -219,10 +219,11 @@ export function RechnungseingangPage() {
               placeholder="Betrag netto"
               className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
-            <select
+            <Select
+              className="w-auto"
               value={form.kategorie}
               onChange={(e) => setForm({ ...form, kategorie: e.target.value })}
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              groesse="kompakt"
             >
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
@@ -230,7 +231,7 @@ export function RechnungseingangPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <input

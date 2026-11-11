@@ -20,6 +20,7 @@ import {
 } from "../../utils/zeiterfassung";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { Select } from "../../components/apple/Select";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
 
@@ -230,21 +231,20 @@ export function ZeitenBuchenPage() {
       <div className="card-ap grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select id={`${uid}-0`} value={technikerId} onChange={(e) => setTechnikerId(e.target.value)} className="field-ap">
+          <Select id={`${uid}-0`} value={technikerId} onChange={(e) => setTechnikerId(e.target.value)}>
             <option value="">Alle</option>
             {techniker.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Status</label>
-          <select id={`${uid}-1`}
+          <Select id={`${uid}-1`}
             value={buchungsstatus}
             onChange={(e) => setBuchungsstatus(e.target.value as ZeiterfassungBuchungsstatus | "")}
-            className="field-ap"
           >
             <option value="">Alle</option>
             {BUCHUNGSSTATUS_OPTIONEN.map((s) => (
@@ -252,7 +252,7 @@ export function ZeitenBuchenPage() {
                 {BUCHUNGSSTATUS_LABEL[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Vermerkt älter als (Tage)</label>

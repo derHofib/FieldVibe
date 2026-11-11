@@ -13,6 +13,7 @@ import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -124,14 +125,14 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
         <div className="space-y-3 card-ap p-4">
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Lieferant</label>
-            <select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
+            <Select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)}>
               <option value="">Name manuell eintragen…</option>
               {(lieferanten ?? []).map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {!lieferantId && (
             <input
@@ -173,14 +174,14 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           </div>
           <div>
             <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">Kategorie</label>
-            <select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
+            <Select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)}>
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}

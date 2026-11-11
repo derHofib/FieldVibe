@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_LABEL: Record<PruefmittelStatus, string> = {
   aktiv: "Aktiv",
@@ -136,10 +137,9 @@ export function PruefmittelPage() {
             <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
               Zugewiesen an
             </label>
-            <select id={`${uid}-2`}
+            <Select id={`${uid}-2`}
               value={form.zugewiesenAn}
               onChange={(e) => setForm({ ...form, zugewiesenAn: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Niemand</option>
               {zuweisbareNutzer.map((t) => (
@@ -147,7 +147,7 @@ export function PruefmittelPage() {
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">

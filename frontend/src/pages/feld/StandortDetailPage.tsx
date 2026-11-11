@@ -12,6 +12,7 @@ import type { Adresse } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -248,10 +249,9 @@ function AnlagenVerwaltung({
           Keine weiteren Anlagen dieses Kunden verfügbar.
         </p>
       ) : (
-        <select
+        <Select
           value={zuordnenId}
           onChange={(e) => setZuordnenId(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Anlage wählen…</option>
           {zuordenbar.map((a) => (
@@ -259,7 +259,7 @@ function AnlagenVerwaltung({
               {a.bezeichnung}
             </option>
           ))}
-        </select>
+        </Select>
       )}
       {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">

@@ -31,6 +31,7 @@ import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormVi
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { Select } from "../../components/apple/Select";
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
@@ -99,13 +100,13 @@ function RegelForm({
 
   return (
     <div className="space-y-2 border border-sepstrong p-3">
-      <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
+      <Select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)}>
         {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
           <option key={e} value={e}>
             {EFFEKT_LABEL[e]}
           </option>
         ))}
-      </select>
+      </Select>
 
       <RuleConditionBuilder fields={schema.fields} condition={condition} onChange={setCondition} />
 
@@ -148,14 +149,14 @@ function RegelForm({
 
       <div>
         <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Gültig in</label>
-        <select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
+        <Select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)}>
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name} ({v.type})
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {error && <p className="text-xs text-st-fehlt ">{error}</p>}
@@ -473,13 +474,13 @@ export function FormSchemaEditorPage() {
             </div>
           ))}
           <div className="flex gap-2">
-            <select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)} className={inputClass}>
+            <Select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)}>
               {VIEW_TYPEN.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
               ))}
-            </select>
+            </Select>
             <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
             <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-ap px-3 disabled:opacity-50">
               <Plus size={16} />
@@ -502,13 +503,13 @@ export function FormSchemaEditorPage() {
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)} className={inputClass}>
+            <Select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)}>
               {LEISTUNGSTYPEN.map((lt) => (
                 <option key={lt} value={lt}>
                   {LEISTUNGSTYP_LABEL[lt]}
                 </option>
               ))}
-            </select>
+            </Select>
             <label className="flex shrink-0 items-center gap-1.5 text-xs text-label">
               <input type="checkbox" checked={zuPflicht} onChange={(e) => setZuPflicht(e.target.checked)} /> Pflicht
             </label>

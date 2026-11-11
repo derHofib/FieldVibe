@@ -9,6 +9,7 @@ import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { SkeletonList } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -109,10 +110,9 @@ export function PapierkorbPage() {
         <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
           Nach Typ filtern
         </label>
-        <select id={`${uid}-0`}
+        <Select className="w-auto" id={`${uid}-0`}
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
-          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label text-label"
         >
           <option value="">Alle Typen</option>
           {Object.entries(ENTITY_TYP_LABEL).map(([value, label]) => (
@@ -120,7 +120,7 @@ export function PapierkorbPage() {
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {isLoading ? (

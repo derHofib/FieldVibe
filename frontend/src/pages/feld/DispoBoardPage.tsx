@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type { Termin, TerminWarnung } from "../../types";
+import { Select } from "../../components/apple/Select";
 
 const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const OFFENE_VORGANG_STATUS = ["neu", "geplant", "in_arbeit", "wartet_kunde"];
@@ -282,10 +283,9 @@ export function DispoBoardPage() {
         <div className="space-y-3 card-ap p-4">
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Vorgang</label>
-            <select id={`${uid}-0`}
+            <Select id={`${uid}-0`}
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Bitte wählen…</option>
               {wahlbareVorgaenge.map((v) => (
@@ -293,21 +293,20 @@ export function DispoBoardPage() {
                   {v.vorgangsnummer}: {v.titel}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-            <select id={`${uid}-1`}
+            <Select id={`${uid}-1`}
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {technikers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Titel</label>

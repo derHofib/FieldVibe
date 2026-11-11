@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
+import { Select } from "../../components/apple/Select";
 
 function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
   const queryClient = useQueryClient();
@@ -18,11 +19,11 @@ function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktu
   });
 
   return (
-    <select
+    <Select
+      className="mt-2"
       value={aktuellesFahrzeugId ?? ""}
       onChange={(e) => setzenMutation.mutate(e.target.value || null)}
       disabled={setzenMutation.isPending}
-      className="btn-touch mt-2 w-full border border-sep bg-transparent px-2 py-1.5 text-sm disabled:opacity-50 text-label"
     >
       <option value="">Kein Fahrzeug</option>
       {(fahrzeuge ?? []).map((f) => (
@@ -30,7 +31,7 @@ function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktu
           {f.bezeichnung}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
 
