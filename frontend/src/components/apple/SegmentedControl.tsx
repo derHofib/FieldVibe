@@ -30,7 +30,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             aria-pressed={aktiv}
             onClick={() => onChange(opt.wert)}
-            className={`rounded-[7px] px-3 text-[13px] transition-colors ${
+            className={`rounded-[7px] px-3 text-sekundaer transition-colors ${
               volleBreite ? "flex-1" : ""
             } ${groesse === "touch" ? "h-11" : groesse === "mobil" ? "h-7" : "h-6"} ${
               // text-label statt text-label2 im inaktiven Zustand: echte

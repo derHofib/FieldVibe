@@ -41,7 +41,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
 
   return (
     <div className="card-ap p-3">
-      <h2 className="mb-2 text-sm font-semibold text-label2">Formulare</h2>
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Formulare</h2>
 
       {(ausfuellungen ?? []).length > 0 && (
         <div className="mb-2 space-y-1.5">
@@ -55,10 +55,10 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
                 className="btn-touch flex min-w-0 flex-1 items-center gap-2 text-left"
               >
                 <ClipboardList size={16} className="shrink-0 text-label2" />
-                <span className="truncate text-sm text-label">{fs.schema_name}</span>
+                <span className="truncate text-fliess text-label">{fs.schema_name}</span>
               </button>
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                className={`shrink-0 rounded-full px-2 py-0.5 text-meta font-medium ${
                   fs.status === "abgeschlossen"
                     ? "bg-st-erledigt-bg text-st-erledigt  "
                     : "bg-st-arbeit-bg text-st-arbeit  "
@@ -87,7 +87,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               key={s.id}
               onClick={() => startMutation.mutate(s.id)}
               disabled={startMutation.isPending}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               + {s.name} ausfüllen
               {s.pflicht_vor_abschluss && <span className="ml-1 text-st-fehlt">*</span>}

@@ -82,15 +82,15 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
             const wert = values[feld.key] as FotoPlanWert | undefined;
             return (
               <div key={feld.id} className="space-y-1.5 border-b border-sep py-1.5">
-                <span className="block text-sm text-label2">{feld.label.de ?? feld.key}</span>
-                {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-label">—</span>}
+                <span className="block text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
+                {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-fliess font-medium text-label">—</span>}
               </div>
             );
           }
           return (
             <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
-              <span className="text-sm text-label2">{feld.label.de ?? feld.key}</span>
-              <span className="text-right text-sm font-medium text-label">{formatWert(feld, values[feld.key])}</span>
+              <span className="text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
+              <span className="text-right text-fliess font-medium text-label">{formatWert(feld, values[feld.key])}</span>
             </div>
           );
         })}
@@ -110,21 +110,21 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
           const zeile = zeilen[0] ?? {};
           return (
             <div key={gruppe.id}>
-              <h3 className="mb-1.5 text-base font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
+              <h3 className="mb-1.5 text-zeile font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
               {gruppenFelder.map((feld) => {
                 if (feld.feld_typ === "foto_plan") {
                   const wert = zeile[feld.key] as FotoPlanWert | undefined;
                   return (
                     <div key={feld.id} className="space-y-1.5 border-b border-sep py-1.5">
-                      <span className="block text-sm text-label2">{feld.label.de ?? feld.key}</span>
-                      {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-label">—</span>}
+                      <span className="block text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
+                      {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-fliess font-medium text-label">—</span>}
                     </div>
                   );
                 }
                 return (
                   <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
-                    <span className="text-sm text-label2">{feld.label.de ?? feld.key}</span>
-                    <span className="text-right text-sm font-medium text-label">{formatWert(feld, zeile[feld.key])}</span>
+                    <span className="text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
+                    <span className="text-right text-fliess font-medium text-label">{formatWert(feld, zeile[feld.key])}</span>
                   </div>
                 );
               })}
@@ -134,14 +134,14 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
 
         return (
           <div key={gruppe.id}>
-            <h3 className="mb-1.5 text-base font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
+            <h3 className="mb-1.5 text-zeile font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
             {zeilen.length === 0 ? (
-              <p className="text-sm text-label2">Keine Einträge.</p>
+              <p className="text-sekundaer text-label2">Keine Einträge.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
+                <table className="w-full border-collapse text-fliess">
                   <thead>
-                    <tr className="border-b border-sepstrong text-left text-xs font-medium uppercase text-label2">
+                    <tr className="border-b border-sepstrong text-left text-meta font-medium uppercase text-label2">
                       {gruppenFelder.map((f) => (
                         <th key={f.id} className="py-1.5 pr-3">
                           {f.label.de ?? f.key}

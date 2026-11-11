@@ -27,7 +27,7 @@ export function Hinweiskasten({
   return (
     <div
       role={ton === "fehler" ? "alert" : "status"}
-      className={`flex items-start gap-2 rounded-[var(--radius-ap-md)] p-3 text-[13px] ${klasse}`}
+      className={`flex items-start gap-2 rounded-[var(--radius-ap-md)] p-3 text-sekundaer ${klasse}`}
     >
       <Icon size={16} strokeWidth={2} className="mt-px shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1 space-y-1">
@@ -61,7 +61,7 @@ export function FehlerMeldung({ meldung, alsKasten = false }: { meldung: string;
     );
   }
   return (
-    <p role="alert" className="text-xs whitespace-pre-line text-st-fehlt">
+    <p role="alert" className="text-sekundaer whitespace-pre-line text-st-fehlt">
       {meldung}
     </p>
   );

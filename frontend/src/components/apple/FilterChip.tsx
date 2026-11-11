@@ -20,7 +20,7 @@ export function FilterChip({
       type="button"
       aria-pressed={aktiv}
       onClick={onClick}
-      className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-xs font-medium ${
+      className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-sekundaer font-medium ${
         aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
       }`}
     >

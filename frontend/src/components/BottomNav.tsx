@@ -81,14 +81,14 @@ export function BottomNav() {
             <span className="relative">
               <tab.icon size={25} strokeWidth={isActive ? 2.2 : 2} aria-hidden="true" />
               {tab.key === "mehr" && unreadCount > 0 && (
-                <span className="absolute -right-2 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-2 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-nav font-bold text-white">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </span>
             {/* eigene Textfarbe statt vom Link geerbt: text-tint faellt bei
              * 10px unter 4.5:1 (axe-core, Phase D), text-tint-text nicht. */}
-            <span className={`text-[10px] font-medium ${isActive ? "text-tint-text" : ""}`}>{tab.label}</span>
+            <span className={`text-nav font-medium ${isActive ? "text-tint-text" : ""}`}>{tab.label}</span>
           </Link>
         );
       })}

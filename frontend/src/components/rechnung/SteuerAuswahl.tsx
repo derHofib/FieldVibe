@@ -60,7 +60,7 @@ export function SteuerAuswahl({
         onClose={() => setListeOffen(false)}
         titel="Steuer"
         rechts={
-          <button onClick={() => setListeOffen(false)} className="btn-touch text-[17px] font-semibold text-tint-text">
+          <button onClick={() => setListeOffen(false)} className="btn-touch text-zeile font-semibold text-tint-text">
             Fertig
           </button>
         }
@@ -76,7 +76,7 @@ export function SteuerAuswahl({
                   setListeOffen(false);
                 }}
               >
-                <span className="flex-1 text-[17px] text-label">{o.label}</span>
+                <span className="flex-1 text-zeile text-label">{o.label}</span>
                 {o.wert === wert.option && <Check size={18} strokeWidth={2.5} className="text-tint" aria-label="Gewählt" />}
               </GroupedListRow>
             ))}
@@ -86,7 +86,7 @@ export function SteuerAuswahl({
 
       {wert.option === "e_befreit" && (
         <div>
-          <label htmlFor={textId} className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor={textId} className="mb-1 block text-sekundaer font-medium text-label2">
             Begründung der Steuerbefreiung
           </label>
           <input
@@ -100,7 +100,7 @@ export function SteuerAuswahl({
             placeholder="z. B. Steuerfreie Ausfuhrlieferung"
             className="field-ap"
           />
-          <div className="mt-1 flex justify-between gap-2 text-xs">
+          <div className="mt-1 flex justify-between gap-2 text-sekundaer">
             {textBesucht && fehler ? <span className="text-st-fehlt">{fehler}</span> : <span />}
             <span className="shrink-0 tabular-nums text-label2">
               {wert.text.trim().length}/{STEUER_TEXT_MAX}

@@ -16,7 +16,7 @@ import { DetailSkeleton } from "../Skeleton";
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-xs font-semibold text-label2 uppercase">{titel}</h3>
+      <h3 className="text-meta font-semibold text-label2 uppercase">{titel}</h3>
       {children}
     </section>
   );
@@ -26,7 +26,7 @@ function Text({ titel, text }: { titel: string; text: string | null }) {
   if (!text) return null;
   return (
     <Abschnitt titel={titel}>
-      <p className="card-ap whitespace-pre-wrap break-words p-3 text-[15px] text-label">{text}</p>
+      <p className="card-ap whitespace-pre-wrap break-words p-3 text-fliess text-label">{text}</p>
     </Abschnitt>
   );
 }
@@ -88,7 +88,7 @@ function Loesung({
           speichern({ loesungsnotiz: notiz.trim() || null, fix_commit: commit.trim() || null, fix_pr_url: pr.trim() || null });
         }}
       >
-        <label className="block text-sm font-medium text-label">
+        <label className="block text-fliess font-medium text-label">
           Lösungsnotiz
           <textarea
             value={notiz}
@@ -100,7 +100,7 @@ function Loesung({
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-medium text-label">
+          <label className="block text-fliess font-medium text-label">
             Fix-Commit
             <input
               value={commit}
@@ -110,7 +110,7 @@ function Loesung({
               className="field-ap mt-1 font-mono"
             />
           </label>
-          <label className="block text-sm font-medium text-label">
+          <label className="block text-fliess font-medium text-label">
             PR-Link
             <input
               value={pr}
@@ -127,7 +127,7 @@ function Loesung({
             href={detail.fix_pr_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm font-medium text-tint-text"
+            className="inline-flex items-center gap-1 text-fliess font-medium text-tint-text"
           >
             <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
             Pull Request öffnen
@@ -169,7 +169,7 @@ function DuplikatBereich({
   return (
     <Abschnitt titel="Duplikat">
       {detail.duplikat_von_id && (
-        <p className="text-sm text-label">
+        <p className="text-fliess text-label">
           Duplikat von{" "}
           <Link to={detailPfad(detail.duplikat_von_id)} className="font-medium text-tint-text underline">
             {detail.duplikat_von_id.slice(0, 8)}
@@ -178,7 +178,7 @@ function DuplikatBereich({
             <button
               type="button"
               onClick={() => speichern({ duplikat_von_id: null })}
-              className="ml-3 text-sm font-medium text-label2 underline"
+              className="ml-3 text-sekundaer font-medium text-label2 underline"
             >
               Verknüpfung entfernen
             </button>
@@ -299,7 +299,7 @@ export function FehlerberichtDetailAnsicht({
   const darfAendern = kannBearbeiten && (!idee || ideenVerwalten);
 
   const zurueck = (
-    <Link to={idee ? `${listenPfad}?art=idee` : listenPfad} className="inline-flex items-center gap-1 text-sm font-medium text-tint-text">
+    <Link to={idee ? `${listenPfad}?art=idee` : listenPfad} className="inline-flex items-center gap-1 text-fliess font-medium text-tint-text">
       <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
       {idee ? "Alle Ideen" : "Alle Fehlerberichte"}
     </Link>
@@ -331,7 +331,7 @@ export function FehlerberichtDetailAnsicht({
       {zurueck}
 
       <header className="card-ap space-y-3 p-4">
-        <h2 className="flex items-start gap-2 text-xl font-semibold break-words text-label">
+        <h2 className="flex items-start gap-2 text-zeile font-semibold break-words text-label">
           {idee && <Lightbulb size={20} strokeWidth={2} className="mt-1 shrink-0 text-tone-amber" aria-label="Idee" role="img" />}
           <span className="min-w-0">{detail.titel}</span>
         </h2>
@@ -370,25 +370,25 @@ export function FehlerberichtDetailAnsicht({
           </div>
         )}
         {idee && darfAendern && (
-          <p className="text-sm text-label2">Freigegebene Ideen setzt Claude beim nächsten Lauf als Pull Request um.</p>
+          <p className="text-sekundaer text-label2">Freigegebene Ideen setzt Claude beim nächsten Lauf als Pull Request um.</p>
         )}
         {idee && !darfAendern && (
-          <p className="text-sm text-label2">Ideen werden vom FieldVibe-Team geprüft und freigegeben.</p>
+          <p className="text-sekundaer text-label2">Ideen werden vom FieldVibe-Team geprüft und freigegeben.</p>
         )}
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {felder.map(([label, wert]) => (
-            <div key={label} className="flex items-baseline gap-2 text-sm">
+            <div key={label} className="flex items-baseline gap-2 text-fliess">
               <dt className="w-24 shrink-0 text-label2">{label}</dt>
               <dd className="min-w-0 text-label">{wert}</dd>
             </div>
           ))}
         </dl>
         <div className="flex flex-wrap gap-2 pt-1">
-          <button type="button" onClick={bundleKopieren} className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm">
+          <button type="button" onClick={bundleKopieren} className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sekundaer">
             <ClipboardCopy size={14} strokeWidth={2} aria-hidden="true" />
             AI-Bundle kopieren
           </button>
-          <button type="button" onClick={bundleHerunterladen} className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm">
+          <button type="button" onClick={bundleHerunterladen} className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sekundaer">
             <Download size={14} strokeWidth={2} aria-hidden="true" />
             AI-Bundle herunterladen
           </button>
@@ -398,7 +398,7 @@ export function FehlerberichtDetailAnsicht({
               onClick={async () => {
                 if (await bestaetigen({ titel: `${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`, bestaetigenLabel: "Endgültig löschen" })) loeschen.mutate();
               }}
-              className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm text-st-fehlt hover:bg-st-fehlt-bg"
+              className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg"
             >
               <Trash2 size={14} strokeWidth={2} aria-hidden="true" />
               Löschen
@@ -406,7 +406,7 @@ export function FehlerberichtDetailAnsicht({
           )}
         </div>
         {hinweis && (
-          <p role="status" className="text-sm text-label2">
+          <p role="status" className="text-sekundaer text-label2">
             {hinweis}
           </p>
         )}

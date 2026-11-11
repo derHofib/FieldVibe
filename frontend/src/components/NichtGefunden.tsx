@@ -24,8 +24,8 @@ export function NichtGefunden({
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center gap-3 py-12 text-center">
       <IconBadge icon={Compass} tone="slate" />
-      <Titel className="text-[17px] font-semibold text-label">Seite nicht gefunden</Titel>
-      <p className="text-sm text-label2">Diese Adresse gibt es nicht. Vielleicht wurde die Seite verschoben oder der Link ist veraltet.</p>
+      <Titel className="text-zeile font-semibold text-label">Seite nicht gefunden</Titel>
+      <p className="text-sekundaer text-label2">Diese Adresse gibt es nicht. Vielleicht wurde die Seite verschoben oder der Link ist veraltet.</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {hatVerlauf && (
           <button type="button" className="btn-touch btn-ap px-4" onClick={() => navigate(-1)}>

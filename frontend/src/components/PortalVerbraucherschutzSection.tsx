@@ -37,11 +37,11 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
   return (
     <div className="space-y-3 card-ap p-4" id="kundenportal-verbraucherschutz">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
           <Scale size={15} strokeWidth={2} className="text-tone-violet" aria-hidden="true" /> Kundenportal /
           Verbraucherschutz
         </h2>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           Regelt, wie Privatkunden Angebote im Portal beauftragen und widerrufen können.
         </p>
       </div>
@@ -53,9 +53,9 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
       </Hinweiskasten>
 
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-sm font-medium text-label">B2C-Ablauf im Portal</legend>
+        <legend className="mb-1 text-fliess font-medium text-label">B2C-Ablauf im Portal</legend>
         {MODUS_OPTIONEN.map((o) => (
-          <label key={o.wert} className="flex items-start gap-2 text-sm text-label">
+          <label key={o.wert} className="flex items-start gap-2 text-fliess text-label">
             <input
               type="radio"
               name="portal-verbraucherschutz"
@@ -65,11 +65,11 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
             />
             <span>
               {o.label}
-              <span className="block text-xs text-label2">{o.hinweis}</span>
+              <span className="block text-sekundaer text-label2">{o.hinweis}</span>
             </span>
           </label>
         ))}
-        <p className="text-xs text-label2">
+        <p className="text-meta text-label2">
           Bestandsmandanten ohne Einstellung stehen auf „Aus“; neue Mandanten starten mit „Nur für Privatkunden“.
         </p>
       </fieldset>
@@ -82,7 +82,7 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
       )}
 
       <div>
-        <label htmlFor="portal-belehrung-text" className="mb-0.5 block text-sm font-medium text-label">
+        <label htmlFor="portal-belehrung-text" className="mb-0.5 block text-fliess font-medium text-label">
           Widerrufsbelehrung
         </label>
         <textarea
@@ -94,14 +94,14 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
           aria-describedby="portal-belehrung-hinweis"
           className="field-ap"
         />
-        <p id="portal-belehrung-hinweis" className="mt-0.5 text-xs text-label2">
+        <p id="portal-belehrung-hinweis" className="mt-0.5 text-sekundaer text-label2">
           Reiner Text, Absätze durch Leerzeilen trennen (kein Markdown). Leer lassen für den Platzhalter-Mustertext.
         </p>
         {fehler.belehrungText && <FehlerMeldung meldung={fehler.belehrungText} />}
       </div>
 
       <div>
-        <label htmlFor="portal-belehrung-version" className="mb-0.5 block text-sm font-medium text-label">
+        <label htmlFor="portal-belehrung-version" className="mb-0.5 block text-fliess font-medium text-label">
           Version / Stand der Belehrung
         </label>
         <input
@@ -113,15 +113,15 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
           aria-describedby="portal-belehrung-version-hinweis"
           className="field-ap"
         />
-        <p id="portal-belehrung-version-hinweis" className="mt-0.5 text-xs text-label2">
+        <p id="portal-belehrung-version-hinweis" className="mt-0.5 text-sekundaer text-label2">
           Wird im Annahmenachweis gespeichert. Bei jeder Textänderung neu setzen.
         </p>
       </div>
 
       <div className="space-y-2 border-t-[0.5px] border-sep pt-3">
-        <h3 className="text-sm font-medium text-label">Barrierefreiheitserklärung</h3>
+        <h3 className="text-fliess font-medium text-label">Barrierefreiheitserklärung</h3>
         <div>
-          <label htmlFor="portal-bf-email" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="portal-bf-email" className="mb-0.5 block text-sekundaer text-label2">
             Kontakt für Feedback (E-Mail)
           </label>
           <input
@@ -135,7 +135,7 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
           {fehler.barrierefreiheitEmail && <FehlerMeldung meldung={fehler.barrierefreiheitEmail} />}
         </div>
         <div>
-          <label htmlFor="portal-bf-stand" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="portal-bf-stand" className="mb-0.5 block text-meta text-label2">
             Stand der Erklärung
           </label>
           <input
@@ -147,7 +147,7 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
           />
         </div>
         <div>
-          <label htmlFor="portal-bf-url" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="portal-bf-url" className="mb-0.5 block text-sekundaer text-label2">
             Eigene Erklärung (URL, optional – ersetzt die Platzhalter-Seite)
           </label>
           <input
@@ -172,12 +172,12 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
           type="button"
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || hatFehler}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span role="status" className="text-xs text-st-erledigt ">
+          <span role="status" className="text-sekundaer text-st-erledigt ">
             Gespeichert.
           </span>
         )}

@@ -104,7 +104,7 @@ export function ZeiterfassungManuellForm({
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">
             Datum
           </label>
           <input id={`${uid}-0`}
@@ -112,11 +112,11 @@ export function ZeiterfassungManuellForm({
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
             required
-            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label">
             Von
           </label>
           <input id={`${uid}-1`}
@@ -124,11 +124,11 @@ export function ZeiterfassungManuellForm({
             value={startZeit}
             onChange={(e) => setStartZeit(e.target.value)}
             required
-            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label">
             Bis
           </label>
           <input id={`${uid}-2`}
@@ -136,13 +136,13 @@ export function ZeiterfassungManuellForm({
             value={endeZeit}
             onChange={(e) => setEndeZeit(e.target.value)}
             required
-            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label">
+        <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label">
           Kategorie
         </label>
         <Select id={`${uid}-3`}
@@ -159,7 +159,7 @@ export function ZeiterfassungManuellForm({
 
       {kategorie === "auftrag" && (
         <div>
-          <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer font-medium text-label">
             Vorgang
           </label>
           <SearchableSelect id={`${uid}-4`}
@@ -171,7 +171,7 @@ export function ZeiterfassungManuellForm({
             onChange={setVorgangId}
             placeholder="Vorgang suchen…"
           />
-          <label className="mt-2 flex items-center gap-1.5 text-sm text-label">
+          <label className="mt-2 flex items-center gap-1.5 text-fliess text-label">
             <input
               type="checkbox"
               checked={abrechenbar}
@@ -182,7 +182,7 @@ export function ZeiterfassungManuellForm({
           </label>
           {abrechenbar && (stundensaetze ?? []).length > 0 && (
             <div className="mt-2">
-              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sekundaer font-medium text-label">
                 Stundenverrechnungssatz (optional)
               </label>
               <SearchableSelect id={`${uid}-5`}
@@ -200,7 +200,7 @@ export function ZeiterfassungManuellForm({
       )}
 
       <div>
-        <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label">
+        <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer font-medium text-label">
           Notiz (optional)
         </label>
         <input id={`${uid}-6`}
@@ -208,24 +208,24 @@ export function ZeiterfassungManuellForm({
           value={taetigkeit}
           onChange={(e) => setTaetigkeit(e.target.value)}
           placeholder="z.B. Materialbestellung, Ersatzteile abholen…"
-          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
       </div>
 
-      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
+      {fehler && <p className="text-fliess text-st-fehlt ">{fehler}</p>}
 
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer text-label "
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
+          className="btn-touch btn-ap-primary px-3 py-1.5 text-sekundaer"
         >
           Speichern
         </button>

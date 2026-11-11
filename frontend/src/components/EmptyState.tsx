@@ -18,7 +18,7 @@ export function EmptyState({
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-fill text-label2">
         <Icon size={20} strokeWidth={2} aria-hidden="true" />
       </span>
-      <p className="max-w-xs text-sm text-label2">{text}</p>
+      <p className="max-w-xs text-sekundaer text-label2">{text}</p>
       {action && <div className="mt-2 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
@@ -46,8 +46,8 @@ export function GesperrtZustand({
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-fill text-label2">
         <Lock size={20} strokeWidth={2} aria-hidden="true" />
       </span>
-      <Titel className="text-[17px] font-semibold text-label">{titel}</Titel>
-      <p className="text-sm text-label2">{text}</p>
+      <Titel className="text-zeile font-semibold text-label">{titel}</Titel>
+      <p className="text-sekundaer text-label2">{text}</p>
       {action && <div className="mt-2 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );

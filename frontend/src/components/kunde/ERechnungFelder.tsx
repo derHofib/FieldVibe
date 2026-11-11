@@ -31,7 +31,7 @@ export function ERechnungFelder({
   return (
     <div className="space-y-2">
       <div>
-        <label htmlFor={leitwegFeldId} className="mb-1 block text-xs text-label2">
+        <label htmlFor={leitwegFeldId} className="mb-1 block text-sekundaer text-label2">
           Leitweg-ID
         </label>
         <input
@@ -45,18 +45,18 @@ export function ERechnungFelder({
           className="field-ap"
         />
         {fehler ? (
-          <p role="alert" className="mt-1 text-xs text-st-fehlt">
+          <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
             {fehler}
           </p>
         ) : (
-          <p id={hilfeId} className="mt-1 text-xs text-label2">
+          <p id={hilfeId} className="mt-1 text-sekundaer text-label2">
             Nur für Behörden und öffentliche Auftraggeber: Die Leitweg-ID steht im Auftrag oder auf der Webseite der
             Behörde. Mit Leitweg-ID wird die Rechnung automatisch als XRechnung erzeugt. {LEITWEG_ID_FORMAT_HINWEIS}
           </p>
         )}
       </div>
       <div>
-        <label htmlFor={formatFeldId} className="mb-1 block text-xs text-label2">
+        <label htmlFor={formatFeldId} className="mb-1 block text-sekundaer text-label2">
           Format der E-Rechnung
         </label>
         <Select
@@ -70,7 +70,7 @@ export function ERechnungFelder({
             </option>
           ))}
         </Select>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           XRechnung verlangt zusätzlich Telefon, E-Mail und IBAN in den Firmendaten sowie die Leitweg-ID.
         </p>
       </div>

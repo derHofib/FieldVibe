@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 export function AbschnittskopfA({ titel, anzahl }: { titel: string; anzahl?: number }) {
   return (
     <div className="flex items-baseline justify-between px-5 pt-[18px] pb-2">
-      <h2 className="ap-heading text-xl font-bold text-label">{titel}</h2>
-      {anzahl !== undefined && <span className="text-[15px] text-label2">{anzahl}</span>}
+      <h2 className="ap-heading text-titel-mobil font-bold text-label">{titel}</h2>
+      {anzahl !== undefined && <span className="text-fliess text-label2">{anzahl}</span>}
     </div>
   );
 }
@@ -15,11 +15,11 @@ export function AbschnittskopfA({ titel, anzahl }: { titel: string; anzahl?: num
  * einer Gruppierten Liste, z. B. "HERKUNFT"/"PROJEKT"/"OPTIONEN". */
 export function AbschnittskopfB({ titel }: { titel: string }) {
   return (
-    <p className="px-8 pt-[22px] pb-[7px] text-[13px] font-semibold tracking-wide text-label2 uppercase">{titel}</p>
+    <p className="px-8 pt-[22px] pb-[7px] text-sekundaer font-semibold tracking-wide text-label2 uppercase">{titel}</p>
   );
 }
 
 /** Fußzeile unter einer Gruppierten Liste (Abschnitt 4.2), z. B. Hinweistext. */
 export function AbschnittsFusszeile({ children }: { children: ReactNode }) {
-  return <p className="px-8 pt-[7px] text-[13px] text-label2">{children}</p>;
+  return <p className="px-8 pt-[7px] text-sekundaer text-label2">{children}</p>;
 }

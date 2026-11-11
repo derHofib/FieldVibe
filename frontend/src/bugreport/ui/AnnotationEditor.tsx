@@ -158,7 +158,7 @@ export function AnnotationEditor({
             }}
             aria-label="Annotationstext"
             placeholder="Text eingeben"
-            className="absolute rounded-[6px] border border-sepstrong bg-card px-1.5 text-[16px] text-label"
+            className="absolute rounded-[6px] border border-sepstrong bg-card px-1.5 text-zeile text-label"
             style={{
               left: `${(textPos.x / breite) * 100}%`,
               top: `${(textPos.y / hoehe) * 100}%`,
@@ -169,7 +169,7 @@ export function AnnotationEditor({
           />
         )}
       </div>
-      <p className="mt-2 text-[13px] text-label2">Persönliche Daten bitte mit „Schwärzen“ abdecken.</p>
+      <p className="mt-2 text-sekundaer text-label2">Persönliche Daten bitte mit „Schwärzen“ abdecken.</p>
     </div>
   );
 }

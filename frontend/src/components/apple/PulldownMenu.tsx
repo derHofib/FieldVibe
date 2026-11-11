@@ -132,7 +132,7 @@ export function PulldownMenu({
                   }`}
                 >
                   {Icon && <Icon size={15} strokeWidth={2} className="shrink-0" />}
-                  <span className="flex-1 text-[13px]">{item.label}</span>
+                  <span className="flex-1 text-sekundaer">{item.label}</span>
                   {item.kuerzel && (
                     <span className="text-label2 group-hover:text-white/80">{item.kuerzel}</span>
                   )}

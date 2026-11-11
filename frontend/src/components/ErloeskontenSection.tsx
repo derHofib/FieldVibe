@@ -43,10 +43,10 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
   return (
     <div className="space-y-3 card-ap p-4" id="buchhaltung-erloeskonten">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
           <BookOpen size={15} strokeWidth={2} className="text-tone-indigo" /> Buchhaltung – Erlöskonten
         </h2>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           Wird vom Steuerberater festgelegt. Für 19 % und 7 % gelten ohne Eintrag die Standardkonten {standard19}/{standard7} ({kontenrahmen}). Für die
           übrigen Kategorien blockiert der DATEV-Export, bis ein Konto hinterlegt ist. Eingetragene Konten müssen genau so viele Stellen haben wie die Sachkontenlänge.
         </p>
@@ -59,9 +59,9 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
           const buId = `bu-${z.schluessel}`;
           return (
             <div key={z.schluessel} className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0 sm:grid-cols-[1fr_9rem_6rem]">
-              <p className="col-span-2 self-center text-[15px] text-label sm:col-span-1">{z.label}</p>
+              <p className="col-span-2 self-center text-fliess text-label sm:col-span-1">{z.label}</p>
               <div>
-                <label htmlFor={kontoId} className="mb-0.5 block text-xs text-label2">
+                <label htmlFor={kontoId} className="mb-0.5 block text-sekundaer text-label2">
                   Konto
                 </label>
                 <input
@@ -77,7 +77,7 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
                 />
               </div>
               <div className="w-24 sm:w-auto">
-                <label htmlFor={buId} className="mb-0.5 block text-xs text-label2">
+                <label htmlFor={buId} className="mb-0.5 block text-sekundaer text-label2">
                   BU-Schlüssel
                 </label>
                 <input
@@ -92,7 +92,7 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
                 />
               </div>
               {besucht && f && (
-                <p role="alert" className="col-span-2 text-xs text-st-fehlt sm:col-span-3">
+                <p role="alert" className="col-span-2 text-sekundaer text-st-fehlt sm:col-span-3">
                   {[f.konto, f.bu].filter(Boolean).join(" · ")}
                 </p>
               )}
@@ -116,11 +116,11 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || hatFehler}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
-        {speichernMutation.isSuccess && <span className="text-xs text-st-erledigt">Gespeichert.</span>}
+        {speichernMutation.isSuccess && <span className="text-sekundaer text-st-erledigt">Gespeichert.</span>}
       </div>
     </div>
   );

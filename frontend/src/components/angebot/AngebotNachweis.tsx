@@ -26,11 +26,11 @@ export function AngebotNachweis({ angebot }: { angebot: Angebot }) {
       )}
       {nachweis && (
         <section aria-labelledby="angebot-nachweis-titel" className="card-ap space-y-2 p-4">
-          <h2 id="angebot-nachweis-titel" className="flex items-center gap-1.5 text-sm font-semibold text-label">
+          <h2 id="angebot-nachweis-titel" className="flex items-center gap-1.5 text-fliess font-semibold text-label">
             <ShieldCheck size={15} strokeWidth={2} className="text-tone-emerald" aria-hidden="true" /> Nachweis aus dem
             Kundenportal
           </h2>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-fliess">
             <dt className="text-label2">Aktion</dt>
             <dd className="text-label">
               {AKTION_LABEL[nachweis.aktion]}
@@ -48,7 +48,7 @@ export function AngebotNachweis({ angebot }: { angebot: Angebot }) {
               {nachweis.user_agent ? ` · ${nachweis.user_agent}` : ""}
             </dd>
             <dt className="text-label2">Fassung (SHA-256)</dt>
-            <dd className="break-all font-mono text-xs text-label">{nachweis.fassung_sha256}</dd>
+            <dd className="break-all font-mono text-sekundaer text-label">{nachweis.fassung_sha256}</dd>
             {nachweis.belehrung_version && (
               <>
                 <dt className="text-label2">Widerrufsbelehrung</dt>

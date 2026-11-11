@@ -72,7 +72,7 @@ export function AngebotLvUebernahme({
       titel="Aus Leistungsverzeichnis"
       vollbild
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint">
+        <button type="button" onClick={onClose} className="text-zeile text-tint">
           Abbrechen
         </button>
       }
@@ -81,7 +81,7 @@ export function AngebotLvUebernahme({
           type="submit"
           form={FORM_ID}
           disabled={anzahl === 0 || ungueltig || uebernehmen.isPending}
-          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+          className="text-zeile font-semibold text-tint disabled:opacity-40"
         >
           Übernehmen{anzahl > 0 ? ` (${anzahl})` : ""}
         </button>
@@ -97,19 +97,19 @@ export function AngebotLvUebernahme({
         className="space-y-4 p-4"
       >
         {fehler && <FehlerMeldung meldung={fehler} alsKasten />}
-        {isLoading && <p className="text-sm text-label2">Lädt…</p>}
+        {isLoading && <p className="text-sekundaer text-label2">Lädt…</p>}
         {!isLoading && gruppen.size === 0 && (
-          <p className="text-sm text-label2">Für diesen Kunden gibt es keine Leistungsverzeichnis-Positionen.</p>
+          <p className="text-sekundaer text-label2">Für diesen Kunden gibt es keine Leistungsverzeichnis-Positionen.</p>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-label">
+        <label className="flex items-center gap-2 text-fliess text-label">
           <input type="checkbox" checked={mitGliederung} onChange={(e) => setMitGliederung(e.target.checked)} />
           Hauptpunkte als Titel übernehmen (Gliederung)
         </label>
 
         {[...gruppen].map(([lvId, liste]) => (
           <section key={lvId}>
-            <h3 className="mb-1 text-xs font-semibold uppercase text-label2">
+            <h3 className="mb-1 text-meta font-semibold uppercase text-label2">
               {lvs?.find((l) => l.id === lvId)?.name ?? "Leistungsverzeichnis"}
             </h3>
             <ul className="divide-y-[0.5px] divide-sep">
@@ -131,8 +131,8 @@ export function AngebotLvUebernahme({
                       }}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-label">{p.bezeichnung}</div>
-                      <div className="text-xs text-label2">
+                      <div className="truncate text-fliess text-label">{p.bezeichnung}</div>
+                      <div className="text-sekundaer text-label2">
                         {p.einzelpreis} €/{p.einheit}
                         {(lohn || material) && ` · Lohn ${p.lohn_gesamt} € · Material ${p.material_gesamt} €`}
                       </div>

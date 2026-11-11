@@ -13,7 +13,7 @@ import { newClause, parseCondition, serializeCondition } from "../../utils/ruleC
 import type { FormField } from "../../types";
 import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
 function operatorenFuer(feld: FormField | undefined): { operator: ClauseOperator; label: string }[] {
   if (!feld) return [{ operator: "==", label: "ist" }];
@@ -211,11 +211,11 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
             }
           }}
           rows={3}
-          className={`${inputClass} font-mono text-xs`}
+          className={`${inputClass} font-mono text-sekundaer`}
         />
-        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
+        {rawFehler && <p className="text-sekundaer text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
-          <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
+          <button type="button" onClick={() => setErweitert(false)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
             Zurück zum Regel-Baukasten
           </button>
         )}
@@ -225,13 +225,13 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
 
   return (
     <div className="space-y-1.5">
-      {clauses.length === 0 && <p className="text-xs text-label2">Immer aktiv (keine Bedingung).</p>}
+      {clauses.length === 0 && <p className="text-sekundaer text-label2">Immer aktiv (keine Bedingung).</p>}
       {clauses.map((clause, idx) => {
         const feld = rootFelder.find((f) => f.key === clause.field);
         return (
           <div key={idx} className="space-y-1">
             {idx > 0 && (
-              <div className="flex items-center gap-2 text-xs font-medium text-label2">
+              <div className="flex items-center gap-2 text-sekundaer font-medium text-label2">
                 <Select
                   className="w-auto"
                   value={combinator}
@@ -306,11 +306,11 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
           type="button"
           onClick={() => updateClauses([...clauses, newClause(rootFelder[0]?.key ?? "")])}
           disabled={rootFelder.length === 0}
-          className="btn-touch flex items-center gap-1 text-xs font-medium text-cyan-700 disabled:opacity-50 dark:text-cyan-400"
+          className="btn-touch flex items-center gap-1 text-sekundaer font-medium text-cyan-700 disabled:opacity-50 dark:text-cyan-400"
         >
           <Plus size={13} /> Bedingung
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
+        <button type="button" onClick={() => setErweitert(true)} className="text-sekundaer text-label2">
           Erweitert (JSON)
         </button>
       </div>

@@ -34,7 +34,7 @@ export function AnlegenPanel({
       titel={titel}
       onClose={onClose}
       links={
-        <button type="button" onClick={onClose} className="text-[17px] text-tint-text">
+        <button type="button" onClick={onClose} className="text-zeile text-tint-text">
           Abbrechen
         </button>
       }

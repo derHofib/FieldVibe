@@ -30,13 +30,13 @@ export function Feld({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-label">
+      <label htmlFor={id} className="mb-1 block text-fliess font-medium text-label">
         {label}
         {pflicht && <span aria-hidden="true" className="text-st-fehlt"> *</span>}
       </label>
       {children({ id, "aria-invalid": !!fehler, "aria-describedby": fehler ? `${id}-fehler` : undefined })}
       {fehler && (
-        <p id={`${id}-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
+        <p id={`${id}-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
           {fehler}
         </p>
       )}

@@ -37,14 +37,14 @@ export function MfaCodesAnzeige({ codes, onFertig }: { codes: string[]; onFertig
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gbg p-4"
     >
       <div className="card-ap w-full max-w-md space-y-4 p-5">
-        <h1 id="mfa-codes-titel" className="text-[17px] font-semibold text-label">
+        <h1 id="mfa-codes-titel" className="text-zeile font-semibold text-label">
           Wiederherstellungscodes
         </h1>
         <Hinweiskasten ton="warnung" titel="Jetzt sichern – sie werden nur einmal angezeigt">
           Jeder Code funktioniert genau einmal, falls du dein Handy verlierst. Bewahre sie getrennt vom Handy auf
           (Passwort-Manager oder Ausdruck).
         </Hinweiskasten>
-        <ul className="grid grid-cols-2 gap-2 font-mono text-sm text-label" aria-label="Wiederherstellungscodes">
+        <ul className="grid grid-cols-2 gap-2 font-mono text-fliess text-label" aria-label="Wiederherstellungscodes">
           {codes.map((c) => (
             <li key={c} className="rounded-[var(--radius-ap-input)] bg-fill px-2 py-1.5 text-center select-all">
               {c}
@@ -60,7 +60,7 @@ export function MfaCodesAnzeige({ codes, onFertig }: { codes: string[]; onFertig
             <Download size={16} aria-hidden="true" /> Herunterladen
           </button>
         </div>
-        <label className="flex items-start gap-2 text-sm text-label">
+        <label className="flex items-start gap-2 text-fliess text-label">
           <input
             type="checkbox"
             checked={gespeichert}

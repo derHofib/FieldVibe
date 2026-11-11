@@ -96,7 +96,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={t.id}
               // Fehler als assertive Ansage (alert), sonst höfliches status
               role={t.art === "fehler" ? "alert" : "status"}
-              className={`pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-lg px-3 py-2.5 text-sm shadow-lg ${STIL[t.art]}`}
+              className={`pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-lg px-3 py-2.5 text-fliess shadow-lg ${STIL[t.art]}`}
             >
               <Icon size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1">{t.text}</span>

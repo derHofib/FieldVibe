@@ -132,7 +132,7 @@ export function FehlerberichtProvider({
           role="region"
           aria-label={modus === "idee" ? "Idee einreichen – Aufnahmemodus" : "Fehler melden – Aufnahmemodus"}
         >
-          <button type="button" onClick={() => void aufnehmen(modus)} className="flex min-h-10 items-center gap-2 text-left text-[13px] font-semibold">
+          <button type="button" onClick={() => void aufnehmen(modus)} className="flex min-h-10 items-center gap-2 text-left text-sekundaer font-semibold">
             <Camera size={16} strokeWidth={2} className="shrink-0" aria-hidden="true" />
             <span>{modus === "idee" ? "Zur betroffenen Stelle wechseln, dann hier tippen · Aufnehmen" : "Zum Fehler wechseln, dann hier tippen · Aufnehmen"}</span>
           </button>

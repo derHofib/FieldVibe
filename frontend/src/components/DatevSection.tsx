@@ -42,10 +42,10 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
   return (
     <div className="space-y-3 card-ap p-4" id="buchhaltung-datev">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
           <FileSpreadsheet size={15} strokeWidth={2} className="text-tone-indigo" /> DATEV / Buchhaltung
         </h2>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           Stammdaten für den DATEV-Export (Buchungsstapel). Die Werte kennt der Steuerberater – ohne Berater- und
           Mandantennummer lässt sich der Export nicht erzeugen.
         </p>
@@ -57,7 +57,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="datev-berater" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="datev-berater" className="mb-0.5 block text-meta text-label2">
             Beraternummer
           </label>
           <input
@@ -73,7 +73,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
           />
         </div>
         <div>
-          <label htmlFor="datev-mandant" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="datev-mandant" className="mb-0.5 block text-meta text-label2">
             Mandantennummer
           </label>
           <input
@@ -89,7 +89,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
           />
         </div>
         <div>
-          <label htmlFor="datev-wj" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="datev-wj" className="mb-0.5 block text-sekundaer text-label2">
             Wirtschaftsjahr beginnt im
           </label>
           <Select
@@ -105,7 +105,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
           </Select>
         </div>
         <div>
-          <label htmlFor="datev-skr" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="datev-skr" className="mb-0.5 block text-sekundaer text-label2">
             Kontenrahmen
           </label>
           <Select
@@ -121,7 +121,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
           </Select>
         </div>
         <div>
-          <label htmlFor="datev-laenge" className="mb-0.5 block text-xs text-label2">
+          <label htmlFor="datev-laenge" className="mb-0.5 block text-sekundaer text-label2">
             Sachkontenlänge
           </label>
           <input
@@ -135,20 +135,20 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
             aria-invalid={!!fehler.sachkontenlaenge}
             className="field-ap tabular-nums"
           />
-          <p className="mt-0.5 text-xs text-label2">
+          <p className="mt-0.5 text-sekundaer text-label2">
             Personenkonten (Debitoren/Kreditoren) haben eine Stelle mehr, z. B. 5 Stellen bei 4.
           </p>
         </div>
       </div>
 
       {besucht && hatFehler && (
-        <p role="alert" className="text-xs text-st-fehlt">
+        <p role="alert" className="text-sekundaer text-st-fehlt">
           {Object.values(fehler).join(" · ")}
         </p>
       )}
 
       {laengeGeaendert && (
-        <p className="text-xs text-label2">
+        <p className="text-sekundaer text-label2">
           Bereits vergebene Debitoren-/Kreditorenkonten behalten ihre Länge und müssen nach einer Änderung der
           Sachkontenlänge angepasst werden, sonst blockiert der Export.
         </p>
@@ -169,11 +169,11 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || hatFehler}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
-        {speichernMutation.isSuccess && <span className="text-xs text-st-erledigt">Gespeichert.</span>}
+        {speichernMutation.isSuccess && <span className="text-sekundaer text-st-erledigt">Gespeichert.</span>}
       </div>
     </div>
   );

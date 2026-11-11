@@ -10,7 +10,7 @@ export function SchweregradBadge({ schweregrad }: { schweregrad: FehlerberichtSc
   return (
     <span
       data-schweregrad={schweregrad}
-      className={`inline-flex items-center rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${SCHWEREGRAD_KLASSE[schweregrad]}`}
+      className={`inline-flex items-center rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${SCHWEREGRAD_KLASSE[schweregrad]}`}
     >
       {SCHWEREGRAD_LABEL[schweregrad]}
     </span>

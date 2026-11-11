@@ -41,7 +41,7 @@ import type { FormFeldTyp, FormField, FormGroup, FormSchemaDetail, PlanSymbol } 
 import { FELD_TYP_KATALOG, FELD_TYP_LABEL } from "../../utils/feldTypKatalog";
 import { FormFieldRenderer } from "./FormFieldRenderer";
 
-const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
 type Auswahl = { art: "feld"; id: string } | { art: "gruppe"; id: string } | null;
 type RootEintrag =
@@ -76,7 +76,7 @@ function PaletteItem({ dragId, label, icon: Icon }: { dragId: string; label: str
       {...attributes}
       type="button"
       style={{ touchAction: "none" }}
-      className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] border-sep p-2 text-center text-[11px] font-medium text-label hover:bg-fill ${
+      className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] border-sep p-2 text-center text-meta font-medium text-label hover:bg-fill ${
         isDragging ? "opacity-30" : ""
       }`}
     >
@@ -108,14 +108,14 @@ function FeldTypPalette({ ohneStruktur = false }: { ohneStruktur?: boolean }) {
 
   return (
     <div className="w-64 shrink-0 space-y-1.5 border-r border-sep pr-4">
-      <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Feldtypen — ziehen &amp; ablegen</p>
+      <p className="text-meta font-bold tracking-wide text-label2 uppercase">Feldtypen — ziehen &amp; ablegen</p>
       {kategorien.map((kat) => {
         const offen = offeneKategorien.has(kat.name);
         return (
           <div key={kat.name} className="border rounded-[var(--radius-ap-md)] border-sepstrong">
             <button
               onClick={() => toggeln(kat.name)}
-              className="flex w-full items-center gap-2 p-2 text-left text-[11px] font-bold tracking-wide text-label2 uppercase hover:bg-fill"
+              className="flex w-full items-center gap-2 p-2 text-left text-meta font-bold tracking-wide text-label2 uppercase hover:bg-fill"
             >
               {offen ? <ChevronDown size={14} strokeWidth={1.5} /> : <ChevronRight size={14} strokeWidth={1.5} />}
               {kat.name}
@@ -163,7 +163,7 @@ function FeldKarte({ field, ausgewaehlt, onSelect }: { field: FormField; ausgewa
       <div className="min-w-0 flex-1">
         <FormFieldRenderer field={field} value={undefined} onChange={() => {}} readOnly required={field.pflichtfeld} />
       </div>
-      <span className="absolute top-1.5 right-1.5 card-ap px-1.5 py-0.5 text-[10px] text-label2">
+      <span className="absolute top-1.5 right-1.5 card-ap px-1.5 py-0.5 text-meta text-label2">
         {field.feld_typ}
       </span>
     </div>
@@ -218,8 +218,8 @@ function GruppenKarte({
         >
           <GripVertical size={15} strokeWidth={1.5} />
         </button>
-        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
-        <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-[10px] font-medium text-label ">
+        <h3 className="min-w-0 flex-1 truncate text-fliess font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
+        <span className="shrink-0 rounded-full bg-fill px-2 py-0.5 text-meta font-medium text-label ">
           {gruppe.repeatable ? "Unterformular" : "Abschnitt"}
         </span>
       </div>
@@ -230,7 +230,7 @@ function GruppenKarte({
               e.stopPropagation();
               onUnterformularOeffnen();
             }}
-            className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-2.5 text-sm font-medium text-label hover:bg-fill"
+            className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-2.5 text-sekundaer font-medium text-label hover:bg-fill"
           >
             <PenLine size={15} strokeWidth={1.5} />
             Unterformular bearbeiten
@@ -270,7 +270,7 @@ function GruppenKoerper({
         ))}
       </SortableContext>
       {felder.length === 0 && (
-        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-3 text-center text-xs text-label2">Feld hierher ziehen</div>
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-3 text-center text-sekundaer text-label2">Feld hierher ziehen</div>
       )}
     </div>
   );
@@ -320,7 +320,7 @@ function Canvas({
         )}
       </SortableContext>
       {rootEntries.length === 0 && (
-        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-10 text-center text-sm text-label2">
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-10 text-center text-sekundaer text-label2">
           Feldtyp aus der Palette hierher ziehen
         </div>
       )}
@@ -331,7 +331,7 @@ function Canvas({
 // --- Eigenschaften-Spalte -------------------------------------------------
 
 function InspectorLeer() {
-  return <div className="p-4 text-sm text-label2">Feld oder Gruppe im Formular auswählen, um Eigenschaften zu bearbeiten.</div>;
+  return <div className="p-4 text-sekundaer text-label2">Feld oder Gruppe im Formular auswählen, um Eigenschaften zu bearbeiten.</div>;
 }
 
 function InspectorFeld({
@@ -367,11 +367,11 @@ function InspectorFeld({
   return (
     <div className="space-y-4 p-4">
       <div>
-        <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Ausgewähltes Feld</p>
-        <p className="text-sm font-semibold text-label">{FELD_TYP_LABEL[feld.feld_typ]}</p>
+        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Ausgewähltes Feld</p>
+        <p className="text-fliess font-semibold text-label">{FELD_TYP_LABEL[feld.feld_typ]}</p>
       </div>
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">Bezeichnung</label>
         <input id={`${uid}-0`}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -383,18 +383,18 @@ function InspectorFeld({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Feldschlüssel</label>
-        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sm text-label2">{feld.key}</p>
+        <label className="mb-1 block text-sekundaer font-medium text-label">Feldschlüssel</label>
+        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sekundaer text-label2">{feld.key}</p>
       </div>
-      <label className="flex items-center justify-between border-b border-sep py-2 text-sm text-label">
+      <label className="flex items-center justify-between border-b border-sep py-2 text-fliess text-label">
         Pflichtfeld
         <input type="checkbox" checked={feld.pflichtfeld} onChange={onPflichtfeldToggle} className="h-4 w-4" />
       </label>
       {feld.feld_typ === "foto_plan" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-label">Verfügbare Symbole</label>
+          <label className="mb-1 block text-sekundaer font-medium text-label">Verfügbare Symbole</label>
           {planSymbole.length === 0 ? (
-            <p className="text-xs text-label2">
+            <p className="text-sekundaer text-label2">
               Noch keine Plan-Symbole angelegt —{" "}
               <Link to="/plan-symbole" className="text-tint-text hover:underline">
                 Symbol-Bibliothek öffnen
@@ -409,7 +409,7 @@ function InspectorFeld({
                   <button
                     key={s.id}
                     onClick={() => symbolUmschalten(s.id)}
-                    className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] p-1.5 text-center text-[10px] ${
+                    className={`flex flex-col items-center gap-1 border rounded-[var(--radius-ap-md)] p-1.5 text-center text-meta ${
                       ausgewaehlt ? "border-tint bg-tintbg text-tint" : "border-sep text-label hover:bg-fill"
                     }`}
                   >
@@ -423,10 +423,10 @@ function InspectorFeld({
         </div>
       )}
       <div>
-        <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Regeln &amp; Formel</p>
+        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Regeln &amp; Formel</p>
         <button
           onClick={onRegelnOeffnen}
-          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
+          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sekundaer text-label hover:bg-fill"
         >
           <span className="flex items-center gap-1.5">
             <SlidersHorizontal size={13} strokeWidth={1.5} /> Regeln bearbeiten
@@ -436,7 +436,7 @@ function InspectorFeld({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
+        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sekundaer text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Feld löschen
       </button>
@@ -471,11 +471,11 @@ function InspectorGruppe({
   return (
     <div className="space-y-4 p-4">
       <div>
-        <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Ausgewählte Gruppe</p>
-        <p className="text-sm font-semibold text-label">{gruppe.repeatable ? "Unterformular" : "Abschnitt"}</p>
+        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Ausgewählte Gruppe</p>
+        <p className="text-fliess font-semibold text-label">{gruppe.repeatable ? "Unterformular" : "Abschnitt"}</p>
       </div>
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">Bezeichnung</label>
         <input id={`${uid}-0`}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -487,12 +487,12 @@ function InspectorGruppe({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Schlüssel</label>
-        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sm text-label2">{gruppe.key}</p>
+        <label className="mb-1 block text-sekundaer font-medium text-label">Schlüssel</label>
+        <p className="border rounded-[var(--radius-ap-md)] border-sep bg-fill px-2 py-1.5 text-sekundaer text-label2">{gruppe.key}</p>
       </div>
       {gruppe.repeatable && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-label">Einträge (optional)</label>
+          <label className="mb-1 block text-sekundaer font-medium text-label">Einträge (optional)</label>
           <div className="grid grid-cols-2 gap-2">
             <input
               value={minItems}
@@ -516,10 +516,10 @@ function InspectorGruppe({
         </div>
       )}
       <div>
-        <p className="mb-1 text-[11px] font-bold tracking-wide text-label2 uppercase">Regeln</p>
+        <p className="mb-1 text-meta font-bold tracking-wide text-label2 uppercase">Regeln</p>
         <button
           onClick={onRegelnOeffnen}
-          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sm text-label hover:bg-fill"
+          className="flex w-full items-center justify-between border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-sekundaer text-label hover:bg-fill"
         >
           <span className="flex items-center gap-1.5">
             <SlidersHorizontal size={13} strokeWidth={1.5} /> Regeln bearbeiten
@@ -529,7 +529,7 @@ function InspectorGruppe({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
+        className="flex w-full items-center justify-center gap-1.5 border rounded-[var(--radius-ap-md)] border-sep py-1.5 text-sekundaer text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Gruppe löschen
       </button>
@@ -576,7 +576,7 @@ function UnterformularFeldZeile({
         <FormFieldRenderer field={field} value={undefined} onChange={() => {}} readOnly required={field.pflichtfeld} />
       </div>
       <div className="mt-1 flex shrink-0 flex-col items-end gap-1">
-        <span className="card-ap px-1.5 py-0.5 text-[10px] text-label2">{field.feld_typ}</span>
+        <span className="card-ap px-1.5 py-0.5 text-meta text-label2">{field.feld_typ}</span>
         <div className="flex gap-1">
           <button
             onClick={onRegelnOeffnen}
@@ -595,7 +595,7 @@ function UnterformularFeldZeile({
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
         </div>
-        {regelnAnzahl > 0 && <span className="text-[10px] text-label2">{regelnAnzahl} Regel{regelnAnzahl === 1 ? "" : "n"}</span>}
+        {regelnAnzahl > 0 && <span className="text-meta text-label2">{regelnAnzahl} Regel{regelnAnzahl === 1 ? "" : "n"}</span>}
       </div>
     </div>
   );
@@ -629,7 +629,7 @@ function UnterformularFeldListe({
         ))}
       </SortableContext>
       {felder.length === 0 && (
-        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-8 text-center text-sm text-label2">
+        <div className="rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong p-8 text-center text-sekundaer text-label2">
           Feldtyp aus der Palette hierher ziehen
         </div>
       )}
@@ -707,14 +707,14 @@ function UnterformularPanel({
         </div>
         <DragOverlay>
           {aktivId?.startsWith("palette:") && (
-            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-fliess text-label shadow-lg">
               {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
             </div>
           )}
           {aktivId?.startsWith("field:") &&
             (() => {
               const f = felder.find((x) => x.id === aktivId.slice("field:".length));
-              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
+              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-fliess text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
             })()}
         </DragOverlay>
       </DndContext>
@@ -1025,7 +1025,7 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     // transform auf einem Vorfahren macht diesen zum Containing-Block fuer
     // position:fixed und hat den Overlay weit vom Cursor weg gerissen.
     <div className="mx-[calc(50%-50vw)] w-screen max-w-none space-y-2 px-3 sm:px-6">
-      <p className="mx-auto max-w-[1400px] text-[11px] font-bold tracking-wide text-label2 uppercase">Formular</p>
+      <p className="mx-auto max-w-[1400px] text-meta font-bold tracking-wide text-label2 uppercase">Formular</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="mx-auto flex max-w-[1400px] gap-4 card-ap" style={{ minHeight: 520 }}>
@@ -1090,25 +1090,25 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
         </div>
         <DragOverlay>
           {aktivId?.startsWith("struktur:") && (
-            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-fliess text-label shadow-lg">
               {aktivId === "struktur:unterformular" ? "Unterformular" : "Abschnitt"}
             </div>
           )}
           {aktivId?.startsWith("palette:") && (
-            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">
+            <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-fliess text-label shadow-lg">
               {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
             </div>
           )}
           {aktivId?.startsWith("field:") &&
             (() => {
               const f = schema.fields.find((x) => x.id === aktivId.slice("field:".length));
-              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
+              return f ? <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-fliess text-label shadow-lg">{f.label.de ?? f.key}</div> : null;
             })()}
           {aktivId?.startsWith("group:") &&
             (() => {
               const g = schema.groups.find((x) => x.id === aktivId.slice("group:".length));
               return g ? (
-                <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sm font-semibold text-label shadow-lg">{g.label.de ?? g.key}</div>
+                <div className="border rounded-[var(--radius-ap-md)] border-tint bg-card px-3 py-2 text-sekundaer font-semibold text-label shadow-lg">{g.label.de ?? g.key}</div>
               ) : null;
             })()}
         </DragOverlay>

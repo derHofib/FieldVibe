@@ -52,8 +52,8 @@ function Kachel({
         aktiv ? "bg-tint-solid text-white" : "bg-cell text-label hover:bg-fill"
       }`}
     >
-      <span className="text-[22px] font-bold leading-none tabular-nums">{anzahl ?? "–"}</span>
-      <span className="flex items-center gap-1.5 text-xs font-semibold">
+      <span className="text-titel-mobil font-bold leading-none tabular-nums">{anzahl ?? "–"}</span>
+      <span className="flex items-center gap-1.5 text-sekundaer font-semibold">
         {punktKlasse && (
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${aktiv ? "bg-white" : `bg-current ${punktKlasse}`}`}
@@ -91,7 +91,7 @@ function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeig
       )}
       <Link to={detailPfad(b.id)} className="flex flex-col gap-1.5 px-4 py-3 hover:bg-fill">
         <div className="flex items-start justify-between gap-3">
-          <p className={`flex min-w-0 items-start gap-2 text-[15px] text-label ${dringend ? "font-bold" : "font-semibold"}`}>
+          <p className={`flex min-w-0 items-start gap-2 text-fliess text-label ${dringend ? "font-bold" : "font-semibold"}`}>
             {b.art === "idee" ? (
               <Lightbulb size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-tone-amber" aria-label="Idee" role="img" />
             ) : (
@@ -99,7 +99,7 @@ function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeig
             )}
             <span className="min-w-0">{b.titel}</span>
           </p>
-          <span className="shrink-0 text-xs text-label2" title={new Date(b.created_at).toLocaleString("de-DE")}>
+          <span className="shrink-0 text-meta text-label2" title={new Date(b.created_at).toLocaleString("de-DE")}>
             {relativeZeit(b.created_at)}
           </span>
         </div>
@@ -107,7 +107,7 @@ function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeig
           <SchweregradBadge schweregrad={b.schweregrad} />
           <FehlerStatusPille status={b.status} art={b.art} />
           {b.duplikat_von_id && (
-            <span className="inline-flex items-center gap-1 text-xs text-label2">
+            <span className="inline-flex items-center gap-1 text-sekundaer text-label2">
               <Copy size={12} strokeWidth={2} aria-hidden="true" />
               Mögliches Duplikat
             </span>
@@ -120,7 +120,7 @@ function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeig
           )}
         </div>
         {(meta || b.route) && (
-          <p className="truncate text-xs text-label2">
+          <p className="truncate text-sekundaer text-label2">
             {meta}
             {meta && b.route ? " · " : ""}
             {b.route && <span className="font-mono">{b.route}</span>}
@@ -257,7 +257,7 @@ export function FehlerberichtListe({
         )}
       </div>
       {abweichend && (
-        <button type="button" onClick={() => setFilter(STANDARD_FILTER)} className="text-sm font-medium text-tint-text">
+        <button type="button" onClick={() => setFilter(STANDARD_FILTER)} className="text-sekundaer font-medium text-tint-text">
           Filter zurücksetzen
         </button>
       )}

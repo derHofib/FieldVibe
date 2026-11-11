@@ -116,7 +116,7 @@ export function VorgangHinzufuegen({
       onClose={schliessen}
       titel={vorgangId ? "Posten wählen" : "Vorgang hinzufügen"}
       links={
-        <button onClick={vorgangId ? zurueck : schliessen} className="btn-touch text-[17px] text-tint-text">
+        <button onClick={vorgangId ? zurueck : schliessen} className="btn-touch text-zeile text-tint-text">
           {vorgangId ? "Zurück" : "Abbrechen"}
         </button>
       }
@@ -124,21 +124,21 @@ export function VorgangHinzufuegen({
       <div className="space-y-3 p-4">
         {!vorgangId && (
           <>
-            {vorgaengeLaden && <p className="text-sm text-label2">Lädt…</p>}
+            {vorgaengeLaden && <p className="text-sekundaer text-label2">Lädt…</p>}
             {vorgaenge && vorgaenge.length === 0 && (
-              <p className="text-sm text-label2">Keine abrechenbaren Vorgänge für diesen Kunden.</p>
+              <p className="text-sekundaer text-label2">Keine abrechenbaren Vorgänge für diesen Kunden.</p>
             )}
             <div className="space-y-1.5">
               {(vorgaenge ?? []).map((v) => (
                 <button
                   key={v.vorgang_id}
                   onClick={() => setVorgangId(v.vorgang_id)}
-                  className="btn-touch block w-full rounded-md bg-fill p-2 text-left text-sm"
+                  className="btn-touch block w-full rounded-md bg-fill p-2 text-left text-sekundaer"
                 >
                   <span className="block truncate text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </span>
-                  <span className="block text-xs text-label2">
+                  <span className="block text-sekundaer text-label2">
                     {formatStunden(Number(v.stunden_ohne_svs) + Number(v.stunden_mit_svs))} ·{" "}
                     {materialText(v.material_offen)}
                   </span>
@@ -150,9 +150,9 @@ export function VorgangHinzufuegen({
 
         {vorgangId && (
           <>
-            {vorschlaegeLaden && <p className="text-sm text-label2">Lädt…</p>}
+            {vorschlaegeLaden && <p className="text-sekundaer text-label2">Lädt…</p>}
             {vorschlaege && liste.length === 0 && (
-              <p className="text-sm text-label2">Keine abrechenbaren Posten.</p>
+              <p className="text-sekundaer text-label2">Keine abrechenbaren Posten.</p>
             )}
             {GRUPPEN.map((g) => {
               const zeilen = liste
@@ -161,10 +161,10 @@ export function VorgangHinzufuegen({
               if (zeilen.length === 0) return null;
               return (
                 <div key={g.titel}>
-                  <p className="mb-1 text-xs font-semibold text-label2">{g.titel}</p>
+                  <p className="mb-1 text-sekundaer font-semibold text-label2">{g.titel}</p>
                   <div className="space-y-1.5">
                     {zeilen.map(({ v, i }) => (
-                      <label key={i} className="flex items-start gap-2 rounded-md bg-fill p-2 text-sm">
+                      <label key={i} className="flex items-start gap-2 rounded-md bg-fill p-2 text-fliess">
                         <input
                           type="checkbox"
                           checked={!abgewaehlt.has(i)}
@@ -173,7 +173,7 @@ export function VorgangHinzufuegen({
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block text-label">{v.beschreibung}</span>
-                          <span className="block text-xs text-label2">
+                          <span className="block text-sekundaer text-label2">
                             {v.menge} {v.einheit} × {v.einzelpreis} €
                           </span>
                         </span>
@@ -186,7 +186,7 @@ export function VorgangHinzufuegen({
 
             {zeitGewaehlt && (
               <div>
-                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Stundensatz (€/Std)</label>
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Stundensatz (€/Std)</label>
                 <input id={`${uid}-0`}
                   type="number"
                   step="0.01"
@@ -200,7 +200,7 @@ export function VorgangHinzufuegen({
             )}
 
             {uebernehmen.isError && (
-              <p className="text-xs text-st-fehlt">
+              <p className="text-sekundaer text-st-fehlt">
                 {uebernehmen.error instanceof ApiError ? uebernehmen.error.message : "Übernahme fehlgeschlagen"}
               </p>
             )}
@@ -208,7 +208,7 @@ export function VorgangHinzufuegen({
             <button
               disabled={gewaehlt.length === 0 || uebernehmen.isPending}
               onClick={bestaetigen}
-              className="btn-touch btn-ap btn-ap-primary w-full px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch btn-ap btn-ap-primary w-full px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               Übernehmen
             </button>

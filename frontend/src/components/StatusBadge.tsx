@@ -18,7 +18,7 @@ const TONE_FLAECHE: Record<IconTone, string> = {
 export function StatusBadge({ label, tone }: { label: string; tone: IconTone }) {
   return (
     <span
-      className={`inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold text-label ${TONE_FLAECHE[tone]}`}
+      className={`inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold text-label ${TONE_FLAECHE[tone]}`}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${TONE_FILL[tone]}`} aria-hidden="true" />
       {label}

@@ -13,7 +13,7 @@ import { neuerTerm, parseFormel, serializeFormel } from "../../utils/ruleFormula
 import type { FormField } from "../../types";
 import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
 const OPERATOR_LABEL: Record<FormelOperator, string> = {
   "+": "+",
@@ -68,11 +68,11 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
             }
           }}
           rows={3}
-          className={`${inputClass} font-mono text-xs`}
+          className={`${inputClass} font-mono text-sekundaer`}
         />
-        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
+        {rawFehler && <p className="text-sekundaer text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
-          <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
+          <button type="button" onClick={() => setErweitert(false)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
             Zurück zum Formel-Baukasten
           </button>
         )}
@@ -82,7 +82,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
 
   return (
     <div className="space-y-1.5">
-      {terme.length === 0 && <p className="text-xs text-label2">Kein Term – Formel hinzufügen.</p>}
+      {terme.length === 0 && <p className="text-sekundaer text-label2">Kein Term – Formel hinzufügen.</p>}
       {terme.map((term, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           {idx > 0 && (
@@ -166,11 +166,11 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
         <button
           type="button"
           onClick={() => update([...terme, neuerTerm()], terme.length > 0 ? [...operatoren, "+"] : operatoren)}
-          className="btn-touch flex items-center gap-1 text-xs font-medium text-cyan-700 dark:text-cyan-400"
+          className="btn-touch flex items-center gap-1 text-sekundaer font-medium text-cyan-700 dark:text-cyan-400"
         >
           <Plus size={13} strokeWidth={1.5} /> Term
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
+        <button type="button" onClick={() => setErweitert(true)} className="text-sekundaer text-label2">
           Erweitert (JSON)
         </button>
       </div>

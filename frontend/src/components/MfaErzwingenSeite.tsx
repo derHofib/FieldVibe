@@ -17,7 +17,7 @@ export function MfaErzwingenSeite() {
           <Logo variante="wortmarke" hoehe={32} />
         </div>
         <div className="card-ap space-y-4 p-5">
-          <h1 className="text-[17px] font-semibold text-label">Zwei-Faktor-Anmeldung einrichten</h1>
+          <h1 className="text-zeile font-semibold text-label">Zwei-Faktor-Anmeldung einrichten</h1>
           <Hinweiskasten ton="info">
             Dein Betrieb schreibt die Zwei-Faktor-Anmeldung vor. Richte sie jetzt ein, um fortzufahren.
           </Hinweiskasten>

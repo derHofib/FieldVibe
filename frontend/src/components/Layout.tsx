@@ -59,7 +59,7 @@ export function Layout() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `btn-touch relative flex items-center justify-center gap-2.5 px-2.5 py-2 text-sm font-medium transition-colors sm:justify-start ${
+                  `btn-touch relative flex items-center justify-center gap-2.5 px-2.5 py-2 text-sekundaer font-medium transition-colors sm:justify-start ${
                     isActive ? "text-label" : "text-label hover:bg-fill hover:text-label"
                   }`
                 }
@@ -75,7 +75,7 @@ export function Layout() {
                     {item.to === "/bugfixes" && offeneBugfixes > 0 && (
                       <span
                         aria-label={`${offeneBugfixes} offene Fehler und neue Ideen`}
-                        className="absolute top-0.5 right-0.5 min-w-4 rounded-full bg-tint-solid px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums sm:static sm:ml-auto"
+                        className="absolute top-0.5 right-0.5 min-w-4 rounded-full bg-tint-solid px-1 text-center text-meta leading-4 font-semibold text-white tabular-nums sm:static sm:ml-auto"
                       >
                         {offeneBugfixes}
                       </span>
@@ -88,13 +88,13 @@ export function Layout() {
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between gap-2 border-b border-sep px-3 py-3 sm:px-6">
-            <h1 className="truncate text-sm font-semibold text-label">{seitentitel}</h1>
+            <h1 className="truncate text-fliess font-semibold text-label">{seitentitel}</h1>
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-label sm:inline">
+              <span className="hidden text-fliess text-label sm:inline">
                 Angemeldet als <strong>{currentUser?.name}</strong> ({rolleLabel(currentUser?.role)})
               </span>
               <ThemeToggle />
-              <button onClick={logout} className="btn-touch btn-ap px-3 py-2 text-sm">
+              <button onClick={logout} className="btn-touch btn-ap px-3 py-2 text-sekundaer">
                 Abmelden
               </button>
             </div>

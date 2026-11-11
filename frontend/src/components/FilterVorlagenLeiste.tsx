@@ -99,7 +99,7 @@ function VorlagenChips({ v: h }: { v: FilterVorlagenState }) {
             return (
               <div
                 key={v.id}
-                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-xs font-medium ${
+                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-sekundaer font-medium ${
                   aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
                 }`}
               >
@@ -145,22 +145,22 @@ function SpeichernForm({ v: h }: { v: FilterVorlagenState }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name der Vorlage"
-            className="btn-touch min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-1.5 text-sm text-label"
+            className="btn-touch min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-1.5 text-zeile text-label"
           />
-          <label className="flex shrink-0 items-center gap-1 text-xs text-label">
+          <label className="flex shrink-0 items-center gap-1 text-sekundaer text-label">
             <input type="checkbox" checked={alsStandard} onChange={(e) => setAlsStandard(e.target.checked)} />
             Als Standard
           </label>
           <button
             disabled={!name.trim() || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+            className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             Speichern
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
+      {error && <p className="text-sekundaer text-st-fehlt ">{error}</p>}
     </>
   );
 }
@@ -176,7 +176,7 @@ export function FilterVorlagenLeiste(props: FilterVorlagenProps) {
         {hatAktivenFilter && (
           <button
             onClick={() => onApply({})}
-            className="btn-touch text-xs text-label2 "
+            className="btn-touch text-sekundaer text-label2 "
           >
             Filter zurücksetzen
           </button>
@@ -185,7 +185,7 @@ export function FilterVorlagenLeiste(props: FilterVorlagenProps) {
         {(hatAktivenFilter || zeigeSpeichern) && (
           <button
             onClick={() => setZeigeSpeichern((v) => !v)}
-            className="btn-touch text-xs font-medium text-tint-text"
+            className="btn-touch text-sekundaer font-medium text-tint-text"
           >
             {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
           </button>

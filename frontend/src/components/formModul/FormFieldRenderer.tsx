@@ -74,14 +74,14 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
         className="h-36 w-full touch-none rounded-md border border-sep bg-white"
       />
       <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="btn-touch flex-1 rounded-md text-sm text-label2">
+        <button type="button" onClick={onCancel} className="btn-touch flex-1 rounded-md text-sekundaer text-label2">
           Abbrechen
         </button>
         <button
           type="button"
           disabled={!hatUnterschrift}
           onClick={() => canvasRef.current?.toBlob((blob) => blob && onSave(blob), "image/png")}
-          className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-stone-700"
+          className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sekundaer font-medium text-white disabled:opacity-50 dark:bg-stone-700"
         >
           Übernehmen
         </button>
@@ -191,7 +191,7 @@ function FotoPlanFeld({
           <PenTool size={24} strokeWidth={1.3} />
         </div>
         {!readOnly && onUpload && (
-          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
+          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label ">
             <Camera size={16} />
             {hochladenPending ? "Lädt hoch…" : "Foto aufnehmen"}
             <input
@@ -227,7 +227,7 @@ function FotoPlanFeld({
                     setLinienPunkte([]);
                     setWerkzeug(werkzeug?.art === "symbol" && werkzeug.symbolId === s.id ? null : { art: "symbol", symbolId: s.id });
                   }}
-                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
+                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sekundaer font-medium ${
                     werkzeug?.art === "symbol" && werkzeug.symbolId === s.id
                       ? "border-tint bg-tintbg text-tint"
                       : "border-sep text-label hover:bg-fill"
@@ -246,7 +246,7 @@ function FotoPlanFeld({
                 setLinienPunkte([]);
                 setWerkzeug(werkzeug?.art === "linie" ? null : { art: "linie" });
               }}
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sekundaer font-medium ${
                 werkzeug?.art === "linie" ? "border-tint bg-tintbg text-tint" : "border-sep text-label hover:bg-fill"
               }`}
             >
@@ -258,7 +258,7 @@ function FotoPlanFeld({
                   type="button"
                   onClick={linieUebernehmen}
                   disabled={linienPunkte.length < 2}
-                  className="rounded-md bg-st-erledigt-dot px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+                  className="rounded-md bg-st-erledigt-dot px-2 py-1 text-sekundaer font-medium text-white disabled:opacity-40"
                 >
                   Fertig
                 </button>
@@ -268,7 +268,7 @@ function FotoPlanFeld({
                     setLinienPunkte([]);
                     setWerkzeug(null);
                   }}
-                  className="rounded-md bg-fill px-2 py-1 text-xs font-medium text-label "
+                  className="rounded-md bg-fill px-2 py-1 text-sekundaer font-medium text-label "
                 >
                   Abbrechen
                 </button>
@@ -276,7 +276,7 @@ function FotoPlanFeld({
             )}
           </div>
           {werkzeug && (
-            <p className="text-[11px] text-label2">
+            <p className="text-meta text-label2">
               {werkzeug.art === "symbol" ? "Auf das Foto tippen, um das Symbol zu platzieren." : "Punkte entlang der Leitung antippen, dann „Fertig“."}
             </p>
           )}
@@ -348,7 +348,7 @@ function FotoPlanFeld({
         <div className="mb-2 flex flex-wrap gap-1.5">
           {markierungen.map((m, i) =>
             m.art === "linie" ? (
-              <span key={i} className="flex items-center gap-1 rounded-md bg-fill px-2 py-1 text-xs text-label ">
+              <span key={i} className="flex items-center gap-1 rounded-md bg-fill px-2 py-1 text-sekundaer text-label ">
                 Leitung {i + 1}
                 {!readOnly && (
                   <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-label2 hover:text-st-fehlt">
@@ -362,7 +362,7 @@ function FotoPlanFeld({
       )}
 
       {!readOnly && onUpload && (
-        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
+        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label ">
           <Camera size={16} />
           {hochladenPending ? "Lädt hoch…" : "Foto ersetzen"}
           <input
@@ -405,14 +405,14 @@ export function FormFieldRenderer({
   const label = field.label.de ?? field.key;
 
   const labelNode = (
-    <label className="mb-1 block text-sm font-medium text-label">
+    <label className="mb-1 block text-fliess font-medium text-label">
       {label}
       {required && <span className="ml-1 text-st-fehlt">*</span>}
     </label>
   );
   const wrapperClass = "card-ap p-3";
   const inputClass =
-    "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sekundaer disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
 
   switch (field.feld_typ) {
     case "text":
@@ -420,7 +420,7 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           <input value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass} />
-          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-sekundaer text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "email":
@@ -434,7 +434,7 @@ export function FormFieldRenderer({
             disabled={readOnly}
             className={inputClass}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-sekundaer text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "telefon":
@@ -448,7 +448,7 @@ export function FormFieldRenderer({
             disabled={readOnly}
             className={inputClass}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-sekundaer text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "textarea":
@@ -462,7 +462,7 @@ export function FormFieldRenderer({
             rows={3}
             className={`${inputClass} resize-none`}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-sekundaer text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "zahl":
@@ -485,7 +485,7 @@ export function FormFieldRenderer({
               disabled={readOnly}
               className={inputClass}
             />
-            <span className="shrink-0 text-sm text-label2">€</span>
+            <span className="shrink-0 text-sekundaer text-label2">€</span>
           </div>
         </div>
       );
@@ -551,7 +551,7 @@ export function FormFieldRenderer({
           {labelNode}
           <div className="space-y-1.5">
             {werte.map((w) => (
-              <label key={w} className="flex items-center gap-2 text-sm text-label">
+              <label key={w} className="flex items-center gap-2 text-fliess text-label">
                 <input
                   type="checkbox"
                   disabled={readOnly}
@@ -580,7 +580,7 @@ export function FormFieldRenderer({
                 type="button"
                 disabled={readOnly}
                 onClick={() => onChange(opt.wert)}
-                className={`btn-touch flex-1 rounded-md py-1.5 text-sm font-medium disabled:opacity-60 ${
+                className={`btn-touch flex-1 rounded-md py-1.5 text-sekundaer font-medium disabled:opacity-60 ${
                   value === opt.wert ? "bg-cyan-600 text-white" : "bg-fill text-label "
                 }`}
               >
@@ -604,7 +604,7 @@ export function FormFieldRenderer({
                 type="button"
                 disabled={readOnly}
                 onClick={() => onChange(n)}
-                className={`btn-touch flex-1 rounded-md text-sm font-semibold disabled:opacity-60 ${
+                className={`btn-touch flex-1 rounded-md text-sekundaer font-semibold disabled:opacity-60 ${
                   value === n ? "bg-cyan-600 text-white" : "bg-fill text-label "
                 }`}
               >
@@ -621,17 +621,17 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           {gps ? (
-            <p className="text-sm text-label">
+            <p className="text-fliess text-label">
               {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}
             </p>
           ) : (
-            <p className="text-sm text-label2">Noch kein Standort erfasst.</p>
+            <p className="text-sekundaer text-label2">Noch kein Standort erfasst.</p>
           )}
           {!readOnly && (
             <button
               type="button"
               onClick={() => navigator.geolocation.getCurrentPosition((pos) => onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude }))}
-              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label "
+              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label "
             >
               <MapPin size={15} /> Standort erfassen
             </button>
@@ -675,7 +675,7 @@ export function FormFieldRenderer({
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label ">
               <Camera size={16} />
               {hochladenPending ? "Lädt hoch…" : foto ? "Foto ersetzen" : "Foto aufnehmen"}
               <input
@@ -708,7 +708,7 @@ export function FormFieldRenderer({
                 href={datei.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mb-2 flex items-center gap-2 card-ap p-2 text-sm text-tint"
+                className="mb-2 flex items-center gap-2 card-ap p-2 text-fliess text-tint"
               >
                 <FileText size={16} strokeWidth={1.5} className="shrink-0" />
                 <span className="truncate">{datei.filename || "Datei ansehen"}</span>
@@ -720,7 +720,7 @@ export function FormFieldRenderer({
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label ">
               <Paperclip size={16} />
               {hochladenPending ? "Lädt hoch…" : datei ? "Datei ersetzen" : "Datei anhängen"}
               <input
@@ -774,7 +774,7 @@ export function FormFieldRenderer({
                 }}
               />
             ) : (
-              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
+              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label ">
                 <PenLine size={16} /> {unterschrift ? "Neu unterschreiben" : "Unterschreiben"}
               </button>
             ))}

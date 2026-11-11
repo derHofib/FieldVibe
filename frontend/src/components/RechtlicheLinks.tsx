@@ -65,7 +65,7 @@ export function RechtlicheLinks({ dunkel = false, className = "", portalSlug, ba
   return (
     <nav
       aria-label="Rechtliche Hinweise"
-      className={`flex flex-wrap justify-center gap-x-4 gap-y-1 text-center text-[13px] ${
+      className={`flex flex-wrap justify-center gap-x-4 gap-y-1 text-center text-sekundaer ${
         dunkel ? "" : "text-label2"
       } ${className}`}
     >
