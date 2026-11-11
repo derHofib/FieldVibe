@@ -112,23 +112,23 @@ export function PositionenInhalt({
   return (
     <>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
+          <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Positionen</h2>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowBedarfForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint-text"
+              className="btn-touch text-sekundaer font-medium text-tint-text"
             >
               {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
             </button>
             <button
               onClick={() => setShowMaterialForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint-text"
+              className="btn-touch text-sekundaer font-medium text-tint-text"
             >
               {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
             </button>
             <button
               onClick={() => setShowLeistungForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint-text"
+              className="btn-touch text-sekundaer font-medium text-tint-text"
             >
               {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
             </button>
@@ -154,7 +154,7 @@ export function PositionenInhalt({
                   value={bedarfNeuBezeichnung}
                   onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
                   placeholder="Bezeichnung"
-                  className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                 />
                 <div className="flex gap-2">
                   <input
@@ -162,7 +162,7 @@ export function PositionenInhalt({
                     value={bedarfNeuEinheit}
                     onChange={(e) => setBedarfNeuEinheit(e.target.value)}
                     placeholder="Einheit"
-                    className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                   />
                   <input
                     type="number"
@@ -171,7 +171,7 @@ export function PositionenInhalt({
                     value={bedarfNeuEinzelpreis}
                     onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
                     placeholder="Preis (optional)"
-                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                   />
                 </div>
                 <Select
@@ -196,7 +196,7 @@ export function PositionenInhalt({
                 value={bedarfMenge}
                 onChange={(e) => setBedarfMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <Select
                 className="w-auto"
@@ -213,7 +213,7 @@ export function PositionenInhalt({
               value={bedarfNotiz}
               onChange={(e) => setBedarfNotiz(e.target.value)}
               placeholder="Notiz (optional)"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <button
               disabled={
@@ -223,12 +223,12 @@ export function PositionenInhalt({
                 materialBedarfMutation.isPending
               }
               onClick={() => materialBedarfMutation.mutate()}
-              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sekundaer"
             >
               Vormerken
             </button>
             {materialBedarfMutation.isError && (
-              <p className="text-xs text-st-fehlt">
+              <p className="text-sekundaer text-st-fehlt">
                 {materialBedarfMutation.error instanceof ApiError
                   ? materialBedarfMutation.error.message
                   : "Fehler beim Vormerken"}
@@ -240,13 +240,13 @@ export function PositionenInhalt({
         {(materialBedarfe ?? []).length > 0 &&
           (layout === "dicht" ? (
             <div className="mb-2 overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full border-collapse text-fliess">
                 <thead>
                   <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
-                    <th className="px-2 py-1 text-xs font-medium">Material</th>
-                    <th className="px-2 py-1 text-xs font-medium">Zweck</th>
-                    <th className="px-2 py-1 text-xs font-medium">Status</th>
+                    <th className="px-2 py-1 text-meta font-medium">Menge</th>
+                    <th className="px-2 py-1 text-meta font-medium">Material</th>
+                    <th className="px-2 py-1 text-meta font-medium">Zweck</th>
+                    <th className="px-2 py-1 text-meta font-medium">Status</th>
                     <th className="px-2 py-1"></th>
                   </tr>
                 </thead>
@@ -261,7 +261,7 @@ export function PositionenInhalt({
                         {b.status === "offen" && (
                           <button
                             onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                            className="btn-touch text-xs text-st-fehlt"
+                            className="btn-touch text-sekundaer text-st-fehlt"
                           >
                             Entfernen
                           </button>
@@ -277,18 +277,18 @@ export function PositionenInhalt({
               {materialBedarfe!.map((b) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-fliess"
                 >
                   <span className="text-label">
                     {b.menge}× {b.material_bezeichnung}
-                    <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
+                    <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-meta text-label">
                       {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
                     </span>
                   </span>
                   {b.status === "offen" && (
                     <button
                       onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                      className="btn-touch text-xs text-st-fehlt"
+                      className="btn-touch text-sekundaer text-st-fehlt"
                     >
                       Entfernen
                     </button>
@@ -301,13 +301,13 @@ export function PositionenInhalt({
         {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
           layout === "dicht" ? (
             <div className="mb-2 overflow-x-auto">
-              <h3 className="px-1 pb-1 text-xs font-medium text-label2">Verwendet</h3>
-              <table className="w-full border-collapse text-sm">
+              <h3 className="px-1 pb-1 text-sekundaer font-medium text-label2">Verwendet</h3>
+              <table className="w-full border-collapse text-fliess">
                 <thead>
                   <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Typ</th>
-                    <th className="px-2 py-1 text-xs font-medium">Bezeichnung</th>
-                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
+                    <th className="px-2 py-1 text-meta font-medium">Typ</th>
+                    <th className="px-2 py-1 text-meta font-medium">Bezeichnung</th>
+                    <th className="px-2 py-1 text-meta font-medium">Menge</th>
                     <th className="px-2 py-1"></th>
                   </tr>
                 </thead>
@@ -337,7 +337,7 @@ export function PositionenInhalt({
                         <button
                           onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
                           disabled={lvVerwendungEntfernenMutation.isPending}
-                          className="btn-touch text-xs text-st-fehlt disabled:opacity-50"
+                          className="btn-touch text-sekundaer text-st-fehlt disabled:opacity-50"
                         >
                           Entfernen
                         </button>
@@ -349,17 +349,17 @@ export function PositionenInhalt({
             </div>
           ) : (
             <div className="mb-2 space-y-1">
-              <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
+              <h3 className="px-1 text-sekundaer font-medium text-label2">Verwendet</h3>
               {(materialVerwendungen ?? []).map((v) => (
                 <div
                   key={`material-${v.id}`}
-                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-fliess"
                 >
                   <span className="flex min-w-0 items-center gap-2 text-label">
                     <SymbolKachel icon={Package} farbe="orange" groesse={24} />
                     <span className="truncate">
                       {v.menge}× {v.material_bezeichnung}
-                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
+                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-meta text-label">
                         {v.material_einheit}
                       </span>
                     </span>
@@ -369,13 +369,13 @@ export function PositionenInhalt({
               {(lvVerwendungen ?? []).map((v) => (
                 <div
                   key={`lv-${v.id}`}
-                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-fliess"
                 >
                   <span className="flex min-w-0 items-center gap-2 text-label">
                     <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
                     <span className="truncate">
                       {v.menge}× {v.lv_bezeichnung}
-                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
+                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-meta text-label">
                         {v.lv_einheit}
                       </span>
                     </span>
@@ -383,7 +383,7 @@ export function PositionenInhalt({
                   <button
                     onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
                     disabled={lvVerwendungEntfernenMutation.isPending}
-                    className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
+                    className="btn-touch shrink-0 text-sekundaer text-st-fehlt disabled:opacity-50"
                   >
                     Entfernen
                   </button>
@@ -397,7 +397,7 @@ export function PositionenInhalt({
           <button
             onClick={() => angebotAusVorgangMutation.mutate()}
             disabled={angebotAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sekundaer"
           >
             + Angebot aus diesem Vorgang erstellen
           </button>
@@ -407,7 +407,7 @@ export function PositionenInhalt({
           <button
             onClick={() => rechnungAusVorgangMutation.mutate()}
             disabled={rechnungAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sekundaer"
           >
             + Rechnung aus diesem Vorgang erstellen
           </button>
@@ -462,18 +462,18 @@ export function PositionenInhalt({
                 value={materialMenge}
                 onChange={(e) => setMaterialMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sekundaer"
               >
                 Erfassen
               </button>
             </div>
             {materialVerwendenMutation.isError && (
-              <p className="text-xs text-st-fehlt">
+              <p className="text-sekundaer text-st-fehlt">
                 {materialVerwendenMutation.error instanceof ApiError
                   ? materialVerwendenMutation.error.message
                   : "Fehler beim Erfassen"}
@@ -485,7 +485,7 @@ export function PositionenInhalt({
         {showLeistungForm && (
           <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
             {(leistungsverzeichnis ?? []).length === 0 ? (
-              <p className="text-xs text-label2">
+              <p className="text-sekundaer text-label2">
                 Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
               </p>
             ) : (
@@ -508,18 +508,18 @@ export function PositionenInhalt({
                     value={lvMenge}
                     onChange={(e) => setLvMenge(e.target.value)}
                     placeholder="Menge"
-                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                   />
                   <button
                     disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}
                     onClick={() => leistungVerwendenMutation.mutate()}
-                    className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+                    className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sekundaer"
                   >
                     Erfassen
                   </button>
                 </div>
                 {leistungVerwendenMutation.isError && (
-                  <p className="text-xs text-st-fehlt">
+                  <p className="text-sekundaer text-st-fehlt">
                     {leistungVerwendenMutation.error instanceof ApiError
                       ? leistungVerwendenMutation.error.message
                       : "Fehler beim Erfassen"}

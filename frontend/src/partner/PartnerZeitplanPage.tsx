@@ -39,8 +39,8 @@ export function PartnerZeitplanPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-3 py-4 pb-10">
-      <h1 className="ap-heading px-5 pt-2 pb-1 text-[26px] font-bold text-label">Zeitplan</h1>
-      <p className="px-5 text-[15px] text-label2">Ihre Schritte in den Projekten, nur zur Ansicht.</p>
+      <h1 className="ap-heading px-5 pt-2 pb-1 text-titel-mobil font-bold text-label">Zeitplan</h1>
+      <p className="px-5 text-fliess text-label2">Ihre Schritte in den Projekten, nur zur Ansicht.</p>
 
       {isLoading ? (
         <div className="px-4 pt-4">
@@ -64,20 +64,20 @@ export function PartnerZeitplanPage() {
                     <div key={e.id} className={dieseWoche ? "bg-tintbg" : ""}>
                       <GroupedListRow last={i === eintraege.length - 1} minHoehe={56}>
                         <div className="min-w-0 flex-1">
-                          <p className={`truncate text-[17px] ${e.erledigt ? "text-label2 line-through" : "text-label"}`}>{e.titel}</p>
-                          <p className="truncate text-[13px] text-label2">
+                          <p className={`truncate text-zeile ${e.erledigt ? "text-label2 line-through" : "text-label"}`}>{e.titel}</p>
+                          <p className="truncate text-sekundaer text-label2">
                             {e.phase_titel ? `${e.phase_titel} · ` : ""}
                             {zeitraumText(e)}
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
-                          {dieseWoche && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-[11px] font-semibold text-white">Diese Woche</span>}
+                          {dieseWoche && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-meta font-semibold text-white">Diese Woche</span>}
                           {e.erledigt ? (
-                            <span className="flex items-center gap-1 text-[13px] font-semibold text-st-erledigt">
+                            <span className="flex items-center gap-1 text-sekundaer font-semibold text-st-erledigt">
                               <Check size={14} strokeWidth={2.5} aria-hidden="true" /> Erledigt
                             </span>
                           ) : (
-                            <span className="flex items-center gap-2 text-[13px] text-label2 tabular-nums">
+                            <span className="flex items-center gap-2 text-sekundaer text-label2 tabular-nums">
                               <span className="h-1.5 w-14 overflow-hidden rounded-full bg-fill2" role="img" aria-label={`Fortschritt ${e.fortschritt} Prozent`}>
                                 <span className="block h-full rounded-full bg-tint-solid" style={{ width: `${Math.min(100, Math.max(0, e.fortschritt))}%` }} />
                               </span>

@@ -66,7 +66,7 @@ export function PasswortAendernKarte() {
       </button>
 
       {erfolg && !offen && (
-        <p className="mx-4 mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
+        <p className="mx-4 mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-fliess text-st-erledigt">
           Passwort geändert. Auf allen anderen Geräten wurdest du abgemeldet.
         </p>
       )}
@@ -74,12 +74,12 @@ export function PasswortAendernKarte() {
       {offen && (
         <form onSubmit={absenden} className="px-4 pb-4">
           {fehler && (
-            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
               {fehler}
             </div>
           )}
 
-          <label htmlFor="pw-alt" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="pw-alt" className="mb-1 block text-fliess font-medium text-label">
             Aktuelles Passwort
           </label>
           <input
@@ -92,7 +92,7 @@ export function PasswortAendernKarte() {
             className="field-ap btn-touch mb-4"
           />
 
-          <label htmlFor="pw-neu" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="pw-neu" className="mb-1 block text-fliess font-medium text-label">
             Neues Passwort
           </label>
           <input
@@ -105,9 +105,9 @@ export function PasswortAendernKarte() {
             onChange={(e) => setNeuesPasswort(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+          <p className="mb-4 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
-          <label htmlFor="pw-wiederholung" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="pw-wiederholung" className="mb-1 block text-fliess font-medium text-label">
             Neues Passwort wiederholen
           </label>
           <input

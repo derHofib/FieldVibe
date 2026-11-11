@@ -36,27 +36,27 @@ export function PortalRegistrierenPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
-        <h1 className="mb-2 font-heading text-xl font-semibold uppercase tracking-wide text-label">
+        <h1 className="mb-2 font-heading text-titel-mobil font-semibold uppercase tracking-wide text-label">
           Kunden<span className="text-tint">portal</span> — Zugang einrichten
         </h1>
-        <p className="mb-6 text-sm text-label2">
+        <p className="mb-6 text-sekundaer text-label2">
           Mit diesem Zugang sehen Sie jederzeit den Status Ihrer Aufträge, Angebote und Rechnungen.
         </p>
 
         {!token && (
-          <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+          <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
             Der Link ist unvollständig. Bitte den Einladungslink erneut vom Betrieb anfordern.
           </p>
         )}
 
         <form onSubmit={handleSubmit}>
           {error && (
-            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
               {error}
             </div>
           )}
 
-          <label htmlFor="portal-register-name" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="portal-register-name" className="mb-1 block text-fliess font-medium text-label">
             Name
           </label>
           <input
@@ -67,7 +67,7 @@ export function PortalRegistrierenPage() {
             className="field-ap btn-touch mb-4"
           />
 
-          <label htmlFor="portal-register-password" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="portal-register-password" className="mb-1 block text-fliess font-medium text-label">
             Passwort
           </label>
           <input
@@ -79,7 +79,7 @@ export function PortalRegistrierenPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-6 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+          <p className="mb-6 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
           <button
             type="submit"

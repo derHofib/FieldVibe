@@ -58,7 +58,7 @@ export function MfaKarte() {
       >
         <IconBadge icon={ShieldCheck} tone="emerald" size="sm" />
         <span className="flex-1 font-medium text-label">Zwei-Faktor-Anmeldung</span>
-        {s && <span className="text-sm text-label2">{s.aktiv ? "Aktiv" : "Aus"}</span>}
+        {s && <span className="text-sekundaer text-label2">{s.aktiv ? "Aktiv" : "Aus"}</span>}
       </button>
 
       {offen && s && (
@@ -74,7 +74,7 @@ export function MfaKarte() {
 
           {s.aktiv && (
             <>
-              <p className="text-sm text-label2">
+              <p className="text-sekundaer text-label2">
                 Beim Anmelden wird zusätzlich ein Code aus deiner Authenticator-App verlangt. Noch{" "}
                 {s.wiederherstellungscodes_uebrig} von 10 Wiederherstellungscodes übrig.
               </p>
@@ -84,7 +84,7 @@ export function MfaKarte() {
                     Neue Wiederherstellungscodes erzeugen
                   </button>
                   {s.pflicht ? (
-                    <p className="text-xs text-label2">Dein Betrieb schreibt MFA vor – sie kann nicht deaktiviert werden.</p>
+                    <p className="text-sekundaer text-label2">Dein Betrieb schreibt MFA vor – sie kann nicht deaktiviert werden.</p>
                   ) : (
                     <button type="button" onClick={() => setAktion("deaktivieren")} className="btn-touch btn-ap w-full">
                       MFA deaktivieren
@@ -95,11 +95,11 @@ export function MfaKarte() {
               {aktion && (
                 <form onSubmit={absenden} className="space-y-3">
                   {fehler && (
-                    <div role="alert" className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+                    <div role="alert" className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
                       {fehler}
                     </div>
                   )}
-                  <label htmlFor="mfa-pw" className="block text-sm font-medium text-label">
+                  <label htmlFor="mfa-pw" className="block text-fliess font-medium text-label">
                     Passwort
                   </label>
                   <input
@@ -111,7 +111,7 @@ export function MfaKarte() {
                     onChange={(e) => setPasswort(e.target.value)}
                     className="field-ap btn-touch"
                   />
-                  <label htmlFor="mfa-aktion-code" className="block text-sm font-medium text-label">
+                  <label htmlFor="mfa-aktion-code" className="block text-fliess font-medium text-label">
                     Code oder Wiederherstellungscode
                   </label>
                   <input

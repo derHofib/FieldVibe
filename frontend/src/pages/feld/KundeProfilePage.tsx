@@ -93,14 +93,14 @@ export function KundeProfilePage({
     return (
       <div className="space-y-4">
         {!eingebettet && (
-          <button onClick={() => navigate(-1)} className="text-sm text-label2">
+          <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
             ← Zurück
           </button>
         )}
         <div className="card-ap p-4">
-          <div className="text-xs text-label2">{kunde.kundennummer}</div>
-          <Titel className="text-lg font-bold text-label">{kunde.name}</Titel>
-          {kunde.typ && <span className="text-sm text-label2">{kundeTypLabel(kunde.typ)}</span>}
+          <div className="text-meta text-label2">{kunde.kundennummer}</div>
+          <Titel className="text-zeile font-bold text-label">{kunde.name}</Titel>
+          {kunde.typ && <span className="text-sekundaer text-label2">{kundeTypLabel(kunde.typ)}</span>}
         </div>
       </div>
     );
@@ -142,7 +142,7 @@ export function KundeProfilePage({
   return (
     <div className="space-y-4">
       {!eingebettet && (
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
       )}
@@ -150,9 +150,9 @@ export function KundeProfilePage({
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">{profil.kundennummer}</div>
-            <Titel className="text-lg font-bold text-label">{profil.name}</Titel>
-            {profil.typ && <span className="text-sm text-label2">{kundeTypLabel(profil.typ)}</span>}
+            <div className="text-meta text-label2">{profil.kundennummer}</div>
+            <Titel className="text-zeile font-bold text-label">{profil.name}</Titel>
+            {profil.typ && <span className="text-sekundaer text-label2">{kundeTypLabel(profil.typ)}</span>}
           </div>
           {menueEintraege.length > 0 && (
             <PulldownMenu
@@ -174,11 +174,11 @@ export function KundeProfilePage({
             />
           )}
         </div>
-        {deleteError && <p className="mt-2 text-sm text-st-fehlt ">{deleteError}</p>}
+        {deleteError && <p className="mt-2 text-fliess text-st-fehlt ">{deleteError}</p>}
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
-              <span key={t.id} className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
+              <span key={t.id} className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                 #{t.label}
               </span>
             ))}

@@ -26,13 +26,13 @@ export function HighlightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
+      <h1 className="flex items-center gap-1.5 text-titel-mobil font-bold text-label">
         <Star size={19} strokeWidth={2} className="text-st-arbeit" /> Highlights
       </h1>
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
 
@@ -73,10 +73,10 @@ export function HighlightsPage() {
                   />
                 )}
                 <div className="p-2">
-                  <div className="line-clamp-1 text-xs font-medium text-label">
+                  <div className="line-clamp-1 text-sekundaer font-medium text-label">
                     {h.titel ?? h.vorgang_titel}
                   </div>
-                  <div className="text-xs text-label2">{h.vorgangsnummer}</div>
+                  <div className="text-meta text-label2">{h.vorgangsnummer}</div>
                 </div>
               </button>
               {/* Spiegelt app/api/routes/highlights.py:delete_highlight -- nur
@@ -90,7 +90,7 @@ export function HighlightsPage() {
                   onClick={() => removeMutation.mutate(h.id)}
                   disabled={removeMutation.isPending}
                   title="Highlight entfernen"
-                  className="btn-touch absolute right-1 top-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white disabled:opacity-50"
+                  className="btn-touch absolute right-1 top-1 rounded-full bg-black/50 px-2 py-0.5 text-meta text-white disabled:opacity-50"
                 >
                   ✕
                 </button>

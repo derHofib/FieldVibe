@@ -33,19 +33,19 @@ export function PortalResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
-        <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-label">
+        <h1 className="mb-6 font-heading text-titel-mobil font-semibold uppercase tracking-wide text-label">
           Neues Passwort setzen
         </h1>
 
         {!token && (
-          <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+          <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
             Der Link ist unvollständig. Bitte fordern Sie einen neuen an.
           </p>
         )}
 
         {done ? (
           <>
-            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
+            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-fliess text-st-erledigt ">
               Passwort erfolgreich geändert. Sie können sich jetzt anmelden.
             </p>
             <button
@@ -58,11 +58,11 @@ export function PortalResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit}>
             {error && (
-              <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt ">
                 {error}
               </div>
             )}
-            <label htmlFor="portal-reset-password" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-reset-password" className="mb-1 block text-fliess font-medium text-label">
               Neues Passwort
             </label>
             <input
@@ -74,7 +74,7 @@ export function PortalResetPasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="field-ap btn-touch mb-1"
             />
-            <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+            <p className="mb-4 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             <button
               type="submit"
               disabled={submitting || !token}
@@ -85,7 +85,7 @@ export function PortalResetPasswordPage() {
           </form>
         )}
 
-        <Link to="/portal/login" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+        <Link to="/portal/login" className="mt-4 block text-center text-sekundaer text-label2 hover:text-label">
           Zurück zur Anmeldung
         </Link>
       </Blueprint>

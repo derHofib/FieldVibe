@@ -48,11 +48,11 @@ export function PartnerAbschnitt({
           {...tabPanelProps("abschnitt-uebersicht")}
         >
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
+            <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
             {!vorgang.partner_id && (
               <button
                 onClick={() => setShowPartnerForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-tint-text"
+                className="btn-touch text-sekundaer font-medium text-tint-text"
               >
                 {showPartnerForm ? "Abbrechen" : "+ Zuweisen"}
               </button>
@@ -60,7 +60,7 @@ export function PartnerAbschnitt({
           </div>
 
           {partnerWarnung && (
-            <p className="mb-2 rounded-md bg-st-arbeit-bg px-3 py-2 text-xs text-st-arbeit">
+            <p className="mb-2 rounded-md bg-st-arbeit-bg px-3 py-2 text-sekundaer text-st-arbeit">
               Für diesen Partner liegt keine gültige Freistellungsbescheinigung vor – ohne sie greift bei
               Zahlungen für Bauleistungen grundsätzlich die 15%-Bauabzugsteuer nach § 48 EStG.
             </p>
@@ -71,17 +71,17 @@ export function PartnerAbschnitt({
               <div>
                 <button
                   onClick={() => navigate(`/partner/${vorgang.partner_id}`)}
-                  className="text-sm font-medium text-label hover:underline"
+                  className="text-sekundaer font-medium text-label hover:underline"
                 >
                   {zugewiesenerPartner?.name ?? "…"}
                 </button>
                 {vorgang.partner_honorar_netto && (
-                  <div className="text-xs text-label2">
+                  <div className="text-sekundaer text-label2">
                     Honorar: {vorgang.partner_honorar_netto} EUR netto
                   </div>
                 )}
                 {vorgang.partner_freigabe_status === "abgelehnt" && vorgang.partner_ablehnung_grund && (
-                  <div className="text-xs text-st-fehlt">
+                  <div className="text-sekundaer text-st-fehlt">
                     Grund: {vorgang.partner_ablehnung_grund}
                   </div>
                 )}
@@ -89,7 +89,7 @@ export function PartnerAbschnitt({
               <div className="flex items-center gap-2">
                 {vorgang.partner_freigabe_status && (
                   <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${FREIGABE_FARBE[vorgang.partner_freigabe_status]}`}
+                    className={`rounded-full px-2 py-1 text-meta font-semibold ${FREIGABE_FARBE[vorgang.partner_freigabe_status]}`}
                   >
                     {FREIGABE_LABEL[vorgang.partner_freigabe_status]}
                   </span>
@@ -97,7 +97,7 @@ export function PartnerAbschnitt({
                 <button
                   onClick={() => partnerAufhebenMutation.mutate()}
                   disabled={partnerAufhebenMutation.isPending}
-                  className="btn-touch text-xs text-st-fehlt"
+                  className="btn-touch text-sekundaer text-st-fehlt"
                 >
                   Aufheben
                 </button>
@@ -105,7 +105,7 @@ export function PartnerAbschnitt({
             </div>
           ) : (
             !showPartnerForm && (
-              <p className="text-sm text-label2">Kein Nachunternehmer zugewiesen.</p>
+              <p className="text-sekundaer text-label2">Kein Nachunternehmer zugewiesen.</p>
             )
           )}
 
@@ -128,12 +128,12 @@ export function PartnerAbschnitt({
                 value={partnerHonorar}
                 onChange={(e) => setPartnerHonorar(e.target.value)}
                 placeholder="Honorar netto (optional)"
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <button
                 disabled={!partnerAuswahl || partnerZuweisenMutation.isPending}
                 onClick={() => partnerZuweisenMutation.mutate()}
-                className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sekundaer"
               >
                 Zuweisen
               </button>

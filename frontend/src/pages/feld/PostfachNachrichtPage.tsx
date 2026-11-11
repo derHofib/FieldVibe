@@ -62,15 +62,15 @@ export function PostfachNachrichtPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate("/postfach")} className="text-sm text-label2">
+      <button onClick={() => navigate("/postfach")} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-label">
+        <h1 className="text-titel-mobil font-bold text-label">
           {detail.betreff || "(kein Betreff)"}
         </h1>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           Von{" "}
           <span className="font-medium text-label">
             {detail.von_name || detail.von_adresse}
@@ -87,7 +87,7 @@ export function PostfachNachrichtPage() {
                 const { url } = await mailApi.attachmentUrl(detail.id, a.id);
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
-              className="btn-touch rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label "
+              className="btn-touch rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label "
             >
               {a.dateiname}
             </button>
@@ -95,7 +95,7 @@ export function PostfachNachrichtPage() {
         </div>
       )}
 
-      <p className="text-sm whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
+      <p className="text-fliess whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
 
       {antwortenOffen ? (
         <div className="-mx-4 border-t border-sep pt-3 ">
@@ -113,7 +113,7 @@ export function PostfachNachrichtPage() {
       ) : (
         <button
           onClick={() => setAntwortenOffen(true)}
-          className="btn-touch btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
+          className="btn-touch btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-sekundaer"
         >
           <Reply size={13} strokeWidth={2} /> Antworten
         </button>

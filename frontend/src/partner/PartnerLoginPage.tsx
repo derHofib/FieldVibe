@@ -36,7 +36,7 @@ export function PartnerLoginPage() {
       <form onSubmit={handleSubmit}>
         {error && <FehlerHinweis>{error}</FehlerHinweis>}
 
-        <label htmlFor="partner-login-email" className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor="partner-login-email" className="mb-1 block text-fliess font-medium text-label">
           E-Mail
         </label>
         <input
@@ -49,7 +49,7 @@ export function PartnerLoginPage() {
           className="field-ap btn-touch mb-4"
         />
 
-        <label htmlFor="partner-login-password" className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor="partner-login-password" className="mb-1 block text-fliess font-medium text-label">
           Passwort
         </label>
         <input
@@ -68,7 +68,7 @@ export function PartnerLoginPage() {
 
         <Link
           to="/partnerportal/passwort-vergessen"
-          className="btn-touch mt-2 flex items-center justify-center text-sm text-tint-text"
+          className="btn-touch mt-2 flex items-center justify-center text-sekundaer text-tint-text"
         >
           Passwort vergessen?
         </Link>

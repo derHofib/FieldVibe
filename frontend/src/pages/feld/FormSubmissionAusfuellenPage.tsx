@@ -122,21 +122,21 @@ export function FormSubmissionAusfuellenPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "PDF konnte nicht erzeugt werden"),
   });
 
-  if (submissionLoading || schemaLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
+  if (submissionLoading || schemaLoading) return <p className="text-center text-sekundaer text-label2">Lädt…</p>;
   if (!submission || !schema) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
   const readOnly = submission.status === "abgeschlossen";
 
   return (
     <div className="space-y-3 pb-24">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">{schema.name}</h1>
+        <h1 className="text-titel-mobil font-bold text-label">{schema.name}</h1>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+          className={`shrink-0 rounded-full px-2 py-0.5 text-meta font-medium ${
             readOnly ? "bg-st-erledigt-bg text-st-erledigt  " : "bg-st-arbeit-bg text-st-arbeit  "
           }`}
         >
@@ -169,15 +169,15 @@ export function FormSubmissionAusfuellenPage() {
       )}
 
       {fehler ? (
-        <p className="text-sm text-st-fehlt ">{fehler}</p>
+        <p className="text-fliess text-st-fehlt ">{fehler}</p>
       ) : (
-        gespeichert && <p className="text-sm text-st-erledigt ">Gespeichert.</p>
+        gespeichert && <p className="text-fliess text-st-erledigt ">Gespeichert.</p>
       )}
 
       <button
         onClick={() => pdfMutation.mutate()}
         disabled={pdfMutation.isPending}
-        className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label disabled:opacity-50 "
+        className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
       >
         <FileText size={16} /> {readOnly ? "Als PDF öffnen" : "PDF-Vorschau ansehen"}
       </button>
@@ -187,7 +187,7 @@ export function FormSubmissionAusfuellenPage() {
           <button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-white py-2 text-sm font-medium text-label shadow-md disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch flex-1 rounded-md bg-white py-2 text-sekundaer font-medium text-label shadow-md disabled:opacity-50 dark:bg-stone-800 "
           >
             Speichern
           </button>
@@ -198,7 +198,7 @@ export function FormSubmissionAusfuellenPage() {
               }
             }}
             disabled={abschliessenMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium shadow-md disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium shadow-md disabled:opacity-50"
           >
             Abschließen
           </button>

@@ -104,7 +104,7 @@ export function BestellungDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -115,7 +115,7 @@ export function BestellungDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Bestellung löschen
           </button>
@@ -125,16 +125,16 @@ export function BestellungDetailPage() {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">{bestellung.bestellnummer}</div>
-            <h1 className="text-lg font-bold text-label">
+            <div className="text-meta text-label2">{bestellung.bestellnummer}</div>
+            <h1 className="text-titel-mobil font-bold text-label">
               {lieferant?.name ?? "Kein Lieferant hinterlegt"}
             </h1>
           </div>
-          <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
+          <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-semibold text-label">
             {STATUS_LABEL[bestellung.status]}
           </span>
         </div>
-        <label className="mt-3 flex items-center justify-between gap-3 text-sm text-label2">
+        <label className="mt-3 flex items-center justify-between gap-3 text-sekundaer text-label2">
           Liefertermin
           <input
             type="date"
@@ -142,13 +142,13 @@ export function BestellungDetailPage() {
             onChange={(e) => lieferterminMutation.mutate(e.target.value || null)}
             disabled={lieferterminMutation.isPending}
             aria-label="Liefertermin"
-            className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-sm text-label disabled:opacity-50"
+            className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-zeile text-label disabled:opacity-50"
           />
         </label>
         {bestellung.notiz && (
-          <p className="mt-2 text-sm text-label">{bestellung.notiz}</p>
+          <p className="mt-2 text-fliess text-label">{bestellung.notiz}</p>
         )}
-        <div className="mt-3 text-right text-sm text-label2">
+        <div className="mt-3 text-right text-sekundaer text-label2">
           Richtwert gesamt: {gesamtRichtwert.toFixed(2)} EUR
         </div>
 
@@ -156,14 +156,14 @@ export function BestellungDetailPage() {
           <button
             onClick={() => csvMutation.mutate()}
             disabled={csvMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <Download size={14} strokeWidth={2} /> CSV
           </button>
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <FileText size={14} strokeWidth={2} /> PDF
           </button>
@@ -171,16 +171,16 @@ export function BestellungDetailPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Positionen</h2>
         <div className="space-y-1.5">
           {bestellung.positionen.map((p) => (
             <div
               key={p.id}
-              className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
+              className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess"
             >
               <div>
                 <div className="text-label">{p.beschreibung}</div>
-                <div className="text-xs text-label2">
+                <div className="text-sekundaer text-label2">
                   {p.menge} {p.einheit} × {p.einzelpreis} EUR (Richtwert)
                 </div>
               </div>
@@ -203,10 +203,10 @@ export function BestellungDetailPage() {
 
       {wareneingangOffen && (
         <div className="card-ap p-4">
-          <h2 className="mb-1 text-sm font-semibold text-label2">
+          <h2 className="mb-1 text-fliess font-semibold text-label2">
             Wareneingang – Preise prüfen
           </h2>
-          <p className="mb-3 text-xs text-label2">
+          <p className="mb-3 text-meta text-label2">
             Der bisherige Preis war nur ein Richtwert zum Bestellzeitpunkt. Bei Abweichung hier
             den tatsächlich bezahlten Preis eintragen.
           </p>
@@ -217,8 +217,8 @@ export function BestellungDetailPage() {
                 className="flex items-center justify-between gap-3 border rounded-[var(--radius-ap-md)] border-sepstrong p-2"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-label">{p.beschreibung}</div>
-                  <div className="text-xs text-label2">
+                  <div className="truncate text-fliess text-label">{p.beschreibung}</div>
+                  <div className="text-sekundaer text-label2">
                     {p.menge} {p.einheit}
                   </div>
                 </div>
@@ -230,9 +230,9 @@ export function BestellungDetailPage() {
                     inputMode="decimal"
                     value={preise[p.id] ?? p.einzelpreis}
                     onChange={(e) => setPreise((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                    className="w-20 rounded-md border border-sep px-2 py-1 text-right text-sm dark:bg-stone-900 "
+                    className="w-20 rounded-md border border-sep px-2 py-1 text-right text-zeile dark:bg-stone-900 "
                   />
-                  <span className="text-xs text-label2">EUR</span>
+                  <span className="text-sekundaer text-label2">EUR</span>
                 </div>
               </div>
             ))}
@@ -241,14 +241,14 @@ export function BestellungDetailPage() {
             <button
               onClick={() => setWareneingangOffen(false)}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+              className="btn-touch flex-1 rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               Abbrechen
             </button>
             <button
               onClick={() => statusMutation.mutate({ status: "eingegangen", positionen_preise: preise })}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
             >
               Wareneingang jetzt buchen
             </button>
@@ -260,14 +260,14 @@ export function BestellungDetailPage() {
           <button
             onClick={() => statusMutation.mutate({ status: "bestellt" })}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Als bestellt markieren
           </button>
           <button
             onClick={wareneingangOeffnen}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             Wareneingang buchen
           </button>
@@ -277,13 +277,13 @@ export function BestellungDetailPage() {
         <button
           onClick={wareneingangOeffnen}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-st-erledigt-dot px-4 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
         >
           Wareneingang buchen
         </button>
       )}
       {bestellung.status === "eingegangen" && (
-        <p className="text-center text-sm text-label2">
+        <p className="text-center text-sekundaer text-label2">
           Wareneingang gebucht – Bestand wurde entsprechend erhöht.
         </p>
       )}

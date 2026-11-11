@@ -43,12 +43,12 @@ export function ProfilePage() {
     <div className="space-y-4">
       <div className="card-ap p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center border rounded-full border-sep text-lg font-bold text-label">
+          <div className="flex h-12 w-12 items-center justify-center border rounded-full border-sep text-zeile font-bold text-label">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>
             <div className="font-semibold text-label">{currentUser?.name}</div>
-            <div className="text-sm text-label2">
+            <div className="text-sekundaer text-label2">
               {currentUser &&
                 (currentUser.role === "custom"
                   ? (currentUser.account_typ_name ?? "Account")
@@ -56,7 +56,7 @@ export function ProfilePage() {
             </div>
           </div>
         </div>
-        <dl className="mt-4 space-y-1 text-sm">
+        <dl className="mt-4 space-y-1 text-fliess">
           <div className="flex justify-between">
             <dt className="text-label2">E-Mail</dt>
             <dd className="text-label">{currentUser?.email}</dd>
@@ -111,7 +111,7 @@ export function ProfilePage() {
       >
         <MonitorSmartphone size={16} strokeWidth={1.5} /> Auf allen Geräten abmelden
       </button>
-      {abmeldenFehler && <p className="text-sm text-st-fehlt">{abmeldenFehler}</p>}
+      {abmeldenFehler && <p className="text-fliess text-st-fehlt">{abmeldenFehler}</p>}
 
       <button
         onClick={logout}

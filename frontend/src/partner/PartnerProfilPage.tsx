@@ -9,7 +9,7 @@ export function PartnerProfilPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-3 py-4 pb-10">
-      <h1 className="ap-heading px-5 pt-2 pb-1 text-[26px] font-bold text-label">Profil</h1>
+      <h1 className="ap-heading px-5 pt-2 pb-1 text-titel-mobil font-bold text-label">Profil</h1>
 
       <AbschnittskopfB titel="Zugang" />
       <div className="px-4">

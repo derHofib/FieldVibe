@@ -70,8 +70,8 @@ function StoryChip({ item }: { item: StoryItem }) {
         // Utility fuer nur die linke Kante koennte das nicht ueberschreiben.
         style={{ borderLeftWidth: 2, borderLeftColor: item.ampel ? AMPEL_VAR[item.ampel] : "var(--sepstrong)" }}
       >
-        <span className="line-clamp-2 text-xs font-semibold leading-tight text-label">{item.titel}</span>
-        {item.subtitel && <span className="mt-0.5 block text-[11px] text-label2">{item.subtitel}</span>}
+        <span className="line-clamp-2 text-sekundaer font-semibold leading-tight text-label">{item.titel}</span>
+        {item.subtitel && <span className="mt-0.5 block text-meta text-label2">{item.subtitel}</span>}
       </Blueprint>
     </button>
   );
@@ -138,18 +138,18 @@ function FeedCardView({ card }: { card: FeedCard }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] tracking-wide text-label2">{card.vorgangsnummer}</div>
+            <div className="text-meta tracking-wide text-label2">{card.vorgangsnummer}</div>
             <div className="mt-0.5 font-semibold text-label">{card.titel}</div>
-            <div className="text-xs text-label2">{card.kunde_name}</div>
+            <div className="text-meta text-label2">{card.kunde_name}</div>
             {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-              <div className="text-xs text-label2">
+              <div className="text-meta text-label2">
                 {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
               </div>
             )}
-            {card.anlage_kurzadresse && <div className="text-xs text-label2">{card.anlage_kurzadresse}</div>}
-            {card.ersteller_name && <div className="text-xs text-label2">von {card.ersteller_name}</div>}
+            {card.anlage_kurzadresse && <div className="text-sekundaer text-label2">{card.anlage_kurzadresse}</div>}
+            {card.ersteller_name && <div className="text-sekundaer text-label2">von {card.ersteller_name}</div>}
             {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
-              <div className="text-xs text-label2">
+              <div className="text-sekundaer text-label2">
                 {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
               </div>
             )}
@@ -164,18 +164,18 @@ function FeedCardView({ card }: { card: FeedCard }) {
               </span>
             )}
             <StatusPille status={vorgangStatusZuToken(card.status)} label={STATUS_LABEL[card.status]} />
-            <span className="whitespace-nowrap text-xs text-label2">
+            <span className="whitespace-nowrap text-sekundaer text-label2">
               {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
             </span>
           </div>
         </div>
         {card.status === "wartet_kunde" ? (
-          <span className="flex items-center gap-1 text-xs text-label2">
+          <span className="flex items-center gap-1 text-sekundaer text-label2">
             <MessageCircle size={13} strokeWidth={1.5} aria-hidden="true" /> Wartet auf Rückmeldung
           </span>
         ) : (
           faelligkeitIso && (
-            <span className={`flex items-center gap-1 text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
+            <span className={`flex items-center gap-1 text-sekundaer font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
               {faelligkeitIso < heuteIso() ? (
                 <>
                   <Clock size={13} strokeWidth={1.5} aria-hidden="true" /> {tageUeberfaellig(faelligkeitIso)}{" "}
@@ -188,11 +188,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
           )
         )}
         {statusMeta ? (
-          <p className="text-xs text-label2">{statusMeta}</p>
+          <p className="text-sekundaer text-label2">{statusMeta}</p>
         ) : (
           card.letztes_event_vorschau &&
           card.letztes_event_vorschau !== "Status geändert" && (
-            <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-sm text-label">
+            <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-fliess text-label">
               {card.letztes_event_vorschau}
             </p>
           )
@@ -200,7 +200,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {card.tags.map((tag) => (
-              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label">
+              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-meta text-label">
                 #{tag}
               </span>
             ))}
@@ -209,7 +209,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
       </button>
       {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
         <div className="flex items-center justify-end gap-1.5 border-t-[0.5px] border-sep px-3 py-2">
-          {aktionFehlerText && <span className="mr-auto text-xs text-st-fehlt">{aktionFehlerText}</span>}
+          {aktionFehlerText && <span className="mr-auto text-sekundaer text-st-fehlt">{aktionFehlerText}</span>}
           {zeigeUebernehmen && (
             <button
               onClick={(e) => {
@@ -217,7 +217,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 zuweisenMutation.mutate();
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <UserPlus size={13} strokeWidth={1.5} aria-hidden="true" /> Übernehmen
             </button>
@@ -229,7 +229,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 statusMutation.mutate("in_arbeit");
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <Play size={13} strokeWidth={1.5} aria-hidden="true" /> Starten
             </button>
@@ -241,7 +241,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 statusMutation.mutate("abgeschlossen");
               }}
               disabled={aktionLaeuft}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <CheckCircle2 size={13} strokeWidth={1.5} aria-hidden="true" /> Fertig melden
             </button>
@@ -252,7 +252,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 e.stopPropagation();
                 navigate(`/vorgaenge/${card.id}#email`);
               }}
-              className="btn-ap text-xs"
+              className="btn-ap text-sekundaer"
             >
               <Bell size={13} strokeWidth={1.5} aria-hidden="true" /> Nachfragen
             </button>
@@ -383,7 +383,7 @@ export function FeedPage() {
             <button
               onClick={() => navigate("/highlights")}
               aria-label="Highlights ansehen"
-              className="btn-touch flex items-center gap-1 rounded-[13px] bg-fill px-2.5 text-xs font-medium text-st-arbeit"
+              className="btn-touch flex items-center gap-1 rounded-[13px] bg-fill px-2.5 text-sekundaer font-medium text-st-arbeit"
             >
               <Star size={14} strokeWidth={1.5} aria-hidden="true" /> Highlights
             </button>
@@ -409,7 +409,7 @@ export function FeedPage() {
 
       {zeigeScanner && <QrScanner onScan={handleScan} onClose={() => setZeigeScanner(false)} />}
       {scanFehler && (
-        <p role="alert" className="text-sm text-st-fehlt">
+        <p role="alert" className="text-fliess text-st-fehlt">
           {scanFehler}
         </p>
       )}
@@ -464,7 +464,7 @@ export function FeedPage() {
           >
             <Filter size={14} strokeWidth={2} aria-hidden="true" />
             {aktiveFilterAnzahl > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-nav font-bold text-white">
                 {aktiveFilterAnzahl}
               </span>
             )}
@@ -488,7 +488,7 @@ export function FeedPage() {
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-sekundaer font-medium text-label"
             >
               {c.label}
               <button
@@ -500,7 +500,7 @@ export function FeedPage() {
               </button>
             </span>
           ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint">
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-sekundaer font-semibold text-tint">
             Bearbeiten
           </button>
         </div>
@@ -509,7 +509,7 @@ export function FeedPage() {
       {zeigeFilter && (
         <div className="card-ap space-y-2 p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
+            <div className="mb-1 text-sekundaer font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(STATUS_LABEL) as VorgangStatus[]).map((value) => {
                 const aktiv = aktiveStatus.includes(value);
@@ -558,7 +558,7 @@ export function FeedPage() {
                 title="Fällig ab"
                 className="field-ap"
               />
-              <span className="text-xs text-label2">bis</span>
+              <span className="text-sekundaer text-label2">bis</span>
               <input
                 type="date"
                 value={filter.faellig_bis ?? ""}
@@ -604,11 +604,11 @@ export function FeedPage() {
               />
             </Suspense>
             {ohneKoordinatenAnzahl > 0 && (
-              <p className="text-center text-xs text-label2">
+              <p className="text-center text-sekundaer text-label2">
                 {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
               </p>
             )}
-            {hasNextPage && <p className="text-center text-xs text-label2">Lädt weitere Vorgänge…</p>}
+            {hasNextPage && <p className="text-center text-sekundaer text-label2">Lädt weitere Vorgänge…</p>}
           </>
         )
       ) : (
@@ -641,7 +641,7 @@ export function FeedPage() {
                   aktiveFilterAnzahl > 0 && (
                   <button
                     onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
-                    className="btn-ap mt-1 text-xs"
+                    className="btn-ap mt-1 text-sekundaer"
                   >
                     Filter zurücksetzen
                   </button>
@@ -655,7 +655,7 @@ export function FeedPage() {
                 <div key={gruppe} className="space-y-3">
                   <div className="flex items-baseline gap-1.5 px-1">
                     <h2
-                      className={`text-[10px] font-medium tracking-[0.14em] uppercase ${
+                      className={`text-meta font-medium tracking-[0.14em] uppercase ${
                         gruppe === "ueberfaellig"
                           ? "text-st-fehlt"
                           : gruppe === "heute"
@@ -665,7 +665,7 @@ export function FeedPage() {
                     >
                       {GRUPPEN_LABEL[gruppe]}
                     </h2>
-                    <span className="text-xs text-label2">{gruppenCards.length}</span>
+                    <span className="text-sekundaer text-label2">{gruppenCards.length}</span>
                   </div>
                   <div className="space-y-3">
                     {gruppenCards.map((card) => (

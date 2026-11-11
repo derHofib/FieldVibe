@@ -42,7 +42,7 @@ export function KundeVorgaengeTab({
 
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-label2">Vorgänge</h2>
+        <h2 className="text-fliess font-semibold text-label2">Vorgänge</h2>
         {profil.anlagen.length > 0 && (
           <Select
             className="w-auto"
@@ -72,7 +72,7 @@ export function KundeVorgaengeTab({
               }`}
             >
               <div>
-                <div className="text-xs text-label2">
+                <div className="text-meta text-label2">
                   {v.vorgangsnummer}
                   {v.anlage_id && anlageNameById.get(v.anlage_id) && ` · ${anlageNameById.get(v.anlage_id)}`}
                   {v.dauerauftrag_id && (
@@ -82,9 +82,9 @@ export function KundeVorgaengeTab({
                     </>
                   )}
                 </div>
-                <div className="text-sm font-medium text-label">{v.titel}</div>
+                <div className="text-fliess font-medium text-label">{v.titel}</div>
               </div>
-              <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+              <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
                 {statusLabel(v.status)}
               </span>
             </button>

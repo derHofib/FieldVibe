@@ -92,15 +92,15 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const inputClass =
-    "border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+    "border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 
   return (
     <div className="space-y-3 card-ap p-4">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
           <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
         </h2>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-sekundaer text-label2">
           Diese Angaben erscheinen im Briefkopf und in der Fußzeile eurer Angebots-PDFs.
         </p>
       </div>
@@ -109,9 +109,9 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         {logoUrl?.url ? (
           <img src={logoUrl.url} alt="Firmenlogo" className="h-12 max-w-[160px] object-contain" />
         ) : (
-          <span className="text-xs text-label2">Kein Logo hinterlegt</span>
+          <span className="text-sekundaer text-label2">Kein Logo hinterlegt</span>
         )}
-        <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-xs font-medium">
+        <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-sekundaer font-medium">
           Logo hochladen
           <input
             type="file"
@@ -128,7 +128,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
           <button
             onClick={() => logoRemoveMutation.mutate()}
             disabled={logoRemoveMutation.isPending}
-            className="btn-touch text-xs font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Entfernen
           </button>
@@ -194,7 +194,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div>
-          <label htmlFor="firma-impressum-url" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="firma-impressum-url" className="mb-1 block text-sekundaer font-medium text-label2">
             Impressum-URL
           </label>
           <input
@@ -209,13 +209,13 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
             className={`w-full ${inputClass}`}
           />
           {impressumUrlFehlt && (
-            <p role="alert" className="mt-1 text-xs text-st-fehlt">
+            <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
               Bitte eine URL mit http:// oder https:// angeben.
             </p>
           )}
         </div>
         <div>
-          <label htmlFor="firma-datenschutz-url" className="mb-1 block text-xs font-medium text-label2">
+          <label htmlFor="firma-datenschutz-url" className="mb-1 block text-sekundaer font-medium text-label2">
             Datenschutz-URL
           </label>
           <input
@@ -230,17 +230,17 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
             className={`w-full ${inputClass}`}
           />
           {datenschutzUrlFehlt && (
-            <p role="alert" className="mt-1 text-xs text-st-fehlt">
+            <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
               Bitte eine URL mit http:// oder https:// angeben.
             </p>
           )}
         </div>
-        <p id="firma-rechtstext-hilfe" className="text-xs text-label2 sm:col-span-2">
+        <p id="firma-rechtstext-hilfe" className="text-sekundaer text-label2 sm:col-span-2">
           Leer lassen = automatische Platzhalter-Seite mit deinen Firmendaten
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-label">
+      <label className="flex items-center gap-2 text-fliess text-label">
         <input
           type="checkbox"
           checked={istKleinunternehmer}
@@ -250,14 +250,14 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
       </label>
 
       <fieldset className="space-y-1.5">
-        <legend className="text-sm font-medium text-label">E-Rechnung (XRechnung / ZUGFeRD)</legend>
-        <p className="text-xs text-label2">
+        <legend className="text-fliess font-medium text-label">E-Rechnung (XRechnung / ZUGFeRD)</legend>
+        <p className="text-sekundaer text-label2">
           Rechnungen werden beim Versand mit eingebetteter bzw. beiliegender E-Rechnungs-XML erzeugt, sobald alle
           Pflichtangaben vorhanden sind. Fehlen Angaben, ist der Versand gesperrt und die Meldung nennt, was fehlt.
           Kunden mit Leitweg-ID (Behörden) bekommen eine XRechnung, alle anderen ZUGFeRD.
         </p>
         {E_RECHNUNG_MODI.map((o) => (
-          <label key={o.wert} className="flex items-start gap-2 text-sm text-label">
+          <label key={o.wert} className="flex items-start gap-2 text-fliess text-label">
             <input
               type="radio"
               name="e-rechnung-modus"
@@ -268,18 +268,18 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
             />
             <span>
               {o.label}
-              <span className="mt-0.5 block text-xs text-label2">{o.hinweis}</span>
+              <span className="mt-0.5 block text-sekundaer text-label2">{o.hinweis}</span>
             </span>
           </label>
         ))}
         {eRechnungModusWahl !== "aus" && (
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Für die XRechnung zusätzlich nötig: Telefon, E-Mail und IBAN oben sowie die Leitweg-ID am Kunden.
           </p>
         )}
       </fieldset>
 
-      <label className="flex items-start gap-2 text-sm text-label">
+      <label className="flex items-start gap-2 text-fliess text-label">
         <input
           type="checkbox"
           className="mt-0.5"
@@ -288,7 +288,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         />
         <span>
           Hinweise für Privatkunden auf Rechnungen
-          <span className="mt-0.5 block text-xs text-label2">
+          <span className="mt-0.5 block text-sekundaer text-label2">
             Aufbewahrungspflicht von zwei Jahren (§ 14 Abs. 4 Nr. 9 UStG) und – wenn die Positionen aus Zeiterfassung
             und Material stammen – der Ausweis der Arbeitskosten für die Steuerermäßigung nach § 35a EStG.
           </span>
@@ -299,12 +299,12 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || impressumUrlFehlt || datenschutzUrlFehlt}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
+          <span className="text-sekundaer text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -332,23 +332,23 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   return (
     <div className="space-y-2 card-ap p-4">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
+        <h2 className="flex items-center gap-1.5 text-fliess font-semibold text-label">
           <Mail size={15} strokeWidth={2} className="text-st-fehlt" /> Mahnwesen
         </h2>
-        <p className="mt-1 text-xs text-label2">
+        <p className="mt-1 text-meta text-label2">
           Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
           automatisch per E-Mail an den Kunden geschickt wird (inkl. Verzugszinsen).
         </p>
       </div>
-      <label className="flex items-center gap-2 text-sm text-label">
+      <label className="flex items-center gap-2 text-fliess text-label">
         <input type="checkbox" checked={mahnung1} onChange={(e) => setMahnung1(e.target.checked)} />
         1. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-label">
+      <label className="flex items-center gap-2 text-fliess text-label">
         <input type="checkbox" checked={mahnung2} onChange={(e) => setMahnung2(e.target.checked)} />
         2. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-label">
+      <label className="flex items-center gap-2 text-fliess text-label">
         <input type="checkbox" checked={mahnung3} onChange={(e) => setMahnung3(e.target.checked)} />
         3. Mahnung automatisch versenden
       </label>
@@ -356,12 +356,12 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
+          <span className="text-sekundaer text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -383,10 +383,10 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
 
   return (
     <div className="card-ap p-4">
-      <h2 className="mb-1 text-sm font-semibold text-label">
+      <h2 className="mb-1 text-fliess font-semibold text-label">
         Wiedervorlage-Standardfrist
       </h2>
-      <p className="mb-2 text-xs text-label2">
+      <p className="mb-2 text-sekundaer text-label2">
         Vorschlag (in Tagen), wenn ein Vorgang auf "Wartet auf Kunde" gesetzt wird – pro Vorgang
         beim Setzen weiterhin änderbar.
       </p>
@@ -397,18 +397,18 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
           placeholder={einstellungen.effektive_wiedervorlage_standard_tage.toString()}
           value={tage}
           onChange={(e) => setTage(e.target.value)}
-          className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
-        <span className="text-sm text-label2">Tage</span>
+        <span className="text-sekundaer text-label2">Tage</span>
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
+          <span className="text-sekundaer text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -446,8 +446,8 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
 
   return (
     <div className="card-ap p-4">
-      <h2 className="mb-1 text-sm font-semibold text-label">Fahrzeit-Abrechnung</h2>
-      <p className="mb-2 text-xs text-label2">
+      <h2 className="mb-1 text-fliess font-semibold text-label">Fahrzeit-Abrechnung</h2>
+      <p className="mb-2 text-meta text-label2">
         Steuert, ob und wie Fahrzeit-Einträge (Kategorie "Fahrzeit") als zusätzliche
         Rechnungsvorschläge "Fahrzeit"/"Fahrtkosten" am Vorgang erscheinen.
       </p>
@@ -465,7 +465,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
           ))}
         </Select>
         {(modus === "zeit" || modus === "zeit_und_km") && (
-          <label className="flex items-center gap-1.5 text-sm text-label2">
+          <label className="flex items-center gap-1.5 text-sekundaer text-label2">
             <input
               type="number"
               step="0.01"
@@ -474,13 +474,13 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
               value={fahrzeitSatz}
               onChange={(e) => setFahrzeitSatz(e.target.value)}
               aria-label="Fahrzeit-Satz (€/Std, netto)"
-              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             € netto / Std Fahrzeit
           </label>
         )}
         {(modus === "km" || modus === "zeit_und_km") && (
-          <label className="flex items-center gap-1.5 text-sm text-label2">
+          <label className="flex items-center gap-1.5 text-sekundaer text-label2">
             <input
               type="number"
               step="0.01"
@@ -488,7 +488,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
               placeholder="0,30"
               value={kmSatz}
               onChange={(e) => setKmSatz(e.target.value)}
-              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             € netto / km
           </label>
@@ -496,11 +496,11 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
-        {speichernMutation.isSuccess && <span className="text-xs text-st-erledigt">Gespeichert.</span>}
+        {speichernMutation.isSuccess && <span className="text-sekundaer text-st-erledigt">Gespeichert.</span>}
       </div>
     </div>
   );
@@ -531,9 +531,9 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   return (
     <div className="space-y-2 card-ap p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-label">SMTP (E-Mail-Versand)</span>
+        <span className="text-fliess font-semibold text-label">SMTP (E-Mail-Versand)</span>
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+          className={`rounded-full px-2 py-0.5 text-meta font-semibold ${
             integration.aktiv
               ? "bg-st-erledigt-bg text-st-erledigt  "
               : "bg-fill text-label2 "
@@ -548,25 +548,25 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
       </div>
       <input
@@ -574,7 +574,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
       />
 
       <div className="flex gap-2">
@@ -586,14 +586,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -602,7 +602,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             if (await bestaetigen({ titel: "SMTP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
+          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
         >
           Löschen
         </button>
@@ -636,11 +636,11 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   return (
     <div className="space-y-2 card-ap p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-label">
+        <span className="text-fliess font-semibold text-label">
           IMAP (Rechnungseingang-Import)
         </span>
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+          className={`rounded-full px-2 py-0.5 text-meta font-semibold ${
             integration.aktiv
               ? "bg-st-erledigt-bg text-st-erledigt  "
               : "bg-fill text-label2 "
@@ -655,25 +655,25 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Postfach-Adresse"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
         <input
           value={mailbox}
           onChange={(e) => setMailbox(e.target.value)}
           placeholder="Ordner (z.B. INBOX)"
-          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
         />
       </div>
       <input
@@ -681,7 +681,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
       />
 
       <div className="flex gap-2">
@@ -693,14 +693,14 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -709,7 +709,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             if (await bestaetigen({ titel: "IMAP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
+          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
         >
           Löschen
         </button>
@@ -796,10 +796,10 @@ export function IntegrationenPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
+      <h1 className="flex items-center gap-1.5 text-titel-mobil font-bold text-label">
         <Plug size={19} strokeWidth={2} className="text-indigo-500" /> Integrationen
       </h1>
 
@@ -812,10 +812,10 @@ export function IntegrationenPage() {
 
       {einstellungen && (
         <div className="card-ap p-4">
-          <h2 className="mb-1 text-sm font-semibold text-label">
+          <h2 className="mb-1 text-fliess font-semibold text-label">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
-          <p className="mb-2 text-xs text-label2">
+          <p className="mb-2 text-meta text-label2">
             Uhrzeit (UTC), zu der der tägliche Hintergrund-Lauf für diesen Betrieb
             geprüfte/überfällige Vorgänge und Rechnungen bearbeitet.
           </p>
@@ -836,7 +836,7 @@ export function IntegrationenPage() {
               ))}
             </Select>
             {schedulerMutation.isPending && (
-              <span className="text-xs text-label2">Speichert…</span>
+              <span className="text-sekundaer text-label2">Speichert…</span>
             )}
           </div>
         </div>
@@ -845,7 +845,7 @@ export function IntegrationenPage() {
       {einstellungen && <WiedervorlageSection einstellungen={einstellungen} />}
       {einstellungen && <FahrzeitAbrechnungSection einstellungen={einstellungen} />}
 
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne
         konfiguriertes SMTP kann ein Mitarbeiter das Passwort eines Kunden weiterhin
         direkt über den Kunden setzen.
@@ -860,25 +860,25 @@ export function IntegrationenPage() {
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <input
@@ -886,12 +886,12 @@ export function IntegrationenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -899,13 +899,13 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-card py-2.5 text-sm font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
+          className="btn-touch w-full rounded-md bg-card py-2.5 text-sekundaer font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
         >
           + SMTP einrichten
         </button>
       )}
 
-      <p className="text-sm text-label2">
+      <p className="text-sekundaer text-label2">
         Mit einem IMAP-Postfach (z.B. rechnung@deine-domain.de) werden Rechnungs-E-Mails automatisch
         abgeholt: jeder PDF-Anhang landet als Entwurf im Rechnungseingang, den ein Mitarbeiter dort
         gegen den Beleg prüft und bestätigt.
@@ -920,25 +920,25 @@ export function IntegrationenPage() {
               value={imapHost}
               onChange={(e) => setImapHost(e.target.value)}
               placeholder="Host"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={imapPort}
               onChange={(e) => setImapPort(e.target.value)}
               placeholder="Port"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={imapUser}
               onChange={(e) => setImapUser(e.target.value)}
               placeholder="Postfach-Adresse"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               value={imapMailbox}
               onChange={(e) => setImapMailbox(e.target.value)}
               placeholder="Ordner (z.B. INBOX)"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <input
@@ -946,12 +946,12 @@ export function IntegrationenPage() {
             value={imapSecret}
             onChange={(e) => setImapSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}
             onClick={() => createImapMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
           >
             IMAP einrichten
           </button>
@@ -959,7 +959,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowImapForm(true)}
-          className="btn-touch w-full rounded-md bg-card py-2.5 text-sm font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
+          className="btn-touch w-full rounded-md bg-card py-2.5 text-sekundaer font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
         >
           + IMAP einrichten
         </button>

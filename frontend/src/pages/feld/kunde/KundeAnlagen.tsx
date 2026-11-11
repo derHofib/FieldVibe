@@ -107,11 +107,11 @@ export function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte:
                       setStandortFehler(null);
                       neuerStandortMutation.mutate();
                     }}
-                    className="btn-touch btn-ap shrink-0 px-4 text-sm font-medium"
+                    className="btn-touch btn-ap shrink-0 px-4 text-sekundaer font-medium"
                   >
                     Anlegen
                   </button>
-                  <button type="button" onClick={() => setZeigeNeuerStandort(false)} className="btn-touch btn-ap shrink-0 px-4 text-sm font-medium">
+                  <button type="button" onClick={() => setZeigeNeuerStandort(false)} className="btn-touch btn-ap shrink-0 px-4 text-sekundaer font-medium">
                     Abbrechen
                   </button>
                 </div>
@@ -137,11 +137,11 @@ export function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte:
             </Feld>
           )}
           {error && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {error}
             </p>
           )}
-          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
             Anlegen
           </button>
         </form>
@@ -161,7 +161,7 @@ export function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId
     <button
       onClick={() => toggleMutation.mutate()}
       disabled={toggleMutation.isPending}
-      className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
+      className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-sekundaer font-semibold"
     >
       {anlage.aktiv ? "Deaktivieren" : "Aktivieren"}
     </button>

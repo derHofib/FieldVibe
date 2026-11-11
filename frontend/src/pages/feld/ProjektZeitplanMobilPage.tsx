@@ -109,13 +109,13 @@ export function ProjektZeitplanMobilPage() {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <StatusPille status={ANTRAG_STATUS_TOKEN.offen} label={`Antrag ${ANTRAG_STATUS_LABEL.offen.toLowerCase()}`} />
-              <span className="text-[13px] text-label2">{antragZeitText(offen)}</span>
+              <span className="text-sekundaer text-label2">{antragZeitText(offen)}</span>
             </div>
             <button
               type="button"
               onClick={() => zurueckziehen.mutate(offen.id)}
               disabled={zurueckziehen.isPending}
-              className="btn-touch -ml-1 px-1 text-[15px] text-tint-text disabled:opacity-50"
+              className="btn-touch -ml-1 px-1 text-fliess text-tint-text disabled:opacity-50"
             >
               Antrag zurückziehen
             </button>
@@ -125,13 +125,13 @@ export function ProjektZeitplanMobilPage() {
           <div className="space-y-0.5">
             <div className="flex flex-wrap items-center gap-2">
               <StatusPille status={ANTRAG_STATUS_TOKEN[letzter.status]} label={`Antrag ${ANTRAG_STATUS_LABEL[letzter.status].toLowerCase()}`} />
-              <span className="text-[13px] text-label2">{antragZeitText(letzter)}</span>
+              <span className="text-sekundaer text-label2">{antragZeitText(letzter)}</span>
             </div>
-            {letzter.antwort && <p className="text-[13px] text-label2">„{letzter.antwort}“</p>}
+            {letzter.antwort && <p className="text-sekundaer text-label2">„{letzter.antwort}“</p>}
           </div>
         )}
         {kannBeantragen && (
-          <button type="button" onClick={() => setAntragFuer(e)} className="btn-touch -ml-1 px-1 text-[15px] font-medium text-tint-text">
+          <button type="button" onClick={() => setAntragFuer(e)} className="btn-touch -ml-1 px-1 text-fliess font-medium text-tint-text">
             Änderung beantragen
           </button>
         )}
@@ -147,7 +147,7 @@ export function ProjektZeitplanMobilPage() {
 
   return (
     <div className="-mx-3 -mt-4 pb-8">
-      <Link to="/projekte" className="flex items-center gap-0.5 px-3 pt-3 text-[17px] text-tint-text">
+      <Link to="/projekte" className="flex items-center gap-0.5 px-3 pt-3 text-zeile text-tint-text">
         <ChevronLeft size={20} strokeWidth={2} aria-hidden="true" /> Projekte
       </Link>
       <AbschnittskopfA titel="Zeitplan" />
@@ -156,7 +156,7 @@ export function ProjektZeitplanMobilPage() {
         {isLoading ? (
           <SkeletonList count={4} />
         ) : error ? (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {error instanceof ApiError && error.status === 404
               ? "Kein Zugriff auf diesen Zeitplan"
               : "Zeitplan konnte nicht geladen werden."}
@@ -171,13 +171,13 @@ export function ProjektZeitplanMobilPage() {
                 <div className="flex items-baseline justify-between">
                   <AbschnittskopfB titel={g.phase?.titel ?? "Ohne Phase"} />
                   {g.phase && (
-                    <span className="pt-[22px] pr-4 text-[13px] text-label2 tabular-nums">
+                    <span className="pt-[22px] pr-4 text-sekundaer text-label2 tabular-nums">
                       {phaseZ ? `${formatKurz(phaseZ.start)} – ${formatKurz(phaseZ.ende)}` : ""} · {g.phase.fortschritt} %
                     </span>
                   )}
                 </div>
                 {g.kinder.length === 0 ? (
-                  <p className="px-4 text-sm text-label2">Noch keine Schritte.</p>
+                  <p className="px-4 text-sekundaer text-label2">Noch keine Schritte.</p>
                 ) : (
                   <GroupedList>
                     {g.kinder.map((e, i) => {
@@ -189,8 +189,8 @@ export function ProjektZeitplanMobilPage() {
                           <GroupedListRow last={i === g.kinder.length - 1} minHoehe={56}>
                             <span className="flex w-5 shrink-0 justify-center">{symbol(e)}</span>
                             <div className="min-w-0 flex-1">
-                              <p className={`truncate text-[17px] ${e.erledigt ? "text-label2 line-through" : "text-label"}`}>{e.titel}</p>
-                              <p className="truncate text-[13px] text-label2">
+                              <p className={`truncate text-zeile ${e.erledigt ? "text-label2 line-through" : "text-label"}`}>{e.titel}</p>
+                              <p className="truncate text-sekundaer text-label2">
                                 {zeitraumText(e, z)}
                                 {zusatz(e) ? ` · ${zusatz(e)}` : ""}
                               </p>
@@ -201,9 +201,9 @@ export function ProjektZeitplanMobilPage() {
                               )}
                               {antragBereich(e)}
                             </div>
-                            <div className="flex shrink-0 flex-col items-end gap-1 text-[13px] text-label2 tabular-nums">
-                              {aktiv && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-[11px] font-semibold text-white">Heute</span>}
-                              {dieseWoche && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-[11px] font-semibold text-white">Diese Woche</span>}
+                            <div className="flex shrink-0 flex-col items-end gap-1 text-sekundaer text-label2 tabular-nums">
+                              {aktiv && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-meta font-semibold text-white">Heute</span>}
+                              {dieseWoche && <span className="rounded-full bg-tint-solid px-2 py-0.5 text-meta font-semibold text-white">Diese Woche</span>}
                               {e.typ === "schritt" && <span>{e.erledigt ? "Erledigt" : `${e.fortschritt} %`}</span>}
                               {e.typ === "meilenstein" && e.erledigt && <span>Erledigt</span>}
                             </div>

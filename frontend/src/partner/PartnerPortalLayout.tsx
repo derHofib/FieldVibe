@@ -25,18 +25,18 @@ export function PartnerPortalLayout() {
         {currentPartner?.mandant_logo_url ? (
           <img src={currentPartner.mandant_logo_url} alt={currentPartner.mandant_name} className="h-7 max-w-[140px] object-contain" />
         ) : (
-          <span className="max-w-[160px] truncate text-[17px] font-bold text-label">
+          <span className="max-w-[160px] truncate text-zeile font-bold text-label">
             {currentPartner?.mandant_name ?? <Logo variante="wortmarke" hoehe={22} />}
           </span>
         )}
-        <span className="hidden text-[13px] font-semibold tracking-wide text-label2 uppercase sm:inline">Partnerportal</span>
+        <span className="hidden text-sekundaer font-semibold tracking-wide text-label2 uppercase sm:inline">Partnerportal</span>
         <nav aria-label="Hauptnavigation" className="ml-4 hidden items-center gap-1 md:flex">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `rounded-[var(--radius-ap-pill)] px-3 py-1.5 text-[15px] font-medium ${
+                `rounded-[var(--radius-ap-pill)] px-3 py-1.5 text-fliess font-medium ${
                   isActive ? "bg-tintbg text-tint-text" : "text-label2 hover:bg-fill"
                 }`
               }
@@ -46,7 +46,7 @@ export function PartnerPortalLayout() {
           ))}
         </nav>
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <span className="truncate text-[13px] text-label2">{currentPartner?.partner_name}</span>
+          <span className="truncate text-sekundaer text-label2">{currentPartner?.partner_name}</span>
           <ThemeToggle />
         </div>
       </header>
@@ -55,7 +55,7 @@ export function PartnerPortalLayout() {
 
       <RechtlicheLinks className="pt-2" />
 
-      <footer className="flex items-center justify-center gap-1.5 pt-2 pb-4 text-[11px] text-label3">
+      <footer className="flex items-center justify-center gap-1.5 pt-2 pb-4 text-meta text-label3">
         via <Logo variante="wortmarke" hoehe={12} />
       </footer>
 
@@ -76,7 +76,7 @@ export function PartnerPortalLayout() {
             {({ isActive }) => (
               <>
                 <item.icon size={25} strokeWidth={isActive ? 2.2 : 2} aria-hidden="true" />
-                <span className={`text-[10px] font-medium ${isActive ? "text-tint-text" : ""}`}>{item.label}</span>
+                <span className={`text-nav font-medium ${isActive ? "text-tint-text" : ""}`}>{item.label}</span>
               </>
             )}
           </NavLink>

@@ -39,19 +39,19 @@ export function ResetPasswordPage() {
         </div>
 
         <Blueprint className="bg-card p-8">
-          <h1 className="mb-6 text-center font-heading text-sm font-semibold uppercase tracking-[0.14em] text-label2">
+          <h1 className="mb-6 text-center font-heading text-zeile font-semibold text-label">
             Neues Passwort setzen
           </h1>
 
           {!token && (
-            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
               Der Link ist unvollständig. Bitte fordere einen neuen an.
             </p>
           )}
 
           {done ? (
             <>
-              <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
+              <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-fliess text-st-erledigt">
                 Passwort erfolgreich geändert. Du kannst dich jetzt anmelden.
               </p>
               <button
@@ -64,11 +64,11 @@ export function ResetPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit}>
               {error && (
-                <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+                <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-fliess text-st-fehlt">
                   {error}
                 </div>
               )}
-              <label htmlFor="reset-password" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="reset-password" className="mb-1 block text-fliess font-medium text-label">
                 Neues Passwort
               </label>
               <input
@@ -81,7 +81,7 @@ export function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="field-ap btn-touch mb-1"
               />
-              <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+              <p className="mb-4 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
               <button
                 type="submit"
                 disabled={submitting || !token}
@@ -95,12 +95,12 @@ export function ResetPasswordPage() {
           {!done && (
             <Link
               to="/passwort-vergessen"
-              className="mt-4 block text-center text-sm text-label2 hover:text-label"
+              className="mt-4 block text-center text-sekundaer text-label2 hover:text-label"
             >
               Neuen Link anfordern
             </Link>
           )}
-          <Link to="/login" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+          <Link to="/login" className="mt-4 block text-center text-sekundaer text-label2 hover:text-label">
             Zurück zur Anmeldung
           </Link>
         </Blueprint>

@@ -77,8 +77,8 @@ export function BoardsUebersichtPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-bold text-label">Boards</h1>
-          <span className="text-sm font-medium text-label2">{boards?.length ?? 0}</span>
+          <h1 className="text-titel-mobil font-bold text-label">Boards</h1>
+          <span className="text-sekundaer font-medium text-label2">{boards?.length ?? 0}</span>
         </div>
         <button
           onClick={() => setZeigeNeu((v) => !v)}
@@ -96,7 +96,7 @@ export function BoardsUebersichtPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z. B. Projektplanung Rheinblick"
-            className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+            className="w-full border border-sep bg-transparent px-3 py-2 text-zeile text-label"
           />
           <Select
             value={typ}
@@ -112,13 +112,13 @@ export function BoardsUebersichtPage() {
             <button
               onClick={() => erstellen.mutate()}
               disabled={!name.trim() || erstellen.isPending}
-              className="btn-ap-primary flex-1 py-2 text-sm"
+              className="btn-ap-primary flex-1 py-2 text-sekundaer"
             >
               Anlegen
             </button>
             <button
               onClick={() => setZeigeNeu(false)}
-              className="text-sm font-medium text-label2"
+              className="text-sekundaer font-medium text-label2"
             >
               Abbrechen
             </button>
@@ -131,7 +131,7 @@ export function BoardsUebersichtPage() {
           <button
             key={o.key}
             onClick={() => setFilter(o.key)}
-            className={`btn-touch shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap ${
+            className={`btn-touch shrink-0 rounded-full px-3.5 py-1.5 text-meta font-semibold whitespace-nowrap ${
               filter === o.key
                 ? "bg-slate-800 text-white dark:bg-stone-100 "
                 : "bg-card text-label shadow-xs dark:shadow-none dark:ring-1 "
@@ -143,7 +143,7 @@ export function BoardsUebersichtPage() {
       </div>
 
       {isLoading ? (
-        <p className="py-8 text-center text-sm text-label2">Lädt…</p>
+        <p className="py-8 text-center text-sekundaer text-label2">Lädt…</p>
       ) : ladeFehler && !boards ? (
         <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : gefiltert.length === 0 ? (
@@ -162,8 +162,8 @@ export function BoardsUebersichtPage() {
                   <Icon size={19} strokeWidth={2} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14.5px] font-bold text-label">{b.name}</p>
-                  <p className="mt-0.5 text-xs text-label2">
+                  <p className="truncate text-fliess font-bold text-label">{b.name}</p>
+                  <p className="mt-0.5 text-meta text-label2">
                     {TYP_LABEL[b.board_typ]} &middot; {relativeZeit(b.updated_at)}
                   </p>
                 </div>

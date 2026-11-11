@@ -47,10 +47,10 @@ export function TeamZeitenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Team-Zeiten</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Team-Zeiten</h1>
 
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
           Techniker
         </label>
         <Select id={`${uid}-0`}
@@ -75,11 +75,11 @@ export function TeamZeitenPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer text-label "
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-label">
+            <span className="text-fliess font-medium text-label">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -88,7 +88,7 @@ export function TeamZeitenPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer text-label "
             >
               Woche →
             </button>

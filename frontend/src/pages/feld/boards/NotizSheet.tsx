@@ -70,14 +70,14 @@ export function NeueNotizSheet({
 
   return (
     <SheetGeruest onClose={onAbbrechen}>
-      <h2 className="mb-3 text-base font-bold text-label">Neue Notiz</h2>
+      <h2 className="mb-3 text-zeile font-bold text-label">Neue Notiz</h2>
       <textarea
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
         placeholder="Was gibt's zu notieren?"
-        className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
+        className="w-full rounded-lg border border-sep px-3 py-2.5 text-zeile dark:bg-stone-800 "
       />
       <div className="mt-3 flex items-center gap-2.5">
         {KLEBEZETTEL_FARBEN.map((f) => (
@@ -95,11 +95,11 @@ export function NeueNotizSheet({
         <button
           onClick={() => onErstellen({ text: text.trim(), farbe })}
           disabled={!text.trim()}
-          className="btn-ap-primary flex-1 py-2.5 text-sm"
+          className="btn-ap-primary flex-1 py-2.5 text-sekundaer"
         >
           Auf Board setzen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
+        <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -132,13 +132,13 @@ export function NotizAktionSheet({
   if (modus === "bearbeiten") {
     return (
       <SheetGeruest onClose={onAbbrechen}>
-        <h2 className="mb-3 text-base font-bold text-label">Notiz bearbeiten</h2>
+        <h2 className="mb-3 text-zeile font-bold text-label">Notiz bearbeiten</h2>
         <textarea
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
+          className="w-full rounded-lg border border-sep px-3 py-2.5 text-zeile dark:bg-stone-800 "
         />
         <div className="mt-3 flex items-center gap-2.5">
           {KLEBEZETTEL_FARBEN.map((f) => (
@@ -155,11 +155,11 @@ export function NotizAktionSheet({
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => onSpeichern({ text: text.trim(), farbe })}
-            className="btn-ap-primary flex-1 py-2.5 text-sm"
+            className="btn-ap-primary flex-1 py-2.5 text-sekundaer"
           >
             Speichern
           </button>
-          <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
+          <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
             Abbrechen
           </button>
         </div>
@@ -186,7 +186,7 @@ export function NotizAktionSheet({
   return (
     <SheetGeruest onClose={onAbbrechen}>
       <div className="flex items-start justify-between gap-3">
-        <div className={`flex-1 rounded-lg p-3 text-sm font-medium ${FARB_SWATCH[daten.farbe]} bg-opacity-60`}>
+        <div className={`flex-1 rounded-lg p-3 text-sekundaer font-medium ${FARB_SWATCH[daten.farbe]} bg-opacity-60`}>
           {daten.text || <span className="opacity-60">(leer)</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -210,7 +210,7 @@ export function NotizAktionSheet({
         </div>
       </div>
 
-      <p className="mt-4 mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase">
+      <p className="mt-4 mb-1.5 text-meta font-bold tracking-wide text-label2 uppercase">
         In FieldVibe übernehmen
       </p>
       <button
@@ -221,8 +221,8 @@ export function NotizAktionSheet({
           <Link2 size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-label">Neuer Vorgang</span>
-          <span className="block text-xs text-label2">Kunde, Leistungsart und Abrechnung wählen</span>
+          <span className="block text-fliess font-bold text-label">Neuer Vorgang</span>
+          <span className="block text-sekundaer text-label2">Kunde, Leistungsart und Abrechnung wählen</span>
         </span>
       </button>
       <button
@@ -233,21 +233,21 @@ export function NotizAktionSheet({
           <AlertTriangle size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-label">Mangel melden</span>
-          <span className="block text-xs text-label2">An bestehenden Vorgang hängen</span>
+          <span className="block text-fliess font-bold text-label">Mangel melden</span>
+          <span className="block text-sekundaer text-label2">An bestehenden Vorgang hängen</span>
         </span>
       </button>
 
       <div className="mt-4 flex gap-3">
         <button
           onClick={() => setModus("bearbeiten")}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-fill py-2.5 text-sm font-semibold text-label "
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-fill py-2.5 text-sekundaer font-semibold text-label "
         >
           <Pencil size={14} strokeWidth={2} /> Bearbeiten
         </button>
         <button
           onClick={onLoeschen}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-st-fehlt-bg py-2.5 text-sm font-semibold text-st-fehlt "
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-st-fehlt-bg py-2.5 text-sekundaer font-semibold text-st-fehlt "
         >
           <Trash2 size={14} strokeWidth={2} /> Löschen
         </button>
@@ -283,7 +283,7 @@ function NeuerVorgangForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-label">Neuer Vorgang</h2>
+      <h2 className="text-zeile font-bold text-label">Neuer Vorgang</h2>
       <SearchableSelect
         value={kundeId}
         onChange={setKundeId}
@@ -310,16 +310,16 @@ function NeuerVorgangForm({
           </option>
         ))}
       </Select>
-      {erstellen.isError && <p className="text-xs text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
+      {erstellen.isError && <p className="text-sekundaer text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-ap-primary flex-1 py-2.5 text-sm"
+          className="btn-ap-primary flex-1 py-2.5 text-sekundaer"
         >
           Vorgang anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
+        <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
           Zurück
         </button>
       </div>
@@ -345,7 +345,7 @@ function MangelMeldenForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-label">Mangel melden</h2>
+      <h2 className="text-zeile font-bold text-label">Mangel melden</h2>
       <SearchableSelect
         value={vorgangId}
         onChange={setVorgangId}
@@ -357,18 +357,18 @@ function MangelMeldenForm({
         onChange={(e) => setBeschreibung(e.target.value)}
         rows={3}
         placeholder="Beschreibung des Mangels…"
-        className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
+        className="w-full rounded-lg border border-sep px-3 py-2.5 text-zeile dark:bg-stone-800 "
       />
-      {melden.isError && <p className="text-xs text-st-fehlt ">Melden fehlgeschlagen.</p>}
+      {melden.isError && <p className="text-sekundaer text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">
         <button
           onClick={() => melden.mutate()}
           disabled={!vorgangId || !beschreibung.trim() || melden.isPending}
-          className="flex-1 rounded-lg bg-st-arbeit-dot py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="flex-1 rounded-lg bg-st-arbeit-dot py-2.5 text-sekundaer font-semibold text-white disabled:opacity-40"
         >
           Mangel melden
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
+        <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
           Zurück
         </button>
       </div>

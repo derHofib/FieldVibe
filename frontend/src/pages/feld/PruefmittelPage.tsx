@@ -96,10 +96,10 @@ export function PruefmittelPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-label">Prüfmittelverwaltung</h1>
+        <h1 className="text-titel-mobil font-bold text-label">Prüfmittelverwaltung</h1>
         <span />
       </div>
 
@@ -113,28 +113,28 @@ export function PruefmittelPage() {
       <AnlegenPanel offen={showForm} titel="Neues Prüfmittel" onClose={() => setShowForm(false)}>
         <div className="space-y-3 p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">
               Bezeichnung
             </label>
             <input id={`${uid}-0`}
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               placeholder="z.B. Installationstester Gossen Metrahit"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-meta font-medium text-label2">
               Seriennummer
             </label>
             <input id={`${uid}-1`}
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">
               Zugewiesen an
             </label>
             <Select id={`${uid}-2`}
@@ -150,7 +150,7 @@ export function PruefmittelPage() {
             </Select>
           </div>
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label2">
               Kalibrierintervall (Monate)
             </label>
             <input id={`${uid}-3`}
@@ -158,7 +158,7 @@ export function PruefmittelPage() {
               min={1}
               value={form.intervallMonate}
               onChange={(e) => setForm({ ...form, intervallMonate: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <button
@@ -171,7 +171,7 @@ export function PruefmittelPage() {
                 kalibrierintervall_monate: Number(form.intervallMonate),
               })
             }
-            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -180,7 +180,7 @@ export function PruefmittelPage() {
 
       <div className="space-y-2">
         {sortiert.length === 0 ? (
-          <p className="text-center text-sm text-label2">Keine Prüfmittel erfasst.</p>
+          <p className="text-center text-sekundaer text-label2">Keine Prüfmittel erfasst.</p>
         ) : (
           sortiert.map((mittel) => (
             <div
@@ -189,28 +189,28 @@ export function PruefmittelPage() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-label">
+                  <div className="text-fliess font-medium text-label">
                     {mittel.bezeichnung}
                   </div>
                   {mittel.seriennummer && (
-                    <div className="text-xs text-label2">SN {mittel.seriennummer}</div>
+                    <div className="text-meta text-label2">SN {mittel.seriennummer}</div>
                   )}
-                  <div className="text-xs text-label2">
+                  <div className="text-sekundaer text-label2">
                     Zugewiesen: {nameFuer(mittel.zugewiesen_an)}
                   </div>
                 </div>
-                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                   {STATUS_LABEL[mittel.status]}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span className={`text-sm font-medium ${faelligkeitsFarbe(mittel.naechste_kalibrierung_am)}`}>
+                <span className={`text-fliess font-medium ${faelligkeitsFarbe(mittel.naechste_kalibrierung_am)}`}>
                   Fällig: {formatDatum(mittel.naechste_kalibrierung_am)}
                 </span>
                 <button
                   onClick={() => markiereKalibriert(mittel)}
                   disabled={updateMutation.isPending}
-                  className="btn-touch rounded-md bg-fill px-3 py-1 text-xs font-medium text-label disabled:opacity-50 "
+                  className="btn-touch rounded-md bg-fill px-3 py-1 text-sekundaer font-medium text-label disabled:opacity-50 "
                 >
                   Kalibrierung erfolgt (heute)
                 </button>
@@ -223,7 +223,7 @@ export function PruefmittelPage() {
                     }
                   }}
                   disabled={deleteMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-xs font-medium text-st-fehlt disabled:opacity-50 "
+                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
                 >
                   Löschen
                 </button>

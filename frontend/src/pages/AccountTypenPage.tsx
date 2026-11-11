@@ -57,9 +57,9 @@ function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; 
   return (
     <div className="border-t border-sep">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-fliess">
           <caption className="sr-only">Rechte-Matrix des Account-Typs je Bereich und Aktion</caption>
-          <thead className="text-xs text-label2">
+          <thead className="text-sekundaer text-label2">
             <tr>
               <th scope="col" className="px-4 py-2">
                 Bereich
@@ -101,11 +101,11 @@ function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; 
         </table>
       </div>
       {fehler && (
-        <p role="alert" className="border-t border-sep px-4 py-2 text-sm text-st-fehlt">
+        <p role="alert" className="border-t border-sep px-4 py-2 text-fliess text-st-fehlt">
           {fehler}
         </p>
       )}
-      <p className="border-t border-sep px-4 py-3 text-xs text-label2">
+      <p className="border-t border-sep px-4 py-3 text-sekundaer text-label2">
         Die Reichweite (Scope) neuer Rechte setzt das Backend automatisch: „Eigene“ bei „Sieht nur zugewiesene Kunden“ (sofern der Bereich das kennt),
         sonst „Mandant“. Feinere Reichweiten je Position vergeben Sie im Organigramm (Reiter „Rechte“).
       </p>
@@ -115,7 +115,7 @@ function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; 
 
 function FlagZeile({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
   return (
-    <label className="flex items-center gap-2 border-t border-sep px-4 py-3 text-sm text-label">
+    <label className="flex items-center gap-2 border-t border-sep px-4 py-3 text-fliess text-label">
       <input type="checkbox" className="h-4 w-4 accent-tint" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {children}
     </label>
@@ -222,11 +222,11 @@ export function AccountTypenPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-3xl">
-          <Link to="/einstellungen" className="text-sm font-medium text-tint-text hover:underline">
+          <Link to="/einstellungen" className="text-fliess font-medium text-tint-text hover:underline">
             ← Zurück zu Einstellungen
           </Link>
-          <h1 className="mt-2 text-lg font-bold text-label">Account-Typen & Rechte</h1>
-          <p className="mt-1 text-sm text-label2">
+          <h1 className="mt-2 text-titel-desktop font-bold text-label">Account-Typen & Rechte</h1>
+          <p className="mt-1 text-sekundaer text-label2">
             Ein Account-Typ ist die Rechte-Vorlage für Positionen im Organigramm: Er legt je Bereich fest, was sehen, erstellen, bearbeiten, löschen,
             exportieren oder freigeben darf. Einzelne Positionen und Nutzer können davon abweichen. Mandanten-Administratoren sind von dieser Matrix nicht betroffen
             und haben immer vollen Zugriff.
@@ -236,7 +236,7 @@ export function AccountTypenPage() {
           <button type="button" className="btn-touch btn-ap-primary px-4" onClick={() => setZeigeNeu(true)}>
             + Neuer Account-Typ
           </button>
-          <button type="button" className="btn-touch btn-ap px-4 py-2 text-sm font-medium" onClick={() => setZeigeVorlage(true)}>
+          <button type="button" className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium" onClick={() => setZeigeVorlage(true)}>
             <LayoutTemplate size={14} strokeWidth={2} aria-hidden="true" />
             Aus Vorlage
           </button>
@@ -246,30 +246,30 @@ export function AccountTypenPage() {
       <AnlegenPanel offen={zeigeNeu} titel="Neuer Account-Typ" onClose={() => setZeigeNeu(false)}>
         <form onSubmit={handleCreate} className="space-y-3 p-4">
           <div>
-            <label htmlFor="at-name" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="at-name" className="mb-1 block text-fliess font-medium text-label">
               Name <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input id="at-name" required autoFocus placeholder="z.B. Techniker" value={name} onChange={(e) => setName(e.target.value)} className="field-ap" />
           </div>
           <div>
-            <label htmlFor="at-icon" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="at-icon" className="mb-1 block text-fliess font-medium text-label">
               Icon (optional)
             </label>
             <input id="at-icon" placeholder="🔧" value={icon} onChange={(e) => setIcon(e.target.value)} className="field-ap" />
           </div>
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={nurZugewieseneKunden} onChange={(e) => setNurZugewieseneKunden(e.target.checked)} />
             Sieht nur zugewiesene Kunden
           </label>
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfSelbstUebernehmen} onChange={(e) => setDarfSelbstUebernehmen(e.target.checked)} />
             Darf Vorgänge selbst übernehmen
           </label>
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfZeitenBuchen} onChange={(e) => setDarfZeitenBuchen(e.target.checked)} />
             Darf Zeiten buchen
           </label>
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input type="checkbox" className="h-4 w-4 accent-tint" checked={darfAbwesenheiten} onChange={(e) => setDarfAbwesenheiten(e.target.checked)} />
             Abwesenheiten verwalten
           </label>
@@ -278,7 +278,7 @@ export function AccountTypenPage() {
           </button>
         </form>
         {formError && (
-          <p role="alert" className="mx-4 mb-4 text-sm text-st-fehlt">
+          <p role="alert" className="mx-4 mb-4 text-fliess text-st-fehlt">
             {formError}
           </p>
         )}
@@ -286,12 +286,12 @@ export function AccountTypenPage() {
 
       <section className="space-y-3">
         {deleteError && (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {deleteError}
           </p>
         )}
         {updateError && (
-          <p role="alert" className="text-sm text-st-fehlt">
+          <p role="alert" className="text-fliess text-st-fehlt">
             {updateError}
           </p>
         )}
@@ -314,7 +314,7 @@ export function AccountTypenPage() {
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
                     {typ.icon ? (
-                      <span className="text-xl" aria-hidden="true">
+                      <span className="text-titel-mobil" aria-hidden="true">
                         {typ.icon}
                       </span>
                     ) : (
@@ -322,7 +322,7 @@ export function AccountTypenPage() {
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold text-label">{typ.name}</span>
-                      <span className="block text-xs text-label2">
+                      <span className="block text-sekundaer text-label2">
                         {typ.anzahl_nutzer} Nutzer
                         {positionen && ` · von ${anzahlPositionen} ${anzahlPositionen === 1 ? "Position" : "Positionen"} genutzt`}
                         {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
@@ -371,14 +371,14 @@ export function AccountTypenPage() {
                     >
                       Abwesenheiten verwalten (Soll-Zeit, Feiertage und Bundesland pflegen, Saldo anderer einsehen)
                     </FlagZeile>
-                    {registry ? <RechteMatrixEditor accountTypId={typ.id} registry={registry} /> : <p className="border-t border-sep p-4 text-sm text-label2">Rechte-Registry lädt…</p>}
+                    {registry ? <RechteMatrixEditor accountTypId={typ.id} registry={registry} /> : <p className="border-t border-sep p-4 text-sekundaer text-label2">Rechte-Registry lädt…</p>}
                   </div>
                 )}
               </div>
             );
           })
         ) : (
-          <p className="text-sm text-label2">Noch keine Account-Typen angelegt.</p>
+          <p className="text-sekundaer text-label2">Noch keine Account-Typen angelegt.</p>
         )}
       </section>
 

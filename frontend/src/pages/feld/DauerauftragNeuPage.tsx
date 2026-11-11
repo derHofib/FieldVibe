@@ -94,11 +94,11 @@ export function DauerauftragNeuPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-label">Neuer Dauer-Auftrag</h1>
-      <p className="text-sm text-label2">
+      <h1 className="text-titel-mobil font-bold text-label">Neuer Dauer-Auftrag</h1>
+      <p className="text-sekundaer text-label2">
         Erzeugt automatisch einen neuen Vorgang, sobald das eingestellte Intervall ab dem Abschluss
         des jeweils letzten erzeugten Vorgangs erreicht ist.
       </p>
@@ -108,7 +108,7 @@ export function DauerauftragNeuPage() {
         className="space-y-3 card-ap p-4"
       >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Kunde</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Kunde</label>
           <Select id={`${uid}-0`}
             value={kundeId}
             onChange={(e) => {
@@ -127,22 +127,22 @@ export function DauerauftragNeuPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">
+            <label className="mb-1 block text-fliess font-medium text-label">
               Anlagen (optional, mehrfach möglich)
             </label>
-            <p className="mb-1 text-xs text-label2">
+            <p className="mb-1 text-sekundaer text-label2">
               Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
               ausgewählt: ein Bündel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
               anlegt – statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
             </p>
             {!anlagenListe || anlagenListe.length === 0 ? (
-              <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
+              <p className="text-sekundaer text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
             ) : (
               <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-sep p-2 ">
                 {anlagenListe.map((a) => (
                   <label
                     key={a.id}
-                    className="flex items-center gap-2 py-1 text-sm text-label"
+                    className="flex items-center gap-2 py-1 text-fliess text-label"
                   >
                     <input
                       type="checkbox"
@@ -162,7 +162,7 @@ export function DauerauftragNeuPage() {
         )}
 
         <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">Titel</label>
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Titel</label>
           <input id={`${uid}-1`}
             required
             value={titel}
@@ -173,7 +173,7 @@ export function DauerauftragNeuPage() {
         </div>
 
         <div>
-          <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Beschreibung</label>
           <textarea id={`${uid}-2`}
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
@@ -184,7 +184,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Leistungstyp</label>
             <Select id={`${uid}-3`}
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
@@ -197,7 +197,7 @@ export function DauerauftragNeuPage() {
             </Select>
           </div>
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-fliess font-medium text-label">Abrechnungsart</label>
             <Select id={`${uid}-4`}
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
@@ -213,7 +213,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-fliess font-medium text-label">
               Intervall (Tage)
             </label>
             <input id={`${uid}-5`}
@@ -226,7 +226,7 @@ export function DauerauftragNeuPage() {
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-6`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-fliess font-medium text-label">
               Erste Fälligkeit
             </label>
             <input id={`${uid}-6`}
@@ -240,7 +240,7 @@ export function DauerauftragNeuPage() {
         </div>
 
         <div>
-          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-fliess font-medium text-label">
             Wann wird die nächste Fälligkeit berechnet?
           </label>
           <Select id={`${uid}-7`}
@@ -252,7 +252,7 @@ export function DauerauftragNeuPage() {
             </option>
             <option value="fest">Fest – ab dem ursprünglich geplanten Termin</option>
           </Select>
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-sekundaer text-label2">
             {modus === "rollierend"
               ? "Wird ein Vorgang früher oder später abgeschlossen, verschiebt sich die nächste Fälligkeit entsprechend mit."
               : "Der Kalenderrhythmus bleibt fest, unabhängig davon, wann tatsächlich abgeschlossen wird."}
@@ -261,7 +261,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor={`${uid}-8`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-8`} className="mb-1 block text-fliess font-medium text-label">
               Toleranz zu früh (Tage)
             </label>
             <input id={`${uid}-8`}
@@ -274,7 +274,7 @@ export function DauerauftragNeuPage() {
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-9`} className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-9`} className="mb-1 block text-fliess font-medium text-label">
               Toleranz zu spät (Tage)
             </label>
             <input id={`${uid}-9`}
@@ -287,12 +287,12 @@ export function DauerauftragNeuPage() {
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-label2">
+        <p className="-mt-2 text-sekundaer text-label2">
           Wird außerhalb dieser Toleranz abgeschlossen, entsteht dazu nur ein Hinweis im
           Vorgangs-Chat – der Abschluss selbst wird nie blockiert.
         </p>
 
-        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
+        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
 
         <button
           type="submit"

@@ -67,7 +67,7 @@ function AngeboteListe() {
       <AnlegenPanel offen={showForm} titel="Neues Angebot" onClose={() => setShowForm(false)}>
         <div className="space-y-3 p-4">
           <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">
               Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <SearchableSelect id={`${uid}-0`}
@@ -80,7 +80,7 @@ function AngeboteListe() {
               options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
             />
             {kundeFehler && (
-              <p role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {kundeFehler}
               </p>
             )}
@@ -94,7 +94,7 @@ function AngeboteListe() {
               }
               erstellen.mutate();
             }}
-            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             Angebot anlegen
           </button>
@@ -116,11 +116,11 @@ function AngeboteListe() {
               className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
-                <div className="text-xs text-label2">{a.angebotsnummer}</div>
-                <div className="text-sm font-medium text-label">{nameFuer(a.kunde_id)}</div>
-                <div className="text-xs text-label2">{formatEuro(a.gesamt_brutto)}</div>
+                <div className="text-meta text-label2">{a.angebotsnummer}</div>
+                <div className="text-fliess font-medium text-label">{nameFuer(a.kunde_id)}</div>
+                <div className="text-sekundaer text-label2">{formatEuro(a.gesamt_brutto)}</div>
               </div>
-              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-semibold text-label">
                 {ANGEBOT_STATUS_LABEL[a.status]}
               </span>
             </button>
@@ -184,13 +184,13 @@ export function RechnungenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">
+        <h1 className="text-titel-mobil font-bold text-label">
           {bereich === "rechnungen" ? "Rechnungen" : "Angebote"}
         </h1>
         {bereich === "rechnungen" && (
           <button
             onClick={exportieren}
-            className="btn-touch btn-ap px-3 py-1.5 text-sm font-medium"
+            className="btn-touch btn-ap px-3 py-1.5 text-sekundaer font-medium"
           >
             CSV-Export
           </button>
@@ -208,7 +208,7 @@ export function RechnungenPage() {
               setBereich(o.wert);
               setZeigeNeu(false);
             }}
-            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ${
+            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sekundaer font-medium ${
               bereich === o.wert
                 ? "btn-ap-primary text-white"
                 : "text-label"
@@ -244,10 +244,10 @@ export function RechnungenPage() {
               setSeiten(1);
             }}
             placeholder="Rechnungsnummer oder Kunde suchen…"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
           />
 
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-sekundaer">
             {STATUS_OPTIONEN.map((s) => (
               <button
                 key={s}
@@ -290,7 +290,7 @@ export function RechnungenPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
-            <span className="text-xs text-label2">Art</span>
+            <span className="text-sekundaer text-label2">Art</span>
             {RECHNUNGSART_FILTER.map((a) => (
               <FilterChip
                 key={a}
@@ -307,20 +307,20 @@ export function RechnungenPage() {
           {data && (
             <div className="grid grid-cols-3 gap-2 card-ap p-3 text-center">
               <div>
-                <div className="text-xs text-label2">Treffer</div>
-                <div className="text-sm font-semibold tabular-nums text-label">
+                <div className="text-sekundaer text-label2">Treffer</div>
+                <div className="text-fliess font-semibold tabular-nums text-label">
                   {data.gesamt_anzahl}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-label2">Brutto gesamt</div>
-                <div className="text-sm font-semibold tabular-nums text-label">
+                <div className="text-sekundaer text-label2">Brutto gesamt</div>
+                <div className="text-fliess font-semibold tabular-nums text-label">
                   {formatEuro(data.summe_brutto)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-label2">Offen</div>
-                <div className="text-sm font-semibold tabular-nums text-st-arbeit ">
+                <div className="text-sekundaer text-label2">Offen</div>
+                <div className="text-fliess font-semibold tabular-nums text-st-arbeit ">
                   {formatEuro(data.summe_offen)}
                 </div>
               </div>
@@ -356,8 +356,8 @@ export function RechnungenPage() {
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="text-xs text-label2">{r.rechnungsnummer}</div>
-                    <div className="truncate text-sm font-medium text-label">
+                    <div className="text-meta text-label2">{r.rechnungsnummer}</div>
+                    <div className="truncate text-fliess font-medium text-label">
                       Fällig: {formatDatum(r.faellig_am)}
                       {r.ist_ueberfaellig && (
                         <span className="ml-1 text-st-fehlt ">
@@ -366,14 +366,14 @@ export function RechnungenPage() {
                       )}
                     </div>
                     {r.mahnstufe > 0 && (
-                      <div className="text-xs text-st-arbeit ">
+                      <div className="text-sekundaer text-st-arbeit ">
                         Mahnstufe {r.mahnstufe}
                       </div>
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span
-                      className={`tabular-nums text-sm font-medium ${
+                      className={`tabular-nums text-fliess font-medium ${
                         Number(r.betrag_brutto) < 0 ? "text-st-fehlt" : "text-label"
                       }`}
                     >
@@ -394,7 +394,7 @@ export function RechnungenPage() {
           {gibtMehr && (
             <button
               onClick={() => setSeiten((v) => v + 1)}
-              className="btn-touch w-full btn-ap px-3 py-2 text-sm font-medium"
+              className="btn-touch w-full btn-ap px-3 py-2 text-sekundaer font-medium"
             >
               Mehr laden
             </button>

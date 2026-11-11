@@ -25,10 +25,10 @@ function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
     <div className="card-ap p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-label2">Rechnung Nr. {rechnung.rechnungsnummer}</div>
+          <div className="text-meta text-label2">Rechnung Nr. {rechnung.rechnungsnummer}</div>
           <div className="font-medium text-label">{rechnung.betrag_brutto} EUR</div>
           {rechnung.faellig_am && (
-            <div className={`text-xs ${ueberfaellig ? "font-medium text-st-fehlt" : "text-label2"}`}>
+            <div className={`text-sekundaer ${ueberfaellig ? "font-medium text-st-fehlt" : "text-label2"}`}>
               {ueberfaellig ? "Überfällig seit " : "Fällig am "}
               {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
             </div>
@@ -37,8 +37,8 @@ function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
         <span
           className={
             ueberfaellig
-              ? "border rounded-[var(--radius-ap-pill)] border-st-fehlt px-2 py-1 text-xs font-semibold text-st-fehlt"
-              : "border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label"
+              ? "border rounded-[var(--radius-ap-pill)] border-st-fehlt px-2 py-1 text-sekundaer font-semibold text-st-fehlt"
+              : "border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-semibold text-label"
           }
         >
           {ueberfaellig ? "Überfällig" : RECHNUNG_STATUS_LABEL[rechnung.status]}
@@ -50,11 +50,11 @@ function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
           pdfMutation.mutate();
         }}
         disabled={pdfMutation.isPending}
-        className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+        className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
       >
         <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
       </button>
-      {fehler && <p className="mt-1 text-xs text-st-fehlt ">{fehler}</p>}
+      {fehler && <p className="mt-1 text-sekundaer text-st-fehlt ">{fehler}</p>}
     </div>
   );
 }
@@ -67,7 +67,7 @@ export function PortalRechnungenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Rechnungen</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Ihre Rechnungen</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : ladeFehler && !rechnungen ? (

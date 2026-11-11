@@ -17,7 +17,7 @@ export function PortalVorgaengePage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Aufträge</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Ihre Aufträge</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : ladeFehler && !vorgaenge ? (
@@ -34,10 +34,10 @@ export function PortalVorgaengePage() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-label2">Auftrag Nr. {v.vorgangsnummer}</div>
+                  <div className="text-meta text-label2">Auftrag Nr. {v.vorgangsnummer}</div>
                   <div className="font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
                   {STATUS_LABEL[v.status]}
                 </span>
               </div>

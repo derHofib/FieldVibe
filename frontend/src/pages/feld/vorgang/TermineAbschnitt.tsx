@@ -67,7 +67,7 @@ export function TermineAbschnitt({
          * eine ganze Zeile, ohne den Abschnitt komplett zu verstecken
          * (Aktion bleibt sofort erreichbar). */}
         {!(layout !== "dicht" && (termine ?? []).length === 0 && !showTerminForm) && (
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
+          <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Termine</h2>
         )}
         {kannDisponieren && (
           <button
@@ -85,7 +85,7 @@ export function TermineAbschnitt({
                 );
               }
             }}
-            className="btn-touch text-xs font-medium text-tint-text"
+            className="btn-touch text-sekundaer font-medium text-tint-text"
           >
             {showTerminForm ? "Abbrechen" : "+ Termin planen"}
           </button>
@@ -93,7 +93,7 @@ export function TermineAbschnitt({
       </div>
 
       {terminWarnungen.length > 0 && (
-        <div className="mb-2 rounded-md border border-st-arbeit bg-st-arbeit-bg p-2 text-xs text-st-arbeit">
+        <div className="mb-2 rounded-md border border-st-arbeit bg-st-arbeit-bg p-2 text-sekundaer text-st-arbeit">
           {terminWarnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -108,7 +108,7 @@ export function TermineAbschnitt({
             value={terminTitel}
             onChange={(e) => setTerminTitel(e.target.value)}
             placeholder="Titel"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <Select
             value={terminTechnikerId}
@@ -127,19 +127,19 @@ export function TermineAbschnitt({
               type="datetime-local"
               value={terminStart}
               onChange={(e) => setTerminStart(e.target.value)}
-              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <input
               type="datetime-local"
               value={terminEnde}
               onChange={(e) => setTerminEnde(e.target.value)}
-              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <button
             disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
             onClick={() => terminMutation.mutate()}
-            className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
+            className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sekundaer"
           >
             Anlegen
           </button>
@@ -171,7 +171,7 @@ export function TermineAbschnitt({
                     <button
                       type="button"
                       onClick={() => setTerminWocheOffset((o) => o - 1)}
-                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill"
                     >
                       ← Vorherige Woche
                     </button>
@@ -179,19 +179,19 @@ export function TermineAbschnitt({
                       type="button"
                       onClick={() => setTerminWocheOffset(0)}
                       disabled={terminWocheOffset === 0}
-                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill disabled:opacity-50"
                     >
                       Diese Woche
                     </button>
                     <button
                       type="button"
                       onClick={() => setTerminWocheOffset((o) => o + 1)}
-                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-sekundaer text-label hover:bg-fill"
                     >
                       Nächste Woche →
                     </button>
                   </div>
-                  <span className="text-xs text-label2">
+                  <span className="text-meta text-label2">
                     {wocheStart.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}–
                     {wocheEnde.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
@@ -202,7 +202,7 @@ export function TermineAbschnitt({
                     const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
                     return (
                       <div key={i} className="min-h-[110px] bg-card p-1.5">
-                        <div className={`mb-1 text-[11px] font-medium ${heuteFlag ? "text-tint-text" : "text-label2"}`}>
+                        <div className={`mb-1 text-meta font-medium ${heuteFlag ? "text-tint-text" : "text-label2"}`}>
                           {WOCHENTAGE[i]} {tag.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                         </div>
                         <div className="space-y-1">
@@ -210,7 +210,7 @@ export function TermineAbschnitt({
                             <div
                               key={t.id}
                               title={t.titel}
-                              className={`rounded-[5px] border p-1 text-[11px] ${
+                              className={`rounded-[5px] border p-1 text-meta ${
                                 t.status === "abgesagt"
                                   ? "border-sep text-label2 line-through"
                                   : "border-tint text-tint-text"
@@ -233,7 +233,7 @@ export function TermineAbschnitt({
                                     }
                                   }}
                                   disabled={deleteTerminMutation.isPending}
-                                  className="mt-0.5 text-[10px] font-medium text-st-fehlt"
+                                  className="mt-0.5 text-meta font-medium text-st-fehlt"
                                 >
                                   Löschen
                                 </button>
@@ -249,17 +249,17 @@ export function TermineAbschnitt({
             );
           })()
         : (termine ?? []).length === 0 ? (
-            <p className="text-sm text-label2">{showTerminForm ? "Keine Termine geplant." : "Termine: Keine geplant."}</p>
+            <p className="text-sekundaer text-label2">{showTerminForm ? "Keine Termine geplant." : "Termine: Keine geplant."}</p>
           ) : (
             <div className="space-y-1.5">
               {termine!.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong p-2 text-sm"
+                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong p-2 text-fliess"
                 >
                   <div>
                     <div className="font-medium text-label">{t.titel}</div>
-                    <div className="text-xs text-label2">
+                    <div className="text-meta text-label2">
                       {new Date(t.start_at).toLocaleString("de-DE", {
                         timeZone: "Europe/Berlin",
                         dateStyle: "short",
@@ -269,7 +269,7 @@ export function TermineAbschnitt({
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-medium ${
+                      className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-medium ${
                         t.status === "abgesagt"
                           ? "border-sep text-label2"
                           : "border-tint text-tint-text"
@@ -285,7 +285,7 @@ export function TermineAbschnitt({
                           }
                         }}
                         disabled={deleteTerminMutation.isPending}
-                        className="btn-touch text-xs font-medium text-st-fehlt"
+                        className="btn-touch text-sekundaer font-medium text-st-fehlt"
                       >
                         Löschen
                       </button>

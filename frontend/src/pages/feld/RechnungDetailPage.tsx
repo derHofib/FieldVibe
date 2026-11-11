@@ -109,11 +109,11 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
     <div className="mb-3 rounded-[var(--radius-ap-md)] bg-cyan-50/60 p-3 dark:bg-cyan-500/10">
       <div className="mb-2 flex items-center gap-1.5">
         <ListChecks size={13} strokeWidth={2} className="text-cyan-700 dark:text-cyan-300" />
-        <p className="text-xs font-bold text-cyan-800 dark:text-cyan-200">Vorschläge aus dem Vorgang</p>
+        <p className="text-sekundaer font-bold text-cyan-800 dark:text-cyan-200">Vorschläge aus dem Vorgang</p>
       </div>
       <div className="space-y-1.5">
         {(vorschlaege ?? []).map((v: RechnungPositionVorschlag, i) => (
-          <label key={i} className="flex items-center gap-2 rounded-md bg-card px-2 py-1.5 text-sm">
+          <label key={i} className="flex items-center gap-2 rounded-md bg-card px-2 py-1.5 text-fliess">
             <input
               type="checkbox"
               checked={ausgewaehlt.has(i)}
@@ -123,7 +123,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
             <span className="flex-1 text-label">
               {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
             </span>
-            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-[10px] font-semibold text-label2">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-semibold text-label2">
               {VORSCHLAG_QUELLE_LABEL[v.quelle]}
             </span>
           </label>
@@ -132,7 +132,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
       <button
         disabled={ausgewaehlt.size === 0 || uebernehmenMutation.isPending}
         onClick={() => uebernehmenMutation.mutate()}
-        className="btn-touch mt-2 rounded-md btn-ap-primary px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+        className="btn-touch mt-2 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-semibold disabled:opacity-50"
       >
         Übernehmen
       </button>
@@ -173,7 +173,7 @@ function EinzelpreisFeld({
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-1.5 py-0.5 text-right text-xs text-label disabled:opacity-50"
+      className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-1.5 py-0.5 text-right text-sekundaer text-label disabled:opacity-50"
     />
   );
 }
@@ -386,7 +386,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   if (rechnungIstFehler) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         <EmptyState
@@ -420,17 +420,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     const abzug = istAbzugsposition(p);
     return (
             <div key={p.id} className="space-y-1.5">
-              <div className="flex items-center justify-between rounded-md bg-fill p-2 text-sm">
+              <div className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess">
                 <div>
                   <div className="text-label">
                     {abzug && (
-                      <span className="mr-1.5 inline-block rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label">
+                      <span className="mr-1.5 inline-block rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-meta font-medium text-label">
                         Abzug
                       </span>
                     )}
                     {p.beschreibung}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-label2">
+                  <div className="flex items-center gap-1 text-sekundaer text-label2">
                     {p.menge} {p.einheit} ×{" "}
                     {rechnung.status === "entwurf" && !abzug ? (
                       <EinzelpreisFeld
@@ -461,7 +461,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                         }
                         aria-expanded={!!bearbeitet}
                         aria-label={`Steuer ändern: ${steuerKurzlabel(p)}`}
-                        className="btn-touch inline-flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-xs font-medium text-label"
+                        className="btn-touch inline-flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-meta font-medium text-label"
                       >
                         Steuer: {steuerKurzlabel(p)}
                         <ChevronDown size={12} strokeWidth={2} aria-hidden="true" />
@@ -469,22 +469,22 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     ) : (
                       <span
                         title={p.steuer_grund_text ?? undefined}
-                        className="inline-flex items-center rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label"
+                        className="inline-flex items-center rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-meta font-medium text-label"
                       >
                         Steuer: {steuerKurzlabel(p)}
                       </span>
                     )}
                   </div>
                   {rechnung.status === "entwurf" && p.steuer_kategorie === "E" && !p.steuer_grund && (
-                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">
+                    <div className="mt-0.5 text-sekundaer font-medium text-st-arbeit">
                       Steuergrund fehlt – vor dem Versand angeben
                     </div>
                   )}
                   {abzug && rechnung.status === "entwurf" && (
-                    <div className="mt-0.5 text-xs text-label2">Entfernen hebt die Anrechnung auf.</div>
+                    <div className="mt-0.5 text-sekundaer text-label2">Entfernen hebt die Anrechnung auf.</div>
                   )}
                   {(p.quelle === "zeit" || p.quelle === "fahrzeit") && Number(p.einzelpreis) === 0 && (
-                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">
+                    <div className="mt-0.5 text-sekundaer font-medium text-st-arbeit">
                       {p.quelle === "fahrzeit"
                         ? "Fahrzeit-Satz fehlt – in den Einstellungen hinterlegen"
                         : "Stundensatz fehlt"}
@@ -533,7 +533,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       onClick={() =>
                         steuerSpeichernMutation.mutate({ positionId: p.id, eingabe: bearbeitet.eingabe })
                       }
-                      className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                      className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
                     >
                       Steuer speichern
                     </button>
@@ -543,7 +543,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                         steuerSpeichernMutation.reset();
                         setSteuerBearbeitung(null);
                       }}
-                      className="btn-touch px-2 text-sm font-medium text-label2"
+                      className="btn-touch px-2 text-sekundaer font-medium text-label2"
                     >
                       Abbrechen
                     </button>
@@ -557,7 +557,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -568,7 +568,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Rechnung löschen
           </button>
@@ -576,7 +576,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {rechnung.ist_storno && (
-        <div className="rounded-lg bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
+        <div className="rounded-lg bg-st-arbeit-bg p-3 text-fliess text-st-arbeit ">
           Diese Rechnung storniert{" "}
           {storniertRechnung ? (
             <button
@@ -593,7 +593,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
 
       {rechnung.xml_object_key && (
-        <div className="rounded-lg bg-st-erledigt-bg p-3 text-sm text-st-erledigt ">
+        <div className="rounded-lg bg-st-erledigt-bg p-3 text-fliess text-st-erledigt ">
           {eRechnungPruefHinweis(rechnung.e_rechnung_profil ?? "en16931", rechnung.leitweg_id)} Das PDF enthält die
           eingebettete E-Rechnungs-XML.
         </div>
@@ -602,18 +602,18 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">{rechnung.rechnungsnummer}</div>
-            <h1 className="text-lg font-bold text-label">{kunde?.name ?? "…"}</h1>
+            <div className="text-meta text-label2">{rechnung.rechnungsnummer}</div>
+            <h1 className="text-titel-mobil font-bold text-label">{kunde?.name ?? "…"}</h1>
           </div>
           <div className="flex flex-wrap items-start justify-end gap-1.5">
             {art !== "rechnung" && <StatusBadge label={RECHNUNGSART_LABEL[art]} tone={RECHNUNGSART_TONE[art]} />}
-            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-semibold text-label">
               {RECHNUNG_STATUS_LABEL[rechnung.status]}
             </span>
           </div>
         </div>
         {istGutschrift && (
-          <div className="mt-2 space-y-0.5 text-sm">
+          <div className="mt-2 space-y-0.5 text-fliess">
             {rechnung.gutschrift_grund && (
               <p className="text-label">
                 <span className="text-label2">Grund: </span>
@@ -631,17 +631,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         )}
         {rechnung.leistungsdatum && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-meta text-label2">
             Leistungsdatum {new Date(rechnung.leistungsdatum).toLocaleDateString("de-DE")}
           </p>
         )}
         {rechnung.faellig_am && (
-          <p className="mt-1 text-xs text-label2">
+          <p className="mt-1 text-meta text-label2">
             Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
         {rechnung.mahnstufe > 0 && (
-          <p className="mt-1 text-xs font-semibold text-st-fehlt ">
+          <p className="mt-1 text-sekundaer font-semibold text-st-fehlt ">
             {rechnung.mahnstufe}. Mahnung
             {rechnung.letzte_mahnung_am &&
               ` am ${new Date(rechnung.letzte_mahnung_am).toLocaleDateString("de-DE")}`}
@@ -650,7 +650,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
         <RechnungSummen rechnung={rechnung} />
         {rechnung.status !== "entwurf" && rechnung.status !== "storniert" && (
-          <div className="mt-1 text-right text-xs text-label2">
+          <div className="mt-1 text-right text-sekundaer text-label2">
             {istGutschrift ? (
               <>
                 Guthaben: {offenAnzeige(rechnung.offener_betrag)} EUR
@@ -668,7 +668,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <FileText size={14} strokeWidth={2} /> PDF anzeigen
           </button>
@@ -676,7 +676,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => xmlMutation.mutate()}
               disabled={xmlMutation.isPending}
-              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
             >
               <FileText size={14} strokeWidth={2} /> XML herunterladen
             </button>
@@ -686,17 +686,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {art === "schluss" && (rechnung.angerechnete_abschlaege ?? []).length > 0 && (
         <div className="card-ap p-4">
-          <h2 className="mb-2 text-sm font-semibold text-label2">Angerechnete Abschlagsrechnungen</h2>
+          <h2 className="mb-2 text-fliess font-semibold text-label2">Angerechnete Abschlagsrechnungen</h2>
           <ul className="space-y-1.5">
             {(rechnung.angerechnete_abschlaege ?? []).map((a) => (
               <li key={a.rechnung_id}>
                 <Link
                   to={`/rechnungen/${a.rechnung_id}`}
-                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm"
+                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sekundaer"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-label">{a.rechnungsnummer}</span>
-                    <span className="block text-xs text-label2">vom {new Date(a.datum).toLocaleDateString("de-DE")}</span>
+                    <span className="block text-meta text-label2">vom {new Date(a.datum).toLocaleDateString("de-DE")}</span>
                   </span>
                   <span className="shrink-0 tabular-nums font-medium text-label">{formatEuro(a.netto)} netto</span>
                 </Link>
@@ -708,13 +708,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {(rechnung.gutschriften ?? []).length > 0 && (
         <div className="card-ap p-4">
-          <h2 className="mb-2 text-sm font-semibold text-label2">Gutschriften</h2>
+          <h2 className="mb-2 text-fliess font-semibold text-label2">Gutschriften</h2>
           <ul className="space-y-1.5">
             {(rechnung.gutschriften ?? []).map((g) => (
               <li key={g.rechnung_id}>
                 <Link
                   to={`/rechnungen/${g.rechnung_id}`}
-                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm"
+                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sekundaer"
                 >
                   <span className="truncate font-medium text-label">{g.rechnungsnummer}</span>
                   <span className="shrink-0 tabular-nums font-medium text-st-fehlt">{formatEuro(g.brutto)}</span>
@@ -727,7 +727,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-label2">Positionen</h2>
+          <h2 className="text-fliess font-semibold text-label2">Positionen</h2>
           {rechnung.status === "entwurf" && (
             <div className="flex flex-wrap items-center justify-end gap-3">
               {hatAnrechenbare && kannAbrechnen && (
@@ -735,14 +735,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   type="button"
                   onClick={() => anrechnenMutation.mutate()}
                   disabled={anrechnenMutation.isPending}
-                  className="btn-touch text-xs font-medium text-tint-text disabled:opacity-50"
+                  className="btn-touch text-sekundaer font-medium text-tint-text disabled:opacity-50"
                 >
                   Abschläge anrechnen
                 </button>
               )}
               <button
                 onClick={() => setShowVorgang(true)}
-                className="btn-touch text-xs font-medium text-tint-text"
+                className="btn-touch text-sekundaer font-medium text-tint-text"
               >
                 + Vorgang
               </button>
@@ -751,7 +751,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   setSteuerNeu(vorbelegung(rechnung.mwst_satz));
                   setShowForm((v) => !v);
                 }}
-                className="btn-touch text-xs font-medium text-tint-text"
+                className="btn-touch text-sekundaer font-medium text-tint-text"
               >
                 {showForm ? "Abbrechen" : "+ Position"}
               </button>
@@ -780,7 +780,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             {(leistungsverzeichnis ?? []).length > 0 && (
               <div>
-                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label">
                   Aus Leistungsverzeichnis wählen (optional)
                 </label>
                 <SearchableSelect id={`${uid}-0`}
@@ -810,7 +810,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -819,13 +819,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 type="number"
@@ -833,7 +833,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
             {kleinunternehmer ? (
@@ -841,7 +841,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             ) : (
               steuerNeu && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-label2">Steuer</label>
+                  <label className="mb-1 block text-sekundaer font-medium text-label2">Steuer</label>
                   <SteuerAuswahl
                     wert={steuerNeu}
                     onChange={setSteuerNeu}
@@ -868,7 +868,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 (!kleinunternehmer && !!steuerNeu && !!validiereSteuer(steuerNeu))
               }
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -876,7 +876,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {updatePositionMutation.isError && (
-          <p className="mb-2 text-xs text-st-fehlt">
+          <p className="mb-2 text-sekundaer text-st-fehlt">
             {updatePositionMutation.error instanceof ApiError
               ? updatePositionMutation.error.message
               : "Preis konnte nicht gespeichert werden"}
@@ -890,7 +890,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {rechnung.positionen.length === 0 ? (
-          <p className="text-sm text-label2">
+          <p className="text-sekundaer text-label2">
             Keine eigenen Positionen – Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
@@ -898,11 +898,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             {ohneVorgang.map(renderPosition)}
             {gruppen.map((g) => (
               <div key={g.vorgang.id} className="space-y-1.5 pt-2">
-                <p className="text-[13px] font-semibold tracking-wide text-label2">
+                <p className="text-sekundaer font-semibold tracking-wide text-label2">
                   {g.vorgang.vorgangsnummer} · {g.vorgang.titel}
                 </p>
                 {g.positionen.map(renderPosition)}
-                <div className="text-right text-xs font-semibold text-label">Zwischensumme: {g.zwischensumme} EUR</div>
+                <div className="text-right text-sekundaer font-semibold text-label">Zwischensumme: {g.zwischensumme} EUR</div>
               </div>
             ))}
           </div>
@@ -915,14 +915,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           rechnung.status === "bezahlt") && (
         <div className="card-ap p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
+            <h2 className="text-fliess font-semibold text-label2">Zahlungen</h2>
             {(rechnung.status === "versendet" || rechnung.status === "teilweise_bezahlt") && (
               <button
                 onClick={() => {
                   setZahlungBetrag(rechnung.offener_betrag);
                   setShowZahlungForm((v) => !v);
                 }}
-                className="btn-touch text-xs font-medium text-tint "
+                className="btn-touch text-sekundaer font-medium text-tint "
               >
                 {showZahlungForm ? "Abbrechen" : "+ Zahlung"}
               </button>
@@ -938,14 +938,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   value={zahlungBetrag}
                   onChange={(e) => setZahlungBetrag(e.target.value)}
                   placeholder="Betrag"
-                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                 />
                 <input
                   type="date"
                   value={zahlungDatum}
                   onChange={(e) => setZahlungDatum(e.target.value)}
                   max={heuteIso()}
-                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
                 />
               </div>
               <Select
@@ -960,14 +960,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 ))}
               </Select>
               {addZahlungMutation.isError && (
-                <p className="text-xs text-st-fehlt ">
+                <p className="text-sekundaer text-st-fehlt ">
                   Zahlung übersteigt den offenen Betrag oder ist ungültig.
                 </p>
               )}
               <button
                 disabled={!zahlungBetrag || addZahlungMutation.isPending}
                 onClick={() => addZahlungMutation.mutate()}
-                className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
               >
                 Zahlung erfassen
               </button>
@@ -975,7 +975,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           )}
 
           {rechnung.zahlungen.length === 0 ? (
-            <p className="text-sm text-label2">Noch keine Zahlung erfasst.</p>
+            <p className="text-sekundaer text-label2">Noch keine Zahlung erfasst.</p>
           ) : (
             <div className="space-y-1.5">
               {(() => {
@@ -985,7 +985,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 return rechnung.zahlungen.map((z) => (
                   <div
                     key={z.id}
-                    className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
+                    className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess"
                   >
                     <span className="text-label2">
                       {new Date(z.datum).toLocaleDateString("de-DE")}
@@ -1007,7 +1007,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                             if (await bestaetigen({ titel: "Diese Zahlung stornieren?", bestaetigenLabel: "Stornieren" })) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
-                          className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50"
+                          className="btn-touch text-sekundaer text-label2 underline-offset-2 hover:underline disabled:opacity-50"
                         >
                           Storno
                         </button>
@@ -1064,14 +1064,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("versendet")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
           >
             An Kunden senden
           </button>
           <button
             onClick={() => statusMutation.mutate("storniert")}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             Stornieren
           </button>
@@ -1081,7 +1081,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         <button
           type="button"
           onClick={() => setGutschriftOffen(true)}
-          className="btn-touch w-full btn-ap px-4 py-2 text-sm font-medium"
+          className="btn-touch w-full btn-ap px-4 py-2 text-sekundaer font-medium"
         >
           Gutschrift erstellen
         </button>
@@ -1092,7 +1092,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => statusMutation.mutate("bezahlt")}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sekundaer font-medium text-white disabled:opacity-50"
             >
               Als bezahlt markieren
             </button>
@@ -1103,7 +1103,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
-            className={`btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 ${
+            className={`btn-touch rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 ${
               istGutschrift ? "flex-1" : ""
             }`}
           >
@@ -1118,7 +1118,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}
-          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
         >
           Stornieren
         </button>

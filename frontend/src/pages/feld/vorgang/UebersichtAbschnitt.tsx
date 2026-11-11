@@ -139,19 +139,19 @@ export function UebersichtAbschnitt({
       {...tabPanelProps("abschnitt-uebersicht")}
     >
     <div className="card-ap p-4">
-      <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-      <h1 className="font-heading text-lg font-semibold text-label">{vorgang.titel}</h1>
+      <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+      <h1 className="font-heading text-titel-mobil font-semibold text-label">{vorgang.titel}</h1>
       {parentVorgang && (
         <button
           onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
-          className="mt-0.5 block text-xs text-label2 underline-offset-2 hover:underline"
+          className="mt-0.5 block text-sekundaer text-label2 underline-offset-2 hover:underline"
         >
           Entstanden aus Vorgang {parentVorgang.vorgangsnummer}
         </button>
       )}
 
       <div className="mt-1 flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-fliess">
           {kunde && (
             <button
               onClick={() => navigate(`/kunden/${kunde.id}`)}
@@ -180,7 +180,7 @@ export function UebersichtAbschnitt({
               setZuordnungError(null);
               setEditingZuordnung(true);
             }}
-            className="btn-touch text-xs font-medium text-tint-text"
+            className="btn-touch text-sekundaer font-medium text-tint-text"
           >
             Bearbeiten
           </button>
@@ -190,7 +190,7 @@ export function UebersichtAbschnitt({
       {editingZuordnung && (
         <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+            <label className="mb-1 block text-sekundaer font-medium text-label2">Kunde</label>
             <Select
               value={editKundeId}
               onChange={(e) => {
@@ -206,7 +206,7 @@ export function UebersichtAbschnitt({
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label className="mb-1 block text-sekundaer font-medium text-label2">
               Anlage (optional)
             </label>
             <Select
@@ -221,12 +221,12 @@ export function UebersichtAbschnitt({
               ))}
             </Select>
           </div>
-          {zuordnungError && <p className="text-xs text-st-fehlt">{zuordnungError}</p>}
+          {zuordnungError && <p className="text-sekundaer text-st-fehlt">{zuordnungError}</p>}
           <div className="flex gap-2">
             <button
               onClick={() => zuordnungMutation.mutate()}
               disabled={!editKundeId || zuordnungMutation.isPending}
-              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sekundaer"
             >
               Speichern
             </button>
@@ -235,7 +235,7 @@ export function UebersichtAbschnitt({
                 setEditingZuordnung(false);
                 setZuordnungError(null);
               }}
-              className="btn-touch flex-1 btn-ap py-1.5 text-sm"
+              className="btn-touch flex-1 btn-ap py-1.5 text-sekundaer"
             >
               Abbrechen
             </button>
@@ -245,7 +245,7 @@ export function UebersichtAbschnitt({
 
       <div className="mt-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-label2">Adresse</span>
+          <span className="text-sekundaer font-medium text-label2">Adresse</span>
           {kannDisponieren && !editingAdresse && (
             <button
               onClick={() => {
@@ -253,7 +253,7 @@ export function UebersichtAbschnitt({
                 setAdresseError(null);
                 setEditingAdresse(true);
               }}
-              className="btn-touch text-xs font-medium text-tint-text"
+              className="btn-touch text-sekundaer font-medium text-tint-text"
             >
               Bearbeiten
             </button>
@@ -262,10 +262,10 @@ export function UebersichtAbschnitt({
         {!editingAdresse &&
           (adresseAlsZeile(anzeigeAdresse) ? (
             <>
-              <p className="mt-1 text-sm text-label">
+              <p className="mt-1 text-fliess text-label">
                 {adresseAlsZeile(anzeigeAdresse)}
                 {!vorgang.adresse && (standort || anlage) && (
-                  <span className="ml-1 text-xs text-label2">
+                  <span className="ml-1 text-meta text-label2">
                     ({standort ? "Standort" : "Anlage"})
                   </span>
                 )}
@@ -281,13 +281,13 @@ export function UebersichtAbschnitt({
                   />
                 </Suspense>
               ) : (
-                <div className="mt-2 flex h-40 w-full items-center justify-center rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong text-center text-xs text-label2">
+                <div className="mt-2 flex h-40 w-full items-center justify-center rounded-[var(--radius-ap-md)] border border-dashed border-sepstrong text-center text-sekundaer text-label2">
                   Keine Kartenposition verfügbar
                 </div>
               )}
             </>
           ) : (
-            <p className="mt-1 text-sm text-label2">Keine Adresse hinterlegt.</p>
+            <p className="mt-1 text-sekundaer text-label2">Keine Adresse hinterlegt.</p>
           ))}
         {editingAdresse && (
           <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
@@ -295,28 +295,28 @@ export function UebersichtAbschnitt({
               value={adresseForm.strasse}
               onChange={(e) => setAdresseForm({ ...adresseForm, strasse: e.target.value })}
               placeholder="Straße + Hausnr."
-              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             <div className="grid grid-cols-2 gap-2">
               <input
                 value={adresseForm.plz}
                 onChange={(e) => setAdresseForm({ ...adresseForm, plz: e.target.value })}
                 placeholder="PLZ"
-                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <input
                 value={adresseForm.ort}
                 onChange={(e) => setAdresseForm({ ...adresseForm, ort: e.target.value })}
                 placeholder="Ort"
-                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
             </div>
-            {adresseError && <p className="text-xs text-st-fehlt">{adresseError}</p>}
+            {adresseError && <p className="text-sekundaer text-st-fehlt">{adresseError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={() => adresseMutation.mutate()}
                 disabled={adresseMutation.isPending}
-                className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary flex-1 py-1.5 text-sekundaer"
               >
                 Speichern
               </button>
@@ -325,7 +325,7 @@ export function UebersichtAbschnitt({
                   setEditingAdresse(false);
                   setAdresseError(null);
                 }}
-                className="btn-touch flex-1 btn-ap py-1.5 text-sm"
+                className="btn-touch flex-1 btn-ap py-1.5 text-sekundaer"
               >
                 Abbrechen
               </button>
@@ -337,11 +337,11 @@ export function UebersichtAbschnitt({
       {((weitereAnlagen && weitereAnlagen.length > 0) || kannDisponieren) && (
         <div className="mt-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-label2">Weitere Anlagen</span>
+            <span className="text-sekundaer font-medium text-label2">Weitere Anlagen</span>
             {kannDisponieren && !showAnlageHinzufuegen && (
               <button
                 onClick={() => setShowAnlageHinzufuegen(true)}
-                className="btn-touch text-xs font-medium text-tint-text"
+                className="btn-touch text-sekundaer font-medium text-tint-text"
               >
                 + Hinzufügen
               </button>
@@ -352,7 +352,7 @@ export function UebersichtAbschnitt({
               {weitereAnlagen!.map((a) => (
                 <span
                   key={a.id}
-                  className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label"
+                  className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label"
                 >
                   <button
                     onClick={() => navigate(`/anlagen/${a.id}`)}
@@ -394,7 +394,7 @@ export function UebersichtAbschnitt({
               <button
                 onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
                 disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
-                className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary px-3 py-1.5 text-sekundaer"
               >
                 OK
               </button>
@@ -403,7 +403,7 @@ export function UebersichtAbschnitt({
                   setShowAnlageHinzufuegen(false);
                   setNeueAnlageId("");
                 }}
-                className="btn-touch btn-ap px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap px-3 py-1.5 text-sekundaer"
               >
                 Abbrechen
               </button>
@@ -413,7 +413,7 @@ export function UebersichtAbschnitt({
       )}
 
       {vorgang.beschreibung && (
-        <p className="mt-2 text-sm text-label">{vorgang.beschreibung}</p>
+        <p className="mt-2 text-fliess text-label">{vorgang.beschreibung}</p>
       )}
 
       <VorgangStatusAktionen
@@ -435,12 +435,12 @@ export function UebersichtAbschnitt({
         {vorgang.dauerauftrag_id ? (
           <span
             title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
-            className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-1 text-xs text-label"
+            className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-1 text-sekundaer text-label"
           >
             Priorität {vorgang.prioritaet} (automatisch)
           </span>
         ) : (
-          <label className="flex items-center gap-1 text-sm text-label2">
+          <label className="flex items-center gap-1 text-sekundaer text-label2">
             Priorität
             <Select
               className="w-auto"
@@ -462,14 +462,14 @@ export function UebersichtAbschnitt({
             setFolgeAuftragLeistungstyp("stoerung");
             setShowFolgeAuftragDialog(true);
           }}
-          className="btn-touch btn-ap px-3 py-1 text-xs"
+          className="btn-touch btn-ap px-3 py-1 text-sekundaer"
         >
           + Folge-Vorgang
         </button>
       </div>
 
       {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-fliess">
           <span className="text-label2">
             {vorgang.zugewiesener_name ? (
               <>
@@ -492,7 +492,7 @@ export function UebersichtAbschnitt({
                 uebernehmenMutation.mutate();
               }}
               disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
-              className="btn-touch btn-ap flex items-center gap-1 px-3 py-1.5 text-xs disabled:cursor-not-allowed"
+              className="btn-touch btn-ap flex items-center gap-1 px-3 py-1.5 text-sekundaer disabled:cursor-not-allowed"
             >
               <UserCheck size={13} strokeWidth={2} />
               {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Vorgang übernehmen"}
@@ -503,7 +503,7 @@ export function UebersichtAbschnitt({
 
       {showWartetKundeDialog && (
         <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
-          <p className="text-sm text-label">
+          <p className="text-fliess text-label">
             Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
           </p>
           <input
@@ -516,7 +516,7 @@ export function UebersichtAbschnitt({
             }
             value={wiedervorlageTage}
             onChange={(e) => setWiedervorlageTage(e.target.value)}
-            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <div className="flex gap-2">
             <button
@@ -528,13 +528,13 @@ export function UebersichtAbschnitt({
                 setShowWartetKundeDialog(false);
               }}
               disabled={statusMutation.isPending}
-              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sekundaer"
             >
               Übernehmen
             </button>
             <button
               onClick={() => setShowWartetKundeDialog(false)}
-              className="btn-touch flex-1 btn-ap py-1.5 text-sm"
+              className="btn-touch flex-1 btn-ap py-1.5 text-sekundaer"
             >
               Abbrechen
             </button>
@@ -544,7 +544,7 @@ export function UebersichtAbschnitt({
 
       {showFolgeAuftragDialog && (
         <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
-          <p className="text-sm text-label">
+          <p className="text-fliess text-label">
             Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
             Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
           </p>
@@ -565,13 +565,13 @@ export function UebersichtAbschnitt({
                 setShowFolgeAuftragDialog(false);
               }}
               disabled={folgeAuftragMutation.isPending}
-              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary flex-1 py-1.5 text-sekundaer"
             >
               Anlegen
             </button>
             <button
               onClick={() => setShowFolgeAuftragDialog(false)}
-              className="btn-touch flex-1 btn-ap py-1.5 text-sm"
+              className="btn-touch flex-1 btn-ap py-1.5 text-sekundaer"
             >
               Abbrechen
             </button>
@@ -580,7 +580,7 @@ export function UebersichtAbschnitt({
       )}
 
       {folgeVorgangId && (
-        <div className="mt-2 flex items-center justify-between rounded-md bg-st-erledigt-bg px-3 py-2 text-sm text-st-erledigt">
+        <div className="mt-2 flex items-center justify-between rounded-md bg-st-erledigt-bg px-3 py-2 text-fliess text-st-erledigt">
           <span>Folge-Vorgang wurde angelegt.</span>
           <button
             onClick={() => navigate(`/vorgaenge/${folgeVorgangId}`)}
@@ -593,12 +593,12 @@ export function UebersichtAbschnitt({
 
       {folgeAuftraege && folgeAuftraege.length > 0 && (
         <div className="mt-2 space-y-1">
-          <span className="text-xs font-medium text-label2">Folge-Vorgänge:</span>
+          <span className="text-sekundaer font-medium text-label2">Folge-Vorgänge:</span>
           {folgeAuftraege.map((fa) => (
             <button
               key={fa.id}
               onClick={() => navigate(`/vorgaenge/${fa.id}`)}
-              className="btn-touch block w-full border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-left text-sm text-label hover:bg-fill"
+              className="btn-touch block w-full border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-left text-sekundaer text-label hover:bg-fill"
             >
               {fa.vorgangsnummer} · {fa.titel} · {STATUS_LABEL[fa.status]}
             </button>

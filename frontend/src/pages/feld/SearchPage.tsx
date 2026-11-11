@@ -67,13 +67,13 @@ export function SearchPage() {
 
       {!q && tags && tags.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-label2">Tags</h2>
+          <h2 className="mb-2 text-fliess font-semibold text-label2">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <button
                 key={tag.id}
                 onClick={() => setQ(`#${tag.label}`)}
-                className="btn-touch rounded-full bg-card px-3 py-1.5 text-sm text-label shadow-xs dark:shadow-none dark:ring-1 "
+                className="btn-touch rounded-full bg-card px-3 py-1.5 text-sekundaer text-label shadow-xs dark:shadow-none dark:ring-1 "
               >
                 #{tag.label}
               </button>
@@ -94,12 +94,12 @@ export function SearchPage() {
                 className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
               >
                 <div>
-                  <div className="text-sm font-medium text-label">{hit.titel}</div>
+                  <div className="text-fliess font-medium text-label">{hit.titel}</div>
                   {hit.subtitel && (
-                    <div className="text-xs text-label2">{subtitelLabel(hit)}</div>
+                    <div className="text-sekundaer text-label2">{subtitelLabel(hit)}</div>
                   )}
                 </div>
-                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                   {KATEGORIE_LABEL[hit.kategorie]}
                 </span>
               </button>

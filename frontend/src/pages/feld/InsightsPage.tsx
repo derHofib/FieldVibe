@@ -22,8 +22,8 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 function Kachel({ label, wert }: { label: string; wert: string }) {
   return (
     <div className="card-ap p-4">
-      <div className="text-xs font-medium text-label2">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-label">{wert}</div>
+      <div className="text-sekundaer font-medium text-label2">{label}</div>
+      <div className="mt-1 text-titel-mobil font-bold text-label">{wert}</div>
     </div>
   );
 }
@@ -60,10 +60,10 @@ export function InsightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-label2">
+      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
+      <h1 className="flex items-center gap-1.5 text-titel-mobil font-bold text-label">
         <BarChart3 size={19} strokeWidth={2} className="text-sky-500" /> Insights
       </h1>
 
@@ -83,11 +83,11 @@ export function InsightsPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge nach Status</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Vorgänge nach Status</h2>
         <div className="space-y-1.5">
           {Object.entries(insights.vorgaenge_nach_status).map(([status, count]) => (
             <div key={status} className="flex items-center gap-2">
-              <span className="w-32 shrink-0 text-sm text-label">
+              <span className="w-32 shrink-0 text-fliess text-label">
                 {STATUS_LABEL[status as VorgangStatus] ?? status}
               </span>
               <div className="h-4 flex-1 overflow-hidden rounded-full bg-fill">
@@ -96,7 +96,7 @@ export function InsightsPage() {
                   style={{ width: `${gesamtVorgaenge > 0 ? (count / gesamtVorgaenge) * 100 : 0}%` }}
                 />
               </div>
-              <span className="w-8 shrink-0 text-right text-sm font-medium text-label">
+              <span className="w-8 shrink-0 text-right text-fliess font-medium text-label">
                 {count}
               </span>
             </div>
@@ -105,15 +105,15 @@ export function InsightsPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">
+        <h2 className="mb-2 text-fliess font-semibold text-label2">
           Techniker-Auslastung (diese Woche)
         </h2>
         {insights.techniker_auslastung.length === 0 ? (
-          <p className="text-sm text-label2">Keine Techniker erfasst.</p>
+          <p className="text-sekundaer text-label2">Keine Techniker erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {insights.techniker_auslastung.map((t) => (
-              <div key={t.techniker_id} className="flex items-center justify-between text-sm">
+              <div key={t.techniker_id} className="flex items-center justify-between text-fliess">
                 <span className="text-label">{t.name}</span>
                 <span className="font-medium text-label">
                   {formatStundenAlsHHMM(Number(t.stunden_diese_woche))} Std.
@@ -125,33 +125,33 @@ export function InsightsPage() {
       </div>
 
       <div className="card-ap p-4">
-        <h2 className="mb-2 text-sm font-semibold text-label2">Export</h2>
+        <h2 className="mb-2 text-fliess font-semibold text-label2">Export</h2>
         <div className="space-y-2">
           <button
             onClick={() => vorgaengeExportMutation.mutate()}
             disabled={vorgaengeExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Vorgänge (CSV)
           </button>
           <button
             onClick={() => zeiterfassungExportMutation.mutate()}
             disabled={zeiterfassungExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Arbeitszeit (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
             disabled={materialExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Material-Bestand (CSV)
           </button>
           <button
             onClick={() => eingangsrechnungenExportMutation.mutate()}
             disabled={eingangsrechnungenExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Eingangsrechnungen (CSV)
           </button>

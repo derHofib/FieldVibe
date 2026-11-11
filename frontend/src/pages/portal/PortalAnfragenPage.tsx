@@ -104,16 +104,16 @@ function NeueAnfrage() {
 
   return (
     <>
-      <button onClick={() => setZeigen(true)} className="btn-touch btn-ap-primary w-full rounded-lg py-3 text-sm font-medium">
+      <button onClick={() => setZeigen(true)} className="btn-touch btn-ap-primary w-full rounded-lg py-3 text-sekundaer font-medium">
         + Neue Anfrage
       </button>
       <AnlegenPanel offen={zeigen} titel="Neue Anfrage" onClose={() => setZeigen(false)}>
         <form onSubmit={handleSubmit} className="space-y-3 p-4">
-          <p className="text-xs text-label2">
+          <p className="text-sekundaer text-label2">
             Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
           </p>
           <div>
-            <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-titel" className="mb-1 block text-fliess font-medium text-label">
               Titel <span aria-hidden="true" className="text-st-fehlt">*</span>
             </label>
             <input
@@ -126,13 +126,13 @@ function NeueAnfrage() {
               className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {titelFehler && (
-              <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+              <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                 {titelFehler}
               </p>
             )}
           </div>
           <div>
-            <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-fliess font-medium text-label">
               Beschreibung
             </label>
             <textarea
@@ -144,7 +144,7 @@ function NeueAnfrage() {
             />
           </div>
           <div>
-            <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor="portal-anfrage-art" className="mb-1 block text-fliess font-medium text-label">
               Art
             </label>
             <Select
@@ -162,7 +162,7 @@ function NeueAnfrage() {
 
           {(standorte ?? []).length > 0 && (
             <div>
-              <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-standort" className="mb-1 block text-fliess font-medium text-label">
                 Standort (optional)
               </label>
               <Select
@@ -187,13 +187,13 @@ function NeueAnfrage() {
             <button
               type="button"
               onClick={() => setZeigeNeuerStandort(true)}
-              className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+              className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium"
             >
               + Neuer Standort
             </button>
           ) : (
             <div>
-              <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-fliess font-medium text-label">
                 Neuer Standort <span aria-hidden="true" className="text-st-fehlt">*</span>
               </label>
               <div className="flex gap-2">
@@ -204,7 +204,7 @@ function NeueAnfrage() {
                   placeholder="z.B. Filiale Nord"
                   aria-invalid={!!standortFehler}
                   aria-describedby={standortFehler ? "portal-anfrage-standort-fehler" : undefined}
-                  className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
+                  className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
                 />
                 <button
                   type="button"
@@ -217,13 +217,13 @@ function NeueAnfrage() {
                     setStandortFehler(null);
                     neuerStandortMutation.mutate();
                   }}
-                  className="btn-touch btn-ap shrink-0 px-4 py-2 text-sm font-medium"
+                  className="btn-touch btn-ap shrink-0 px-4 py-2 text-sekundaer font-medium"
                 >
                   Anlegen
                 </button>
               </div>
               {standortFehler && (
-                <p id="portal-anfrage-standort-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
+                <p id="portal-anfrage-standort-fehler" role="alert" className="mt-1 text-sekundaer text-st-fehlt">
                   {standortFehler}
                 </p>
               )}
@@ -232,7 +232,7 @@ function NeueAnfrage() {
 
           {anlagenFuerStandort.length > 0 && (
             <div>
-              <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-fliess font-medium text-label">
                 Anlage (optional)
               </label>
               <Select
@@ -250,12 +250,12 @@ function NeueAnfrage() {
             </div>
           )}
 
-          {error && <p role="alert" className="text-sm text-st-fehlt">{error}</p>}
+          {error && <p role="alert" className="text-fliess text-st-fehlt">{error}</p>}
 
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium"
+            className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium"
           >
             Anfrage senden
           </button>
@@ -273,7 +273,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Anfragen</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Ihre Anfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (
@@ -291,17 +291,17 @@ export function PortalAnfragenPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="font-medium text-label">{a.titel}</div>
-                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[a.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[a.status]}`}>
                   {STATUS_LABEL[a.status]}
                 </span>
               </div>
               {a.beschreibung && (
-                <p className="mt-1 text-sm text-label2">{a.beschreibung}</p>
+                <p className="mt-1 text-sekundaer text-label2">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
                 <>
-                  <p className="mt-1 text-xs text-label2">Grund: {a.ablehnungsgrund}</p>
-                  <p className="mt-1 text-xs text-label2">
+                  <p className="mt-1 text-sekundaer text-label2">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-sekundaer text-label2">
                     Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
                   </p>
                 </>

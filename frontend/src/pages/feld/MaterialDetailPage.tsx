@@ -123,7 +123,7 @@ export function MaterialDetailPage({
         {eingebettet ? (
           <span />
         ) : (
-          <button onClick={() => navigate(-1)} className="text-sm text-label2">
+          <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
             ← Zurück
           </button>
         )}
@@ -135,7 +135,7 @@ export function MaterialDetailPage({
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
+            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
           >
             Material löschen
           </button>
@@ -143,12 +143,12 @@ export function MaterialDetailPage({
       </div>
 
       <div className="card-ap p-4">
-        <h1 className="text-lg font-bold text-label">{material.bezeichnung}</h1>
-        <p className="mt-1 text-xs text-label2">
+        <h1 className="text-titel-mobil font-bold text-label">{material.bezeichnung}</h1>
+        <p className="mt-1 text-meta text-label2">
           Gesamtbestand: {material.bestand_gesamt} {material.einheit}
         </p>
         {material.bestaende.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-sep pt-2 text-xs ">
+          <div className="mt-2 space-y-1 border-t border-sep pt-2 text-sekundaer ">
             {material.bestaende.map((b) => (
               <div key={b.lager_id} className="flex items-center justify-between text-label2">
                 <span>{b.lager_bezeichnung}</span>
@@ -162,45 +162,45 @@ export function MaterialDetailPage({
       </div>
 
       <div className="space-y-3 card-ap p-4">
-        <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
+        <h2 className="text-fliess font-semibold text-label2">Stammdaten</h2>
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Bezeichnung</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer text-label2">Bezeichnung</label>
           <input id={`${uid}-0`}
             value={form.bezeichnung}
             onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">Einheit</label>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer text-label2">Einheit</label>
             <input id={`${uid}-1`}
               value={form.einheit}
               onChange={(e) => setForm({ ...form, einheit: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Mindestbestand</label>
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-meta text-label2">Mindestbestand</label>
             <input id={`${uid}-2`}
               type="number"
               step="0.01"
               value={form.mindestbestand}
               onChange={(e) => setForm({ ...form, mindestbestand: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Artikelnummer</label>
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-meta text-label2">Artikelnummer</label>
             <input id={`${uid}-3`}
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="z.B. 5SY4116-7"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div>
-            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer text-label2">
               Einkaufspreis (EUR, Richtwert)
             </label>
             <input id={`${uid}-4`}
@@ -208,11 +208,11 @@ export function MaterialDetailPage({
               step="0.01"
               value={form.einzelpreis}
               onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
           </div>
           <div className="col-span-2">
-            <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">Lieferant</label>
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-sekundaer text-label2">Lieferant</label>
             <Select id={`${uid}-5`}
               value={form.lieferant_id}
               onChange={(e) => setForm({ ...form, lieferant_id: e.target.value })}
@@ -226,7 +226,7 @@ export function MaterialDetailPage({
             </Select>
           </div>
           <div className="col-span-2">
-            <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-label2">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-sekundaer text-label2">
               Bestell-Link (Lieferanten-/Produktseite)
             </label>
             <input id={`${uid}-6`}
@@ -234,14 +234,14 @@ export function MaterialDetailPage({
               value={form.bestell_url}
               onChange={(e) => setForm({ ...form, bestell_url: e.target.value })}
               placeholder="https://…"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
             />
             {material.bestell_url && (
               <a
                 href={material.bestell_url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block text-xs text-tint underline "
+                className="mt-1 inline-block text-sekundaer text-tint underline "
               >
                 Zum Bestell-Link →
               </a>
@@ -251,25 +251,25 @@ export function MaterialDetailPage({
         <button
           disabled={!form.bezeichnung.trim() || speichernMutation.isPending}
           onClick={() => speichernMutation.mutate()}
-          className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <p className="text-center text-xs text-st-erledigt ">Gespeichert.</p>
+          <p className="text-center text-sekundaer text-st-erledigt ">Gespeichert.</p>
         )}
       </div>
 
       <div className="space-y-2 card-ap p-4">
-        <h2 className="text-sm font-semibold text-label2">Tags</h2>
+        <h2 className="text-fliess font-semibold text-label2">Tags</h2>
         <div className="flex flex-wrap gap-1.5">
           {zugewieseneTags.length === 0 && (
-            <p className="text-sm text-label2">Noch keine Tags zugewiesen.</p>
+            <p className="text-sekundaer text-label2">Noch keine Tags zugewiesen.</p>
           )}
           {zugewieseneTags.map((t) => (
             <span
               key={t.id}
-              className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-medium text-label"
+              className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer font-medium text-label"
             >
               #{t.label}
               <button
@@ -288,7 +288,7 @@ export function MaterialDetailPage({
             value={neuerTag}
             onChange={(e) => setNeuerTag(e.target.value)}
             placeholder="Tag hinzufügen…"
-            className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <datalist id="material-tag-vorschlaege">
             {verfuegbareTags.map((t) => (
@@ -298,7 +298,7 @@ export function MaterialDetailPage({
           <button
             disabled={!neuerTag.trim() || tagHinzufuegenMutation.isPending}
             onClick={() => tagHinzufuegenMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
+            className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-label disabled:opacity-50 "
           >
             + Hinzufügen
           </button>

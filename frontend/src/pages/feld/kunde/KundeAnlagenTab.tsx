@@ -26,7 +26,7 @@ export function KundeAnlagenTab({
     <LeistungsverzeichnisVerwaltung kundeId={id!} kundeName={profil.name} kannVerwalten={kannVerwalten} />
 
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-label2">Anlagen</h2>
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Anlagen</h2>
       {profil.anlagen.length === 0 ? (
         <EmptyState icon={Boxes} text="Keine Anlagen." className="py-4" />
       ) : (
@@ -39,8 +39,8 @@ export function KundeAnlagenTab({
               }`}
             >
               <button onClick={() => navigate(`/anlagen/${a.id}`)} className="btn-touch flex-1 text-left">
-                <div className="text-sm font-medium text-label">{a.bezeichnung}</div>
-                {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
+                <div className="text-fliess font-medium text-label">{a.bezeichnung}</div>
+                {a.anlagentyp && <div className="text-sekundaer text-label2">{a.anlagentyp}</div>}
               </button>
               {kannVerwalten && (
                 <AnlageAktivToggle anlage={a} kundeId={id!} />

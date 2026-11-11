@@ -17,7 +17,7 @@ export function PortalAngebotePage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Angebote</h1>
+      <h1 className="text-titel-mobil font-bold text-label">Ihre Angebote</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : ladeFehler && !angebote ? (
@@ -34,10 +34,10 @@ export function PortalAngebotePage() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-label2">Angebot Nr. {a.angebotsnummer}</div>
+                  <div className="text-meta text-label2">Angebot Nr. {a.angebotsnummer}</div>
                   <div className="font-medium text-label">{a.gesamt_brutto} EUR</div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[a.status]}`}>
+                <span className={`px-2 py-1 text-sekundaer font-semibold ${ANGEBOT_STATUS_BADGE[a.status]}`}>
                   {ANGEBOT_STATUS_LABEL[a.status]}
                 </span>
               </div>

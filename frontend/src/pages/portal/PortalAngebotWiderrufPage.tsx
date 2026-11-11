@@ -57,19 +57,19 @@ export function PortalAngebotWiderrufPage() {
       <div className="space-y-4">
         <div className="card-ap space-y-3 p-4">
           <CheckCircle2 size={28} strokeWidth={2} className="text-st-erledigt" aria-hidden="true" />
-          <h1 ref={ueberschrift} tabIndex={-1} className="text-lg font-bold text-label outline-none">
+          <h1 ref={ueberschrift} tabIndex={-1} className="text-titel-mobil font-bold text-label outline-none">
             Ihr Widerruf ist eingegangen
           </h1>
-          <p className="text-sm text-label">
+          <p className="text-fliess text-label">
             Wir haben Ihren Widerruf zum Angebot {erledigt.angebotsnummer}
             {erledigt.widerrufen_am ? ` am ${datumZeit(erledigt.widerrufen_am)} Uhr` : ""} erhalten. Die
             Eingangsbestätigung senden wir an {currentKunde?.email ?? "Ihre E-Mail-Adresse"}.
           </p>
           {erledigt.nachweis_referenz && (
-            <p className="text-xs text-label2">Referenz: {erledigt.nachweis_referenz}</p>
+            <p className="text-sekundaer text-label2">Referenz: {erledigt.nachweis_referenz}</p>
           )}
         </div>
-        <Link to={`/portal/angebote/${erledigt.id}`} className="btn-touch btn-ap block px-4 py-2 text-center text-sm font-medium">
+        <Link to={`/portal/angebote/${erledigt.id}`} className="btn-touch btn-ap block px-4 py-2 text-center text-sekundaer font-medium">
           Zurück zum Angebot
         </Link>
       </div>
@@ -79,10 +79,10 @@ export function PortalAngebotWiderrufPage() {
   return (
     <div className="space-y-4">
       <div className="card-ap space-y-3 p-4">
-        <h1 ref={ueberschrift} className="text-lg font-bold text-label">
+        <h1 ref={ueberschrift} className="text-titel-mobil font-bold text-label">
           Vertrag widerrufen
         </h1>
-        <dl className="space-y-1 text-sm">
+        <dl className="space-y-1 text-fliess">
           <div>
             <dt className="text-label2">Angebot</dt>
             <dd className="text-label">Nr. {angebot.angebotsnummer}</dd>
@@ -119,14 +119,14 @@ export function PortalAngebotWiderrufPage() {
               type="button"
               onClick={() => widerrufMutation.mutate()}
               disabled={widerrufMutation.isPending}
-              className="btn-touch btn-ap-primary w-full px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-touch btn-ap-primary w-full px-4 py-2 text-sekundaer font-medium disabled:opacity-50"
             >
               {widerrufMutation.isPending ? "Wird gesendet…" : "Widerruf bestätigen"}
             </button>
             <button
               type="button"
               onClick={() => navigate(`/portal/angebote/${angebot.id}`)}
-              className="btn-touch btn-ap w-full px-4 py-2 text-sm font-medium"
+              className="btn-touch btn-ap w-full px-4 py-2 text-sekundaer font-medium"
             >
               Abbrechen
             </button>
@@ -140,7 +140,7 @@ export function PortalAngebotWiderrufPage() {
                 ? "Dieser Vertrag wurde bereits widerrufen."
                 : "Für dieses Angebot besteht über das Portal kein Widerrufsrecht.")}
           </Hinweiskasten>
-          <Link to={`/portal/angebote/${angebot.id}`} className="btn-touch btn-ap block px-4 py-2 text-center text-sm font-medium">
+          <Link to={`/portal/angebote/${angebot.id}`} className="btn-touch btn-ap block px-4 py-2 text-center text-sekundaer font-medium">
             Zurück zum Angebot
           </Link>
         </>

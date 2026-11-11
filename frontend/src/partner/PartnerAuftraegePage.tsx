@@ -30,8 +30,8 @@ export function PartnerAuftraegePage() {
 
   return (
     <main className="mx-auto max-w-2xl px-3 py-4 pb-10">
-      <h1 className="ap-heading px-5 pt-2 pb-1 text-[26px] font-bold text-label">Aufträge</h1>
-      <p className="px-5 text-[15px] text-label2">Ihnen zugewiesene Aufträge.</p>
+      <h1 className="ap-heading px-5 pt-2 pb-1 text-titel-mobil font-bold text-label">Aufträge</h1>
+      <p className="px-5 text-fliess text-label2">Ihnen zugewiesene Aufträge.</p>
 
       {isLoading ? (
         <div className="px-4 pt-4">
@@ -63,8 +63,8 @@ export function PartnerAuftraegePage() {
                         onClick={() => navigate(`/partnerportal/auftraege/${a.id}`)}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-[17px] leading-snug text-label">{a.titel}</p>
-                          <p className="truncate text-[13px] text-label2">
+                          <p className="line-clamp-2 text-zeile leading-snug text-label">{a.titel}</p>
+                          <p className="truncate text-sekundaer text-label2">
                             {a.vorgangsnummer} · {a.kunde_name}
                           </p>
                         </div>

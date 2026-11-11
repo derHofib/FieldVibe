@@ -16,8 +16,8 @@ export function DauerauftraegePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Dauer-Aufträge</h1>
-      <p className="text-sm text-label2">
+      <h1 className="text-titel-mobil font-bold text-label">Dauer-Aufträge</h1>
+      <p className="text-sekundaer text-label2">
         Wiederkehrende Aufträge im Überblick – die daraus erzeugten Vorgänge erscheinen zusätzlich
         ganz normal im Feed.
       </p>
@@ -27,7 +27,7 @@ export function DauerauftraegePage() {
       ) : ladeFehler && !dauerauftraege ? (
         <FehlerZustand fehler={ladeFehler} was="Die Daueraufträge" onErneut={() => void neuLaden()} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
-        <p className="text-sm text-label2">Noch keine Dauer-Aufträge angelegt.</p>
+        <p className="text-sekundaer text-label2">Noch keine Dauer-Aufträge angelegt.</p>
       ) : (
         <div className="space-y-2">
           {dauerauftraege.map((d) => (
@@ -37,21 +37,21 @@ export function DauerauftraegePage() {
               className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
-                <div className="text-sm font-medium text-label">
+                <div className="text-fliess font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs font-normal text-label">
+                    <span className="ml-2 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-label2">
+                <div className="text-sekundaer text-label2">
                   {kundeNameById.get(d.kunde_id) ?? "–"} · alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label">
                   pausiert
                 </span>
               )}

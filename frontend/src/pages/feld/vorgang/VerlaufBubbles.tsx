@@ -10,7 +10,7 @@ import type { EmailLog, VorgangEvent } from "../../../types";
 // Design-Vorschlag "Feed und Detail neu gedacht".
 function VerlaufTypTag({ children }: { children: string }) {
   return (
-    <span className="border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-[10px] font-medium text-label2">
+    <span className="border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-meta font-medium text-label2">
       {children}
     </span>
   );
@@ -29,7 +29,7 @@ export function EventBubble({
         ? `Status: ${(event.payload as { von?: string }).von ?? "?"} → ${(event.payload as { nach?: string }).nach ?? "?"}`
         : event.body ?? EVENT_LABEL[event.event_type] ?? event.event_type;
     return (
-      <div className="my-2 text-center text-xs text-label2">
+      <div className="my-2 text-center text-meta text-label2">
         {label} · {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
     );
@@ -37,7 +37,7 @@ export function EventBubble({
 
   return (
     <div className="mb-3 card-ap p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
+      <div className="mb-1 flex items-center justify-between gap-2 text-sekundaer text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
@@ -64,7 +64,7 @@ export function EventBubble({
           </a>
           <button
             onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-st-arbeit"
+            className="btn-touch mb-2 flex items-center gap-1 text-sekundaer font-medium text-st-arbeit"
           >
             <Star size={13} strokeWidth={2} /> Als Highlight markieren
           </button>
@@ -78,7 +78,7 @@ export function EventBubble({
             className="max-h-32 border rounded-[var(--radius-ap-md)] border-sep bg-white"
           />
           {typeof event.payload.unterzeichner_name === "string" && (
-            <p className="mt-1 text-xs text-label2">
+            <p className="mt-1 text-sekundaer text-label2">
               Unterschrieben von: {event.payload.unterzeichner_name}
             </p>
           )}
@@ -89,14 +89,14 @@ export function EventBubble({
           href={event.dokument_url}
           target="_blank"
           rel="noreferrer"
-          className="btn-touch mb-2 flex items-center gap-2 border rounded-[var(--radius-ap-md)] border-sep px-3 py-2 text-sm text-label hover:bg-fill"
+          className="btn-touch mb-2 flex items-center gap-2 border rounded-[var(--radius-ap-md)] border-sep px-3 py-2 text-sekundaer text-label hover:bg-fill"
         >
           <Paperclip size={15} strokeWidth={2} />
           {event.dokument_dateiname ?? "Dokument"}
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap break-words text-sm text-label">
+        <p className="whitespace-pre-wrap break-words text-fliess text-label">
           <MentionText text={event.body} />
         </p>
       )}
@@ -111,7 +111,7 @@ export function EventBubble({
 export function EmailBubble({ email }: { email: EmailLog }) {
   return (
     <div className="mb-3 card-ap p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
+      <div className="mb-1 flex items-center justify-between gap-2 text-sekundaer text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(email.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           <VerlaufTypTag>E-Mail</VerlaufTypTag>
@@ -122,7 +122,7 @@ export function EmailBubble({ email }: { email: EmailLog }) {
           </span>
         )}
       </div>
-      <div className="mb-1 flex items-start gap-1.5 text-sm text-label">
+      <div className="mb-1 flex items-start gap-1.5 text-fliess text-label">
         <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-label2" />
         <div>
           <span className="font-medium">{email.betreff || "(ohne Betreff)"}</span>
@@ -130,7 +130,7 @@ export function EmailBubble({ email }: { email: EmailLog }) {
         </div>
       </div>
       {email.status === "fehler" && email.fehlermeldung && (
-        <p className="text-xs text-st-fehlt">{email.fehlermeldung}</p>
+        <p className="text-sekundaer text-st-fehlt">{email.fehlermeldung}</p>
       )}
     </div>
   );
@@ -145,7 +145,7 @@ export function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard:
           : "bg-fill"
       }`}
     >
-      <div className="mb-1 flex items-center justify-between gap-1 text-xs">
+      <div className="mb-1 flex items-center justify-between gap-1 text-sekundaer">
         {item.failed ? (
           <span className="flex items-center gap-1 text-st-fehlt">
             <AlertTriangle size={13} strokeWidth={2} /> Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}
@@ -166,17 +166,17 @@ export function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard:
         )}
       </div>
       {item.kind === "foto" ? (
-        <p className="flex items-center gap-1 text-sm text-label">
+        <p className="flex items-center gap-1 text-fliess text-label">
           <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
         </p>
       ) : item.kind === "dokument" ? (
-        <p className="flex items-center gap-1 text-sm text-label">
+        <p className="flex items-center gap-1 text-fliess text-label">
           <FileText size={14} strokeWidth={2} /> {item.dokumentName ?? "Dokument"} wartet auf Synchronisierung
         </p>
       ) : item.kind === "status" ? (
-        <p className="text-sm text-label">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
+        <p className="text-fliess text-label">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap break-words text-sm text-label">{item.body}</p>
+        <p className="whitespace-pre-wrap break-words text-fliess text-label">{item.body}</p>
       )}
     </div>
   );

@@ -51,8 +51,8 @@ export function TechnikerZuweisungenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Techniker-Zuweisungen</h1>
-      <p className="text-sm text-label2">
+      <h1 className="text-titel-mobil font-bold text-label">Techniker-Zuweisungen</h1>
+      <p className="text-sekundaer text-label2">
         Welcher Techniker betreut welche Kunden und fährt welches Fahrzeug. Kunden zuweisen/ändern
         geht über das Kunden-Profil, das Fahrzeug direkt hier.
       </p>
@@ -62,7 +62,7 @@ export function TechnikerZuweisungenPage() {
       ) : ladeFehler && !uebersicht ? (
         <FehlerZustand fehler={ladeFehler} was="Die Techniker" onErneut={() => void neuLaden()} />
       ) : !uebersicht || uebersicht.length === 0 ? (
-        <p className="text-sm text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
+        <p className="text-sekundaer text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
       ) : (
         <div className="space-y-3">
           {uebersicht.map((row) => (
@@ -71,16 +71,16 @@ export function TechnikerZuweisungenPage() {
               className="card-ap p-4"
             >
               <div className="font-semibold text-label">{row.techniker.name}</div>
-              <div className="text-xs text-label2">{row.techniker.email}</div>
+              <div className="text-sekundaer text-label2">{row.techniker.email}</div>
               {row.kunden.length === 0 ? (
-                <p className="mt-2 text-sm text-label2">Kein Kunde zugewiesen.</p>
+                <p className="mt-2 text-sekundaer text-label2">Kein Kunde zugewiesen.</p>
               ) : (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {row.kunden.map((k) => (
                     <button
                       key={k.id}
                       onClick={() => navigate(`/kunden/${k.id}`)}
-                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-0.5 text-xs text-label"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-0.5 text-meta text-label"
                     >
                       {k.name}
                     </button>
@@ -88,7 +88,7 @@ export function TechnikerZuweisungenPage() {
                 </div>
               )}
               <div className="mt-2 border-t border-sep pt-2 ">
-                <label className="mb-1 block text-xs text-label2">Fahrzeug</label>
+                <label className="mb-1 block text-sekundaer text-label2">Fahrzeug</label>
                 <FahrzeugAuswahl
                   userId={row.techniker.id}
                   aktuellesFahrzeugId={fahrzeugByTechnikerId.get(row.techniker.id)?.id ?? null}

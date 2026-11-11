@@ -93,7 +93,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
               {(p) => <input {...p} type="number" step="0.01" value={einzelpreis} onChange={(e) => setEinzelpreis(e.target.value)} className={FELD_KLASSE} />}
             </Feld>
           </div>
-          <label className="flex items-center gap-2 text-sm text-label">
+          <label className="flex items-center gap-2 text-fliess text-label">
             <input
               type="checkbox"
               checked={istStundensatz}
@@ -103,11 +103,11 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
             Als Stundenverrechnungssatz in der Arbeitszeit wählbar
           </label>
           {error && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {error}
             </p>
           )}
-          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
             Anlegen
           </button>
         </form>
@@ -128,15 +128,15 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
   return (
     <div className="flex items-center justify-between card-ap p-3">
       <div>
-        <div className="text-sm font-medium text-label">
+        <div className="text-fliess font-medium text-label">
           {position.bezeichnung}
           {position.ist_stundensatz && (
-            <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+            <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-meta font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
               SVS
             </span>
           )}
         </div>
-        <div className="text-xs text-label2">
+        <div className="text-sekundaer text-label2">
           {position.einzelpreis} € / {position.einheit}
         </div>
       </div>
@@ -145,7 +145,7 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
           if (await bestaetigen({ titel: `"${position.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
         }}
         disabled={removeMutation.isPending}
-        className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
+        className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
       >
         Löschen
       </button>
@@ -181,7 +181,7 @@ export function LeistungsverzeichnisVerwaltung({
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-label2">
+      <h2 className="mb-2 text-fliess font-semibold text-label2">
         Leistungsverzeichnis
         <span className="ml-2 font-normal text-label2">(optional, kundenspezifisch)</span>
       </h2>

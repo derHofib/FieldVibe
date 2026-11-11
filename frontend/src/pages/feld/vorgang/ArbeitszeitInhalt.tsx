@@ -71,19 +71,19 @@ export function ArbeitszeitInhalt({
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
+        <h2 className="font-heading text-fliess font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
         {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
-          <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-xs font-medium text-tint-text">
+          <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-sekundaer font-medium text-tint-text">
             + Zeit nachtragen
           </button>
         )}
-        <span className="w-full text-sm font-medium text-label">
+        <span className="w-full text-fliess font-medium text-label">
           Bisher {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
         </span>
       </div>
       {timerLaeuftHier ? (
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-sm font-medium text-label">
+          <span className="flex items-center gap-2 text-fliess font-medium text-label">
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" />
             Zeit läuft seit{" "}
             {new Date(laufenderTimer!.start_at).toLocaleTimeString("de-DE", {
@@ -95,7 +95,7 @@ export function ArbeitszeitInhalt({
           <button
             onClick={() => stopTimerMutation.mutate(laufenderTimer!.id)}
             disabled={stopTimerMutation.isPending}
-            className="btn-touch rounded-md bg-st-fehlt-dot px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch rounded-md bg-st-fehlt-dot px-3 py-1.5 text-sekundaer font-medium text-white disabled:opacity-50"
           >
             Stoppen
           </button>
@@ -106,13 +106,13 @@ export function ArbeitszeitInhalt({
             value={taetigkeit}
             onChange={(e) => setTaetigkeit(e.target.value)}
             placeholder="Tätigkeit (optional)"
-            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
           />
           <button
             onClick={() => startTimerMutation.mutate()}
             disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
             title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-            className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+            className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sekundaer"
           >
             Zeit starten
           </button>
@@ -122,7 +122,7 @@ export function ArbeitszeitInhalt({
       {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 &&
         (layout === "dicht" ? (
           <div className="mt-2 overflow-x-auto border-t border-sep pt-2">
-            <table className="w-full border-collapse text-xs">
+            <table className="w-full border-collapse text-sekundaer">
               <thead>
                 <tr className="text-left text-label2">
                   <th className="w-6 px-2 py-1" />
@@ -222,7 +222,7 @@ export function ArbeitszeitInhalt({
                   return (
                     <div key={e.id}>
                       {neuesDatum && (
-                        <div className="mb-1.5 text-[11px] font-bold tracking-wide text-label3 uppercase">
+                        <div className="mb-1.5 text-meta font-bold tracking-wide text-label3 uppercase">
                           {datum}
                         </div>
                       )}
@@ -240,7 +240,7 @@ export function ArbeitszeitInhalt({
                           className="btn-touch flex min-w-0 flex-1 items-start justify-between gap-3 border rounded-[var(--radius-ap-md)] border-sep px-3 py-2.5 text-left hover:bg-fill"
                         >
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-label">
+                            <div className="text-fliess font-medium text-label">
                               {new Date(e.start_at).toLocaleTimeString("de-DE", {
                                 timeZone: "Europe/Berlin",
                                 hour: "2-digit",
@@ -254,7 +254,7 @@ export function ArbeitszeitInhalt({
                               })}
                               <span className="font-normal text-label2"> · {techniker?.name ?? "—"}</span>
                             </div>
-                            <div className="mt-0.5 truncate text-xs text-label2">
+                            <div className="mt-0.5 truncate text-sekundaer text-label2">
                               {e.taetigkeit || (
                                 <span className="inline-flex items-center gap-1 text-st-arbeit">
                                   <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
@@ -263,10 +263,10 @@ export function ArbeitszeitInhalt({
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1">
-                            <span className="text-sm font-semibold tabular-nums text-label">
+                            <span className="text-fliess font-semibold tabular-nums text-label">
                               {formatSekundenAlsHHMM(dauerSekunden)} Std.
                             </span>
-                            {e.km && <span className="text-[11px] tabular-nums text-label2">{e.km} km</span>}
+                            {e.km && <span className="text-meta tabular-nums text-label2">{e.km} km</span>}
                             <StatusPille
                               status={buchungsstatusZuToken(e.buchungsstatus)}
                               label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
@@ -290,30 +290,30 @@ export function ArbeitszeitInhalt({
                 value={stornierenGrund}
                 onChange={(e) => setStornierenGrund(e.target.value)}
                 placeholder="Grund für die Stornierung"
-                className="field-ap flex-1 text-sm"
+                className="field-ap flex-1 text-zeile"
               />
               <button
                 onClick={() => stornierenMutation.mutate()}
                 disabled={!stornierenGrund.trim() || stornierenMutation.isPending}
-                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-xs disabled:opacity-40"
+                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sekundaer disabled:opacity-40"
               >
                 Bestätigen
               </button>
               <button
                 onClick={() => setStornierenModus(false)}
-                className="btn-touch shrink-0 px-2 py-1.5 text-xs text-label2"
+                className="btn-touch shrink-0 px-2 py-1.5 text-sekundaer text-label2"
               >
                 Abbrechen
               </button>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-label2">{ausgewaehlteZeitIds.size} ausgewählt</span>
+              <span className="text-meta text-label2">{ausgewaehlteZeitIds.size} ausgewählt</span>
               {ausgewaehlterStatus === "vermerkt" && (
                 <button
                   onClick={() => vormerkenMutation.mutate([...ausgewaehlteZeitIds])}
                   disabled={vormerkenMutation.isPending}
-                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                 >
                   Zur Buchung vormerken
                 </button>
@@ -323,7 +323,7 @@ export function ArbeitszeitInhalt({
                   <button
                     onClick={handleBuchen}
                     disabled={buchenMutation.isPending}
-                    className="btn-touch btn-ap-primary px-3 py-1.5 text-xs"
+                    className="btn-touch btn-ap-primary px-3 py-1.5 text-sekundaer"
                   >
                     Buchen
                   </button>
@@ -332,7 +332,7 @@ export function ArbeitszeitInhalt({
                 <button
                   onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteZeitIds])}
                   disabled={zurueckziehenMutation.isPending}
-                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                 >
                   Zurückziehen
                 </button>
@@ -340,14 +340,14 @@ export function ArbeitszeitInhalt({
               {ausgewaehlterStatus === "gebucht" && darfZeitenBuchen && (
                 <button
                   onClick={() => setStornierenModus(true)}
-                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
                 >
                   Buchung stornieren
                 </button>
               )}
               <button
                 onClick={() => setAusgewaehlteZeitIds(new Set())}
-                className="btn-touch px-2 py-1.5 text-xs text-label2"
+                className="btn-touch px-2 py-1.5 text-sekundaer text-label2"
               >
                 Auswahl aufheben
               </button>

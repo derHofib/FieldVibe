@@ -19,8 +19,8 @@ export function UpdatePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-label">Update</h1>
-      <p className="text-sm text-label">
+      <h1 className="text-titel-desktop font-bold text-label">Update</h1>
+      <p className="text-fliess text-label">
         Diese Ansicht zeigt nur an, ob eine neuere Version verfügbar ist. Ein
         Update wird bewusst nicht automatisch aus der Web-App heraus
         ausgeführt – die Befehle unten müssen manuell auf dem Server
@@ -33,27 +33,27 @@ export function UpdatePage() {
       {data && (
         <div className="space-y-4">
           {data.fehler && (
-            <div className="rounded-md border border-st-arbeit bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
+            <div className="rounded-md border border-st-arbeit bg-st-arbeit-bg p-3 text-fliess text-st-arbeit ">
               Der neueste Stand auf GitHub konnte nicht ermittelt werden: {data.fehler}
             </div>
           )}
 
           {data.update_available === true && (
-            <div className="flex items-center gap-1.5 rounded-md border border-st-erledigt bg-st-erledigt-bg p-3 text-sm font-medium text-st-erledigt ">
+            <div className="flex items-center gap-1.5 rounded-md border border-st-erledigt bg-st-erledigt-bg p-3 text-sekundaer font-medium text-st-erledigt ">
               <ArrowUpCircle size={15} strokeWidth={2} /> Update verfügbar
             </div>
           )}
           {data.update_available === false && (
-            <div className="flex items-center gap-1.5 rounded-md border border-sep bg-fill p-3 text-sm text-label ">
+            <div className="flex items-center gap-1.5 rounded-md border border-sep bg-fill p-3 text-fliess text-label ">
               <CheckCircle2 size={15} strokeWidth={2} /> Aktuellste Version deployt
             </div>
           )}
 
           <div className="rounded-md border border-sep bg-card p-4">
-            <h2 className="mb-2 text-sm font-semibold text-label">
+            <h2 className="mb-2 text-fliess font-semibold text-label">
               Aktuell deployt
             </h2>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-fliess">
               <dt className="text-label2">Commit</dt>
               <dd className="font-mono text-label">{data.deployed_commit}</dd>
               <dt className="text-label2">Branch</dt>
@@ -62,11 +62,11 @@ export function UpdatePage() {
           </div>
 
           <div className="rounded-md border border-sep bg-card p-4">
-            <h2 className="mb-2 text-sm font-semibold text-label">
+            <h2 className="mb-2 text-fliess font-semibold text-label">
               Neuester Commit auf GitHub
             </h2>
             {data.latest_commit_sha ? (
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-fliess">
                 <dt className="text-label2">Commit</dt>
                 <dd className="font-mono text-label">
                   {data.latest_commit_url ? (
@@ -90,24 +90,24 @@ export function UpdatePage() {
                 </dd>
               </dl>
             ) : (
-              <p className="text-sm text-label2">Nicht ermittelbar.</p>
+              <p className="text-sekundaer text-label2">Nicht ermittelbar.</p>
             )}
           </div>
 
           <div className="rounded-md border border-sep bg-card p-4">
-            <h2 className="mb-2 text-sm font-semibold text-label">
+            <h2 className="mb-2 text-fliess font-semibold text-label">
               Manuell aktualisieren
             </h2>
-            <p className="mb-2 text-sm text-label">
+            <p className="mb-2 text-fliess text-label">
               Auf dem Server im Repo-Verzeichnis ausführen (siehe docs/DEPLOYMENT.md, Abschnitt 6):
             </p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-label3">
+            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-meta text-label3">
 {`git pull
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head`}
             </pre>
-            <p className="mt-2 text-xs text-label2">
+            <p className="mt-2 text-sekundaer text-label2">
               Einmalig nach diesem Update (App-Rolle statt Superuser, siehe docs/DEPLOYMENT.md,
               Abschnitt 6): <code>./scripts/app_rolle_einrichten.sh</code>
             </p>

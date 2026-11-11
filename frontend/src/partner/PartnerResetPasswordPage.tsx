@@ -46,7 +46,7 @@ export function PartnerResetPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit}>
           {error && <FehlerHinweis>{error}</FehlerHinweis>}
-          <label htmlFor="partner-reset-password" className="mb-1 block text-sm font-medium text-label">
+          <label htmlFor="partner-reset-password" className="mb-1 block text-fliess font-medium text-label">
             Neues Passwort
           </label>
           <input
@@ -59,7 +59,7 @@ export function PartnerResetPasswordPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
+          <p className="mb-4 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
           <button
             type="submit"
             disabled={submitting || !token}
@@ -70,7 +70,7 @@ export function PartnerResetPasswordPage() {
         </form>
       )}
 
-      <Link to="/partnerportal/login" className="btn-touch mt-2 flex items-center justify-center text-sm text-tint-text">
+      <Link to="/partnerportal/login" className="btn-touch mt-2 flex items-center justify-center text-sekundaer text-tint-text">
         Zurück zur Anmeldung
       </Link>
     </PartnerAuthShell>

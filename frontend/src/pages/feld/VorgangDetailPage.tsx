@@ -906,7 +906,7 @@ export function VorgangDetailPage({
   if (vorgangIstFehler) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         <EmptyState
@@ -1342,19 +1342,19 @@ export function VorgangDetailPage({
 
       {(verknuepfteAufgaben ?? []).length > 0 && (
         <div className="scroll-mt-4 card-ap p-3">
-          <h2 className="font-heading mb-2 text-sm font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
+          <h2 className="font-heading mb-2 text-fliess font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
           <div className="space-y-1.5">
             {verknuepfteAufgaben!.map((a) => (
-              <div key={a.id} className="rounded-[var(--radius-ap-md)] bg-fill p-2 text-sm">
+              <div key={a.id} className="rounded-[var(--radius-ap-md)] bg-fill p-2 text-fliess">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-label">{a.titel}</p>
-                  <span className="shrink-0 rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label">
+                  <span className="shrink-0 rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-meta font-medium text-label">
                     {a.prioritaet}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-label2">
+                <div className="mt-1 flex items-center justify-between text-sekundaer text-label2">
                   <span>
                     {a.checkliste.length > 0
                       ? `${a.checkliste.filter((p) => p.erledigt).length}/${a.checkliste.length} erledigt`
@@ -1412,13 +1412,13 @@ export function VorgangDetailPage({
   if (ansicht === "zeit" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{arbeitszeitInhalt}</div>
 
@@ -1437,7 +1437,7 @@ export function VorgangDetailPage({
           onClose={() => setNachStoppenEintrag(null)}
           titel="Was hast du gemacht?"
           links={
-            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
+            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-zeile text-tint">
               Später
             </button>
           }
@@ -1446,7 +1446,7 @@ export function VorgangDetailPage({
               type="button"
               onClick={() => nachStoppenTaetigkeitMutation.mutate()}
               disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-              className="text-[17px] font-semibold text-tint disabled:opacity-40"
+              className="text-zeile font-semibold text-tint disabled:opacity-40"
             >
               Fertig
             </button>
@@ -1469,13 +1469,13 @@ export function VorgangDetailPage({
   if (ansicht === "verlauf" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{verlaufInhalt}</div>
       </div>
@@ -1485,13 +1485,13 @@ export function VorgangDetailPage({
   if (ansicht === "positionen" && layout !== "dicht") {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sekundaer text-label2">
           ← Zurück zum Vorgang
         </button>
         <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+          <div className="text-meta text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-zeile font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-sekundaer text-label2">{kunde.name}</p>}
         </div>
         <div className="card-ap p-3">{positionenInhalt}</div>
       </div>
@@ -1509,7 +1509,7 @@ export function VorgangDetailPage({
       }
     >
       <div className={`flex items-center justify-between ${layout === "dicht" ? "gap-2 border-b-[0.5px] border-sep pb-2" : ""}`}>
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
           ← Zurück
         </button>
         <div className="flex items-center gap-2">
@@ -1549,11 +1549,11 @@ export function VorgangDetailPage({
       </div>
 
       {aktionsFehler && (
-        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ap-md)] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ap-md)] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
           </span>
-          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
+          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-sekundaer underline">
             Ausblenden
           </button>
         </div>
@@ -1565,13 +1565,13 @@ export function VorgangDetailPage({
       {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
         <div className="flex flex-wrap gap-1.5">
           {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-xs font-medium text-label">
+            <span className="flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-medium text-label">
               <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
             </span>
           )}
           {vorgang.faelligkeit_am && (
             <span
-              className={`flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-sekundaer font-medium ${
                 vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                   ? "bg-st-fehlt-bg text-st-fehlt"
@@ -1589,7 +1589,7 @@ export function VorgangDetailPage({
             </span>
           )}
           {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-xs font-semibold text-label">
+            <span className="inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-semibold text-label">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-label3" aria-hidden="true" /> Nicht zugewiesen
             </span>
           )}
@@ -1605,7 +1605,7 @@ export function VorgangDetailPage({
         <div
           role="tablist"
           aria-label="Vorgangs-Abschnitte"
-          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
+          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-fliess"
         >
           {ANCHOR_ABSCHNITTE
             // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite
@@ -1635,7 +1635,7 @@ export function VorgangDetailPage({
           ref={tabNavRef}
           aria-label="Vorgangs-Abschnitte"
           onScroll={tabNavRandAktualisieren}
-          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-sm"
+          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
           style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
         >
           {ANCHOR_ABSCHNITTE.map((a) => {
@@ -1677,7 +1677,7 @@ export function VorgangDetailPage({
        * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
       {layout === "dicht" && (
         <div className="card-ap mb-3 space-y-2.5 p-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm lg:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-fliess lg:grid-cols-4">
             {[
               ["Status", STATUS_LABEL[vorgang.status]],
               ["Priorität", String(vorgang.prioritaet)],
@@ -1691,7 +1691,7 @@ export function VorgangDetailPage({
               ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
             ].map(([label, wert]) => (
               <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
-                <dt className="text-xs text-label2">{label}</dt>
+                <dt className="text-sekundaer text-label2">{label}</dt>
                 <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
               </div>
             ))}
@@ -1712,8 +1712,8 @@ export function VorgangDetailPage({
             onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
             className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Zeit</span>
-            <span className="text-sm font-semibold text-label">
+            <span className="text-meta text-label2">Zeit</span>
+            <span className="text-fliess font-semibold text-label">
               {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
             </span>
           </button>
@@ -1721,8 +1721,8 @@ export function VorgangDetailPage({
             href="#abschnitt-termine"
             className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Nächster Termin</span>
-            <span className="text-sm font-semibold text-label">
+            <span className="text-meta text-label2">Nächster Termin</span>
+            <span className="text-fliess font-semibold text-label">
               {naechsterTermin
                 ? new Date(naechsterTermin.start_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
                 : "—"}
@@ -1732,8 +1732,8 @@ export function VorgangDetailPage({
             href="#abschnitt-maengel"
             className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Mängel</span>
-            <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
+            <span className="text-meta text-label2">Mängel</span>
+            <span className={`text-fliess font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
               {offeneMaengelAnzahl} offen
             </span>
           </a>
@@ -1742,16 +1742,16 @@ export function VorgangDetailPage({
             onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
             className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Positionen</span>
-            <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
+            <span className="text-meta text-label2">Positionen</span>
+            <span className="text-fliess font-semibold text-label">{positionenAnzahl}</span>
           </button>
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
             className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left active:bg-fill"
           >
-            <span className="text-[11px] text-label2">Verlauf</span>
-            <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
+            <span className="text-meta text-label2">Verlauf</span>
+            <span className="text-fliess font-semibold text-label">{verlaufEintraege.length} Einträge</span>
           </button>
         </div>
       )}
@@ -1786,7 +1786,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => setNachStoppenEintrag(null)}
-            className="text-[17px] text-tint"
+            className="text-zeile text-tint"
           >
             Später
           </button>
@@ -1796,7 +1796,7 @@ export function VorgangDetailPage({
             type="button"
             onClick={() => nachStoppenTaetigkeitMutation.mutate()}
             disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-            className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            className="text-zeile font-semibold text-tint disabled:opacity-40"
           >
             Fertig
           </button>

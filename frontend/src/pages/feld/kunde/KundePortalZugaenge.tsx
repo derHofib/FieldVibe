@@ -24,12 +24,12 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
       }`}
     >
       <div>
-        <div className="text-sm font-medium text-label">{zugang.name}</div>
-        <div className="text-xs text-label2">{zugang.email}</div>
+        <div className="text-fliess font-medium text-label">{zugang.name}</div>
+        <div className="text-sekundaer text-label2">{zugang.email}</div>
       </div>
       <button
         onClick={() => toggleMutation.mutate()}
-        className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
+        className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-sekundaer font-semibold"
       >
         {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
       </button>
@@ -77,18 +77,18 @@ export function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
 
   return (
     <div className="card-ap p-4">
-      <h2 className="mb-2 text-sm font-semibold text-label2">
+      <h2 className="mb-2 text-fliess font-semibold text-label2">
         Portal-Link für {kunde.name}
       </h2>
-      <p className="mb-2 text-xs text-label2">
+      <p className="mb-2 text-sekundaer text-label2">
         Ein Link für den ganzen Kunden – jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
         sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
       </p>
       <div className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5">
-        <span className="flex-1 truncate text-xs text-label2">{link}</span>
+        <span className="flex-1 truncate text-sekundaer text-label2">{link}</span>
         <button
           onClick={kopieren}
-          className="btn-touch shrink-0 text-xs font-medium text-tint "
+          className="btn-touch shrink-0 text-sekundaer font-medium text-tint "
         >
           {kopiert ? "Kopiert ✓" : "Link kopieren"}
         </button>
@@ -96,7 +96,7 @@ export function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
 
       {istMandantAdmin && (
         <div className="mt-3 border-t border-sep pt-3 ">
-          <h3 className="mb-2 text-xs font-semibold text-label2">
+          <h3 className="mb-2 text-sekundaer font-semibold text-label2">
             Logo für die Portal-Login-Seite
           </h3>
           <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ export function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
                 className="h-12 w-12 rounded-md object-contain ring-1 ring-sep "
               />
             )}
-            <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-xs font-semibold">
+            <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-sekundaer font-semibold">
               {kunde.logo_object_key ? "Logo ersetzen" : "Logo hochladen"}
               <input
                 type="file"
@@ -124,14 +124,14 @@ export function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
               <button
                 onClick={() => removeMutation.mutate()}
                 disabled={removeMutation.isPending}
-                className="btn-touch text-xs text-st-fehlt underline disabled:opacity-50 "
+                className="btn-touch text-sekundaer text-st-fehlt underline disabled:opacity-50 "
               >
                 Entfernen
               </button>
             )}
           </div>
           {uploadMutation.isError && (
-            <p className="mt-1 text-xs text-st-fehlt ">
+            <p className="mt-1 text-sekundaer text-st-fehlt ">
               {uploadMutation.error instanceof ApiError ? uploadMutation.error.message : "Fehler beim Hochladen"}
             </p>
           )}
@@ -196,11 +196,11 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
             )}
           </Feld>
           {error && (
-            <p role="alert" className="text-sm text-st-fehlt">
+            <p role="alert" className="text-fliess text-st-fehlt">
               {error}
             </p>
           )}
-          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
+          <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sekundaer font-medium">
             Anlegen
           </button>
         </form>
@@ -217,9 +217,9 @@ export function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-label2">Kundenportal-Zugänge</h2>
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Kundenportal-Zugänge</h2>
       {!zugaenge || zugaenge.length === 0 ? (
-        <p className="text-sm text-label2">Noch kein Zugang angelegt.</p>
+        <p className="text-sekundaer text-label2">Noch kein Zugang angelegt.</p>
       ) : (
         <div className="space-y-2">
           {zugaenge.map((z) => (
