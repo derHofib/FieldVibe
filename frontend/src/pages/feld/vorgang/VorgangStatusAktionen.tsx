@@ -1,5 +1,6 @@
 import { ArrowRight, ChevronDown, CircleCheck, Play, RotateCcw } from "lucide-react";
 
+import { useBestaetigung } from "../../../components/ConfirmDialog";
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
 import { StatusPille } from "../../../components/apple/StatusPille";
 import { vorgangStatusZuToken } from "../../../components/apple/status";
@@ -32,6 +33,7 @@ export function VorgangStatusAktionen({
   pending: boolean;
   onWaehle: (status: VorgangStatus) => void;
 }) {
+  const bestaetigen = useBestaetigung();
   const schritt = NAECHSTER_SCHRITT[status];
   const wiederOeffnen = status === "abgeschlossen" || status === "storniert" || status === "abgerechnet";
   const items: PulldownItem[] = SETZBAR.filter((s) => s !== status && s !== schritt?.nach && s !== "storniert").map(
@@ -42,7 +44,12 @@ export function VorgangStatusAktionen({
     }),
   );
   if (status !== "storniert") {
-    items.push("trenner", { label: "Vorgang stornieren", destruktiv: true, onSelect: () => onWaehle("storniert") });
+    items.push("trenner", { label: "Vorgang stornieren", destruktiv: true, onSelect: async () => {
+        // Storno ist im Alltag nicht rückgängig gemeint (verschwindet aus dem Feed), daher nicht ohne Rückfrage.
+        if (!(await bestaetigen({ titel: "Vorgang stornieren?", text: "Der Vorgang verschwindet aus den offenen Vorgängen. Du kannst ihn später über „Status ändern“ wieder öffnen.", bestaetigenLabel: "Stornieren", destruktiv: true }))) return;
+        onWaehle("storniert");
+      },
+    });
   }
 
   return (
