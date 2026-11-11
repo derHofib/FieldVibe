@@ -37,7 +37,7 @@ async function axeVerstoesse(page: Page, label: string) {
   const results = await new AxeBuilder({ page }).exclude("iframe").analyze();
   for (const v of results.violations) {
     // eslint-disable-next-line no-console
-    console.log(`[axe] ${label}: ${v.id} (${v.impact}) ${v.help} -- ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
+    console.log(`[axe] ${label}: ${v.id} (${v.impact}) ${v.help} ${JSON.stringify(v.nodes[0]?.any[0]?.data)} -- ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
   }
   return results.violations.map((v) => v.id);
 }
