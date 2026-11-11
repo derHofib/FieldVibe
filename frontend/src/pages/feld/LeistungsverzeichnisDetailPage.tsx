@@ -35,7 +35,7 @@ function MaterialPostenZeile({
   const { data: material } = useQuery({ queryKey: ["material-alle"], queryFn: () => materialApi.list() });
 
   return (
-    <div className="flex flex-wrap items-end gap-2 border border-sepstrong p-2">
+    <div className="flex flex-wrap items-end gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <div className="min-w-[160px] flex-1">
         <label htmlFor={`${uid}-0`} className="mb-1 block text-[10.5px] font-medium text-label2">
           Bezeichnung
@@ -60,7 +60,7 @@ function MaterialPostenZeile({
           <input
             value={posten.bezeichnung}
             onChange={(e) => onChange({ ...posten, bezeichnung: e.target.value, material_id: null })}
-            className="mt-1 w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
+            className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-xs text-label"
           />
         )}
       </div>
@@ -71,7 +71,7 @@ function MaterialPostenZeile({
           step="0.01"
           value={posten.menge}
           onChange={(e) => onChange({ ...posten, menge: e.target.value })}
-          className="w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-xs text-label"
         />
       </div>
       <div className="w-24">
@@ -83,7 +83,7 @@ function MaterialPostenZeile({
           step="0.01"
           value={posten.einzelpreis}
           onChange={(e) => onChange({ ...posten, einzelpreis: e.target.value })}
-          className="w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-xs text-label"
         />
       </div>
       <button
@@ -230,7 +230,7 @@ function LvPositionFelder({
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder={istUnterpunkt ? "z. B. Liefern und Montieren" : "z. B. Installation Wallbox"}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
@@ -240,7 +240,7 @@ function LvPositionFelder({
           <input id={`${uid}-1`}
             value={einheit}
             onChange={(e) => setEinheit(e.target.value)}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
       </div>
@@ -258,7 +258,7 @@ function LvPositionFelder({
       )}
 
       {hatUnterpunkte ? (
-        <p className="border border-sepstrong bg-fill/40 p-3 text-sm text-label2">
+        <p className="border rounded-[var(--radius-ap-md)] border-sepstrong bg-fill/40 p-3 text-sm text-label2">
           Diese Position hat Unterpositionen – ihr Preis ergibt sich automatisch aus deren Summe (siehe
           Summen-Rechnung unten). Um die Kalkulation zu ändern, bitte die Unterpositionen bearbeiten.
         </p>
@@ -295,12 +295,12 @@ function LvPositionFelder({
                 step="0.01"
                 value={einzelpreis}
                 onChange={(e) => setEinzelpreis(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="border border-sepstrong p-3">
+              <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
                 <p className="mb-2 text-xs font-bold text-label">Lohn</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -311,7 +311,7 @@ function LvPositionFelder({
                       type="number"
                       value={lohnMinuten}
                       onChange={(e) => setLohnMinuten(e.target.value)}
-                      className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                      className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                     />
                   </div>
                   <div>
@@ -323,7 +323,7 @@ function LvPositionFelder({
                       step="0.01"
                       value={lohnStundensatz}
                       onChange={(e) => setLohnStundensatz(e.target.value)}
-                      className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                      className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                     />
                   </div>
                 </div>
@@ -352,12 +352,12 @@ function LvPositionFelder({
                     step="0.1"
                     value={lohnGemeinkosten}
                     onChange={(e) => setLohnGemeinkosten(e.target.value)}
-                    className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="w-28 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
               </div>
 
-              <div className="border border-sepstrong p-3">
+              <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
                 <p className="mb-2 text-xs font-bold text-label">Material</p>
                 <div className="space-y-1.5">
                   {materialPosten.map((p, i) => (
@@ -391,12 +391,12 @@ function LvPositionFelder({
                     step="0.1"
                     value={materialAufschlag}
                     onChange={(e) => setMaterialAufschlag(e.target.value)}
-                    className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="w-28 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
               </div>
 
-              <div className="border border-sepstrong p-3">
+              <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
                 <label htmlFor={`${uid}-7`} className="mb-1 block text-[10.5px] font-medium text-label2">
                   Gewinn/Wagnis (%)
                 </label>
@@ -405,7 +405,7 @@ function LvPositionFelder({
                   step="0.1"
                   value={gewinnWagnis}
                   onChange={(e) => setGewinnWagnis(e.target.value)}
-                  className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="w-28 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
               </div>
             </div>
@@ -421,7 +421,7 @@ function LvPositionFelder({
           value={notiz}
           onChange={(e) => setNotiz(e.target.value)}
           rows={2}
-          className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
 
@@ -437,7 +437,7 @@ function LvPositionFelder({
             />
           ))}
           {neuerUnterpunktOffen ? (
-            <div className="border border-sepstrong p-3">
+            <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
               <LvPositionFelder
                 leistungsverzeichnisId={leistungsverzeichnisId}
                 position={null}
@@ -463,7 +463,7 @@ function LvPositionFelder({
       {hatUnterpunkte ? (
         <div className="border-t border-sep pt-4">
           <p className="mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase">Summe</p>
-          <div className="flex items-center justify-between border border-sepstrong bg-fill/40 p-3 text-sm font-bold text-label">
+          <div className="flex items-center justify-between border rounded-[var(--radius-ap-card)] border-sepstrong bg-fill/40 p-3 text-sm font-bold text-label">
             <span>Gesamt (Summe der Unterpositionen)</span>
             <span>{euro(position!.einzelpreis)}</span>
           </div>
@@ -472,7 +472,7 @@ function LvPositionFelder({
         kalkulationsmodus === "berechnet" && (
           <div className="border-t border-sep pt-4">
             <p className="mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase">Summe</p>
-            <div className="space-y-1 border border-sepstrong p-3 text-xs text-label2">
+            <div className="space-y-1 border rounded-[var(--radius-ap-card)] border-sepstrong p-3 text-xs text-label2">
               <div className="flex justify-between">
                 <span>Lohn-Basis</span>
                 <span>{euro(lohnBasis)}</span>
@@ -553,7 +553,7 @@ function UnterpunktZeileAufklappbar({
 }) {
   const [offen, setOffen] = useState(false);
   return (
-    <div className="border border-sepstrong">
+    <div className="border rounded-[var(--radius-ap-md)] border-sepstrong">
       <button onClick={() => setOffen((v) => !v)} className="flex w-full items-center gap-2 p-2.5 text-left">
         {offen ? (
           <ChevronDown size={14} strokeWidth={1.5} className="shrink-0 text-label2" />

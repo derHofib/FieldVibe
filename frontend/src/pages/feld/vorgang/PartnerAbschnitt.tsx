@@ -67,7 +67,7 @@ export function PartnerAbschnitt({
           )}
 
           {vorgang.partner_id ? (
-            <div className="flex items-center justify-between border border-sepstrong px-3 py-2">
+            <div className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-2">
               <div>
                 <button
                   onClick={() => navigate(`/partner/${vorgang.partner_id}`)}
@@ -110,7 +110,7 @@ export function PartnerAbschnitt({
           )}
 
           {showPartnerForm && (
-            <div className="space-y-2 border border-sepstrong p-2">
+            <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
               <SearchableSelect
                 value={partnerAuswahl}
                 onChange={setPartnerAuswahl}
@@ -128,7 +128,7 @@ export function PartnerAbschnitt({
                 value={partnerHonorar}
                 onChange={(e) => setPartnerHonorar(e.target.value)}
                 placeholder="Honorar netto (optional)"
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 disabled={!partnerAuswahl || partnerZuweisenMutation.isPending}

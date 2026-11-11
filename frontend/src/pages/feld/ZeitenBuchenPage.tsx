@@ -408,7 +408,7 @@ export function ZeitenBuchenPage() {
                   <button
                     onClick={() => vormerkenMutation.mutate([...ausgewaehlteIds])}
                     disabled={vormerkenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                   >
                     Zur Buchung vormerken
                   </button>
@@ -426,7 +426,7 @@ export function ZeitenBuchenPage() {
                   <button
                     onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteIds])}
                     disabled={zurueckziehenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                   >
                     Zurückziehen
                   </button>
@@ -434,7 +434,7 @@ export function ZeitenBuchenPage() {
                 {ausgewaehlterStatus === "gebucht" && (
                   <button
                     onClick={() => setStornierenModus(true)}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                    className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                   >
                     Buchung stornieren
                   </button>
@@ -503,7 +503,7 @@ export function ZeitenBuchenPage() {
                     <button
                       onClick={() => (istFremd ? setBeendenId(t.id) : stopMutation.mutate({ id: t.id }))}
                       disabled={stopMutation.isPending}
-                      className="btn-touch shrink-0 border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                      className="btn-touch shrink-0 border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                     >
                       Beenden
                     </button>

@@ -136,7 +136,7 @@ export function PositionenInhalt({
         </div>
 
         {showBedarfForm && (
-          <div className="mb-2 space-y-2 border border-sepstrong p-2">
+          <div className="mb-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
             <SearchableSelect
               value={bedarfMaterialId}
               onChange={setBedarfMaterialId}
@@ -154,7 +154,7 @@ export function PositionenInhalt({
                   value={bedarfNeuBezeichnung}
                   onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
                   placeholder="Bezeichnung"
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <div className="flex gap-2">
                   <input
@@ -162,7 +162,7 @@ export function PositionenInhalt({
                     value={bedarfNeuEinheit}
                     onChange={(e) => setBedarfNeuEinheit(e.target.value)}
                     placeholder="Einheit"
-                    className="w-20 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                   <input
                     type="number"
@@ -171,7 +171,7 @@ export function PositionenInhalt({
                     value={bedarfNeuEinzelpreis}
                     onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
                     placeholder="Preis (optional)"
-                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
                 <Select
@@ -196,7 +196,7 @@ export function PositionenInhalt({
                 value={bedarfMenge}
                 onChange={(e) => setBedarfMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <Select
                 className="w-auto"
@@ -213,7 +213,7 @@ export function PositionenInhalt({
               value={bedarfNotiz}
               onChange={(e) => setBedarfNotiz(e.target.value)}
               placeholder="Notiz (optional)"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <button
               disabled={
@@ -277,11 +277,11 @@ export function PositionenInhalt({
               {materialBedarfe!.map((b) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
                 >
                   <span className="text-label">
                     {b.menge}× {b.material_bezeichnung}
-                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                    <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
                       {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
                     </span>
                   </span>
@@ -353,13 +353,13 @@ export function PositionenInhalt({
               {(materialVerwendungen ?? []).map((v) => (
                 <div
                   key={`material-${v.id}`}
-                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
                 >
                   <span className="flex min-w-0 items-center gap-2 text-label">
                     <SymbolKachel icon={Package} farbe="orange" groesse={24} />
                     <span className="truncate">
                       {v.menge}× {v.material_bezeichnung}
-                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
                         {v.material_einheit}
                       </span>
                     </span>
@@ -369,13 +369,13 @@ export function PositionenInhalt({
               {(lvVerwendungen ?? []).map((v) => (
                 <div
                   key={`lv-${v.id}`}
-                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                  className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2 py-1.5 text-sm"
                 >
                   <span className="flex min-w-0 items-center gap-2 text-label">
                     <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
                     <span className="truncate">
                       {v.menge}× {v.lv_bezeichnung}
-                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                      <span className="ml-1.5 border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label">
                         {v.lv_einheit}
                       </span>
                     </span>
@@ -414,7 +414,7 @@ export function PositionenInhalt({
         )}
 
         {showMaterialForm && (
-          <div className="space-y-2 border border-sepstrong p-2">
+          <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
             <SearchableSelect
               value={materialId}
               onChange={(v) => {
@@ -462,7 +462,7 @@ export function PositionenInhalt({
                 value={materialMenge}
                 onChange={(e) => setMaterialMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
@@ -483,7 +483,7 @@ export function PositionenInhalt({
         )}
 
         {showLeistungForm && (
-          <div className="space-y-2 border border-sepstrong p-2">
+          <div className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
             {(leistungsverzeichnis ?? []).length === 0 ? (
               <p className="text-xs text-label2">
                 Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
@@ -508,7 +508,7 @@ export function PositionenInhalt({
                     value={lvMenge}
                     onChange={(e) => setLvMenge(e.target.value)}
                     placeholder="Menge"
-                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                    className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                   <button
                     disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}

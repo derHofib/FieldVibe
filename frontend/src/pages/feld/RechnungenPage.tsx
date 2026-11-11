@@ -120,7 +120,7 @@ function AngeboteListe() {
                 <div className="text-sm font-medium text-label">{nameFuer(a.kunde_id)}</div>
                 <div className="text-xs text-label2">{formatEuro(a.gesamt_brutto)}</div>
               </div>
-              <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
                 {ANGEBOT_STATUS_LABEL[a.status]}
               </span>
             </button>
@@ -244,7 +244,7 @@ export function RechnungenPage() {
               setSeiten(1);
             }}
             placeholder="Rechnungsnummer oder Kunde suchen…"
-            className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
 
           <div className="flex flex-wrap gap-2 text-xs">

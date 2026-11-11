@@ -80,7 +80,7 @@ export function TechnikerZuweisungenPage() {
                     <button
                       key={k.id}
                       onClick={() => navigate(`/kunden/${k.id}`)}
-                      className="btn-touch border border-sep px-2 py-0.5 text-xs text-label"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-0.5 text-xs text-label"
                     >
                       {k.name}
                     </button>

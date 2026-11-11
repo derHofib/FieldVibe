@@ -80,13 +80,13 @@ export function MaengelAbschnitt({
       </div>
 
       {showMangelForm && (
-        <div className="mb-2 space-y-2 border border-sepstrong p-2">
+        <div className="mb-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <textarea
             value={mangelBeschreibung}
             onChange={(e) => setMangelBeschreibung(e.target.value)}
             placeholder="Was ist defekt?"
             rows={2}
-            className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+            className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-sm text-label"
           />
           <Select
             value={mangelSchweregrad}
@@ -115,10 +115,10 @@ export function MaengelAbschnitt({
       ) : (
         <div className="space-y-1.5">
           {maengel!.map((m) => (
-            <div key={m.id} className="border border-sepstrong p-2 text-sm">
+            <div key={m.id} className="border rounded-[var(--radius-ap-md)] border-sepstrong p-2 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-label">{m.beschreibung}</p>
-                <span className={`shrink-0 border px-2 py-0.5 text-xs font-medium ${SCHWEREGRAD_BADGE[m.schweregrad]}`}>
+                <span className={`shrink-0 border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-medium ${SCHWEREGRAD_BADGE[m.schweregrad]}`}>
                   {SCHWEREGRAD_LABEL[m.schweregrad]}
                 </span>
               </div>

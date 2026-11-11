@@ -94,7 +94,7 @@ export function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte:
                     value={neuerStandortName}
                     onChange={(e) => setNeuerStandortName(e.target.value)}
                     placeholder="z.B. Filiale Nord"
-                    className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
+                    className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
                   />
                   <button
                     type="button"

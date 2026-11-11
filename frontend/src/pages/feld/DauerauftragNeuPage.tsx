@@ -168,7 +168,7 @@ export function DauerauftragNeuPage() {
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             placeholder="z.B. Monatliche Wartung Lüftungsanlage"
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
 
@@ -178,7 +178,7 @@ export function DauerauftragNeuPage() {
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
-            className="w-full resize-none border border-sep bg-transparent p-2 text-label"
+            className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-label"
           />
         </div>
 
@@ -222,7 +222,7 @@ export function DauerauftragNeuPage() {
               required
               value={intervallTage}
               onChange={(e) => setIntervallTage(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
@@ -234,7 +234,7 @@ export function DauerauftragNeuPage() {
               required
               value={naechsteFaelligkeit}
               onChange={(e) => setNaechsteFaelligkeit(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>
@@ -270,7 +270,7 @@ export function DauerauftragNeuPage() {
               value={toleranzFrueh}
               onChange={(e) => setToleranzFrueh(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
@@ -283,7 +283,7 @@ export function DauerauftragNeuPage() {
               value={toleranzSpaet}
               onChange={(e) => setToleranzSpaet(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>

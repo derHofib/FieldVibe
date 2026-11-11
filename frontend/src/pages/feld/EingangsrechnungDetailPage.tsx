@@ -341,7 +341,7 @@ export function EingangsrechnungDetailPage() {
               {eingangsrechnung.lieferant_name}
             </h1>
           </div>
-          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+          <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
             {STATUS_LABEL[eingangsrechnung.status]}
           </span>
         </div>
@@ -464,12 +464,12 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -478,13 +478,13 @@ export function EingangsrechnungDetailPage() {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 type="number"
@@ -492,7 +492,7 @@ export function EingangsrechnungDetailPage() {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <button
@@ -547,14 +547,14 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showZahlungForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <input
               type="number"
               step="0.01"
               value={zahlungBetrag}
               onChange={(e) => setZahlungBetrag(e.target.value)}
               placeholder="Betrag"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             {addZahlungMutation.isError && (
               <p className="text-xs text-st-fehlt ">

@@ -119,7 +119,7 @@ export function PruefmittelPage() {
             <input id={`${uid}-0`}
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               placeholder="z.B. Installationstester Gossen Metrahit"
             />
           </div>
@@ -130,7 +130,7 @@ export function PruefmittelPage() {
             <input id={`${uid}-1`}
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -158,7 +158,7 @@ export function PruefmittelPage() {
               min={1}
               value={form.intervallMonate}
               onChange={(e) => setForm({ ...form, intervallMonate: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <button
@@ -199,7 +199,7 @@ export function PruefmittelPage() {
                     Zugewiesen: {nameFuer(mittel.zugewiesen_an)}
                   </div>
                 </div>
-                <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                   {STATUS_LABEL[mittel.status]}
                 </span>
               </div>

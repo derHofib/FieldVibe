@@ -66,7 +66,7 @@ export function PasswortAendernKarte() {
       </button>
 
       {erfolg && !offen && (
-        <p className="mx-4 mb-4 border border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
+        <p className="mx-4 mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
           Passwort geändert. Auf allen anderen Geräten wurdest du abgemeldet.
         </p>
       )}
@@ -74,7 +74,7 @@ export function PasswortAendernKarte() {
       {offen && (
         <form onSubmit={absenden} className="px-4 pb-4">
           {fehler && (
-            <div role="alert" className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+            <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
               {fehler}
             </div>
           )}

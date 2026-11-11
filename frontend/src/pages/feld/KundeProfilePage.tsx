@@ -176,7 +176,7 @@ export function KundeProfilePage({
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
-              <span key={t.id} className="border border-sep px-2 py-0.5 text-xs text-label">
+              <span key={t.id} className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                 #{t.label}
               </span>
             ))}

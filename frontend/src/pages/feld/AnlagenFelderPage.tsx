@@ -105,7 +105,7 @@ export function AnlagenFelderPage() {
             value={anlagentyp}
             onChange={(e) => setAnlagentyp(e.target.value)}
             placeholder="z.B. Fahrzeug, Ladestation, Elektroanlage"
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
           <datalist id="bekannte-anlagentypen">
             {bekannteTypen.map((t) => (
@@ -118,7 +118,7 @@ export function AnlagenFelderPage() {
             value={feldName}
             onChange={(e) => setFeldName(e.target.value)}
             placeholder="Feldname, z.B. Kennzeichen"
-            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
           <Select
             className="w-auto"
@@ -160,7 +160,7 @@ export function AnlagenFelderPage() {
                   >
                     <span className="text-sm text-label">{f.feld_name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                      <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                         {FELD_TYP_LABEL[f.feld_typ]}
                       </span>
                       <button

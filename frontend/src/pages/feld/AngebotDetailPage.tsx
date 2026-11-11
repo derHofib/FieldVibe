@@ -50,7 +50,7 @@ function PositionInhalt({ p }: { p: AngebotPosition }) {
     <>
       <div className="text-label">
         {p.positionstyp === "arbeitszeit" && (
-          <span className="mr-1.5 border border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
+          <span className="mr-1.5 border rounded-[var(--radius-ap-pill)] border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
             {POSITIONSTYP_LABEL.arbeitszeit}
           </span>
         )}
@@ -328,7 +328,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               onChange={(e) => setTitelText(e.target.value)}
               placeholder="Titel, z. B. Elektro Erdgeschoss"
               aria-label="Titel"
-              className="min-w-0 flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <button
               disabled={!titelText.trim() || addTitelMutation.isPending}
@@ -341,7 +341,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <button
               type="button"
               onClick={() => setLvOffen(true)}
@@ -369,13 +369,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="Art-Nr. (optional)"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -384,13 +384,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 type="number"
@@ -398,7 +398,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <button

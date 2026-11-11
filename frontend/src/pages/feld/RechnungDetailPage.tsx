@@ -123,7 +123,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
             <span className="flex-1 text-label">
               {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
             </span>
-            <span className="border border-sep px-2 py-0.5 text-[10px] font-semibold text-label2">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-[10px] font-semibold text-label2">
               {VORSCHLAG_QUELLE_LABEL[v.quelle]}
             </span>
           </label>
@@ -173,7 +173,7 @@ function EinzelpreisFeld({
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="w-20 border border-sep bg-transparent px-1.5 py-0.5 text-right text-xs text-label disabled:opacity-50"
+      className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-1.5 py-0.5 text-right text-xs text-label disabled:opacity-50"
     />
   );
 }
@@ -607,7 +607,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
           <div className="flex flex-wrap items-start justify-end gap-1.5">
             {art !== "rechnung" && <StatusBadge label={RECHNUNGSART_LABEL[art]} tone={RECHNUNGSART_TONE[art]} />}
-            <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
               {RECHNUNG_STATUS_LABEL[rechnung.status]}
             </span>
           </div>
@@ -777,7 +777,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showForm && (
-          <div className="mb-3 space-y-2 border border-sepstrong p-3">
+          <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             {(leistungsverzeichnis ?? []).length > 0 && (
               <div>
                 <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
@@ -810,7 +810,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -819,13 +819,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 type="number"
@@ -833,7 +833,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             {kleinunternehmer ? (
@@ -930,7 +930,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
 
           {showZahlungForm && (
-            <div className="mb-3 space-y-2 border border-sepstrong p-3">
+            <div className="mb-3 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
@@ -938,14 +938,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   value={zahlungBetrag}
                   onChange={(e) => setZahlungBetrag(e.target.value)}
                   placeholder="Betrag"
-                  className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <input
                   type="date"
                   value={zahlungDatum}
                   onChange={(e) => setZahlungDatum(e.target.value)}
                   max={heuteIso()}
-                  className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
               </div>
               <Select

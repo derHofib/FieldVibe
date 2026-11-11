@@ -33,7 +33,7 @@ function SymbolKarte({
 
   return (
     <div className="flex flex-col items-center gap-2 card-ap p-3">
-      <div className="flex h-16 w-16 items-center justify-center border border-sepstrong bg-fill">
+      <div className="flex h-16 w-16 items-center justify-center border rounded-[var(--radius-ap-md)] border-sepstrong bg-fill">
         <img src={symbol.url} alt={symbol.name} className="max-h-12 max-w-12 object-contain" />
       </div>
       {bearbeiten ? (
@@ -42,7 +42,7 @@ function SymbolKarte({
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            className="min-w-0 flex-1 border border-sep bg-transparent px-1.5 py-1 text-xs text-label"
+            className="min-w-0 flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-1.5 py-1 text-xs text-label"
           />
           <button
             onClick={() => {

@@ -118,7 +118,7 @@ export function DauerauftragDetailPage() {
             )}
           </div>
           {!dauerauftrag.aktiv && (
-            <span className="border border-sep px-2 py-1 text-xs text-label">
+            <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label">
               pausiert
             </span>
           )}
@@ -150,7 +150,7 @@ export function DauerauftragDetailPage() {
                     min={1}
                     value={editIntervall}
                     onChange={(e) => setEditIntervall(e.target.value)}
-                    className="w-16 border border-sep bg-transparent px-2 py-1 text-label"
+                    className="w-16 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-label"
                   />
                   Tage
                   <button
@@ -277,7 +277,7 @@ export function DauerauftragDetailPage() {
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}
-                  className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+                  className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
                 />
               </div>
               <div className="flex gap-2">

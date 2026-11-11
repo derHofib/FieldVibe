@@ -140,20 +140,20 @@ export function Stammdaten({
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       {brauchtUstIdnr && (
@@ -161,7 +161,7 @@ export function Stammdaten({
           value={form.ustIdnr}
           onChange={(e) => setForm({ ...form, ustIdnr: e.target.value })}
           placeholder="USt-IdNr."
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       )}
       {brauchtUstIdnr && (
@@ -189,7 +189,7 @@ export function Stammdaten({
           maxLength={9}
           placeholder="leer = automatisch beim ersten Export"
           aria-invalid={!!kontoFehler}
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm tabular-nums text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm tabular-nums text-label"
         />
         {kontoFehler && (
           <p role="alert" className="mt-0.5 text-xs text-st-fehlt">
@@ -205,7 +205,7 @@ export function Stammdaten({
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {speichernMutation.isError && (
         <FehlerMeldung
@@ -268,7 +268,7 @@ export function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; z
         ) : (
           <div className="flex flex-wrap gap-1">
             {zugewiesen.map((t) => (
-              <span key={t.id} className="border border-sep px-2 py-0.5 text-xs text-label">
+              <span key={t.id} className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                 {t.name}
               </span>
             ))}
@@ -288,7 +288,7 @@ export function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; z
   }
 
   return (
-    <div className="border border-sepstrong p-3">
+    <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
       <h2 className="mb-2 text-sm font-semibold text-label2">Zugewiesene Techniker</h2>
       {techniker.length === 0 ? (
         <p className="text-sm text-label2">Keine Techniker in diesem Mandanten angelegt.</p>

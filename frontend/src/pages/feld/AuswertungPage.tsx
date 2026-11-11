@@ -82,7 +82,7 @@ export function AuswertungPage() {
                 {offenePosten.summe_debitoren} EUR
               </div>
             </div>
-            <div className="border border-sepstrong p-2">
+            <div className="border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
               <div className="text-xs text-label2">Kreditoren (wir schulden)</div>
               <div className="font-semibold text-label">
                 {offenePosten.summe_kreditoren} EUR
@@ -126,7 +126,7 @@ export function AuswertungPage() {
                 {offenePosten.kreditoren_buckets.map((b) => (
                   <span
                     key={b.label}
-                    className="border border-sep px-2 py-0.5 text-xs text-label"
+                    className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label"
                   >
                     {b.label}: {b.summe} EUR ({b.anzahl})
                   </span>
@@ -160,7 +160,7 @@ export function AuswertungPage() {
               type="date"
               value={von}
               onChange={(e) => setVon(e.target.value)}
-              className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </label>
           <label className="text-xs text-label2">
@@ -169,7 +169,7 @@ export function AuswertungPage() {
               type="date"
               value={bis}
               onChange={(e) => setBis(e.target.value)}
-              className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </label>
         </div>

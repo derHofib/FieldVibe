@@ -81,25 +81,25 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 border border-sepstrong p-2">
+    <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <div className="flex gap-2">
@@ -207,19 +207,19 @@ function AnlagenVerwaltung({
 
   if (modus === "neu") {
     return (
-      <form onSubmit={handleSubmitNeu} className="space-y-2 border border-sepstrong p-3">
+      <form onSubmit={handleSubmitNeu} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-3">
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="Bezeichnung"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
         />
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="Typ (optional)"
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
         />
         {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <div className="flex gap-2">
@@ -243,7 +243,7 @@ function AnlagenVerwaltung({
   }
 
   return (
-    <div className="space-y-2 border border-sepstrong p-3">
+    <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
       {zuordenbar.length === 0 ? (
         <p className="text-sm text-label2">
           Keine weiteren Anlagen dieses Kunden verfügbar.
@@ -350,7 +350,7 @@ export function StandortDetailPage() {
           )}
         </div>
         {!profil.aktiv && (
-          <span className="mt-1 inline-block border border-sep px-2 py-0.5 text-xs text-label">
+          <span className="mt-1 inline-block border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
             inaktiv
           </span>
         )}
@@ -375,7 +375,7 @@ export function StandortDetailPage() {
               <span
                 key={status}
                 className={`px-2 py-1 text-xs font-semibold ${
-                  STATUS_BADGE[status] ?? "border border-sep text-label"
+                  STATUS_BADGE[status] ?? "border rounded-[var(--radius-ap-pill)] border-sep text-label"
                 }`}
               >
                 {anzahl}× {statusLabel(status)}
@@ -404,7 +404,7 @@ export function StandortDetailPage() {
                   {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
                 </div>
                 {!a.aktiv && (
-                  <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                     inaktiv
                   </span>
                 )}

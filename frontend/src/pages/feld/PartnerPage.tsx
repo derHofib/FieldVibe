@@ -109,7 +109,7 @@ export function PartnerPage() {
               aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerPartner.name}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, name: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             {nameFehler && (
               <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -125,7 +125,7 @@ export function PartnerPage() {
               value={neuerPartner.gewerk}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, gewerk: e.target.value })}
               placeholder="z.B. Elektroinstallation, Trockenbau, Gerüstbau"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -133,7 +133,7 @@ export function PartnerPage() {
             <input id={`${uid}-2`}
               value={neuerPartner.telefon}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, telefon: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -142,7 +142,7 @@ export function PartnerPage() {
               type="email"
               value={neuerPartner.email}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, email: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -150,7 +150,7 @@ export function PartnerPage() {
             <input id={`${uid}-4`}
               value={neuerPartner.strasse}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, strasse: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -159,7 +159,7 @@ export function PartnerPage() {
               <input id={`${uid}-5`}
                 value={neuerPartner.plz}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, plz: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -167,7 +167,7 @@ export function PartnerPage() {
               <input id={`${uid}-6`}
                 value={neuerPartner.ort}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, ort: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export function PartnerPage() {
               value={neuerPartner.notiz}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, notiz: e.target.value })}
               rows={2}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <p className="text-xs text-label2">
@@ -207,7 +207,7 @@ export function PartnerPage() {
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suche nach Name oder Gewerk…"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         )}
         {isLoading ? (
@@ -236,7 +236,7 @@ export function PartnerPage() {
                 )}
               </div>
               {!p.aktiv && (
-                <span className="border border-sep px-2 py-1 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label">
                   inaktiv
                 </span>
               )}

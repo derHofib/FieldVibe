@@ -74,7 +74,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             {anlage && ` · ${anlage.bezeichnung}`}
           </div>
           <div className="text-sm font-medium text-label">{anfrage.titel}</div>
-          <span className="mt-1 inline-block border border-sep px-2 py-0.5 text-xs text-label">
+          <span className="mt-1 inline-block border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
             {LEISTUNGSTYP_LABEL[anfrage.leistungstyp]}
           </span>
         </div>
@@ -119,7 +119,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAnnehmen && (
-            <div className="space-y-2 border border-sepstrong p-3">
+            <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
               <label htmlFor={`${uid}-0`} className="block text-xs font-medium text-label2">Abrechnungsart</label>
               <Select id={`${uid}-0`}
                 value={abrechnungsart}
@@ -150,13 +150,13 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAblehnen && (
-            <div className="space-y-2 border border-sepstrong p-3">
+            <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
               <textarea
                 value={ablehnungsgrund}
                 onChange={(e) => setAblehnungsgrund(e.target.value)}
                 placeholder="Grund (optional, für interne Notiz)"
                 rows={2}
-                className="w-full border border-sep bg-transparent p-2 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-sm text-label"
               />
               <div className="flex gap-2">
                 <button

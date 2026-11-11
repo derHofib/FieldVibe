@@ -397,7 +397,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
           placeholder={einstellungen.effektive_wiedervorlage_standard_tage.toString()}
           value={tage}
           onChange={(e) => setTage(e.target.value)}
-          className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <span className="text-sm text-label2">Tage</span>
         <button
@@ -474,7 +474,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
               value={fahrzeitSatz}
               onChange={(e) => setFahrzeitSatz(e.target.value)}
               aria-label="Fahrzeit-Satz (€/Std, netto)"
-              className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             € netto / Std Fahrzeit
           </label>
@@ -488,7 +488,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
               placeholder="0,30"
               value={kmSatz}
               onChange={(e) => setKmSatz(e.target.value)}
-              className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             € netto / km
           </label>
@@ -548,25 +548,25 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <input
@@ -574,7 +574,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
 
       <div className="flex gap-2">
@@ -655,25 +655,25 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Postfach-Adresse"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={mailbox}
           onChange={(e) => setMailbox(e.target.value)}
           placeholder="Ordner (z.B. INBOX)"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <input
@@ -681,7 +681,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
 
       <div className="flex gap-2">
@@ -860,25 +860,25 @@ export function IntegrationenPage() {
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <input
@@ -886,7 +886,7 @@ export function IntegrationenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
@@ -920,25 +920,25 @@ export function IntegrationenPage() {
               value={imapHost}
               onChange={(e) => setImapHost(e.target.value)}
               placeholder="Host"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapPort}
               onChange={(e) => setImapPort(e.target.value)}
               placeholder="Port"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapUser}
               onChange={(e) => setImapUser(e.target.value)}
               placeholder="Postfach-Adresse"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapMailbox}
               onChange={(e) => setImapMailbox(e.target.value)}
               placeholder="Ordner (z.B. INBOX)"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <input
@@ -946,7 +946,7 @@ export function IntegrationenPage() {
             value={imapSecret}
             onChange={(e) => setImapSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}

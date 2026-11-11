@@ -62,7 +62,7 @@ export function SearchPage() {
         value={eingabe}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Kunde, Anlage, Vorgangsnummer, #Tag…"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+        className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
       />
 
       {!q && tags && tags.length > 0 && (
@@ -99,7 +99,7 @@ export function SearchPage() {
                     <div className="text-xs text-label2">{subtitelLabel(hit)}</div>
                   )}
                 </div>
-                <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                   {KATEGORIE_LABEL[hit.kategorie]}
                 </span>
               </button>

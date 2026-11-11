@@ -99,7 +99,7 @@ function RegelForm({
   const istZielNumerisch = zielFeld?.feld_typ === "zahl" || zielFeld?.feld_typ === "betrag";
 
   return (
-    <div className="space-y-2 border border-sepstrong p-3">
+    <div className="space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
       <Select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)}>
         {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
           <option key={e} value={e}>
@@ -115,7 +115,7 @@ function RegelForm({
           <div className="mb-1 flex items-center justify-between">
             <label className="block text-xs font-medium text-label">Zu setzender Wert</label>
             {istZielNumerisch && (
-              <div className="flex border border-sep text-[11px] font-medium">
+              <div className="flex border rounded-[var(--radius-ap-md)] border-sep text-[11px] font-medium">
                 <button
                   type="button"
                   onClick={() => {

@@ -77,7 +77,7 @@ export function FormSchemasPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="z.B. Wartungsprotokoll Heizung"
               autoFocus
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
             />
           </div>
           <div>
@@ -85,7 +85,7 @@ export function FormSchemasPage() {
             <input id={`${uid}-1`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
             />
           </div>
           {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
@@ -118,7 +118,7 @@ export function FormSchemasPage() {
                 <div className="text-sm font-medium text-label">{s.name}</div>
                 <div className="text-xs text-label2">Version {s.version}</div>
               </div>
-              <span className="border border-sep px-2 py-1 text-xs text-label">{STATUS_LABEL[s.status]}</span>
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label">{STATUS_LABEL[s.status]}</span>
             </button>
           ))}
         </div>

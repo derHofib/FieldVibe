@@ -97,7 +97,7 @@ export function VerlaufInhalt({
         <span className="text-sm text-label2">{kundenansicht ? "Kundenansicht" : "Interne Ansicht"}</span>
         <button
           onClick={() => setKundenansicht((v) => !v)}
-          className={`btn-touch border px-3 py-1 text-xs font-semibold ${
+          className={`btn-touch border rounded-[var(--radius-ap-md)] px-3 py-1 text-xs font-semibold ${
             kundenansicht ? "border-tint bg-tint-solid text-white" : "border-sep text-label hover:bg-fill"
           }`}
         >
@@ -117,7 +117,7 @@ export function VerlaufInhalt({
           <button
             key={f.wert}
             onClick={() => setVerlaufFilter(f.wert)}
-            className={`btn-touch border px-2.5 py-1 font-medium ${
+            className={`btn-touch border rounded-[var(--radius-ap-md)] px-2.5 py-1 font-medium ${
               verlaufFilter === f.wert
                 ? "border-tint bg-tint-solid text-white"
                 : "border-sep text-label2 hover:bg-fill"
@@ -171,7 +171,7 @@ export function VerlaufInhalt({
               onChange={(e) => setComment(e.target.value)}
               placeholder="Kommentar schreiben…"
               rows={2}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-sm text-label"
             />
             {/* .card-ap bringt schon eine eigene box-shadow mit (siehe
              * Cascade-Layer-Falle in DESIGN.md) -- shadow-lg hier waere
@@ -232,7 +232,7 @@ export function VerlaufInhalt({
                 onClick={() => setShowMentionPicker((v) => !v)}
                 title="Erwähnen"
                 aria-label="Erwähnen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-base text-label hover:bg-fill"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-base text-label hover:bg-fill"
               >
                 @
               </button>
@@ -241,7 +241,7 @@ export function VerlaufInhalt({
                 disabled={fotoMutation.isPending}
                 title="Foto anhängen"
                 aria-label="Foto anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Camera size={16} strokeWidth={2} />
               </button>
@@ -250,7 +250,7 @@ export function VerlaufInhalt({
                 disabled={dokumentMutation.isPending}
                 title="Dokument anhängen"
                 aria-label="Dokument anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Paperclip size={16} strokeWidth={2} />
               </button>
@@ -258,7 +258,7 @@ export function VerlaufInhalt({
                 onClick={() => setShowUnterschriftPad((v) => !v)}
                 title="Unterschrift erfassen"
                 aria-label="Unterschrift erfassen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill"
+                className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill"
               >
                 <PenLine size={16} strokeWidth={1.5} />
               </button>
@@ -271,7 +271,7 @@ export function VerlaufInhalt({
                 }
                 aria-label="Für Kunde sichtbar umschalten"
                 aria-pressed={kundensichtbar}
-                className={`btn-touch flex h-9 w-9 items-center justify-center border ${
+                className={`btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] ${
                   kundensichtbar ? "border-tint text-tint-text" : "border-sep text-label2 hover:bg-fill"
                 }`}
               >

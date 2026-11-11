@@ -40,7 +40,7 @@ export function DauerauftraegePage() {
                 <div className="text-sm font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 border border-sep px-2 py-0.5 text-xs font-normal text-label">
+                    <span className="ml-2 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
@@ -51,7 +51,7 @@ export function DauerauftraegePage() {
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="border border-sep px-2 py-1 text-xs text-label">
+                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label">
                   pausiert
                 </span>
               )}

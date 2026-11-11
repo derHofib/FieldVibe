@@ -143,39 +143,39 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         value={form.gewerk}
         onChange={(e) => setForm({ ...form, gewerk: e.target.value })}
         placeholder="Gewerk / was die Firma macht"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <input
         value={form.telefon}
         onChange={(e) => setForm({ ...form, telefon: e.target.value })}
         placeholder="Telefon"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <input
         type="email"
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         placeholder="E-Mail"
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <textarea
@@ -183,7 +183,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="flex gap-2">
         <button
@@ -246,7 +246,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-3">
       <Select
         value={typ}
         onChange={(e) => setTyp(e.target.value as PartnerNachweisTyp)}
@@ -263,14 +263,14 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
           type="date"
           value={gueltigBis}
           onChange={(e) => setGueltigBis(e.target.value)}
-          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+          className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
         />
       </div>
       <input
         value={notiz}
         onChange={(e) => setNotiz(e.target.value)}
         placeholder="Notiz (optional)"
-        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+        className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
       />
       {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
@@ -593,7 +593,7 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
           <div className="flex gap-2">
             <button

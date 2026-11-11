@@ -130,7 +130,7 @@ export function BestellungDetailPage() {
               {lieferant?.name ?? "Kein Lieferant hinterlegt"}
             </h1>
           </div>
-          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+          <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label">
             {STATUS_LABEL[bestellung.status]}
           </span>
         </div>
@@ -214,7 +214,7 @@ export function BestellungDetailPage() {
             {bestellung.positionen.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between gap-3 border border-sepstrong p-2"
+                className="flex items-center justify-between gap-3 border rounded-[var(--radius-ap-md)] border-sepstrong p-2"
               >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-label">{p.beschreibung}</div>

@@ -95,7 +95,7 @@ export function MfaKarte() {
               {aktion && (
                 <form onSubmit={absenden} className="space-y-3">
                   {fehler && (
-                    <div role="alert" className="border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+                    <div role="alert" className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
                       {fehler}
                     </div>
                   )}

@@ -101,7 +101,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z. B. Wartungsvertraege, Standardleistungen"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -112,7 +112,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={2}
-              className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
@@ -312,7 +312,7 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
                 step="0.1"
                 value={gemeinkosten}
                 onChange={(e) => setGemeinkosten(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div className={layout === "dicht" ? "w-48" : undefined}>
@@ -322,7 +322,7 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
                 step="0.1"
                 value={gewinnWagnis}
                 onChange={(e) => setGewinnWagnis(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>

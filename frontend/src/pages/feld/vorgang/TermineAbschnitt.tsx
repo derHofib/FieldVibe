@@ -103,12 +103,12 @@ export function TermineAbschnitt({
       )}
 
       {showTerminForm && (
-        <div className="mb-2 space-y-2 border border-sepstrong p-2">
+        <div className="mb-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <input
             value={terminTitel}
             onChange={(e) => setTerminTitel(e.target.value)}
             placeholder="Titel"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <Select
             value={terminTechnikerId}
@@ -127,13 +127,13 @@ export function TermineAbschnitt({
               type="datetime-local"
               value={terminStart}
               onChange={(e) => setTerminStart(e.target.value)}
-              className="w-1/2 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               type="datetime-local"
               value={terminEnde}
               onChange={(e) => setTerminEnde(e.target.value)}
-              className="w-1/2 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-1/2 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <button
@@ -171,7 +171,7 @@ export function TermineAbschnitt({
                     <button
                       type="button"
                       onClick={() => setTerminWocheOffset((o) => o - 1)}
-                      className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
                     >
                       ← Vorherige Woche
                     </button>
@@ -179,14 +179,14 @@ export function TermineAbschnitt({
                       type="button"
                       onClick={() => setTerminWocheOffset(0)}
                       disabled={terminWocheOffset === 0}
-                      className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
                     >
                       Diese Woche
                     </button>
                     <button
                       type="button"
                       onClick={() => setTerminWocheOffset((o) => o + 1)}
-                      className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      className="btn-touch border rounded-[var(--radius-ap-md)] border-sep px-2 py-1 text-xs text-label hover:bg-fill"
                     >
                       Nächste Woche →
                     </button>
@@ -196,7 +196,7 @@ export function TermineAbschnitt({
                     {wocheEnde.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
                 </div>
-                <div className="grid grid-cols-7 gap-px overflow-hidden border border-sep bg-sep">
+                <div className="grid grid-cols-7 gap-px overflow-hidden border rounded-[var(--radius-ap-md)] border-sep bg-sep">
                   {wocheTage.map((tag, i) => {
                     const heuteFlag = tagesSchluessel(tag) === tagesSchluessel(heute);
                     const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
@@ -255,7 +255,7 @@ export function TermineAbschnitt({
               {termine!.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between border border-sepstrong p-2 text-sm"
+                  className="flex items-center justify-between border rounded-[var(--radius-ap-md)] border-sepstrong p-2 text-sm"
                 >
                   <div>
                     <div className="font-medium text-label">{t.titel}</div>
@@ -269,7 +269,7 @@ export function TermineAbschnitt({
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className={`border px-2 py-0.5 text-xs font-medium ${
+                      className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-medium ${
                         t.status === "abgesagt"
                           ? "border-sep text-label2"
                           : "border-tint text-tint-text"

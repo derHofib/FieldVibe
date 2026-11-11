@@ -140,7 +140,7 @@ export function PapierkorbPage() {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs font-semibold text-label">
                     {ENTITY_TYP_LABEL[eintrag.entity_typ]}
                   </span>
                   <span className="truncate font-medium text-label">

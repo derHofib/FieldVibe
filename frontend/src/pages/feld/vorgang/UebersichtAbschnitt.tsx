@@ -185,7 +185,7 @@ export function UebersichtAbschnitt({
       </div>
 
       {editingZuordnung && (
-        <div className="mt-2 space-y-2 border border-sepstrong p-3">
+        <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
             <Select
@@ -287,25 +287,25 @@ export function UebersichtAbschnitt({
             <p className="mt-1 text-sm text-label2">Keine Adresse hinterlegt.</p>
           ))}
         {editingAdresse && (
-          <div className="mt-2 space-y-2 border border-sepstrong p-3">
+          <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
             <input
               value={adresseForm.strasse}
               onChange={(e) => setAdresseForm({ ...adresseForm, strasse: e.target.value })}
               placeholder="Straße + Hausnr."
-              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="grid grid-cols-2 gap-2">
               <input
                 value={adresseForm.plz}
                 onChange={(e) => setAdresseForm({ ...adresseForm, plz: e.target.value })}
                 placeholder="PLZ"
-                className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 value={adresseForm.ort}
                 onChange={(e) => setAdresseForm({ ...adresseForm, ort: e.target.value })}
                 placeholder="Ort"
-                className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             {adresseError && <p className="text-xs text-st-fehlt">{adresseError}</p>}
@@ -349,7 +349,7 @@ export function UebersichtAbschnitt({
               {weitereAnlagen!.map((a) => (
                 <span
                   key={a.id}
-                  className="flex items-center gap-1 border border-sep px-2 py-1 text-xs text-label"
+                  className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs text-label"
                 >
                   <button
                     onClick={() => navigate(`/anlagen/${a.id}`)}
@@ -498,7 +498,7 @@ export function UebersichtAbschnitt({
       )}
 
       {showWartetKundeDialog && (
-        <div className="mt-2 space-y-2 border border-sepstrong p-2">
+        <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <p className="text-sm text-label">
             Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
           </p>
@@ -512,7 +512,7 @@ export function UebersichtAbschnitt({
             }
             value={wiedervorlageTage}
             onChange={(e) => setWiedervorlageTage(e.target.value)}
-            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <div className="flex gap-2">
             <button
@@ -539,7 +539,7 @@ export function UebersichtAbschnitt({
       )}
 
       {showFolgeAuftragDialog && (
-        <div className="mt-2 space-y-2 border border-sepstrong p-2">
+        <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <p className="text-sm text-label">
             Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
             Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
@@ -594,7 +594,7 @@ export function UebersichtAbschnitt({
             <button
               key={fa.id}
               onClick={() => navigate(`/vorgaenge/${fa.id}`)}
-              className="btn-touch block w-full border border-sep px-2 py-1.5 text-left text-sm text-label hover:bg-fill"
+              className="btn-touch block w-full border rounded-[var(--radius-ap-md)] border-sep px-2 py-1.5 text-left text-sm text-label hover:bg-fill"
             >
               {fa.vorgangsnummer} · {fa.titel} · {STATUS_LABEL[fa.status]}
             </button>

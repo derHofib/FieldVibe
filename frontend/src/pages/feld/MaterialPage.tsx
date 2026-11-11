@@ -113,7 +113,7 @@ export function MaterialZeile({
               {tags.map((t) => (
                 <span
                   key={t.id}
-                  className="border border-sep px-1.5 py-0.5 text-xs text-label"
+                  className="border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-xs text-label"
                 >
                   #{t.label}
                 </span>
@@ -174,7 +174,7 @@ export function MaterialZeile({
       </div>
 
       {zeigeUmlagern && (
-        <div className="mt-2 space-y-2 border border-sepstrong p-2">
+        <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
           <div className="grid grid-cols-2 gap-2">
             <Select
               className="w-auto"
@@ -210,7 +210,7 @@ export function MaterialZeile({
               placeholder="Menge"
               value={umlagernMenge}
               onChange={(e) => setUmlagernMenge(e.target.value)}
-              className="flex-1 border border-sep bg-transparent px-2 py-1 text-xs text-label"
+              className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-xs text-label"
             />
             <button
               disabled={
@@ -275,7 +275,7 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
               className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
             >
               <span className="text-label">{l.bezeichnung}</span>
-              <span className="border border-sep px-2 py-0.5 text-xs text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                 {OBJEKTTYP_LABEL[l.objekttyp]}
               </span>
             </button>
@@ -289,7 +289,7 @@ export function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder="Bezeichnung (z.B. Transporter VW)"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <Select
             value={objekttyp}
@@ -516,7 +516,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
             placeholder="Bezeichnung"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -524,7 +524,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
               <input id={`${uid}-0`}
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -536,7 +536,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 step="0.01"
                 value={materialForm.einzelpreis}
                 onChange={(e) => setMaterialForm({ ...materialForm, einzelpreis: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -546,7 +546,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 step="0.01"
                 value={materialForm.menge}
                 onChange={(e) => setMaterialForm({ ...materialForm, menge: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -556,7 +556,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 step="0.01"
                 value={materialForm.mindestbestand}
                 onChange={(e) => setMaterialForm({ ...materialForm, mindestbestand: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div className="col-span-2">
@@ -614,7 +614,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
                 placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <div className="grid grid-cols-2 gap-2">
                 <Select
@@ -855,7 +855,7 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {b.bestellnummer}
                       {b.liefertermin && <span className="ml-1.5 text-xs text-label2">Lieferung {formatDatum(b.liefertermin)}</span>}
                     </span>
-                    <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                    <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>
                   </button>

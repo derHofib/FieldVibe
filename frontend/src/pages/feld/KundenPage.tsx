@@ -132,7 +132,7 @@ export function KundenPage() {
               aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             {nameFehler && (
               <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -149,7 +149,7 @@ export function KundenPage() {
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -173,7 +173,7 @@ export function KundenPage() {
                 value={neuerKunde.ustIdnr}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
                 placeholder="DE123456789"
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           )}
@@ -197,7 +197,7 @@ export function KundenPage() {
             <input id={`${uid}-4`}
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -206,7 +206,7 @@ export function KundenPage() {
               <input id={`${uid}-5`}
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
@@ -214,7 +214,7 @@ export function KundenPage() {
               <input id={`${uid}-6`}
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>
@@ -224,7 +224,7 @@ export function KundenPage() {
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <p className="text-xs text-label2">

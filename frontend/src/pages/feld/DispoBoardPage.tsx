@@ -313,7 +313,7 @@ export function DispoBoardPage() {
             <input id={`${uid}-2`}
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               placeholder="z.B. E-Check Hauptverteilung"
             />
           </div>
@@ -324,7 +324,7 @@ export function DispoBoardPage() {
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div className="flex-1">
@@ -333,7 +333,7 @@ export function DispoBoardPage() {
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>

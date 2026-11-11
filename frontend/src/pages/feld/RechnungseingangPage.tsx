@@ -181,14 +181,14 @@ export function RechnungseingangPage() {
               value={form.lieferantName}
               onChange={(e) => setForm({ ...form, lieferantName: e.target.value })}
               placeholder="Name des Ausstellers"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           )}
           <input
             value={form.rechnungsnummerLieferant}
             onChange={(e) => setForm({ ...form, rechnungsnummerLieferant: e.target.value })}
             placeholder="Rechnungsnummer (vom Aussteller)"
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs text-label2">
@@ -197,7 +197,7 @@ export function RechnungseingangPage() {
                 type="date"
                 value={form.rechnungsdatum}
                 onChange={(e) => setForm({ ...form, rechnungsdatum: e.target.value })}
-                className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </label>
             <label className="text-xs text-label2">
@@ -206,7 +206,7 @@ export function RechnungseingangPage() {
                 type="date"
                 value={form.faelligAm}
                 onChange={(e) => setForm({ ...form, faelligAm: e.target.value })}
-                className="mt-1 w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </label>
           </div>
@@ -217,7 +217,7 @@ export function RechnungseingangPage() {
               value={form.betragNetto}
               onChange={(e) => setForm({ ...form, betragNetto: e.target.value })}
               placeholder="Betrag netto"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <Select
               className="w-auto"
@@ -240,7 +240,7 @@ export function RechnungseingangPage() {
               value={form.skontoProzent}
               onChange={(e) => setForm({ ...form, skontoProzent: e.target.value })}
               placeholder="Skonto %"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               type="number"
@@ -248,7 +248,7 @@ export function RechnungseingangPage() {
               value={form.skontoTage}
               onChange={(e) => setForm({ ...form, skontoTage: e.target.value })}
               placeholder="Skonto-Frist (Tage)"
-              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
@@ -311,7 +311,7 @@ export function RechnungseingangPage() {
               <div className="text-sm font-medium text-label">
                 {e.betrag_brutto} EUR
               </div>
-              <span className="border border-sep px-2 py-0.5 text-xs font-semibold text-label">
+              <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs font-semibold text-label">
                 {STATUS_LABEL[e.status]}
               </span>
             </div>

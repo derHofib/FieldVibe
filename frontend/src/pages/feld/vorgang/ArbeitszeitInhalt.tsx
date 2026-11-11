@@ -106,7 +106,7 @@ export function ArbeitszeitInhalt({
             value={taetigkeit}
             onChange={(e) => setTaetigkeit(e.target.value)}
             placeholder="Tätigkeit (optional)"
-            className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <button
             onClick={() => startTimerMutation.mutate()}
@@ -237,7 +237,7 @@ export function ArbeitszeitInhalt({
                         )}
                         <button
                           onClick={() => setZeitSheetModus(e)}
-                          className="btn-touch flex min-w-0 flex-1 items-start justify-between gap-3 border border-sep px-3 py-2.5 text-left hover:bg-fill"
+                          className="btn-touch flex min-w-0 flex-1 items-start justify-between gap-3 border rounded-[var(--radius-ap-md)] border-sep px-3 py-2.5 text-left hover:bg-fill"
                         >
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-label">
@@ -313,7 +313,7 @@ export function ArbeitszeitInhalt({
                 <button
                   onClick={() => vormerkenMutation.mutate([...ausgewaehlteZeitIds])}
                   disabled={vormerkenMutation.isPending}
-                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                 >
                   Zur Buchung vormerken
                 </button>
@@ -332,7 +332,7 @@ export function ArbeitszeitInhalt({
                 <button
                   onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteZeitIds])}
                   disabled={zurueckziehenMutation.isPending}
-                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                 >
                   Zurückziehen
                 </button>
@@ -340,7 +340,7 @@ export function ArbeitszeitInhalt({
               {ausgewaehlterStatus === "gebucht" && darfZeitenBuchen && (
                 <button
                   onClick={() => setStornierenModus(true)}
-                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  className="btn-touch border rounded-[var(--radius-ap-md)] border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
                 >
                   Buchung stornieren
                 </button>

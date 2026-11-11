@@ -168,7 +168,7 @@ export function MaterialDetailPage({
           <input id={`${uid}-0`}
             value={form.bezeichnung}
             onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -177,7 +177,7 @@ export function MaterialDetailPage({
             <input id={`${uid}-1`}
               value={form.einheit}
               onChange={(e) => setForm({ ...form, einheit: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -187,7 +187,7 @@ export function MaterialDetailPage({
               step="0.01"
               value={form.mindestbestand}
               onChange={(e) => setForm({ ...form, mindestbestand: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -196,7 +196,7 @@ export function MaterialDetailPage({
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="z.B. 5SY4116-7"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -208,7 +208,7 @@ export function MaterialDetailPage({
               step="0.01"
               value={form.einzelpreis}
               onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="col-span-2">
@@ -234,7 +234,7 @@ export function MaterialDetailPage({
               value={form.bestell_url}
               onChange={(e) => setForm({ ...form, bestell_url: e.target.value })}
               placeholder="https://…"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             {material.bestell_url && (
               <a
@@ -269,7 +269,7 @@ export function MaterialDetailPage({
           {zugewieseneTags.map((t) => (
             <span
               key={t.id}
-              className="flex items-center gap-1 border border-sep px-2 py-1 text-xs font-medium text-label"
+              className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-medium text-label"
             >
               #{t.label}
               <button
@@ -288,7 +288,7 @@ export function MaterialDetailPage({
             value={neuerTag}
             onChange={(e) => setNeuerTag(e.target.value)}
             placeholder="Tag hinzufügen…"
-            className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            className="flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <datalist id="material-tag-vorschlaege">
             {verfuegbareTags.map((t) => (

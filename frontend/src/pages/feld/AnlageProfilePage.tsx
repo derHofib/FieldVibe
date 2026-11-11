@@ -106,25 +106,25 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 border border-sepstrong p-2">
+    <div className="mt-2 space-y-2 border rounded-[var(--radius-ap-md)] border-sepstrong p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <div className="flex gap-2">
@@ -240,26 +240,26 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
           value={form.hersteller}
           onChange={(e) => setForm({ ...form, hersteller: e.target.value })}
           placeholder="Hersteller"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.modell}
           onChange={(e) => setForm({ ...form, modell: e.target.value })}
           placeholder="Modell"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.seriennummer}
           onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
           placeholder="Seriennummer"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           type="date"
           value={form.anschaffungsdatum}
           onChange={(e) => setForm({ ...form, anschaffungsdatum: e.target.value })}
           title="Anschaffungsdatum"
-          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <textarea
@@ -267,7 +267,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {(felder ?? []).length > 0 && (
         <div className="space-y-2 border-t border-sep pt-2 ">
@@ -281,7 +281,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
                 type={FELD_TYP_INPUT[f.feld_typ]}
                 value={zusatzwerte[f.feld_name] ?? ""}
                 onChange={(e) => setZusatzwerte({ ...zusatzwerte, [f.feld_name]: e.target.value })}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           ))}
@@ -492,7 +492,7 @@ export function AnlageProfilePage() {
             {profil.tags.map((t) => (
               <span
                 key={t.id}
-                className="border border-sep px-2 py-0.5 text-xs text-label"
+                className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label"
               >
                 #{t.label}
               </span>
@@ -509,7 +509,7 @@ export function AnlageProfilePage() {
             <span
               key={status}
               className={`px-2 py-1 text-xs font-semibold ${
-                STATUS_BADGE[status] ?? "border border-sep text-label"
+                STATUS_BADGE[status] ?? "border rounded-[var(--radius-ap-pill)] border-sep text-label"
               }`}
             >
               {anzahl}× {statusLabel(status)}
@@ -691,7 +691,7 @@ export function AnlageProfilePage() {
                     min={1}
                     value={inventurIntervallTage}
                     onChange={(e) => setInventurIntervallTage(e.target.value)}
-                    className="w-20 border border-sep bg-transparent px-2 py-1 text-sm text-label"
+                    className="w-20 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1 text-sm text-label"
                   />
                   <button
                     disabled={inventurAnlegenMutation.isPending}
@@ -712,7 +712,7 @@ export function AnlageProfilePage() {
                   Fällig: {new Date(inventurzyklus.naechste_inventur_am).toLocaleDateString("de-DE")}
                 </span>
                 {!inventurzyklus.aktiv && (
-                  <span className="border border-sep px-2 py-0.5 text-xs text-label">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-xs text-label">
                     pausiert
                   </span>
                 )}

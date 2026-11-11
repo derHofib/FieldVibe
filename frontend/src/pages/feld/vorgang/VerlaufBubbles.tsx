@@ -10,7 +10,7 @@ import type { EmailLog, VorgangEvent } from "../../../types";
 // Design-Vorschlag "Feed und Detail neu gedacht".
 function VerlaufTypTag({ children }: { children: string }) {
   return (
-    <span className="border border-sep px-1.5 py-0.5 text-[10px] font-medium text-label2">
+    <span className="border rounded-[var(--radius-ap-pill)] border-sep px-1.5 py-0.5 text-[10px] font-medium text-label2">
       {children}
     </span>
   );
@@ -44,10 +44,10 @@ export function EventBubble({
         </div>
         <div className="flex items-center gap-1.5">
           {event.partner_sichtbar && event.author_user_id !== null && (
-            <span className="border border-tint px-2 py-0.5 text-tint-text">Partner sieht das</span>
+            <span className="border rounded-[var(--radius-ap-md)] border-tint px-2 py-0.5 text-tint-text">Partner sieht das</span>
           )}
           {event.kundensichtbar && (
-            <span className="border border-tint px-2 py-0.5 text-tint-text">
+            <span className="border rounded-[var(--radius-ap-md)] border-tint px-2 py-0.5 text-tint-text">
               Kundensichtbar
             </span>
           )}
@@ -75,7 +75,7 @@ export function EventBubble({
           <img
             src={event.unterschrift_url}
             alt="Unterschrift"
-            className="max-h-32 border border-sep bg-white"
+            className="max-h-32 border rounded-[var(--radius-ap-md)] border-sep bg-white"
           />
           {typeof event.payload.unterzeichner_name === "string" && (
             <p className="mt-1 text-xs text-label2">
@@ -89,7 +89,7 @@ export function EventBubble({
           href={event.dokument_url}
           target="_blank"
           rel="noreferrer"
-          className="btn-touch mb-2 flex items-center gap-2 border border-sep px-3 py-2 text-sm text-label hover:bg-fill"
+          className="btn-touch mb-2 flex items-center gap-2 border rounded-[var(--radius-ap-md)] border-sep px-3 py-2 text-sm text-label hover:bg-fill"
         >
           <Paperclip size={15} strokeWidth={2} />
           {event.dokument_dateiname ?? "Dokument"}
@@ -117,7 +117,7 @@ export function EmailBubble({ email }: { email: EmailLog }) {
           <VerlaufTypTag>E-Mail</VerlaufTypTag>
         </div>
         {email.status === "fehler" && (
-          <span className="border border-st-fehlt px-2 py-0.5 text-st-fehlt">
+          <span className="border rounded-[var(--radius-ap-md)] border-st-fehlt px-2 py-0.5 text-st-fehlt">
             Fehler
           </span>
         )}
