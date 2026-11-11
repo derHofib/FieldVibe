@@ -8,6 +8,25 @@
      Google-Fonts-Link mehr noetig (index.html). */
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
 
+  /* Typografie-Skala: benannte Stufen statt freier Pixelwerte, Klassen
+     text-nav/-meta/-sekundaer/-fliess/-zeile/-titel-mobil/-titel-desktop.
+     Eingabefelder bleiben unabhaengig davon bei mindestens 16px (Regel
+     "font-size: 16px" weiter unten, iOS-Zoom bei Fokus). */
+  --text-nav: 10px;
+  --text-nav--line-height: 1.2;
+  --text-meta: 11px;
+  --text-meta--line-height: 1.4545;
+  --text-sekundaer: 13px;
+  --text-sekundaer--line-height: 1.4;
+  --text-fliess: 15px;
+  --text-fliess--line-height: 1.4667;
+  --text-zeile: 17px;
+  --text-zeile--line-height: 1.3;
+  --text-titel-mobil: 22px;
+  --text-titel-mobil--line-height: 1.2727;
+  --text-titel-desktop: 28px;
+  --text-titel-desktop--line-height: 1.2143;
+
   /* ---- Apple-Design-Token -------------------------------------------
      Kanonische Variablennamen 1:1 aus der Spezifikation (docs/ui-redesign,
      Abschnitt 3), bewusst OHNE "--color-"-Praefix, damit backdrop-filter/
