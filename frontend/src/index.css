@@ -144,7 +144,18 @@
      in beiden Modi identisch (kein Statustoken, eigene Bedeutung). */
   --switch-on: #34c759;
 
+  /* Markenakzent "Laeuft" (Logo-Gruen #d4ff3b): einzige Rolle ist "laeuft
+     gerade" (Zeiterfassung/Live). Das Logo-Neon-Gruen hat auf Hell nur ~1.2:1,
+     daher dort ein abgedunkelter Ton gleichen Farbtons (gelblich-oliv,
+     bewusst abseits von --st-erledigt); Dunkel nutzt das Logo-Gruen direkt. */
+  --live-dot: #5f8500;
+  --live-text: #4a6700;
+  --live-bg: rgba(143, 184, 0, 0.2);
+
   --color-switch-on: var(--switch-on);
+  --color-live: var(--live-dot);
+  --color-live-text: var(--live-text);
+  --color-live-bg: var(--live-bg);
 
   /* Radien (Abschnitt 4.1). */
   --radius-ap-sm: 7px;
@@ -377,6 +388,10 @@ body {
 
   --origin-projekt-text: #9c9aff;
   --origin-projekt-bg: rgba(94, 92, 230, 0.28);
+
+  --live-dot: #d4ff3b;
+  --live-text: #d4ff3b;
+  --live-bg: rgba(212, 255, 59, 0.2);
 }
 
 /* Sheets (Modals von unten) weichen im Dunkelmodus von den sonstigen

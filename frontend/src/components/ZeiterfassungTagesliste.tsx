@@ -1,3 +1,4 @@
+import { LaeuftPille } from "./apple/LaeuftPille";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -88,7 +89,7 @@ export function ZeiterfassungTagesliste({
                       className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-card px-2 py-1.5 text-left text-sekundaer disabled:cursor-default"
                     >
                       <span className="min-w-0 truncate text-label">
-                        {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                        {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : <LaeuftPille className="align-middle" />}
                         {" · "}
                         <span className="font-medium">
                           {e.vorgangsnummer ?? ZEITERFASSUNG_KATEGORIE_LABEL[e.kategorie] ?? e.kategorie}

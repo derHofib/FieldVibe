@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { abwesenheitenApi, arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
@@ -354,7 +355,7 @@ export function OfficeArbeitszeitPage() {
                               <td className="py-1.5 pr-3 tabular-nums">
                                 {e.abwesenheit_id ? (
                                   <span>
-                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : <LaeuftPille className="align-middle" />}
                                   </span>
                                 ) : (
                                   <button
@@ -365,7 +366,7 @@ export function OfficeArbeitszeitPage() {
                                     }}
                                     className="text-tint-text"
                                   >
-                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : <LaeuftPille className="align-middle" />}
                                   </button>
                                 )}
                               </td>

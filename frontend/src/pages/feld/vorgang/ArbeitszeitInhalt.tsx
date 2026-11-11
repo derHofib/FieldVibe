@@ -1,4 +1,5 @@
 import { StatusPille } from "../../../components/apple/StatusPille";
+import { LaeuftPunkt } from "../../../components/apple/LaeuftPille";
 import type { UserAuswahl, Vorgang, Zeiterfassung, ZeiterfassungBuchungsstatus } from "../../../types";
 import { formatSekundenAlsHHMM } from "../../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../../utils/zeiterfassung";
@@ -84,7 +85,7 @@ export function ArbeitszeitInhalt({
       {timerLaeuftHier ? (
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-fliess font-medium text-label">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" />
+            <LaeuftPunkt />
             Zeit läuft seit{" "}
             {new Date(laufenderTimer!.start_at).toLocaleTimeString("de-DE", {
               timeZone: "Europe/Berlin",

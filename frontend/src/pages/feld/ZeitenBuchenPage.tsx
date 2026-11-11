@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { useAuth } from "../../context/AuthContext";
 import type { Zeiterfassung, ZeiterfassungBuchungsstatus } from "../../types";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
@@ -466,7 +467,10 @@ export function ZeitenBuchenPage() {
               return (
                 <div key={t.id} className="flex items-center justify-between gap-2 border-b border-sep py-2 text-fliess last:border-0">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-label">{technikerName}</p>
+                    <p className="flex items-center gap-2 truncate font-medium text-label">
+                      {technikerName}
+                      <LaeuftPille />
+                    </p>
                     <p className="truncate text-meta text-label2">
                       {t.vorgangsnummer ?? ZEITERFASSUNG_KATEGORIE_LABEL[t.kategorie] ?? t.kategorie}
                       {" · seit "}

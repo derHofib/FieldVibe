@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { Select } from "../../components/apple/Select";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
@@ -156,7 +157,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
           </div>
           <div className="flex flex-none flex-col items-end gap-1">
             {card.timer_laeuft && (
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" title="Timer läuft" />
+              <LaeuftPille />
             )}
             {card.dauerauftrag_id && (
               <span title="Dauerauftrag" className="text-st-arbeit">
