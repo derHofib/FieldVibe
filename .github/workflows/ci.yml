@@ -1,5 +1,9 @@
 name: CI
 
+# Runner-Image bewusst auf ubuntu-24.04 gepinnt statt ubuntu-latest: Ein stilles Hochziehen
+# der Basis (Werkzeugversionen wie Postgres-Client, Java) soll nur als eigener, gepruefter
+# Commit passieren. Wechsel auf eine neuere Version: alle Jobs gemeinsam umstellen.
+
 on:
   push:
   pull_request:
@@ -15,7 +19,7 @@ permissions:
 
 jobs:
   backend-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine
@@ -81,7 +85,7 @@ jobs:
   # SHA-256 geprueft) -- keine Release-Downloads noetig. Dieser Job schlaegt
   # bei uebersprungenen Tests fehl; backend-tests installiert das Werkzeug ebenfalls.
   e-rechnung-konformitaet:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine
@@ -137,7 +141,7 @@ jobs:
           if grep -q SKIPPED /tmp/konformitaet.log; then echo "Tests wurden uebersprungen" >&2; exit 1; fi
 
   docker-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -154,7 +158,7 @@ jobs:
         run: docker build --target production -t socialcrm-frontend:ci ./frontend
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -184,7 +188,7 @@ jobs:
   # Build hinter `vite preview`, API per page.route gemockt -- kein Backend noetig.
   # Serious/critical-Befunde lassen den Job scheitern.
   frontend-a11y:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: frontend
     steps:
       - uses: actions/checkout@v4
@@ -233,7 +237,7 @@ jobs:
           if-no-files-found: ignore
 
   bugreport-mcp:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -256,7 +260,7 @@ jobs:
         run: npm test
 
   scripts-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Fuer den Test gegen einen echten Postgres (scripts/tests/test_postgres_echt.sh);
     # ohne erreichbaren Server ueberspringt er sich selbst.
     services:
@@ -277,7 +281,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Werkzeuge installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck postgresql-client gnupg
+        # postgresql-client-16 ausdruecklich: Der Client muss zur Server-Major (postgres:16
+        # in docker-compose.yml) passen. Ein neuerer pg_dump schreibt Optionen
+        # (z. B. transaction_timeout), die ein aelterer Server nicht kennt -- das hat
+        # den Job schon einmal rot gemacht, als ubuntu-latest auf ein neueres Image sprang.
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck postgresql-client-16 gnupg
+
+      # Faengt Versionsdrift ab, bevor die Shell-Tests kryptisch scheitern.
+      - name: Client-Version gegen Server-Major pruefen
+        run: |
+          server=$(grep -oP 'image:\s*postgres:\K[0-9]+' docker-compose.yml | head -1)
+          client=$(pg_dump --version | grep -oP '\d+' | head -1)
+          echo "Server-Major (docker-compose.yml): $server, pg_dump-Major: $client"
+          [[ -n "$server" && "$server" == "$client" ]] || { echo "pg_dump passt nicht zur Postgres-Server-Major" >&2; exit 1; }
 
       - name: shellcheck
         run: |
@@ -292,7 +308,7 @@ jobs:
   # und in der Zusammenfassung; Umgang mit Ausnahmen: docs/BETRIEB.md, "Abhaengigkeiten".
   # Dependabot (.github/dependabot.yml) schlaegt die Updates woechentlich vor.
   pip-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -323,7 +339,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   npm-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -345,7 +361,7 @@ jobs:
   # es dient als Release-Artefakt/Archiv, produktiv baut deploy.sh das Frontend mit den
   # Domains des Servers selbst (VITE_* werden zur Build-Zeit eingebacken).
   images:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [backend-tests, frontend, docker-build, scripts-tests]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     permissions:

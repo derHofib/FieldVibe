@@ -63,3 +63,20 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+
+  # Compose-Images (postgres, minio, caddy). Die Postgres-Major darf nur bewusst wechseln
+  # (Datenverzeichnis-Migration, CI-Client-Version) -- daher kein automatischer Major-Vorschlag.
+  # MinIO ist absichtlich auf ein lokal vorhandenes Tag gepinnt (siehe CLAUDE.md) und bleibt
+  # ausgenommen.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+      - dependency-name: minio/minio
+    groups:
+      docker-images-compose:
+        patterns: ["*"]
