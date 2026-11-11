@@ -24,6 +24,7 @@ import {
 } from "./darstellung";
 import { STANDARD_FILTER, ladeBerichte, type ArtReiter, type ListenFilter, type StatusFilter, type Zeitraum } from "./liste";
 import { SkeletonList } from "../Skeleton";
+import { Select } from "../apple/Select";
 
 function offenAnzahl(z: FehlerberichtZaehler): number {
   return OFFENE_STATUS.reduce((summe, s) => summe + z[s], 0);
@@ -218,11 +219,10 @@ export function FehlerberichtListe({
           ariaLabel={art === "idee" ? "Ideen durchsuchen" : art === "alle" ? "Fehler und Ideen durchsuchen" : "Fehlerberichte durchsuchen"}
           className="sm:col-span-2 lg:col-span-1"
         />
-        <select
+        <Select
           aria-label="Schweregrad"
           value={filter.schweregrad}
           onChange={(e) => setze({ schweregrad: e.target.value as FehlerberichtSchweregrad | "" })}
-          className="field-ap"
         >
           <option value="">{art === "idee" ? "Alle Prioritäten" : "Alle Schweregrade"}</option>
           {SCHWEREGRADE.map((s) => (
@@ -230,24 +230,22 @@ export function FehlerberichtListe({
               {SCHWEREGRAD_LABEL[s]}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           aria-label="Zeitraum"
           value={filter.zeitraum}
           onChange={(e) => setze({ zeitraum: e.target.value as Zeitraum })}
-          className="field-ap"
         >
           <option value="">Gesamter Zeitraum</option>
           <option value="24h">Letzte 24 Stunden</option>
           <option value="7d">Letzte 7 Tage</option>
           <option value="30d">Letzte 30 Tage</option>
-        </select>
+        </Select>
         {mitMandantFilter && (
-          <select
+          <Select
             aria-label="Mandant"
             value={filter.mandantId}
             onChange={(e) => setze({ mandantId: e.target.value })}
-            className="field-ap"
           >
             <option value="">Alle Mandanten</option>
             {mandanten?.map((m) => (
@@ -255,7 +253,7 @@ export function FehlerberichtListe({
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
       {abweichend && (

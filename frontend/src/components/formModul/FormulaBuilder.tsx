@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import type { FormelOperator, FormelTerm } from "../../utils/ruleFormulaBuilder";
 import { neuerTerm, parseFormel, serializeFormel } from "../../utils/ruleFormulaBuilder";
 import type { FormField } from "../../types";
+import { Select } from "../apple/Select";
 
 const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
@@ -85,43 +86,44 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
       {terme.map((term, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           {idx > 0 && (
-            <select
+            <Select
+              className="w-14 shrink-0"
               value={operatoren[idx - 1]}
               onChange={(e) => {
                 const nextOperatoren = [...operatoren];
                 nextOperatoren[idx - 1] = e.target.value as FormelOperator;
                 update(terme, nextOperatoren);
               }}
-              className="w-14 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-center text-sm text-label"
+              groesse="kompakt"
             >
               {(Object.keys(OPERATOR_LABEL) as FormelOperator[]).map((op) => (
                 <option key={op} value={op}>
                   {OPERATOR_LABEL[op]}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <select
+          <Select
+            className="w-20 shrink-0"
             value={term.art}
             onChange={(e) => {
               const next = [...terme];
               next[idx] = { art: e.target.value as "feld" | "zahl", wert: "" };
               update(next, operatoren);
             }}
-            className="w-20 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-sm text-label"
+            groesse="kompakt"
           >
             <option value="feld">Feld</option>
             <option value="zahl">Zahl</option>
-          </select>
+          </Select>
           {term.art === "feld" ? (
-            <select
+            <Select
               value={term.wert}
               onChange={(e) => {
                 const next = [...terme];
                 next[idx] = { ...term, wert: e.target.value };
                 update(next, operatoren);
               }}
-              className={inputClass}
             >
               <option value="">Feld wählen…</option>
               {rootFelder.map((f) => (
@@ -129,7 +131,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
                   {f.label.de ?? f.key}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <input
               type="number"

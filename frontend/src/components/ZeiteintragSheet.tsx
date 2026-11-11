@@ -10,6 +10,7 @@ import { BUCHUNGSSTATUS_LABEL, buchungsstatusGesperrt, buchungsstatusZuToken } f
 import { StatusPille } from "./apple/StatusPille";
 import { Sheet } from "./apple/Sheet";
 import { useBestaetigung } from "./ConfirmDialog";
+import { Select } from "./apple/Select";
 
 // Lokale Kopie von toLocalInputValue aus VorgangDetailPage.tsx -- dort eine
 // seiten-lokale Hilfsfunktion, kein geteiltes Modul (siehe dortiger
@@ -360,17 +361,16 @@ export function ZeiteintragSheet({
 
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kategorie</label>
-            <select id={`${uid}-0`}
+            <Select id={`${uid}-0`}
               value={kategorie}
               onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
-              className="field-ap"
             >
               {(eintrag?.kategorie === "freizeitausgleich" ? KATEGORIE_OPTIONEN_MIT_FZA : KATEGORIE_OPTIONEN).map((opt) => (
                 <option key={opt.wert} value={opt.wert}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
@@ -428,10 +428,9 @@ export function ZeiteintragSheet({
               </div>
               <div>
                 <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label2">Fahrzeug</label>
-                <select id={`${uid}-5`}
+                <Select id={`${uid}-5`}
                   value={fahrzeugId}
                   onChange={(e) => setFahrzeugId(e.target.value)}
-                  className="field-ap"
                 >
                   <option value="">—</option>
                   {fahrzeuge?.map((f) => (
@@ -439,7 +438,7 @@ export function ZeiteintragSheet({
                       {f.bezeichnung}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           )}

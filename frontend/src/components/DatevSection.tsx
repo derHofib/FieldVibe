@@ -14,6 +14,7 @@ import {
   type DatevEingabe,
 } from "../utils/datev";
 import { FehlerMeldung, Hinweiskasten } from "./Hinweiskasten";
+import { Select } from "./apple/Select";
 
 /** DATEV-Stammdaten (firmendaten.buchhaltung): Header des Buchungsstapels.
  * Gesendet wird `buchhaltung` samt den Erlöskonten, weil das Backend es als
@@ -91,35 +92,33 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
           <label htmlFor="datev-wj" className="mb-0.5 block text-xs text-label2">
             Wirtschaftsjahr beginnt im
           </label>
-          <select
+          <Select
             id="datev-wj"
             value={eingabe.wjBeginnMonat}
             onChange={(e) => setzeFeld("wjBeginnMonat", e.target.value)}
-            className="field-ap"
           >
             {MONATE.map((name, i) => (
               <option key={name} value={i + 1}>
                 {name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor="datev-skr" className="mb-0.5 block text-xs text-label2">
             Kontenrahmen
           </label>
-          <select
+          <Select
             id="datev-skr"
             value={eingabe.kontenrahmen}
             onChange={(e) => setzeFeld("kontenrahmen", e.target.value as DatevEingabe["kontenrahmen"])}
-            className="field-ap"
           >
             {KONTENRAHMEN.map((skr) => (
               <option key={skr} value={skr}>
                 {skr}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor="datev-laenge" className="mb-0.5 block text-xs text-label2">

@@ -6,6 +6,7 @@ import {
   LEITWEG_ID_FORMAT_HINWEIS,
   leitwegIdFehler,
 } from "../../utils/eRechnungVersand";
+import { Select } from "../apple/Select";
 
 /** Kundentypen, bei denen die E-Rechnung-Einstellungen sinnvoll sind (gewerblich); bei bereits
  * gesetzten Werten bleiben die Felder immer sichtbar, damit nichts unsichtbar weiterwirkt. */
@@ -58,18 +59,17 @@ export function ERechnungFelder({
         <label htmlFor={formatFeldId} className="mb-1 block text-xs text-label2">
           Format der E-Rechnung
         </label>
-        <select
+        <Select
           id={formatFeldId}
           value={format}
           onChange={(e) => onChange({ leitwegId, format: e.target.value as ERechnungFormat | "" })}
-          className="field-ap"
         >
           {E_RECHNUNG_FORMAT_OPTIONEN.map((o) => (
             <option key={o.wert} value={o.wert}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
         <p className="mt-1 text-xs text-label2">
           XRechnung verlangt zusätzlich Telefon, E-Mail und IBAN in den Firmendaten sowie die Leitweg-ID.
         </p>

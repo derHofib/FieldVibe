@@ -5,6 +5,7 @@ import { AnlegenPanel } from "./AnlegenPanel";
 import { useBestaetigung } from "./ConfirmDialog";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "./FormularFeld";
 import type { Ansprechpartner, Eskalationsstufe } from "../types";
+import { Select } from "./apple/Select";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -66,13 +67,12 @@ function AnsprechpartnerForm({
       </div>
       <Feld label="Eskalationsstufe">
         {(p) => (
-          <select
+          <Select
             {...p}
             value={form.eskalationsstufe ?? ""}
             onChange={(e) =>
               setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
             }
-            className={FELD_KLASSE}
           >
             <option value="">Keine Eskalationsstufe</option>
             {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
@@ -80,7 +80,7 @@ function AnsprechpartnerForm({
                 {ESKALATIONSSTUFE_LABEL[stufe]}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </Feld>
       <label className="btn-touch flex items-center gap-2 text-sm text-label">

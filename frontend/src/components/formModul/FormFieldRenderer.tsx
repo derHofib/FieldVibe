@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { planSymboleApi } from "../../api/endpoints";
 import { QrScanner } from "../QrScanner";
 import type { FormField, FotoPlanWert, PlanMarkierungLinie, PlanMarkierungSymbol } from "../../types";
+import { Select } from "../apple/Select";
 
 interface DateiAntwort {
   key: string;
@@ -533,14 +534,14 @@ export function FormFieldRenderer({
       return (
         <div className={wrapperClass}>
           {labelNode}
-          <select value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass}>
+          <Select value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly}>
             <option value="">Bitte wählen…</option>
             {werte.map((w) => (
               <option key={w} value={w}>
                 {w}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       );
     case "mehrfachauswahl": {

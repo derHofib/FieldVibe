@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import { leistungsverzeichnisApi, vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
 import type { ZeiterfassungKategorie } from "../types";
 import { SearchableSelect } from "./SearchableSelect";
+import { Select } from "./apple/Select";
 
 const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "verwaltung", label: "Verwaltung" },
@@ -144,17 +145,16 @@ export function ZeiterfassungManuellForm({
         <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label">
           Kategorie
         </label>
-        <select id={`${uid}-3`}
+        <Select id={`${uid}-3`}
           value={kategorie}
           onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
-          className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           {KATEGORIE_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {kategorie === "auftrag" && (
