@@ -1,4 +1,4 @@
-import { Ban, SearchX, ShieldOff, WifiOff } from "lucide-react";
+import { Ban, Lock, SearchX, WifiOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
@@ -42,7 +42,7 @@ export function FehlerZustand({
 }) {
   const navigate = useNavigate();
   const art = fehlerArt(fehler);
-  const icon = { kein_zugriff: ShieldOff, nicht_gefunden: SearchX, netz: WifiOff, sonst: Ban }[art];
+  const icon = { kein_zugriff: Lock, nicht_gefunden: SearchX, netz: WifiOff, sonst: Ban }[art];
   // Bei 403/404 bringt ein erneuter Versuch nichts.
   const erneutSinnvoll = !!onErneut && art !== "kein_zugriff" && art !== "nicht_gefunden";
   const text = TEXTE[art](was);
@@ -54,7 +54,7 @@ export function FehlerZustand({
         text={text}
         action={
           erneutSinnvoll || zurueck ? (
-            <div className="mt-1 flex flex-wrap justify-center gap-2">
+            <>
               {zurueck && (
                 <button type="button" className="btn-touch btn-ap px-4" onClick={() => navigate(-1)}>
                   Zurück
@@ -65,7 +65,7 @@ export function FehlerZustand({
                   Erneut versuchen
                 </button>
               )}
-            </div>
+            </>
           ) : undefined
         }
       />
