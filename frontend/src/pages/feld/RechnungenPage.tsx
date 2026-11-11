@@ -59,7 +59,7 @@ function AngeboteListe() {
     <div className="space-y-4">
       <button
         onClick={() => setShowForm(true)}
-        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap-primary px-4"
       >
         + Neues Angebot
       </button>
@@ -225,7 +225,7 @@ export function RechnungenPage() {
         <>
           <button
             onClick={() => setZeigeNeu(true)}
-            className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+            className="btn-touch btn-ap-primary px-4"
           >
             + Neue Rechnung
           </button>
@@ -338,7 +338,7 @@ export function RechnungenPage() {
                 text="Keine Rechnungen für diesen Filter."
                 action={
                   hatRecht("abrechnung", "erstellen") ? (
-                    <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap btn-ap-primary px-4">
+                    <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap px-4">
                       + Neue Rechnung
                     </button>
                   ) : undefined

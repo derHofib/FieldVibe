@@ -78,7 +78,7 @@ export function MandantenPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-label">Mandanten</h2>
-        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap px-4 py-2 text-sm font-medium">
+        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap-primary px-4">
           + Neuer Mandant
         </button>
       </div>

@@ -233,7 +233,7 @@ export function AccountTypenPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-touch btn-ap px-4 py-2 text-sm font-medium" onClick={() => setZeigeNeu(true)}>
+          <button type="button" className="btn-touch btn-ap-primary px-4" onClick={() => setZeigeNeu(true)}>
             + Neuer Account-Typ
           </button>
           <button type="button" className="btn-touch btn-ap px-4 py-2 text-sm font-medium" onClick={() => setZeigeVorlage(true)}>

@@ -114,7 +114,7 @@ export function KundenPage() {
 
       <button
         onClick={() => setShowForm(true)}
-        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap-primary px-4"
       >
         + Neuer Kunde
       </button>
@@ -267,7 +267,7 @@ export function KundenPage() {
             text="Keine Kunden vorhanden."
             action={
               hatRecht("kunden", "erstellen") ? (
-                <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap btn-ap-primary px-4">
+                <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4">
                   + Neuer Kunde
                 </button>
               ) : undefined

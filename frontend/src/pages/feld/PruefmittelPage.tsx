@@ -105,7 +105,7 @@ export function PruefmittelPage() {
 
       <button
         onClick={() => setShowForm(true)}
-        className="btn-touch rounded-md btn-ap-primary px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap-primary px-4"
       >
         + Neues Prüfmittel
       </button>

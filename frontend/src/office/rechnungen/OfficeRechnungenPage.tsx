@@ -177,7 +177,7 @@ export function OfficeRechnungenPage() {
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
         <button
           onClick={() => setZeigeNeu((v) => !v)}
-          className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-semibold text-label hover:text-label dark:hover:text-label3"
+          className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
         >
           <Plus size={13} strokeWidth={2.5} />
           {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}

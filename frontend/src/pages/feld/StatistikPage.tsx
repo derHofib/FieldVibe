@@ -153,7 +153,7 @@ export function StatistikPage() {
         {kannErfassen && (
           <button
             onClick={() => setFormularOffen(true)}
-            className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
+            className="btn-touch btn-ap-primary px-4"
           >
             + Zeit erfassen
           </button>
@@ -237,7 +237,7 @@ export function StatistikPage() {
             <div className="mt-2 flex items-center justify-end border-t border-sep pt-2 ">
               <button
                 onClick={exportieren}
-                className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+                className="btn-touch btn-ap px-4"
               >
                 <FileText size={15} strokeWidth={2} /> Als PDF exportieren
               </button>

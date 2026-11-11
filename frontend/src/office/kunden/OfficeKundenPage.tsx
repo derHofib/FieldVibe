@@ -122,7 +122,7 @@ export function OfficeKundenPage() {
               text="Noch keine Kunden angelegt."
               action={
                 hatRecht("kunden", "erstellen") ? (
-                  <button type="button" onClick={() => setNeu(true)} className="btn-ap btn-ap-primary px-4 py-2 text-sm">
+                  <button type="button" onClick={() => setNeu(true)} className="btn-ap px-4 py-2 text-sm">
                     Neuer Kunde
                   </button>
                 ) : undefined

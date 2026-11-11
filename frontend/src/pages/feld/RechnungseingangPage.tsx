@@ -142,14 +142,14 @@ export function RechnungseingangPage() {
             <button
               onClick={() => importInputRef.current?.click()}
               disabled={eRechnungMutation.isPending}
-              className="btn-touch flex items-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50"
+              className="btn-touch btn-ap px-4"
             >
               <FileUp size={14} strokeWidth={2} aria-hidden="true" />
               {eRechnungMutation.isPending ? "Importiert…" : "E-Rechnung importieren"}
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+              className="btn-touch btn-ap-primary px-4"
             >
               + Neue Eingangsrechnung
             </button>

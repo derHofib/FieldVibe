@@ -91,7 +91,7 @@ export function PartnerPage() {
 
       <button
         onClick={() => setShowForm(true)}
-        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap-primary px-4"
       >
         + Neuer Partner
       </button>

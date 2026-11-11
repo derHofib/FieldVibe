@@ -62,7 +62,7 @@ export function DauerauftraegePage() {
 
       <button
         onClick={() => navigate("/dauerauftraege/neu")}
-        className="btn-touch w-full rounded-md btn-ap-primary py-2 font-medium"
+        className="btn-touch btn-ap-primary w-full px-4"
       >
         + Neuer Dauer-Auftrag
       </button>
