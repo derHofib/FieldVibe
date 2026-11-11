@@ -9,6 +9,7 @@ import { IconBadge } from "../components/IconBadge";
 import { NAV_KATEGORIE_REIHENFOLGE, NAV_SEITEN } from "../config/navSeiten";
 import { Select } from "../components/apple/Select";
 import type { NavKategorienRead } from "../types";
+import { SeitenKopf } from "./OfficeUi";
 
 interface LokaleKategorie {
   localId: string;
@@ -134,13 +135,13 @@ export function OfficeNavKategorienPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+        <button onClick={() => navigate(-1)} className="mb-1 text-sm text-label2">
           ‹ Zurück
         </button>
-        <h1 className="mt-1 text-lg font-bold text-label">Menü-Kategorien</h1>
-        <p className="mt-1 text-sm text-label2">
+        <SeitenKopf titel="Menü-Kategorien" />
+        <p className="-mt-2 text-sm text-label2">
           Bestimmt, wie die Office-Seitenleiste gruppiert. Gilt für alle Nutzer dieses Mandanten.
         </p>
       </div>

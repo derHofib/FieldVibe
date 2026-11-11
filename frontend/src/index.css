@@ -21,7 +21,10 @@
   --win: #ffffff;
   --card: #ffffff;
   --insp: #f7f7f9;
-  --side: rgba(242, 242, 246, 0.94);
+  /* Heller als der graue Office-Inhalt (--gbg), sonst verschmelzen Seitenleiste
+     und Inhalt im Hell-Modus (beide ~#f2f2f7). Hellerer Grund hebt zugleich
+     den Kontrast von text-label2 in der Seitenleiste. */
+  --side: rgba(250, 250, 252, 0.94);
   --bar: rgba(249, 249, 251, 0.9);
   --menu: rgba(255, 255, 255, 0.96);
   --fill: rgba(118, 118, 128, 0.12);
@@ -435,6 +438,41 @@ body {
   border: 0.5px solid var(--sep);
   border-radius: var(--radius-ap-card);
   box-shadow: var(--shadow-card);
+}
+
+/* Office: Karten sind reine Flaechen auf dem grauen Inhalt (--gbg), ohne
+   Schatten und Rand -- die Stufe Karte/Hintergrund traegt die Gliederung,
+   Haarlinien stehen nur in Tabellen/Kopfzeilen. Rand bleibt transparent
+   statt "none", damit Inline-Ringe (Auswahlmarkierung) weiter greifen. Die
+   Feld-App bleibt unberuehrt, weil der Selektor am Office-Wrapper haengt. */
+.office-flaechen .card-ap {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+/* Detail-Panel (ListeMitPanel, Vorgangs-Detail): eine einzige Flaeche, die
+   Abschnitte darin sind keine eigenen Karten mehr, sondern durch eine
+   Haarlinie getrennt (sonst Karte-in-Karte-in-Karte). */
+.office-flaechen .office-panel .card-ap {
+  background-color: transparent;
+  border-width: 0 0 0.5px 0;
+  border-color: var(--sep);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.office-flaechen .office-panel .card-ap:last-child {
+  border-bottom-width: 0;
+}
+
+/* Uebernommene Feld-Seiten (SchmaleSpalte) haben eigene, kleinere Seiten-
+   titel; hier auf die Groesse von SeitenKopf gebracht. Titel innerhalb
+   von Karten (Detail-Ueberschriften) bleiben, wie sie sind. */
+.office-schmal h1:not(.card-ap h1) {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .btn-ap {

@@ -197,17 +197,18 @@ export function VorgaengeListe({
         className="w-[10px] shrink-0 cursor-col-resize self-stretch hover:bg-tint/20"
       />
 
-      <Karte className="max-h-[calc(100vh-13rem)] min-w-0 flex-1 overflow-y-auto p-4">
+      <Karte className="office-panel max-h-[calc(100vh-13rem)] min-w-0 flex-1 overflow-y-auto p-4">
         {aktiv ? (
-          <div>
-            <div className="mb-3 flex justify-end">
+          <VorgangDetailPage
+            id={aktiv}
+            layout="dicht"
+            kopfAktionen={
               <button onClick={() => navigate(`/vorgaenge/${aktiv}/vollbild`)} className="btn-ap text-xs">
                 <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
                 Ganze Seite
               </button>
-            </div>
-            <VorgangDetailPage id={aktiv} layout="dicht" />
-          </div>
+            }
+          />
         ) : (
           <p className="py-10 text-center text-sm text-label2">Links einen Vorgang auswählen.</p>
         )}

@@ -35,6 +35,8 @@ export function KundeProfilePage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
+  // Im Office-Panel steht der Seitentitel (h1) schon in SeitenKopf.
+  const Titel = eingebettet ? "h2" : "h1";
   const [anlageFilter, setAnlageFilter] = useState("");
   // Aktiver Tab im Query-Parameter, damit Reload/Deep-Link denselben Tab zeigen.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,7 +99,7 @@ export function KundeProfilePage({
         )}
         <div className="card-ap p-4">
           <div className="text-xs text-label2">{kunde.kundennummer}</div>
-          <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
+          <Titel className="text-lg font-bold text-label">{kunde.name}</Titel>
           {kunde.typ && <span className="text-sm text-label2">{kundeTypLabel(kunde.typ)}</span>}
         </div>
       </div>
@@ -149,7 +151,7 @@ export function KundeProfilePage({
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">{profil.kundennummer}</div>
-            <h1 className="text-lg font-bold text-label">{profil.name}</h1>
+            <Titel className="text-lg font-bold text-label">{profil.name}</Titel>
             {profil.typ && <span className="text-sm text-label2">{kundeTypLabel(profil.typ)}</span>}
           </div>
           {menueEintraege.length > 0 && (

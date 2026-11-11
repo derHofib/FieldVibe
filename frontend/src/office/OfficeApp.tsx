@@ -110,7 +110,7 @@ export function OfficeApp() {
           <Route
             path="/vorgaenge/:id/vollbild"
             element={
-              <div className="mx-auto max-w-[1400px]">
+              <div className="max-w-[1400px]">
                 <VorgangDetailPage layout="dicht" breit />
               </div>
             }
@@ -122,7 +122,7 @@ export function OfficeApp() {
           <Route
             path="/leistungsverzeichnis"
             element={
-              <div className="mx-auto max-w-[1400px]">
+              <div className="max-w-[1400px]">
                 <LeistungsverzeichnisPage layout="dicht" />
               </div>
             }
@@ -130,7 +130,7 @@ export function OfficeApp() {
           <Route
             path="/leistungsverzeichnis/:id"
             element={
-              <div className="mx-auto max-w-[1400px]">
+              <div className="max-w-[1400px]">
                 <LeistungsverzeichnisDetailPage layout="dicht" />
               </div>
             }
@@ -141,7 +141,7 @@ export function OfficeApp() {
           <Route
             path="/statistik"
             element={
-              <div className="mx-auto max-w-[1400px]">
+              <div className="max-w-[1400px]">
                 <OfficeArbeitszeitPage />
               </div>
             }
@@ -151,7 +151,7 @@ export function OfficeApp() {
           <Route
             path="/account-typen"
             element={
-              <div className="mx-auto max-w-[1400px]">
+              <div className="max-w-[1400px]">
                 <AccountTypenPage />
               </div>
             }
@@ -215,7 +215,7 @@ export function OfficeApp() {
 // deshalb bekommen sie hier eine begrenzte Lesespalte statt der vollen Breite.
 function SchmaleSpalte() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="office-schmal max-w-3xl">
       <Outlet />
     </div>
   );

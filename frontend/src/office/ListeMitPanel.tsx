@@ -28,9 +28,10 @@ export function ListeMitPanel({
     >
       <div className="min-w-0">{liste}</div>
       {panel !== null && (
-        <Karte className="sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto">
+        <Karte className="office-panel sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto">
           <section aria-label={panelTitel}>
-            <div className="flex justify-end px-2 pt-2">
+            <div className="flex items-center justify-between border-b-[0.5px] border-sep py-1.5 pr-2 pl-4">
+              <span className="text-xs font-semibold text-label2">{panelTitel}</span>
               <button
                 onClick={onSchliessen}
                 aria-label="Panel schließen"
