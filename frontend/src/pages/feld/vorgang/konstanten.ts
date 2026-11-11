@@ -1,12 +1,14 @@
 import { datumZuIso } from "../../../utils/format";
 import type {
   Adresse,
+  EmailLog,
   Leistungstyp,
   MangelSchweregrad,
   MangelStatus,
   PartnerFreigabeStatus,
   TerminStatus,
   VorgangAbrechnungsart,
+  VorgangEvent,
   VorgangStatus,
 } from "../../../types";
 
@@ -184,3 +186,5 @@ export function adresseAlsZeile(adresse: Adresse | null | undefined): string {
     .filter(Boolean)
     .join(", ");
 }
+
+export type VerlaufEintrag = { art: "event"; zeit: string; event: VorgangEvent } | { art: "email"; zeit: string; email: EmailLog };
