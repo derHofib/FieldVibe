@@ -431,7 +431,7 @@ export function UebersichtAbschnitt({
         {vorgang.dauerauftrag_id ? (
           <span
             title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
-            className="border border-sep px-2 py-1 text-xs text-label"
+            className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-1 text-xs text-label"
           >
             Priorität {vorgang.prioritaet} (automatisch)
           </span>
@@ -458,7 +458,7 @@ export function UebersichtAbschnitt({
             setFolgeAuftragLeistungstyp("stoerung");
             setShowFolgeAuftragDialog(true);
           }}
-          className="btn-touch border border-sepstrong px-3 py-1 text-xs font-medium text-label hover:bg-fill"
+          className="btn-touch btn-ap px-3 py-1 text-xs"
         >
           + Folge-Vorgang
         </button>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -1342,10 +1342,10 @@ export function VorgangDetailPage({
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
           <div className="space-y-1.5">
             {verknuepfteAufgaben!.map((a) => (
-              <div key={a.id} className="border border-sepstrong p-2 text-sm">
+              <div key={a.id} className="rounded-[var(--radius-ap-md)] bg-fill p-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-label">{a.titel}</p>
-                  <span className="shrink-0 border border-sep px-2 py-0.5 text-xs font-medium text-label">
+                  <span className="shrink-0 rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label">
                     {a.prioritaet}
                   </span>
                 </div>
@@ -1541,7 +1541,7 @@ export function VorgangDetailPage({
       </div>
 
       {aktionsFehler && (
-        <div className="flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ap-md)] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
           </span>
@@ -1557,17 +1557,17 @@ export function VorgangDetailPage({
       {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
         <div className="flex flex-wrap gap-1.5">
           {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
+            <span className="flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-xs font-medium text-label">
               <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
             </span>
           )}
           {vorgang.faelligkeit_am && (
             <span
-              className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-xs font-medium ${
                 vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                  ? "border-st-fehlt text-st-fehlt"
-                  : "border-sep text-label"
+                  ? "bg-st-fehlt-bg text-st-fehlt"
+                  : "bg-fill text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
@@ -1581,8 +1581,8 @@ export function VorgangDetailPage({
             </span>
           )}
           {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="flex items-center gap-1.5 border border-dashed border-st-arbeit px-2.5 py-1 text-xs font-medium text-st-arbeit">
-              <UserPlus size={13} strokeWidth={1.5} /> Nicht zugewiesen
+            <span className="inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-xs font-semibold text-label">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-label3" aria-hidden="true" /> Nicht zugewiesen
             </span>
           )}
         </div>
@@ -1702,7 +1702,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
           >
             <span className="text-[11px] text-label2">Zeit</span>
             <span className="text-sm font-semibold text-label">
@@ -1711,7 +1711,7 @@ export function VorgangDetailPage({
           </button>
           <a
             href="#abschnitt-termine"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
           >
             <span className="text-[11px] text-label2">Nächster Termin</span>
             <span className="text-sm font-semibold text-label">
@@ -1722,7 +1722,7 @@ export function VorgangDetailPage({
           </a>
           <a
             href="#abschnitt-maengel"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
           >
             <span className="text-[11px] text-label2">Mängel</span>
             <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
@@ -1732,7 +1732,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
           >
             <span className="text-[11px] text-label2">Positionen</span>
             <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
@@ -1740,7 +1740,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 rounded-[var(--radius-ap-card)] bg-card px-3 py-2 text-left hover:bg-fill"
           >
             <span className="text-[11px] text-label2">Verlauf</span>
             <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>

@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { Select } from "../../components/apple/Select";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
@@ -525,10 +526,10 @@ export function FeedPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select
+            <Select
+              groesse="kompakt"
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -536,11 +537,11 @@ export function FeedPage() {
                   {k.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
+              groesse="kompakt"
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -548,7 +549,7 @@ export function FeedPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </Select>
             <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
               <input
                 type="date"
@@ -572,14 +573,14 @@ export function FeedPage() {
               placeholder="#Tag"
               className="field-ap"
             />
-            <select
+            <Select
+              groesse="kompakt"
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
-            </select>
+            </Select>
           </div>
         </div>
       )}

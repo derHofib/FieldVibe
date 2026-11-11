@@ -70,15 +70,15 @@ export function TeamKennzahlen() {
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2">
-            <div className="border border-sep bg-fill p-3 text-center">
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
               <div className="text-xl font-bold text-label">{kennzahlen.offene_vorgaenge_gesamt}</div>
               <div className="text-xs text-label2">Offene Vorgänge</div>
             </div>
-            <div className="border border-sep bg-fill p-3 text-center">
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
               <div className="text-xl font-bold text-label">{kennzahlen.abgeschlossene_vorgaenge_zeitraum}</div>
               <div className="text-xs text-label2">Abgeschlossen</div>
             </div>
-            <div className="border border-sep bg-fill p-3 text-center">
+            <div className="rounded-[var(--radius-ap-card)] bg-fill p-3 text-center">
               <div className="text-xl font-bold text-label">
                 {kennzahlen.durchschnittliche_durchlaufzeit_tage !== null
                   ? `${kennzahlen.durchschnittliche_durchlaufzeit_tage} T.`
