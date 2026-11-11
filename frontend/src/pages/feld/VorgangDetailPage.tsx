@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
 import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -95,11 +95,15 @@ export function VorgangDetailPage({
   // eine feste zweite Spalte fuer den Verlauf (immer sichtbar statt Tab,
   // siehe verlaufSpalteBreit unten), in der schmalen Spalte nicht.
   breit = false,
+  // Nur "dicht": zusaetzliche Aktionen in der Kopfzeile (Office-Panel:
+  // "Ganze Seite"), damit Zurueck, Aktionen und Menue eine Zeile teilen.
+  kopfAktionen,
 }: {
   id?: string;
   layout?: "kompakt" | "dicht";
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
   breit?: boolean;
+  kopfAktionen?: ReactNode;
 } = {}) {
   const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
@@ -1261,6 +1265,7 @@ export function VorgangDetailPage({
         bestaetigen={bestaetigen}
         uebernehmenMutation={uebernehmenMutation}
         uebernehmenKlebt={uebernehmenKlebt}
+        primaerAktionKlebt={primaerAktionKlebt}
         showWartetKundeDialog={showWartetKundeDialog}
         mandantEinstellungen={mandantEinstellungen}
         wiedervorlageTage={wiedervorlageTage}
@@ -1503,10 +1508,12 @@ export function VorgangDetailPage({
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${layout === "dicht" ? "gap-2 border-b-[0.5px] border-sep pb-2" : ""}`}>
         <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
+        <div className="flex items-center gap-2">
+        {layout === "dicht" && kopfAktionen}
         {kannLoeschen && (
           <PulldownMenu
             ariaLabel="Weitere Aktionen"
@@ -1538,6 +1545,7 @@ export function VorgangDetailPage({
             )}
           />
         )}
+        </div>
       </div>
 
       {aktionsFehler && (

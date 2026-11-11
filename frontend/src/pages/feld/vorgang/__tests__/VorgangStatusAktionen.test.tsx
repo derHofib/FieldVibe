@@ -20,6 +20,13 @@ describe("VorgangStatusAktionen", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("macht den Schritt sekundär, wenn die Seite schon eine Primäraktion zeigt", () => {
+    const { rerender } = render(<VorgangStatusAktionen status="neu" darfAendern pending={false} onWaehle={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Starten/ }).className).toContain("btn-ap-primary");
+    rerender(<VorgangStatusAktionen status="neu" darfAendern pending={false} onWaehle={vi.fn()} primaer={false} />);
+    expect(screen.getByRole("button", { name: /Starten/ }).className).not.toContain("btn-ap-primary");
+  });
+
   it("bietet 'abgerechnet' nie als setzbaren Status an", () => {
     render(<VorgangStatusAktionen status="neu" darfAendern pending={false} onWaehle={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /Status ändern/ }));

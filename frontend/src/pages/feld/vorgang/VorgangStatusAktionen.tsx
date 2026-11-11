@@ -27,11 +27,14 @@ export function VorgangStatusAktionen({
   darfAendern,
   pending,
   onWaehle,
+  primaer = true,
 }: {
   status: VorgangStatus;
   darfAendern: boolean;
   pending: boolean;
   onWaehle: (status: VorgangStatus) => void;
+  /** Auf false, wenn die Seite schon eine gefüllte Primäraktion zeigt (klebende Leiste): pro Ansicht nur eine. */
+  primaer?: boolean;
 }) {
   const bestaetigen = useBestaetigung();
   const schritt = NAECHSTER_SCHRITT[status];
@@ -56,7 +59,7 @@ export function VorgangStatusAktionen({
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <StatusPille status={vorgangStatusZuToken(status)} label={STATUS_LABEL[status]} />
       {darfAendern && schritt && (
-        <button onClick={() => onWaehle(schritt.nach)} disabled={pending} className="btn-touch btn-ap-primary px-4">
+        <button onClick={() => onWaehle(schritt.nach)} disabled={pending} className={`btn-touch px-4 ${primaer ? "btn-ap-primary" : "btn-ap"}`}>
           <schritt.icon size={15} strokeWidth={2} aria-hidden="true" /> {schritt.label}
         </button>
       )}

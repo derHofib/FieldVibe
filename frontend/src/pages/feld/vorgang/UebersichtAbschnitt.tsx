@@ -62,6 +62,7 @@ export function UebersichtAbschnitt({
   bestaetigen,
   uebernehmenMutation,
   uebernehmenKlebt = false,
+  primaerAktionKlebt = false,
   showWartetKundeDialog,
   mandantEinstellungen,
   wiedervorlageTage,
@@ -120,6 +121,8 @@ export function UebersichtAbschnitt({
   uebernehmenMutation: UseMutationResult<Vorgang, unknown, void, unknown>;
   /** Klebende Leiste der Detailseite bietet "Vorgang übernehmen" schon an -- Karten-Button entfällt dann. */
   uebernehmenKlebt?: boolean;
+  /** Klebende Leiste ist die gefüllte Primäraktion der Seite -- der Status-Schritt in der Karte wird dann sekundär. */
+  primaerAktionKlebt?: boolean;
   showWartetKundeDialog: boolean;
   mandantEinstellungen: MandantEinstellungen | undefined;
   wiedervorlageTage: string;
@@ -417,6 +420,7 @@ export function UebersichtAbschnitt({
         status={vorgang.status}
         darfAendern={kannDisponieren}
         pending={statusMutation.isPending}
+        primaer={!primaerAktionKlebt}
         onWaehle={(status) => {
           if (status === "wartet_kunde") {
             setWiedervorlageTage("");
@@ -488,7 +492,7 @@ export function UebersichtAbschnitt({
                 uebernehmenMutation.mutate();
               }}
               disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
-              className="btn-touch btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-xs disabled:cursor-not-allowed"
+              className="btn-touch btn-ap flex items-center gap-1 px-3 py-1.5 text-xs disabled:cursor-not-allowed"
             >
               <UserCheck size={13} strokeWidth={2} />
               {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Vorgang übernehmen"}
