@@ -111,6 +111,26 @@ export function VorgangDetailPage({
   // werden die Abschnitte zu echten Tabs (ein Panel sichtbar) statt der
   // mobilen Anker-Scroll-Liste (alle Abschnitte untereinander).
   const [desktopTab, setDesktopTab] = useState(ANCHOR_ABSCHNITTE[0].ziel);
+  const [aktiverAnker, setAktiverAnker] = useState(ANCHOR_ABSCHNITTE[0].ziel);
+  const tabNavRef = useRef<HTMLElement>(null);
+  const [tabNavRand, setTabNavRand] = useState({ links: false, rechts: false });
+  const tabNavRandAktualisieren = () => {
+    const el = tabNavRef.current;
+    if (!el) return;
+    const links = el.scrollLeft > 2;
+    const rechts = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+    setTabNavRand((alt) => (alt.links === links && alt.rechts === rechts ? alt : { links, rechts }));
+  };
+  // Weicher Auslauf nur dort, wo noch Tabs verdeckt sind.
+  const tabNavMaske = `linear-gradient(to right, ${tabNavRand.links ? "transparent, black 28px" : "black, black 28px"}, ${
+    tabNavRand.rechts ? "black calc(100% - 28px), transparent" : "black calc(100% - 28px), black"
+  })`;
+  // Aktiver Tab soll beim Mount/Wechsel nie hinter dem Rand verschwinden; kein Effekt, solange die Leiste (Ladezustand) fehlt.
+  useEffect(() => {
+    const el = tabNavRef.current;
+    el?.querySelector<HTMLElement>("[data-aktiv]")?.scrollIntoView?.({ inline: "center", block: "nearest" });
+    tabNavRandAktualisieren();
+  });
   const istAktiverTab = (ziel: string) => layout !== "dicht" || desktopTab === ziel;
   const tabPanelProps = (ziel: string) =>
     layout === "dicht" ? { role: "tabpanel" as const, "aria-labelledby": `tab-${ziel}` } : {};
@@ -992,6 +1012,12 @@ export function VorgangDetailPage({
             ? { label: "Zeit erfassen", onClick: () => navigate(`/vorgaenge/${id}/zeit`) }
             : null;
 
+  // Klebende Leiste nur im Feld-App-Layout der Hauptseite; dann ersetzt sie
+  // den gleichlautenden Button in der Übersichts-Karte (UebersichtAbschnitt).
+  const primaerAktionKlebt = layout !== "dicht" && ansicht === "voll" && !!primaerAktion;
+  const uebernehmenKlebt =
+    primaerAktionKlebt && !vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status);
+
   // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
   // Abschnitt 6.1/6.2) -- eine Zeile ist auswaehlbar, wenn sie zu einem der
   // Sammel-Endpunkte passt: vermerkt/vorgemerkt fuer eigene Eintraege oder
@@ -1234,6 +1260,7 @@ export function VorgangDetailPage({
         currentUser={currentUser}
         bestaetigen={bestaetigen}
         uebernehmenMutation={uebernehmenMutation}
+        uebernehmenKlebt={uebernehmenKlebt}
         showWartetKundeDialog={showWartetKundeDialog}
         mandantEinstellungen={mandantEinstellungen}
         wiedervorlageTage={wiedervorlageTage}
@@ -1467,7 +1494,15 @@ export function VorgangDetailPage({
   }
 
   return (
-    <div className={`space-y-4 ${layout !== "dicht" && primaerAktion ? "pb-20" : ""}`}>
+    <div
+      className="space-y-4"
+      // Leiste (44px) + Abstand zur Bottom-Nav + Safe-Area + Luft, damit die letzte Karte nie darunter liegt.
+      style={
+        primaerAktionKlebt
+          ? { paddingBottom: "calc(44px + var(--klebe-abstand) + env(safe-area-inset-bottom, 0px) + 1.5rem)" }
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
@@ -1588,7 +1623,13 @@ export function VorgangDetailPage({
             ))}
         </div>
       ) : (
-        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-sm [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
+        <nav
+          ref={tabNavRef}
+          aria-label="Vorgangs-Abschnitte"
+          onScroll={tabNavRandAktualisieren}
+          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-sm"
+          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
+        >
           {ANCHOR_ABSCHNITTE.map((a) => {
             // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
             // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
@@ -1608,7 +1649,12 @@ export function VorgangDetailPage({
               <a
                 key={a.ziel}
                 href={`#${a.ziel}`}
-                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
+                onClick={() => setAktiverAnker(a.ziel)}
+                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
+                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
+                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
+                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
+                }`}
               >
                 {a.label}
               </a>
@@ -1759,13 +1805,17 @@ export function VorgangDetailPage({
         </div>
       </Sheet>
 
-      {layout !== "dicht" && ansicht === "voll" && primaerAktion && (
-        <div className="fixed inset-x-0 z-30 flex justify-center px-3" style={{ bottom: "var(--klebe-abstand)" }}>
+      {primaerAktionKlebt && primaerAktion && (
+        // Verlauf unterlegt die Leiste, damit durchscrollender Text nicht mit dem Button kollidiert.
+        <div
+          className="pointer-events-none fixed inset-x-0 z-30 flex justify-center bg-gradient-to-t from-gbg via-gbg/90 to-transparent px-3 pt-6 pb-2"
+          style={{ bottom: "calc(var(--klebe-abstand) - 0.5rem)" }}
+        >
           <button
             type="button"
             onClick={primaerAktion.onClick}
             disabled={primaerAktion.disabled}
-            className="btn-touch btn-ap-primary w-full max-w-md disabled:opacity-50"
+            className="btn-touch btn-ap-primary pointer-events-auto w-full max-w-md disabled:opacity-50"
           >
             {primaerAktion.label}
           </button>

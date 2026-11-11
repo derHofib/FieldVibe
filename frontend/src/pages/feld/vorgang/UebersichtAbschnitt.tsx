@@ -60,6 +60,7 @@ export function UebersichtAbschnitt({
   currentUser,
   bestaetigen,
   uebernehmenMutation,
+  uebernehmenKlebt = false,
   showWartetKundeDialog,
   mandantEinstellungen,
   wiedervorlageTage,
@@ -116,6 +117,8 @@ export function UebersichtAbschnitt({
   currentUser: CurrentUser | undefined;
   bestaetigen: ReturnType<typeof useBestaetigung>;
   uebernehmenMutation: UseMutationResult<Vorgang, unknown, void, unknown>;
+  /** Klebende Leiste der Detailseite bietet "Vorgang übernehmen" schon an -- Karten-Button entfällt dann. */
+  uebernehmenKlebt?: boolean;
   showWartetKundeDialog: boolean;
   mandantEinstellungen: MandantEinstellungen | undefined;
   wiedervorlageTage: string;
@@ -471,7 +474,7 @@ export function UebersichtAbschnitt({
               "Nicht zugewiesen"
             )}
           </span>
-          {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
+          {currentUser?.darf_vorgaenge_selbst_uebernehmen && !uebernehmenKlebt && (
             <button
               onClick={async () => {
                 if (
