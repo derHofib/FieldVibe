@@ -299,7 +299,7 @@ export function UsersPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
           )}
@@ -310,7 +310,7 @@ export function UsersPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {!kannEingeladenWerden && (
@@ -322,7 +322,7 @@ export function UsersPage() {
                 minLength={MIN_PASSWORT_LAENGE}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
               <p className="mt-1 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             </div>
@@ -401,7 +401,7 @@ export function UsersPage() {
         </form>
         {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
         {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border border-st-erledigt px-4 py-3 text-sm text-st-erledigt ">
+          <div className="mt-3 flex flex-wrap items-center gap-3 border rounded-[var(--radius-ap-md)] border-st-erledigt px-4 py-3 text-sm text-st-erledigt ">
             <span>
               Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
             </span>
@@ -433,7 +433,7 @@ export function UsersPage() {
                     <td className="px-4 py-3 text-label">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`border px-2 py-0.5 text-xs font-semibold ${
+                        className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${
                           e.abgelaufen
                             ? "border-st-arbeit text-st-arbeit "
                             : "border-sep text-label2"
@@ -501,7 +501,7 @@ export function UsersPage() {
                     {isSuperAdmin && u.mandant_id ? ` · ${mandantNameById.get(u.mandant_id) ?? "–"}` : ""}
                   </p>
                   <span
-                    className={`mt-1.5 inline-block border px-2 py-0.5 text-xs font-semibold ${
+                    className={`mt-1.5 inline-block border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${
                       u.aktiv ? "border-st-erledigt text-st-erledigt" : "border-sep text-label2"
                     }`}
                   >
@@ -539,7 +539,7 @@ export function UsersPage() {
                   )}
                   <td className="px-4 py-3">
                     <span
-                      className={`border px-2 py-0.5 text-xs font-semibold ${
+                      className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${
                         u.aktiv
                           ? "border-st-erledigt text-st-erledigt "
                           : "border-sep text-label2"
@@ -595,7 +595,7 @@ export function UsersPage() {
                 value={loeschBestaetigung}
                 onChange={(e) => setLoeschBestaetigung(e.target.value)}
                 autoComplete="off"
-                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
             {deleteError && <p className="text-sm text-st-fehlt">{deleteError}</p>}

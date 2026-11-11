@@ -96,7 +96,7 @@ export function MandantenPage() {
               onChange={(e) => setName(e.target.value)}
               aria-invalid={!!feldFehler.name}
               aria-describedby={feldFehler.name ? `${uid}-name-fehler` : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {feldFehler.name && (
               <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -114,7 +114,7 @@ export function MandantenPage() {
               onChange={(e) => setSlug(e.target.value)}
               aria-invalid={!!feldFehler.slug}
               aria-describedby={feldFehler.slug ? `${uid}-slug-fehler` : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {feldFehler.slug && (
               <p id={`${uid}-slug-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -130,7 +130,7 @@ export function MandantenPage() {
               id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {formError && (

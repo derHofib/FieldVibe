@@ -48,14 +48,14 @@ export function RegistrierenPage() {
           </h1>
 
           {!token && (
-            <p className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
               Der Link ist unvollständig. Bitte den Einladungslink erneut vom Absender anfordern.
             </p>
           )}
 
           <form onSubmit={handleSubmit}>
             {error && (
-              <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
                 {error}
               </div>
             )}

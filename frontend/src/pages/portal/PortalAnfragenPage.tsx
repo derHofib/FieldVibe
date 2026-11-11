@@ -123,7 +123,7 @@ function NeueAnfrage() {
               onChange={(e) => setTitel(e.target.value)}
               aria-invalid={!!titelFehler}
               aria-describedby={titelFehler ? "portal-anfrage-titel-fehler" : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {titelFehler && (
               <p id="portal-anfrage-titel-fehler" role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -140,7 +140,7 @@ function NeueAnfrage() {
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={3}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-label"
+              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent p-2 text-label"
             />
           </div>
           <div>
@@ -204,7 +204,7 @@ function NeueAnfrage() {
                   placeholder="z.B. Filiale Nord"
                   aria-invalid={!!standortFehler}
                   aria-describedby={standortFehler ? "portal-anfrage-standort-fehler" : undefined}
-                  className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
+                  className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm text-label"
                 />
                 <button
                   type="button"

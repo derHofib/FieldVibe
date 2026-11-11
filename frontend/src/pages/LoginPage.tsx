@@ -64,7 +64,7 @@ export function LoginPage() {
           </h1>
 
           {error && (
-            <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <div className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
               {error}
             </div>
           )}

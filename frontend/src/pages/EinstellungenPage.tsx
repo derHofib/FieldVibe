@@ -135,7 +135,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-label">SMTP (globaler Mailversand)</span>
         <span
-          className={`border px-2 py-0.5 text-xs font-semibold ${
+          className={`border rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "border-st-erledigt text-st-erledigt "
               : "border-sep text-label2"
@@ -172,7 +172,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             if (await bestaetigen({ titel: "Globale SMTP-Konfiguration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
+          className="btn-touch border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
         >
           Löschen
         </button>

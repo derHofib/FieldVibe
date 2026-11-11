@@ -147,7 +147,7 @@ export function MandantDetailPage() {
               onChange={(e) => setName(e.target.value)}
               aria-invalid={!!nameFehler}
               aria-describedby={nameFehler ? `${uid}-name-fehler` : undefined}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
             {nameFehler && (
               <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
@@ -171,7 +171,7 @@ export function MandantDetailPage() {
             <input id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div className="flex items-center gap-3">

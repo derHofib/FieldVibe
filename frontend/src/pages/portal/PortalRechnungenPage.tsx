@@ -37,8 +37,8 @@ function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
         <span
           className={
             ueberfaellig
-              ? "border border-st-fehlt px-2 py-1 text-xs font-semibold text-st-fehlt"
-              : "border border-sep px-2 py-1 text-xs font-semibold text-label"
+              ? "border rounded-[var(--radius-ap-pill)] border-st-fehlt px-2 py-1 text-xs font-semibold text-st-fehlt"
+              : "border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-xs font-semibold text-label"
           }
         >
           {ueberfaellig ? "Überfällig" : RECHNUNG_STATUS_LABEL[rechnung.status]}

@@ -65,7 +65,7 @@ export function AuditLogPage() {
             value={aktion}
             onChange={(e) => setAktion(e.target.value)}
             placeholder="z.B. login_als_mandant"
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         <div>
@@ -74,7 +74,7 @@ export function AuditLogPage() {
             type="date"
             value={von}
             onChange={(e) => setVon(e.target.value)}
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         <div>
@@ -83,7 +83,7 @@ export function AuditLogPage() {
             type="date"
             value={bis}
             onChange={(e) => setBis(e.target.value)}
-            className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
+            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         {(mandantId || aktion || von || bis) && (

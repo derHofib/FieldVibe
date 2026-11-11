@@ -40,7 +40,7 @@ export function ForgotPasswordPage() {
           </p>
 
           {done ? (
-            <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
+            <p className="border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt">
               Falls ein Konto mit dieser E-Mail existiert, wurde eine Nachricht mit weiteren
               Schritten verschickt.
             </p>

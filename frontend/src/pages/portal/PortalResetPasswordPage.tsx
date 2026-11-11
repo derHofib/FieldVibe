@@ -38,14 +38,14 @@ export function PortalResetPasswordPage() {
         </h1>
 
         {!token && (
-          <p className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+          <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
             Der Link ist unvollständig. Bitte fordern Sie einen neuen an.
           </p>
         )}
 
         {done ? (
           <>
-            <p className="mb-4 border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
+            <p className="mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
               Passwort erfolgreich geändert. Sie können sich jetzt anmelden.
             </p>
             <button
@@ -58,7 +58,7 @@ export function PortalResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit}>
             {error && (
-              <div role="alert" className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              <div role="alert" className="mb-4 border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
                 {error}
               </div>
             )}
