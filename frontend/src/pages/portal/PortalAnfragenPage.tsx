@@ -27,9 +27,9 @@ const STATUS_LABEL: Record<VorgangAnfrageStatus, string> = {
 };
 
 const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
-  offen: "border border-st-arbeit text-st-arbeit ",
-  angenommen: "border border-st-erledigt text-st-erledigt ",
-  abgelehnt: "border border-sep text-label2 ",
+  offen: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  angenommen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgelehnt: "border rounded-[var(--radius-ap-pill)] border-sep text-label2 ",
 };
 
 function NeueAnfrage() {

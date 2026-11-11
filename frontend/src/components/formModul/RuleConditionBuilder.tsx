@@ -13,7 +13,7 @@ import { newClause, parseCondition, serializeCondition } from "../../utils/ruleC
 import type { FormField } from "../../types";
 import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 function operatorenFuer(feld: FormField | undefined): { operator: ClauseOperator; label: string }[] {
   if (!feld) return [{ operator: "==", label: "ist" }];

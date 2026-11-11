@@ -30,11 +30,11 @@ const UMSCHALTER = [
 ];
 
 const RECHNUNG_STATUS_BADGE: Record<RechnungStatus, string> = {
-  entwurf: "border border-sep text-label2 ",
-  versendet: "border border-tint text-tint ",
-  teilweise_bezahlt: "border border-st-arbeit text-st-arbeit ",
-  bezahlt: "border border-st-erledigt text-st-erledigt ",
-  storniert: "border border-sep text-label2",
+  entwurf: "border rounded-[var(--radius-ap-pill)] border-sep text-label2 ",
+  versendet: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
+  teilweise_bezahlt: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  bezahlt: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
 };
 
 const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
@@ -46,11 +46,11 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 };
 
 const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
-  entwurf: "border border-sep text-label2 ",
-  versendet: "border border-tint text-tint ",
-  angenommen: "border border-st-erledigt text-st-erledigt ",
-  abgelehnt: "border border-st-fehlt text-st-fehlt ",
-  widerrufen: "border border-st-arbeit text-st-arbeit ",
+  entwurf: "border rounded-[var(--radius-ap-pill)] border-sep text-label2 ",
+  versendet: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
+  angenommen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  abgelehnt: "border rounded-[var(--radius-ap-pill)] border-st-fehlt text-st-fehlt ",
+  widerrufen: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
 };
 
 const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {

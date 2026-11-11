@@ -97,7 +97,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const inputClass =
-    "w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+    "w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
   return (
     <div className="space-y-4">

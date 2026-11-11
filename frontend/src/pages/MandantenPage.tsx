@@ -19,9 +19,9 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "border border-st-erledigt text-st-erledigt ",
-  pausiert: "border border-st-arbeit text-st-arbeit ",
-  gekuendigt: "border border-st-fehlt text-st-fehlt ",
+  aktiv: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
+  pausiert: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
+  gekuendigt: "border rounded-[var(--radius-ap-pill)] border-st-fehlt text-st-fehlt ",
 };
 
 // Entspricht dem Backend-Muster für Mandanten-Slugs (Subdomain).

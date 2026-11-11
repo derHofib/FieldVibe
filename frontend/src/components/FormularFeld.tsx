@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
 
-export const FELD_KLASSE = "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label";
+export const FELD_KLASSE = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label";
 export const NEU_BUTTON_KLASSE = "btn-touch btn-ap px-4 py-2 text-sm font-medium";
 
 export interface FeldProps {

@@ -24,10 +24,10 @@ export const AUFTRAG_STATUS_LABEL: Record<AuftragStatus, string> = {
 };
 
 const AUFTRAG_STATUS_BADGE: Record<AuftragStatus, string> = {
-  offen: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  offen: "border rounded-[var(--radius-ap-pill)] border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  storniert: "border rounded-[var(--radius-ap-pill)] border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 const spalten = createColumnHelper<Auftrag>();

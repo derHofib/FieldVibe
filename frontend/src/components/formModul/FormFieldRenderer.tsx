@@ -412,7 +412,7 @@ export function FormFieldRenderer({
   );
   const wrapperClass = "card-ap p-3";
   const inputClass =
-    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
 
   switch (field.feld_typ) {
     case "text":

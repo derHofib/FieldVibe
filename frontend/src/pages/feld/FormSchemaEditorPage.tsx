@@ -36,7 +36,7 @@ import { Select } from "../../components/apple/Select";
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 const sectionClass = "space-y-3 card-ap p-4";
 
 const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {

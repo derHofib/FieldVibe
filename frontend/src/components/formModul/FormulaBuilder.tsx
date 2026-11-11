@@ -13,7 +13,7 @@ import { neuerTerm, parseFormel, serializeFormel } from "../../utils/ruleFormula
 import type { FormField } from "../../types";
 import { Select } from "../apple/Select";
 
-const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 const OPERATOR_LABEL: Record<FormelOperator, string> = {
   "+": "+",

@@ -92,7 +92,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const inputClass =
-    "border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+    "border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
   return (
     <div className="space-y-3 card-ap p-4">
