@@ -252,10 +252,10 @@ function EventBubble({
         </div>
         <div className="flex items-center gap-1.5">
           {event.partner_sichtbar && event.author_user_id !== null && (
-            <span className="border border-tint px-2 py-0.5 text-tint">Partner sieht das</span>
+            <span className="border border-tint px-2 py-0.5 text-tint-text">Partner sieht das</span>
           )}
           {event.kundensichtbar && (
-            <span className="border border-tint px-2 py-0.5 text-tint">
+            <span className="border border-tint px-2 py-0.5 text-tint-text">
               Kundensichtbar
             </span>
           )}
@@ -1404,7 +1404,7 @@ export function VorgangDetailPage({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
         {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
-          <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-xs font-medium text-tint">
+          <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-xs font-medium text-tint-text">
             + Zeit nachtragen
           </button>
         )}
@@ -1890,7 +1890,7 @@ export function VorgangDetailPage({
                 aria-label="Für Kunde sichtbar umschalten"
                 aria-pressed={kundensichtbar}
                 className={`btn-touch flex h-9 w-9 items-center justify-center border ${
-                  kundensichtbar ? "border-tint text-tint" : "border-sep text-label2 hover:bg-fill"
+                  kundensichtbar ? "border-tint text-tint-text" : "border-sep text-label2 hover:bg-fill"
                 }`}
               >
                 {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
@@ -1937,19 +1937,19 @@ export function VorgangDetailPage({
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowBedarfForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
             </button>
             <button
               onClick={() => setShowMaterialForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
             </button>
             <button
               onClick={() => setShowLeistungForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
             </button>
@@ -2387,7 +2387,7 @@ export function VorgangDetailPage({
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
-                className="text-tint underline-offset-2 hover:underline"
+                className="text-tint-text underline-offset-2 hover:underline"
               >
                 {kunde.name}
               </button>
@@ -2397,7 +2397,7 @@ export function VorgangDetailPage({
                 <span className="text-label2">·</span>
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
-                  className="text-tint underline-offset-2 hover:underline"
+                  className="text-tint-text underline-offset-2 hover:underline"
                 >
                   {anlage.bezeichnung}
                 </button>
@@ -2412,7 +2412,7 @@ export function VorgangDetailPage({
                 setZuordnungError(null);
                 setEditingZuordnung(true);
               }}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               Bearbeiten
             </button>
@@ -2487,7 +2487,7 @@ export function VorgangDetailPage({
                   setAdresseError(null);
                   setEditingAdresse(true);
                 }}
-                className="btn-touch text-xs font-medium text-tint"
+                className="btn-touch text-xs font-medium text-tint-text"
               >
                 Bearbeiten
               </button>
@@ -2575,7 +2575,7 @@ export function VorgangDetailPage({
               {kannDisponieren && !showAnlageHinzufuegen && (
                 <button
                   onClick={() => setShowAnlageHinzufuegen(true)}
-                  className="btn-touch text-xs font-medium text-tint"
+                  className="btn-touch text-xs font-medium text-tint-text"
                 >
                   + Hinzufügen
                 </button>
@@ -2880,7 +2880,7 @@ export function VorgangDetailPage({
                   );
                 }
               }}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               {showTerminForm ? "Abbrechen" : "+ Termin planen"}
             </button>
@@ -2998,7 +2998,7 @@ export function VorgangDetailPage({
                       const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
                       return (
                         <div key={i} className="min-h-[110px] bg-card p-1.5">
-                          <div className={`mb-1 text-[11px] font-medium ${heuteFlag ? "text-tint" : "text-label2"}`}>
+                          <div className={`mb-1 text-[11px] font-medium ${heuteFlag ? "text-tint-text" : "text-label2"}`}>
                             {WOCHENTAGE[i]} {tag.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                           </div>
                           <div className="space-y-1">
@@ -3009,7 +3009,7 @@ export function VorgangDetailPage({
                                 className={`rounded-[5px] border p-1 text-[11px] ${
                                   t.status === "abgesagt"
                                     ? "border-sep text-label2 line-through"
-                                    : "border-tint text-tint"
+                                    : "border-tint text-tint-text"
                                 }`}
                               >
                                 <div className="font-semibold">
@@ -3068,7 +3068,7 @@ export function VorgangDetailPage({
                         className={`border px-2 py-0.5 text-xs font-medium ${
                           t.status === "abgesagt"
                             ? "border-sep text-label2"
-                            : "border-tint text-tint"
+                            : "border-tint text-tint-text"
                         }`}
                       >
                         {TERMIN_STATUS_LABEL[t.status]}
@@ -3123,7 +3123,7 @@ export function VorgangDetailPage({
             )}
             <button
               onClick={() => setShowMangelForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
+              className="btn-touch text-xs font-medium text-tint-text"
             >
               {showMangelForm ? "Abbrechen" : "+ Mangel melden"}
             </button>
@@ -3274,7 +3274,7 @@ export function VorgangDetailPage({
             {!vorgang.partner_id && (
               <button
                 onClick={() => setShowPartnerForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-tint"
+                className="btn-touch text-xs font-medium text-tint-text"
               >
                 {showPartnerForm ? "Abbrechen" : "+ Zuweisen"}
               </button>
@@ -3404,7 +3404,7 @@ export function VorgangDetailPage({
           onClose={() => setNachStoppenEintrag(null)}
           titel="Was hast du gemacht?"
           links={
-            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
+            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint-text">
               Später
             </button>
           }
@@ -3413,7 +3413,7 @@ export function VorgangDetailPage({
               type="button"
               onClick={() => nachStoppenTaetigkeitMutation.mutate()}
               disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-              className="text-[17px] font-semibold text-tint disabled:opacity-40"
+              className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
             >
               Fertig
             </button>
@@ -3731,7 +3731,7 @@ export function VorgangDetailPage({
           <button
             type="button"
             onClick={() => setNachStoppenEintrag(null)}
-            className="text-[17px] text-tint"
+            className="text-[17px] text-tint-text"
           >
             Später
           </button>
@@ -3741,7 +3741,7 @@ export function VorgangDetailPage({
             type="button"
             onClick={() => nachStoppenTaetigkeitMutation.mutate()}
             disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-            className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            className="text-[17px] font-semibold text-tint-text disabled:opacity-40"
           >
             Fertig
           </button>

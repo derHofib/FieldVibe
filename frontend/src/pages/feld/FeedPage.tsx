@@ -192,7 +192,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {card.tags.map((tag) => (
-              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label2">
+              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label">
                 #{tag}
               </span>
             ))}
@@ -648,7 +648,7 @@ export function FeedPage() {
               {gruppiereNachFaelligkeit(cards).map(({ gruppe, cards: gruppenCards }) => (
                 <div key={gruppe} className="space-y-3">
                   <div className="flex items-baseline gap-1.5 px-1">
-                    <h3
+                    <h2
                       className={`text-[10px] font-medium tracking-[0.14em] uppercase ${
                         gruppe === "ueberfaellig"
                           ? "text-st-fehlt"
@@ -658,7 +658,7 @@ export function FeedPage() {
                       }`}
                     >
                       {GRUPPEN_LABEL[gruppe]}
-                    </h3>
+                    </h2>
                     <span className="text-xs text-label2">{gruppenCards.length}</span>
                   </div>
                   <div className="space-y-3">

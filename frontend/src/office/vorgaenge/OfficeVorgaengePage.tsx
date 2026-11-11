@@ -181,7 +181,7 @@ export function OfficeVorgaengePage() {
               </button>
             </span>
           ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint">
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint-text">
             Bearbeiten
           </button>
         </div>
