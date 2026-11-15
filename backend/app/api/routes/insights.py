@@ -38,13 +38,16 @@ async def get_insights(
     auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
 ) -> Insights:
     status_result = await session.execute(
-        select(Vorgang.status, func.count()).group_by(Vorgang.status)
+        select(Vorgang.status, func.count()).where(Vorgang.geloescht_am.is_(None)).group_by(Vorgang.status)
     )
     vorgaenge_nach_status = {status: count for status, count in status_result.all()}
 
     offene_rechnungen = (
         await session.execute(
-            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet", "teilweise_bezahlt")))
+            select(Rechnung).where(
+                Rechnung.status.in_(("entwurf", "versendet", "teilweise_bezahlt")),
+                Rechnung.geloescht_am.is_(None),
+            )
         )
     ).scalars().all()
     # Offener Betrag nach der zentralen Regel (Zahlungen und Gutschriften
@@ -55,7 +58,8 @@ async def get_insights(
     offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
 
     offene_eingangsrechnungen = (
-        await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.status == "offen"))
+        await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.status == "offen", Eingangsrechnung.geloescht_am.is_(None))
+        )
     ).scalars().all()
     offene_verbindlichkeiten = Decimal("0")
     for e in offene_eingangsrechnungen:
@@ -66,10 +70,16 @@ async def get_insights(
     offene_verbindlichkeiten = offene_verbindlichkeiten.quantize(Decimal("0.01"))
 
     angebote_versendet = (
-        await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.versendet_am.isnot(None)))
+        await session.scalar(select(func.count())
+            .select_from(Angebot)
+            .where(Angebot.versendet_am.isnot(None), Angebot.geloescht_am.is_(None))
+        )
     ) or 0
     angebote_angenommen = (
-        await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.status == "angenommen"))
+        await session.scalar(select(func.count())
+            .select_from(Angebot)
+            .where(Angebot.status == "angenommen", Angebot.geloescht_am.is_(None))
+        )
     ) or 0
     angebote_annahmequote = (
         angebote_angenommen / angebote_versendet if angebote_versendet > 0 else None
@@ -91,6 +101,7 @@ async def get_insights(
                     Zeiterfassung.techniker_id == techniker.id,
                     Zeiterfassung.start_at >= wochenstart,
                     Zeiterfassung.ende_at.isnot(None),
+                    Zeiterfassung.geloescht_am.is_(None),
                 )
             )
         ).scalars().all()

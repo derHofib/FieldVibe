@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
 
 from app.db.session import system_session
-from app.models.rechnung import Rechnung
+from app.models.angebot import Angebot
+from app.models.eingangsrechnung import Eingangsrechnung
+from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.zeiterfassung import Zeiterfassung
 from tests.conftest import auth_headers, login
 
@@ -195,3 +197,99 @@ async def test_mandant_isolation_for_insights(client, make_mandant, make_user, m
     token2 = await login(client, admin2.email, "pw-123456")
     resp = await client.get("/api/insights", headers=auth_headers(token2))
     assert resp.json()["vorgaenge_nach_status"] == {}
+
+
+@pytest.mark.asyncio
+async def test_insights_ignoriert_geloeschte_datensaetze(client, make_mandant, make_user, make_kunde, make_vorgang):
+    """Jede Kennzahl: ein aktiver und ein soft-gelöschter Datensatz, nur der
+    aktive darf auftauchen."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456", email="tech2@example.de")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+    jetzt = datetime.now(timezone.utc)
+
+    await make_vorgang(mandant=mandant, kunde=kunde, status="neu")
+    await make_vorgang(mandant=mandant, kunde=kunde, status="neu", geloescht_am=jetzt)
+    await make_vorgang(mandant=mandant, kunde=kunde, status="abgeschlossen", geloescht_am=jetzt)
+    vorgang_fuer_zeit = await make_vorgang(mandant=mandant, kunde=kunde, status="in_arbeit")
+
+    async with system_session() as session:
+        for nummer, geloescht in (("R-DEL-1", None), ("R-DEL-2", jetzt)):
+            rechnung = Rechnung(
+                mandant_id=mandant.id,
+                kunde_id=kunde.id,
+                rechnungsnummer=nummer,
+                betrag_netto=Decimal("0"),
+                mwst_satz=Decimal("19.00"),
+                status="entwurf",
+                erstellt_von=admin.id,
+                geloescht_am=geloescht,
+            )
+            session.add(rechnung)
+            await session.flush()
+            session.add(
+                RechnungPosition(
+                    mandant_id=mandant.id,
+                    rechnung_id=rechnung.id,
+                    position=1,
+                    beschreibung="Leistung",
+                    menge=Decimal("1"),
+                    einheit="psch",
+                    einzelpreis=Decimal("100"),
+                    steuer_kategorie="S",
+                    steuer_satz=Decimal("19"),
+                )
+            )
+        for nummer, geloescht in (("A-DEL-1", None), ("A-DEL-2", jetzt)):
+            session.add(
+                Angebot(
+                    mandant_id=mandant.id,
+                    kunde_id=kunde.id,
+                    angebotsnummer=nummer,
+                    status="angenommen",
+                    versendet_am=jetzt,
+                    angenommen_am=jetzt,
+                    erstellt_von=admin.id,
+                    geloescht_am=geloescht,
+                )
+            )
+        for nummer, geloescht in (("E-DEL-1", None), ("E-DEL-2", jetzt)):
+            session.add(
+                Eingangsrechnung(
+                    mandant_id=mandant.id,
+                    lieferant_name="Sonepar",
+                    rechnungsnummer_lieferant=nummer,
+                    rechnungsdatum=date(2026, 8, 1),
+                    betrag_netto=Decimal("50.00"),
+                    mwst_satz=Decimal("19.00"),
+                    status="offen",
+                    geloescht_am=geloescht,
+                )
+            )
+        for geloescht in (None, jetzt):
+            session.add(
+                Zeiterfassung(
+                    mandant_id=mandant.id,
+                    vorgang_id=vorgang_fuer_zeit.id,
+                    techniker_id=techniker.id,
+                    start_at=jetzt - timedelta(hours=2),
+                    ende_at=jetzt - timedelta(hours=1),
+                    geloescht_am=geloescht,
+                )
+            )
+        await session.commit()
+
+    resp = await client.get("/api/insights", headers=auth_headers(token))
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["vorgaenge_nach_status"] == {"neu": 1, "in_arbeit": 1}
+    # Nur der aktive Entwurf: 100 * 1,19
+    assert body["offene_rechnungssumme"] == "119.00"
+    assert body["offene_verbindlichkeiten"] == "59.50"
+    assert body["angebote_versendet"] == 1
+    assert body["angebote_angenommen"] == 1
+    eintrag = next(t for t in body["techniker_auslastung"] if t["techniker_id"] == str(techniker.id))
+    assert eintrag["stunden_diese_woche"] == "1.0"
