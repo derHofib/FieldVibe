@@ -1,4 +1,6 @@
 import { EmptyState } from "../../../components/EmptyState";
+import { StatusPille } from "../../../components/apple/StatusPille";
+import { vorgangStatusZuToken } from "../../../components/apple/status";
 import { statusLabel } from "../../../config/vorgangDarstellung";
 import type { KundeProfil, Vorgang } from "../../../types";
 import { DauerauftraegeUebersicht } from "./DauerauftraegeUebersicht";
@@ -6,16 +8,6 @@ import { Inbox, Repeat } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import { Select } from "../../../components/apple/Select";
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
-  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
-  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
-  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
-};
 
 export function KundeVorgaengeTab({
   kannVerwalten,
@@ -84,9 +76,7 @@ export function KundeVorgaengeTab({
                 </div>
                 <div className="text-fliess font-medium text-label">{v.titel}</div>
               </div>
-              <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
-                {statusLabel(v.status)}
-              </span>
+              <StatusPille status={vorgangStatusZuToken(v.status)} label={statusLabel(v.status)} />
             </button>
           ))}
         </div>

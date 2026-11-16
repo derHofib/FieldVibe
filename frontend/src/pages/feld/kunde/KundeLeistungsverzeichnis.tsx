@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { leistungsverzeichnisApi, leistungsverzeichnisseApi } from "../../../api/endpoints";
 import { ApiError } from "../../../api/client";
 import { AnlegenPanel } from "../../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
+import { AktionsMenue } from "../../../components/AktionsMenue";
 import { EmptyState } from "../../../components/EmptyState";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { SkeletonList } from "../../../components/Skeleton";
 import type { LeistungsverzeichnisPosition } from "../../../types";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
 
@@ -131,7 +134,7 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
         <div className="text-fliess font-medium text-label">
           {position.bezeichnung}
           {position.ist_stundensatz && (
-            <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-meta font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+            <span className="ml-2 rounded-full bg-fill px-2 py-0.5 text-meta font-normal text-label">
               SVS
             </span>
           )}
@@ -140,15 +143,20 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
           {position.einzelpreis} € / {position.einheit}
         </div>
       </div>
-      <button
-        onClick={async () => {
-          if (await bestaetigen({ titel: `"${position.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
-        }}
-        disabled={removeMutation.isPending}
-        className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
-      >
-        Löschen
-      </button>
+      <AktionsMenue
+        label={`Aktionen für ${position.bezeichnung}`}
+        eintraege={[
+          {
+            label: "Löschen",
+            icon: Trash2,
+            destruktiv: true,
+            disabled: removeMutation.isPending,
+            onClick: async () => {
+              if (await bestaetigen({ titel: `"${position.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
+            },
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -166,18 +174,19 @@ export function LeistungsverzeichnisVerwaltung({
   // der einzelnen Position -- hier zaehlt daher nur, was aus einem diesem
   // Kunden zugewiesenen LV stammt; der komplette Katalog inkl. Verwaltung
   // der LVs selbst wird zentral unter "Leistungsverzeichnisse" gepflegt.
-  const { data: lvs } = useQuery({
+  const { data: lvs, isLoading: lvsLaedt, error: lvsFehler, refetch: lvsNeu } = useQuery({
     queryKey: ["leistungsverzeichnisse"],
     queryFn: () => leistungsverzeichnisseApi.list(),
   });
   const zugewieseneLvs = (lvs ?? []).filter((lv) => lv.kunden_ids.includes(kundeId));
   const zugewieseneLvIds = new Set(zugewieseneLvs.map((lv) => lv.id));
 
-  const { data: alle } = useQuery({
+  const { data: alle, isLoading: positionenLaedt, error: positionenFehler, refetch: positionenNeu } = useQuery({
     queryKey: ["leistungsverzeichnis", kundeId],
     queryFn: () => leistungsverzeichnisApi.list(kundeId),
   });
   const positionen = alle?.filter((p) => zugewieseneLvIds.has(p.leistungsverzeichnis_id));
+  const ladeFehler = (lvsFehler && !lvs) || (positionenFehler && !alle) ? (lvsFehler ?? positionenFehler) : null;
 
   return (
     <div>
@@ -185,7 +194,19 @@ export function LeistungsverzeichnisVerwaltung({
         Leistungsverzeichnis
         <span className="ml-2 font-normal text-label2">(optional, kundenspezifisch)</span>
       </h2>
-      {!positionen || positionen.length === 0 ? (
+      {lvsLaedt || positionenLaedt ? (
+        <SkeletonList count={2} />
+      ) : ladeFehler ? (
+        <FehlerZustand
+          fehler={ladeFehler}
+          was="Das Leistungsverzeichnis"
+          onErneut={() => {
+            void lvsNeu();
+            void positionenNeu();
+          }}
+          className="py-4"
+        />
+      ) : !positionen || positionen.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
           text="Kein Leistungsverzeichnis angelegt."

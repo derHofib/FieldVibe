@@ -8,6 +8,8 @@ import { ApiError } from "../../../api/client";
 import { AnlegenPanel } from "../../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
 import { EmptyState } from "../../../components/EmptyState";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { SkeletonList } from "../../../components/Skeleton";
 
 function NeuerStandort({ kundeId }: { kundeId: string }) {
   const queryClient = useQueryClient();
@@ -96,7 +98,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
 export function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: standorte } = useQuery({
+  const { data: standorte, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["standorte", kundeId],
     queryFn: () => standorteApi.list(kundeId),
   });
@@ -109,7 +111,11 @@ export function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: strin
   return (
     <div>
       <h2 className="mb-2 text-fliess font-semibold text-label2">Standorte</h2>
-      {!standorte || standorte.length === 0 ? (
+      {isLoading ? (
+        <SkeletonList count={2} />
+      ) : ladeFehler && !standorte ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Standorte" onErneut={() => void neuLaden()} className="py-4" />
+      ) : !standorte || standorte.length === 0 ? (
         <EmptyState icon={MapPin} text="Keine Standorte." className="py-4" />
       ) : (
         <div className="space-y-2">

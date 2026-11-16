@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { FileUp } from "lucide-react";
+import { FileUp, ReceiptText } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,6 +14,10 @@ import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../ty
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Select } from "../../components/apple/Select";
+import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -43,6 +47,7 @@ export function RechnungseingangPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
+  const [suche, setSuche] = useState("");
   const [form, setForm] = useState({
     lieferantId: "",
     lieferantName: "",
@@ -58,7 +63,7 @@ export function RechnungseingangPage() {
   const [importFehler, setImportFehler] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: eingangsrechnungen, error: ladeFehler, refetch: neuLaden } = useQuery({
+  const { data: eingangsrechnungen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["eingangsrechnungen", statusFilter],
     queryFn: () => eingangsrechnungenApi.list(statusFilter ? { status: statusFilter } : {}),
     enabled: abrechnungAktiv && kannSehen,
@@ -67,6 +72,12 @@ export function RechnungseingangPage() {
     queryKey: ["lieferanten"],
     queryFn: () => lieferantenApi.list(),
     enabled: abrechnungAktiv && kannSehen,
+  });
+
+  // Die Liste kommt ungepaged vom Server, daher reicht eine lokale Suche.
+  const sichtbar = (eingangsrechnungen ?? []).filter((e) => {
+    const q = suche.trim().toLowerCase();
+    return !q || `${e.lieferant_name} ${e.rechnungsnummer_lieferant}`.toLowerCase().includes(q);
   });
 
   const createMutation = useMutation({
@@ -267,30 +278,47 @@ export function RechnungseingangPage() {
         </div>
       </AnlegenPanel>
 
-      <div className="flex gap-2 text-sekundaer">
+      <SearchField
+        groesse="mobil"
+        value={suche}
+        onChange={setSuche}
+        placeholder="Aussteller oder Rechnungsnummer suchen…"
+      />
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Status der Eingangsrechnung">
         {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (
-          <button
+          <FilterChip
             key={s}
+            label={s === "" ? "Alle" : STATUS_LABEL[s]}
+            aktiv={statusFilter === s}
             onClick={() => setStatusFilter(s)}
-            className={`btn-touch rounded-full px-3 py-1 font-medium ${
-              statusFilter === s
-                ? "bg-cyan-600 text-white"
-                : "bg-fill text-label "
-            }`}
-          >
-            {s === "" ? "Alle" : STATUS_LABEL[s]}
-          </button>
+          />
         ))}
       </div>
 
       <div className="space-y-2">
-        {ladeFehler && !eingangsrechnungen && (
+        {isLoading ? (
+          <SkeletonList count={4} />
+        ) : ladeFehler && !eingangsrechnungen ? (
           <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnungen" onErneut={() => void neuLaden()} />
-        )}
-        {!ladeFehler && (eingangsrechnungen ?? []).length === 0 && (
-          <p className="text-sekundaer text-label2">Keine Eingangsrechnungen.</p>
-        )}
-        {(eingangsrechnungen ?? []).map((e) => (
+        ) : sichtbar.length === 0 ? (
+          <EmptyState
+            icon={ReceiptText}
+            text={
+              suche.trim() || statusFilter
+                ? "Keine Eingangsrechnungen für diese Auswahl."
+                : "Noch keine Eingangsrechnungen. Hier erscheinen Rechnungen deiner Lieferanten."
+            }
+            action={
+              kannErstellen && !suche.trim() && !statusFilter ? (
+                <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4">
+                  + Neue Eingangsrechnung
+                </button>
+              ) : undefined
+            }
+          />
+        ) : null}
+        {sichtbar.map((e) => (
           <button
             key={e.id}
             onClick={() => navigate(`/rechnungseingang/${e.id}`)}

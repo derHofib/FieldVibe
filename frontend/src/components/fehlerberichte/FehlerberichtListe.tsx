@@ -7,6 +7,7 @@ import { fehlerberichteApi, mandantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtZaehler } from "../../types";
 import { EmptyState } from "../EmptyState";
+import { FehlerZustand } from "../FehlerZustand";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { SearchField } from "../apple/SearchField";
 import { SegmentedControl } from "../apple/SegmentedControl";
@@ -174,7 +175,7 @@ export function FehlerberichtListe({
   });
   const qVerzoegert = useDebouncedValue(filter.q);
   const abfrageFilter = { ...filter, q: qVerzoegert, mandantId };
-  const { data: berichte, isLoading, isError } = useQuery({
+  const { data: berichte, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["fehlerberichte", "liste", abfrageFilter],
     queryFn: () => ladeBerichte(abfrageFilter),
   });
@@ -264,8 +265,8 @@ export function FehlerberichtListe({
 
       {isLoading ? (
         <SkeletonList count={4} />
-      ) : isError ? (
-        <p className="text-st-fehlt">Meldungen konnten nicht geladen werden.</p>
+      ) : ladeFehler && !berichte ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Meldungen" onErneut={() => void neuLaden()} />
       ) : berichte && berichte.length > 0 ? (
         <ul className="divide-y divide-sep overflow-hidden rounded-[var(--radius-ap-card)] bg-cell">
           {berichte.map((b) => (
