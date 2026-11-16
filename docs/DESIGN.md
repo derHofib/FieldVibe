@@ -249,7 +249,11 @@ behalten ihre eigene Rundung/Farbe. Nur die Bedienelemente drumherum
   Lesespalte (`max-w-3xl`); Ausnahmen in `max-w-[1400px]`: Leistungsverzeichnis (Übersicht als
   Tabelle, Detail mit Seitenspalte, `layout="dicht"`) und `/statistik`
   (eigene Office-Seite `office/zeit/OfficeArbeitszeitPage.tsx`: Monatsliste
-  mit allen Kalendertagen statt der Feld-Wochenansicht)
+  mit allen Kalendertagen statt der Feld-Wochenansicht), `/partner` als
+  Tabelle mit Detailpanel (`office/partner/OfficePartnerPage.tsx`, Aufbau wie
+  Kunden, Profilseite eingebettet) und `/zeiten-buchen` mit `layout="dicht"`
+  (Tabelle mit Gruppenzeilen und sticky Sammelaktionen, Logik in
+  `utils/zeitenBuchen.ts`)
 
 ## Interaktionsmuster (UX-Überarbeitung Nov. 2026)
 

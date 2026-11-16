@@ -148,6 +148,10 @@ export function OfficeApp() {
             }
           />
 
+          {/* Zeiten buchen vergleicht viele Eintraege spaltenweise (Dauer, Status, Vorgang) und braucht
+              dafuer die Desktop-Breite; die Feld-App behaelt die Kartenliste. */}
+          <Route path="/zeiten-buchen" element={<div className="max-w-[1400px]"><ZeitenBuchenPage layout="dicht" /></div>} />
+
           {/* Rechte-Matrix je Account-Typ braucht die Desktop-Breite (Bereich x 9 Aktionen). */}
           <Route
             path="/account-typen"
@@ -197,7 +201,6 @@ export function OfficeApp() {
           <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />
-          <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
           <Route path="/papierkorb" element={<PapierkorbPage />} />
           </Route>
 
