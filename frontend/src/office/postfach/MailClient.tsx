@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { mailApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { MailAccount, MailAttachment } from "../../types";
 import { ComposePanel, type ComposeModus } from "./ComposePanel";
@@ -60,7 +61,12 @@ export function MailClient({ account }: { account: MailAccount }) {
   const [compose, setCompose] = useState<ComposeModus | null>(null);
   const [gesendetHinweis, setGesendetHinweis] = useState(false);
 
-  const { data: ordner } = useQuery({
+  const {
+    data: ordner,
+    isLoading: ordnerLaden,
+    error: ordnerFehler,
+    refetch: ordnerNeu,
+  } = useQuery({
     queryKey: ["mail-folders", account.id],
     queryFn: () => mailApi.folders(account.id),
   });
@@ -77,6 +83,8 @@ export function MailClient({ account }: { account: MailAccount }) {
     hasNextPage,
     isFetchingNextPage,
     isLoading: nachrichtenLaden,
+    error: nachrichtenFehler,
+    refetch: nachrichtenNeu,
   } = useInfiniteQuery({
     queryKey: ["mail-messages", aktiverOrdner, suche],
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
@@ -87,7 +95,7 @@ export function MailClient({ account }: { account: MailAccount }) {
   });
   const nachrichten = nachrichtenSeiten?.pages.flatMap((s) => s.items) ?? [];
 
-  const { data: detail } = useQuery({
+  const { data: detail, isLoading: detailLaden, error: detailFehler, refetch: detailNeu } = useQuery({
     queryKey: ["mail-message", aktiveNachricht],
     queryFn: () => mailApi.message(aktiveNachricht!),
     enabled: !!aktiveNachricht,
@@ -169,7 +177,11 @@ export function MailClient({ account }: { account: MailAccount }) {
           </p>
         )}
         <div className="flex-1 overflow-y-auto">
-          {nachrichtenLaden ? (
+          {ordnerFehler ? (
+            <FehlerZustand fehler={ordnerFehler} was="Die Ordner" onErneut={() => void ordnerNeu()} />
+          ) : nachrichtenFehler ? (
+            <FehlerZustand fehler={nachrichtenFehler} was="Die Nachrichten" onErneut={() => void nachrichtenNeu()} />
+          ) : ordnerLaden || nachrichtenLaden ? (
             <SkeletonList count={4} />
           ) : nachrichten.length === 0 ? (
             <EmptyState
@@ -239,6 +251,10 @@ export function MailClient({ account }: { account: MailAccount }) {
             }}
             onAbbrechen={() => setCompose(null)}
           />
+        ) : detailLaden ? (
+          <SkeletonList count={2} className="p-4" />
+        ) : detailFehler ? (
+          <FehlerZustand fehler={detailFehler} was="Die Nachricht" onErneut={() => void detailNeu()} className="h-full" />
         ) : !detail ? (
           <EmptyState icon={Inbox} text="Nachricht auswählen." className="h-full justify-center" />
         ) : (

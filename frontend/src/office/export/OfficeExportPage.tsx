@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, FileSpreadsheet } from "lucide-react";
+import { Archive, Download, FileSpreadsheet, PackageOpen } from "lucide-react";
 
 import { ApiError } from "../../api/client";
 import { exporteApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { IconBadge } from "../../components/IconBadge";
+import { SkeletonList } from "../../components/Skeleton";
 import { dateigroesseText } from "../datenimport/datenimportUtils";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -150,6 +153,18 @@ export function OfficeExportPage() {
       </div>
 
       <h2 className="ap-heading text-zeile font-semibold text-label">Letzte Exporte</h2>
+      {liste.isError ? (
+        <FehlerZustand fehler={liste.error} was="Die Exporte" onErneut={() => void liste.refetch()} />
+      ) : liste.isPending ? (
+        <SkeletonList count={3} />
+      ) : exporte.length === 0 ? (
+        <Karte className="p-4">
+          <EmptyState
+            icon={PackageOpen}
+            text="Noch kein Export angefordert. Starte oben einen Vollexport oder Z3-Export, er erscheint dann hier."
+          />
+        </Karte>
+      ) : (
       <TabellenRahmen>
         <table className="w-full text-left text-fliess">
           <caption className="sr-only">Angeforderte Exporte, neueste zuerst</caption>
@@ -200,16 +215,10 @@ export function OfficeExportPage() {
                 </tr>
               );
             })}
-            {liste.isSuccess && exporte.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-label2">
-                  Noch kein Export angefordert.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </TabellenRahmen>
+      )}
       <p className="text-sekundaer text-label2">
         Prüfsumme (SHA-256) und Dateiliste stehen im ZIP in <code>manifest.json</code>; die Summe des gesamten ZIP
         steht im Protokoll.

@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileUp, Undo2 } from "lucide-react";
+import { Download, FileUp, History, Undo2 } from "lucide-react";
 
 import { ApiError } from "../../api/client";
 import { datenimportApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
+import { SkeletonList } from "../../components/Skeleton";
 import { downloadBlob } from "../../utils/download";
 import { KennzahlKarte, Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -564,6 +567,15 @@ export function OfficeDatenimportPage() {
         <h2 id="import-laeufe-titel" className="ap-heading text-zeile font-semibold text-label">
           Bisherige Importe
         </h2>
+        {laeufe.isError ? (
+          <FehlerZustand fehler={laeufe.error} was="Die Importläufe" onErneut={() => void laeufe.refetch()} />
+        ) : laeufe.isPending ? (
+          <SkeletonList count={3} />
+        ) : laeufe.data.length === 0 ? (
+          <Karte className="p-4">
+            <EmptyState icon={History} text="Noch keine Importe. Importläufe erscheinen hier, sobald du oben eine Datei importiert hast." />
+          </Karte>
+        ) : (
         <TabellenRahmen>
           <table className="w-full text-left text-fliess">
             <caption className="sr-only">Liste der bisherigen Importläufe</caption>
@@ -578,7 +590,7 @@ export function OfficeDatenimportPage() {
               </tr>
             </thead>
             <tbody>
-              {(laeufe.data ?? []).map((l) => (
+              {laeufe.data.map((l) => (
                 <tr key={l.id} className="border-t border-sep">
                   <td className="px-3 py-2">{new Date(l.created_at).toLocaleString("de-DE")}</td>
                   <td className="px-3 py-2">{ENTITAET_LABEL[l.entitaet]}</td>
@@ -613,16 +625,10 @@ export function OfficeDatenimportPage() {
                   </td>
                 </tr>
               ))}
-              {(laeufe.data ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-3 py-4 text-center text-label2">
-                    Noch keine Importe.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </TabellenRahmen>
+        )}
       </section>
     </div>
   );

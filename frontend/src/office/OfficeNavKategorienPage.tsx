@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 
 import { navKategorienApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
+import { FehlerZustand } from "../components/FehlerZustand";
 import { IconBadge } from "../components/IconBadge";
+import { SkeletonList } from "../components/Skeleton";
 import { NAV_KATEGORIE_REIHENFOLGE, NAV_SEITEN } from "../config/navSeiten";
 import { Select } from "../components/apple/Select";
 import type { NavKategorienRead } from "../types";
@@ -22,7 +24,7 @@ export function OfficeNavKategorienPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["nav-kategorien"],
     queryFn: () => navKategorienApi.get(),
   });
@@ -130,8 +132,22 @@ export function OfficeNavKategorienPage() {
     });
   }
 
+  if (error) {
+    return (
+      <div className="max-w-2xl space-y-6">
+        <SeitenKopf titel="Menü-Kategorien" />
+        <FehlerZustand fehler={error} was="Die Menü-Kategorien" onErneut={() => void refetch()} />
+      </div>
+    );
+  }
+
   if (isLoading || !initialisiert) {
-    return <p className="p-4 text-sekundaer text-label2">Lädt…</p>;
+    return (
+      <div className="max-w-2xl space-y-6">
+        <SeitenKopf titel="Menü-Kategorien" />
+        <SkeletonList count={4} />
+      </div>
+    );
   }
 
   return (

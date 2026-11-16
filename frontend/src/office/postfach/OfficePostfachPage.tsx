@@ -7,6 +7,7 @@ import { SeitenKopf } from "../OfficeUi";
 import { MailClient } from "./MailClient";
 import { MailKontoFormular } from "./MailKontoFormular";
 import { Select } from "../../components/apple/Select";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = { art: "client" } | { art: "konto-neu" } | { art: "konto-bearbeiten" };
@@ -17,7 +18,7 @@ type Ansicht = { art: "client" } | { art: "konto-neu" } | { art: "konto-bearbeit
  * gemeinsamer Posteingang mit rätselhafter Herkunft je Nachricht) -- ein
  * Umschalter oben wechselt zwischen ihnen. */
 export function OfficePostfachPage() {
-  const { data: accounts, isLoading } = useQuery({
+  const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ["mail-accounts"],
     queryFn: () => mailApi.accounts.list(),
   });
@@ -27,7 +28,22 @@ export function OfficePostfachPage() {
   const aktivesKonto = accounts?.find((a) => a.id === aktivesKontoId) ?? accounts?.[0];
 
   if (isLoading) {
-    return <SkeletonList count={4} />;
+    return (
+      <div>
+        <SeitenKopf titel="Postfach" />
+        <SkeletonList count={4} />
+      </div>
+    );
+  }
+
+  // Fehler darf nicht als "kein Konto" durchfallen, sonst erscheint das Einrichtungsformular.
+  if (error) {
+    return (
+      <div>
+        <SeitenKopf titel="Postfach" />
+        <FehlerZustand fehler={error} was="Die Postfächer" onErneut={() => void refetch()} />
+      </div>
+    );
   }
 
   if (!accounts || accounts.length === 0 || ansicht.art === "konto-neu") {
@@ -55,7 +71,7 @@ export function OfficePostfachPage() {
     );
   }
 
-  if (!aktivesKonto) return null;
+  if (!aktivesKonto) return <SkeletonList count={4} />;
 
   return (
     <div>

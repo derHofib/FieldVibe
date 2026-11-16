@@ -8,6 +8,8 @@ import { abwesenheitenApi, arbeitszeitApi, zeiterfassungApi } from "../../api/en
 import { StatusPille } from "../../components/apple/StatusPille";
 import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
@@ -68,7 +70,7 @@ export function OfficeArbeitszeitPage() {
     enabled: kannAuswerten,
   });
 
-  const { data: eintraege, refetch: monatNeuLaden } = useQuery({
+  const { data: eintraege, isLoading: monatLaedt, error: monatFehler, refetch: monatNeuLaden } = useQuery({
     queryKey: ["zeiterfassung-monat", currentUser?.id, von],
     queryFn: () => zeiterfassungApi.listFuerZeitraum({ techniker_id: currentUser!.id, von, bis }),
     enabled: kannErfassen,
@@ -278,7 +280,11 @@ export function OfficeArbeitszeitPage() {
         </section>
       )}
 
-      {kannErfassen && (
+      {kannErfassen && monatLaedt && <SkeletonList count={5} />}
+      {kannErfassen && monatFehler && (
+        <FehlerZustand fehler={monatFehler} was="Die Zeiteinträge" onErneut={() => void monatNeuLaden()} />
+      )}
+      {kannErfassen && !monatLaedt && !monatFehler && (
         <Karte className="space-y-1 p-2">
           {tage.map((t) => {
             const tagesEintraege = jeTag.get(t.tag) ?? [];
