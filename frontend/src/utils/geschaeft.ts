@@ -1,4 +1,4 @@
-import type { Kunde, Material } from "../types";
+import type { Kunde, Material, Partner } from "../types";
 
 // Von der Feld-Seite (GeschaeftPage) und den Office-Listen (office/kunden,
 // office/material) gemeinsam genutzt, damit Suche und Unterbestand-Regel
@@ -14,6 +14,27 @@ export function filtereKunden(kunden: Kunde[], suche: string): Kunde[] {
   return kunden.filter(
     (k) => k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q),
   );
+}
+
+export type PartnerStatusFilter = "aktiv" | "inaktiv" | "alle";
+
+export function filterePartner(partner: Partner[], suche: string, status: PartnerStatusFilter): Partner[] {
+  const q = suche.trim().toLowerCase();
+  return partner.filter((p) => {
+    if (status === "aktiv" && !p.aktiv) return false;
+    if (status === "inaktiv" && p.aktiv) return false;
+    if (!q) return true;
+    const felder = [
+      p.name,
+      p.gewerk,
+      p.email,
+      p.telefon,
+      p.adresse?.ort,
+      p.adresse?.plz,
+      ...p.ansprechpartner.map((a) => a.name),
+    ];
+    return felder.some((f) => (f ?? "").toLowerCase().includes(q));
+  });
 }
 
 export interface MaterialFilter {

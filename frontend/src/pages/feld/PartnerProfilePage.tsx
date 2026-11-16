@@ -662,13 +662,20 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
   );
 }
 
-export function PartnerProfilePage() {
+/** `id`/`eingebettet` nur für das Detailpanel der Office-Partnerliste */
+export function PartnerProfilePage({
+  id: idProp,
+  eingebettet = false,
+}: { id?: string; eingebettet?: boolean } = {}) {
   const bestaetigen = useBestaetigung();
-  const { id } = useParams<{ id: string }>();
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Im Office-Panel steht der Seitentitel (h1) schon in SeitenKopf.
+  const Titel = eingebettet ? "h2" : "h1";
 
   const { data: partner, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["partner", id],
@@ -691,16 +698,18 @@ export function PartnerProfilePage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
-        ← Zurück
-      </button>
+      {!eingebettet && (
+        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
+          ← Zurück
+        </button>
+      )}
 
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <Briefcase size={18} strokeWidth={2} className="text-label2" />
             <div>
-              <h1 className="text-titel-mobil font-bold text-label">{partner.name}</h1>
+              <Titel className="text-titel-mobil font-bold text-label">{partner.name}</Titel>
               {partner.gewerk && (
                 <p className="text-sekundaer text-label2">{partner.gewerk}</p>
               )}

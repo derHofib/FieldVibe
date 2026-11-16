@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { Kunde, Material } from "../types";
-import { filtereKunden, filtereMaterial, istUnterbestand } from "./geschaeft";
+import type { Kunde, Material, Partner } from "../types";
+import { filtereKunden, filtereMaterial, filterePartner, istUnterbestand } from "./geschaeft";
 
 const material = (teil: Partial<Material>): Material =>
   ({
@@ -48,5 +48,60 @@ describe("filtereKunden", () => {
     expect(filtereKunden(kunden, "mül")).toHaveLength(1);
     expect(filtereKunden(kunden, "k-002")[0].id).toBe("2");
     expect(filtereKunden(kunden, "  ")).toHaveLength(2);
+  });
+});
+
+describe("filterePartner", () => {
+  const p = (teil: Partial<Partner>): Partner =>
+    ({
+      id: "1",
+      name: "Firma",
+      gewerk: null,
+      ansprechpartner: [],
+      telefon: null,
+      email: null,
+      adresse: null,
+      aktiv: true,
+      ...teil,
+    }) as Partner;
+
+  it("trifft jedes Suchfeld", () => {
+    const liste = [
+      p({ id: "n", name: "Alpha Bau" }),
+      p({ id: "g", gewerk: "Trockenbau" }),
+      p({ id: "e", email: "info@beta.de" }),
+      p({ id: "t", telefon: "0171 555" }),
+      p({ id: "o", adresse: { ort: "Hamburg" } as Partner["adresse"] }),
+      p({ id: "z", adresse: { plz: "20095" } as Partner["adresse"] }),
+      p({ id: "a", ansprechpartner: [{ id: "x", name: "Erika Mustermann" }] as Partner["ansprechpartner"] }),
+    ];
+    for (const [q, id] of [
+      ["alpha", "n"],
+      ["trocken", "g"],
+      ["beta.de", "e"],
+      ["555", "t"],
+      ["hamburg", "o"],
+      ["20095", "z"],
+      ["mustermann", "a"],
+    ]) {
+      expect(filterePartner(liste, q, "alle").map((x) => x.id)).toEqual([id]);
+    }
+  });
+
+  it("ignoriert Groß-/Kleinschreibung inkl. Umlaute und trimmt", () => {
+    const liste = [p({ gewerk: "Gerüstbau" })];
+    expect(filterePartner(liste, "  GERÜST ", "alle")).toHaveLength(1);
+    expect(filterePartner(liste, "gerüst", "alle")).toHaveLength(1);
+  });
+
+  it("überspringt null-Felder ohne Fehler", () => {
+    expect(filterePartner([p({})], "xyz", "alle")).toHaveLength(0);
+  });
+
+  it("filtert nach Status; leere Suche liefert alles nach Status", () => {
+    const liste = [p({ id: "a", aktiv: true }), p({ id: "b", aktiv: false })];
+    expect(filterePartner(liste, "", "aktiv").map((x) => x.id)).toEqual(["a"]);
+    expect(filterePartner(liste, "", "inaktiv").map((x) => x.id)).toEqual(["b"]);
+    expect(filterePartner(liste, "", "alle")).toHaveLength(2);
   });
 });

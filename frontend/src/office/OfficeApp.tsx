@@ -27,8 +27,6 @@ import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
-import { PartnerPage } from "../pages/feld/PartnerPage";
-import { PartnerProfilePage } from "../pages/feld/PartnerProfilePage";
 import { ProfilePage } from "../pages/feld/ProfilePage";
 import { PruefmittelPage } from "../pages/feld/PruefmittelPage";
 import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
@@ -42,6 +40,7 @@ import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
 import { RouteGuard } from "../components/RouteGuard";
 import { OfficeKundenPage } from "./kunden/OfficeKundenPage";
+import { OfficePartnerPage } from "./partner/OfficePartnerPage";
 import { OfficeLayout } from "./OfficeLayout";
 import { OfficeMaterialPage } from "./material/OfficeMaterialPage";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
@@ -89,6 +88,8 @@ export function OfficeApp() {
           <Route path="/postfach" element={<OfficePostfachPage />} />
           <Route path="/kunden" element={<OfficeKundenPage />} />
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />
+          <Route path="/partner" element={<OfficePartnerPage />} />
+          <Route path="/partner/:id" element={<OfficePartnerPage />} />
           <Route path="/material" element={<OfficeMaterialPage />} />
           <Route path="/material/:id" element={<OfficeMaterialPage />} />
           <Route path="/boards" element={<OfficeBoardsPage />} />
@@ -168,7 +169,6 @@ export function OfficeApp() {
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/benachrichtigungen" element={<NotificationsPage />} />
           <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/partner/:id" element={<PartnerProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
@@ -179,7 +179,6 @@ export function OfficeApp() {
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
-          <Route path="/partner" element={<PartnerPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
