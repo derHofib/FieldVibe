@@ -4,7 +4,8 @@ import { SearchableSelect } from "../../../components/SearchableSelect";
 import type { Angebot, Anlage, LeistungsverzeichnisPosition, LeistungsverzeichnisVerwendung, LeistungsverzeichnisVerwendungMitDetails, Lieferant, Material, MaterialBedarf, MaterialBedarfMitDetails, MaterialBedarfZweck, MaterialVerwendung, MaterialVerwendungMitDetails, Rechnung } from "../../../types";
 import { NEU_MATERIAL } from "./konstanten";
 import type { UseMutationResult } from "@tanstack/react-query";
-import { Clock, Package } from "lucide-react";
+import { Clock, Package, Trash2 } from "lucide-react";
+import { AktionsMenue } from "../../../components/AktionsMenue";
 import type { Dispatch, SetStateAction } from "react";
 import { Select } from "../../../components/apple/Select";
 
@@ -259,12 +260,18 @@ export function PositionenInhalt({
                       <td className="px-2 py-1.5 text-label2">{b.status}</td>
                       <td className="px-2 py-1.5 text-right">
                         {b.status === "offen" && (
-                          <button
-                            onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                            className="btn-touch text-sekundaer text-st-fehlt"
-                          >
-                            Entfernen
-                          </button>
+                          <AktionsMenue
+                            label="Weitere Aktionen"
+                            touch
+                            eintraege={[
+                              {
+                                label: "Bedarf entfernen",
+                                icon: Trash2,
+                                destruktiv: true,
+                                onClick: () => bedarfEntfernenMutation.mutate(b.id),
+                              },
+                            ]}
+                          />
                         )}
                       </td>
                     </tr>
@@ -286,12 +293,18 @@ export function PositionenInhalt({
                     </span>
                   </span>
                   {b.status === "offen" && (
-                    <button
-                      onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                      className="btn-touch text-sekundaer text-st-fehlt"
-                    >
-                      Entfernen
-                    </button>
+                    <AktionsMenue
+                      label="Weitere Aktionen"
+                      touch
+                      eintraege={[
+                        {
+                          label: "Bedarf entfernen",
+                          icon: Trash2,
+                          destruktiv: true,
+                          onClick: () => bedarfEntfernenMutation.mutate(b.id),
+                        },
+                      ]}
+                    />
                   )}
                 </div>
               ))}
@@ -334,13 +347,19 @@ export function PositionenInhalt({
                         {v.menge} {v.lv_einheit}
                       </td>
                       <td className="px-2 py-1.5 text-right">
-                        <button
-                          onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
-                          disabled={lvVerwendungEntfernenMutation.isPending}
-                          className="btn-touch text-sekundaer text-st-fehlt disabled:opacity-50"
-                        >
-                          Entfernen
-                        </button>
+                        <AktionsMenue
+                          label="Weitere Aktionen"
+                          touch
+                          eintraege={[
+                            {
+                              label: "Verwendung entfernen",
+                              icon: Trash2,
+                              destruktiv: true,
+                              disabled: lvVerwendungEntfernenMutation.isPending,
+                              onClick: () => lvVerwendungEntfernenMutation.mutate(v.id),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -380,13 +399,19 @@ export function PositionenInhalt({
                       </span>
                     </span>
                   </span>
-                  <button
-                    onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
-                    disabled={lvVerwendungEntfernenMutation.isPending}
-                    className="btn-touch shrink-0 text-sekundaer text-st-fehlt disabled:opacity-50"
-                  >
-                    Entfernen
-                  </button>
+                  <AktionsMenue
+                    label="Weitere Aktionen"
+                    touch
+                    eintraege={[
+                      {
+                        label: "Verwendung entfernen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        disabled: lvVerwendungEntfernenMutation.isPending,
+                        onClick: () => lvVerwendungEntfernenMutation.mutate(v.id),
+                      },
+                    ]}
+                  />
                 </div>
               ))}
             </div>

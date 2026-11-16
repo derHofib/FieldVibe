@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { statusLabel } from "../../config/vorgangDarstellung";
-import { Inbox, Repeat } from "lucide-react";
+import { VorgangStatusPille } from "../../components/VorgangStatusPille";
+import { Inbox, Repeat, Trash2 } from "lucide-react";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -30,16 +31,6 @@ const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   woche: "Wochen",
   monat: "Monate",
   stunde: "Stunden",
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
-  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
-  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
-  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
 };
 
 function faelligkeitsFarbe(datum: string): string {
@@ -457,18 +448,24 @@ export function AnlageProfilePage() {
         <div className="flex items-start justify-between">
           <h1 className="text-titel-mobil font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
-            <button
-              onClick={async () => {
-                if (
-                  await bestaetigen({ titel: `${profil.bezeichnung} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
-                ) {
-                  deleteMutation.mutate();
-                }
-              }}
-              className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
-            >
-              Löschen
-            </button>
+            <AktionsMenue
+              label="Weitere Aktionen"
+              touch
+              eintraege={[
+                {
+                  label: "Anlage löschen",
+                  icon: Trash2,
+                  destruktiv: true,
+                  onClick: async () => {
+                    if (
+                      await bestaetigen({ titel: `${profil.bezeichnung} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
+                    ) {
+                      deleteMutation.mutate();
+                    }
+                  },
+                },
+              ]}
+            />
           )}
         </div>
         {deleteError && <p className="mt-1 text-fliess text-st-fehlt ">{deleteError}</p>}
@@ -506,14 +503,7 @@ export function AnlageProfilePage() {
         <h2 className="mb-2 text-fliess font-semibold text-label2">Auswertung</h2>
         <div className="flex flex-wrap gap-2">
           {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
-            <span
-              key={status}
-              className={`px-2 py-1 text-sekundaer font-semibold ${
-                STATUS_BADGE[status] ?? "border rounded-[var(--radius-ap-pill)] border-sep text-label"
-              }`}
-            >
-              {anzahl}× {statusLabel(status)}
-            </span>
+            <VorgangStatusPille key={status} status={status} anzahl={anzahl} />
           ))}
         </div>
         <p className="mt-2 text-fliess text-label">
@@ -552,9 +542,7 @@ export function AnlageProfilePage() {
                   </div>
                   <div className="text-fliess font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {statusLabel(v.status)}
-                </span>
+                <VorgangStatusPille status={v.status} />
               </button>
             ))}
           </div>
@@ -656,17 +644,25 @@ export function AnlageProfilePage() {
                   )}
                 </div>
                 {kannPapierkorbLoeschen && (
-                  <button
-                    onClick={async () => {
-                      if (await bestaetigen({ titel: `Prüfzyklus "${z.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                        deletePruefzyklusMutation.mutate(z.id);
-                      }
-                    }}
-                    disabled={deletePruefzyklusMutation.isPending}
-                    className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-                  >
-                    Löschen
-                  </button>
+                  <div className="mt-2 flex justify-end">
+                    <AktionsMenue
+                      label="Weitere Aktionen"
+                      touch
+                      eintraege={[
+                        {
+                          label: "Prüfzyklus löschen",
+                          icon: Trash2,
+                          destruktiv: true,
+                          disabled: deletePruefzyklusMutation.isPending,
+                          onClick: async () => {
+                            if (await bestaetigen({ titel: `Prüfzyklus "${z.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                              deletePruefzyklusMutation.mutate(z.id);
+                            }
+                          },
+                        },
+                      ]}
+                    />
+                  </div>
                 )}
               </div>
             ))}
@@ -741,17 +737,25 @@ export function AnlageProfilePage() {
                 </div>
               )}
               {kannPapierkorbLoeschen && (
-                <button
-                  onClick={async () => {
-                    if (await bestaetigen({ titel: "Inventurzyklus löschen?", bestaetigenLabel: "Löschen" })) {
-                      deleteInventurzyklusMutation.mutate();
-                    }
-                  }}
-                  disabled={deleteInventurzyklusMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-                >
-                  Löschen
-                </button>
+                <div className="mt-2 flex justify-end">
+                  <AktionsMenue
+                    label="Weitere Aktionen"
+                    touch
+                    eintraege={[
+                      {
+                        label: "Inventurzyklus löschen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        disabled: deleteInventurzyklusMutation.isPending,
+                        onClick: async () => {
+                          if (await bestaetigen({ titel: "Inventurzyklus löschen?", bestaetigenLabel: "Löschen" })) {
+                            deleteInventurzyklusMutation.mutate();
+                          }
+                        },
+                      },
+                    ]}
+                  />
+                </div>
               )}
             </div>
           )}

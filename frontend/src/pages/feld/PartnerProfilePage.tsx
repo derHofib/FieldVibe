@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Briefcase, Link2, ShieldAlert } from "lucide-react";
+import { Briefcase, Link2, ShieldAlert, Trash2 } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { partnerApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
@@ -354,7 +355,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                 {n.dokument_s3_key && (
                   <button
                     onClick={() => herunterladen(n.id)}
-                    className="btn-touch text-sekundaer text-cyan-700 dark:text-cyan-400"
+                    className="btn-touch text-sekundaer text-tint"
                   >
                     Herunterladen
                   </button>
@@ -375,13 +376,19 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                   </label>
                 )}
                 {kannVerwalten && (
-                  <button
-                    onClick={() => removeMutation.mutate(n.id)}
-                    disabled={removeMutation.isPending}
-                    className="btn-touch text-sekundaer text-st-fehlt "
-                  >
-                    Entfernen
-                  </button>
+                  <AktionsMenue
+                    label="Weitere Aktionen"
+                    touch
+                    eintraege={[
+                      {
+                        label: "Nachweis entfernen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        disabled: removeMutation.isPending,
+                        onClick: () => removeMutation.mutate(n.id),
+                      },
+                    ]}
+                  />
                 )}
               </div>
             </div>
@@ -706,14 +713,20 @@ export function PartnerProfilePage() {
               )}
             </div>
           </div>
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: `${partner.name} löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
-            }}
-            className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
-          >
-            Löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Partner löschen",
+                icon: Trash2,
+                destruktiv: true,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: `${partner.name} löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
+                },
+              },
+            ]}
+          />
         </div>
         {deleteError && <p className="mt-2 text-fliess text-st-fehlt ">{deleteError}</p>}
       </div>

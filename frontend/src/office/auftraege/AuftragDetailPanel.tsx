@@ -10,7 +10,8 @@ import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
-import { Layers } from "lucide-react";
+import { Layers, Trash2 } from "lucide-react";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
@@ -146,17 +147,24 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         <ZeitSummenBlock filter={{ auftrag_id: auftrag.id }} />
 
         <div className="border-t border-sep pt-4">
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: `Auftrag "${aktuell?.titel ?? auftrag.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                loeschen.mutate();
-              }
-            }}
-            disabled={loeschen.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt"
-          >
-            Auftrag löschen
-          </button>
+          <div className="flex justify-end">
+            <AktionsMenue
+              label="Weitere Aktionen"
+              eintraege={[
+                {
+                  label: "Auftrag löschen",
+                  icon: Trash2,
+                  destruktiv: true,
+                  disabled: loeschen.isPending,
+                  onClick: async () => {
+                    if (await bestaetigen({ titel: `Auftrag "${aktuell?.titel ?? auftrag.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                      loeschen.mutate();
+                    }
+                  },
+                },
+              ]}
+            />
+          </div>
         </div>
       </div>
     </SeitenPanel>

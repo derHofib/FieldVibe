@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { statusLabel } from "../../config/vorgangDarstellung";
-import { Boxes, Inbox, Repeat } from "lucide-react";
+import { VorgangStatusPille } from "../../components/VorgangStatusPille";
+import { Boxes, Inbox, Repeat, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -13,16 +13,7 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
-  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
-  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
-  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
-};
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 function AdresseBearbeiten({
   standortId,
@@ -322,17 +313,23 @@ export function StandortDetailPage() {
           ← Zurück
         </button>
         {kannLoeschen && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Standort löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Standort löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Standort löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Standort löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 
@@ -372,14 +369,7 @@ export function StandortDetailPage() {
         ) : (
           <div className="flex flex-wrap gap-2">
             {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
-              <span
-                key={status}
-                className={`px-2 py-1 text-sekundaer font-semibold ${
-                  STATUS_BADGE[status] ?? "border rounded-[var(--radius-ap-pill)] border-sep text-label"
-                }`}
-              >
-                {anzahl}× {statusLabel(status)}
-              </span>
+              <VorgangStatusPille key={status} status={status} anzahl={anzahl} />
             ))}
           </div>
         )}
@@ -446,9 +436,7 @@ export function StandortDetailPage() {
                   </div>
                   <div className="text-fliess font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {statusLabel(v.status)}
-                </span>
+                <VorgangStatusPille status={v.status} />
               </button>
             ))}
           </div>

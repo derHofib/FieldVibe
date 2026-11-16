@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, FileCode, FileText, Inbox, Paperclip } from "lucide-react";
+import { Check, FileCode, FileText, Inbox, Paperclip, Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -14,6 +14,7 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -315,17 +316,23 @@ export function EingangsrechnungDetailPage() {
           ← Zurück
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Eingangsrechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Eingangsrechnung löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Eingangsrechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 
@@ -367,7 +374,7 @@ export function EingangsrechnungDetailPage() {
           <p className="mt-2 whitespace-pre-line text-fliess text-label">{eingangsrechnung.notiz}</p>
         )}
         {eingangsrechnung.skonto_prozent && eingangsrechnung.skonto_frist && (
-          <p className="mt-1 text-sekundaer font-medium text-cyan-700 dark:text-cyan-400">
+          <p className="mt-1 text-sekundaer font-medium text-tint">
             Skonto {eingangsrechnung.skonto_prozent}% bis {new Date(eingangsrechnung.skonto_frist).toLocaleDateString("de-DE")}
             {" "}(Ersparnis {eingangsrechnung.skonto_betrag} EUR)
           </p>
@@ -418,13 +425,19 @@ export function EingangsrechnungDetailPage() {
               <FileText size={14} strokeWidth={2} /> Beleg anzeigen
             </button>
             {eingangsrechnung.status === "offen" && !eingangsrechnung.hat_xml && (
-              <button
-                onClick={() => belegRemoveMutation.mutate()}
-                disabled={belegRemoveMutation.isPending}
-                className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-              >
-                Entfernen
-              </button>
+              <AktionsMenue
+                label="Weitere Aktionen"
+                touch
+                eintraege={[
+                  {
+                    label: "Beleg entfernen",
+                    icon: Trash2,
+                    destruktiv: true,
+                    disabled: belegRemoveMutation.isPending,
+                    onClick: () => belegRemoveMutation.mutate(),
+                  },
+                ]}
+              />
             )}
           </div>
         ) : eingangsrechnung.hat_xml ? null : (

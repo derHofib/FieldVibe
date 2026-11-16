@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, ChevronDown, FileText, ListChecks, X } from "lucide-react";
+import { Ban, ChevronDown, FileText, ListChecks, X, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -49,6 +49,7 @@ import type { RechnungZahlungsart } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
   material: "Material",
@@ -561,17 +562,23 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           ← Zurück
         </button>
         {kannLoeschen && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Rechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Rechnung löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Rechnung löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Rechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 

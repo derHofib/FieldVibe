@@ -20,12 +20,15 @@ export function AktionsMenue({
   label,
   ausloeser,
   richtung,
+  touch,
 }: {
   eintraege: (AktionsMenueEintrag | "trenner")[];
   label: string;
   /** Eigener Auslöser; Standard ist ein Drei-Punkte-Button. */
   ausloeser?: (props: { offen: boolean }) => ReactNode;
   richtung?: "unten" | "oben";
+  /** 44px-Tippfläche für Zeilenmenüs in der Feld-App. */
+  touch?: boolean;
 }) {
   const items: PulldownItem[] = eintraege.map((e) =>
     e === "trenner" ? e : { ...e, onSelect: e.onClick },
@@ -44,7 +47,7 @@ export function AktionsMenue({
           title={label}
           aria-haspopup="menu"
           aria-expanded={offen}
-          className={ausloeser ? "block w-full" : "btn-ap-toolbar"}
+          className={ausloeser ? "block w-full" : touch ? "btn-ap-toolbar btn-touch" : "btn-ap-toolbar"}
         >
           {ausloeser ? ausloeser({ offen }) : <MoreHorizontal size={16} strokeWidth={2} />}
         </button>
