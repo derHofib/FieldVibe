@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select, text, update
 from sqlalchemy.exc import DBAPIError
 
-from app.db.session import engine, system_session, tenant_session
+from app.db.session import engine, system_engine, system_session, tenant_session
 from app.models.audit_log import AuditLog, AuditLogSiegel
 from app.models.user import User
 from app.services import audit_service
@@ -26,11 +26,6 @@ async def _admin(client, make_mandant, make_user, name="Betrieb"):
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
     return mandant, admin, token
-
-
-def _super(conn):
-    # Rohe Verbindung ohne App-Sitzung: die FORCE-RLS braucht den Super-Admin-Kontext.
-    return conn.execute(text("SELECT set_config('app.is_super_admin', 'true', true)"))
 
 
 async def _trigger_aus(tabelle: str):
@@ -112,8 +107,7 @@ async def test_manipulation_am_inhalt_wird_erkannt(client, make_mandant, make_us
 
     await _trigger_aus("audit_log")
     try:
-        async with engine.begin() as conn:
-            await _super(conn)
+        async with system_engine.begin() as conn:
             await conn.execute(
                 text("UPDATE audit_log SET payload = '{\"betrag\": \"1.00\"}'::jsonb WHERE id = :i"), {"i": ziel.id}
             )
@@ -136,8 +130,7 @@ async def test_entferntes_oder_eingeschobenes_siegel_wird_erkannt(client, make_m
     # Mittleres Siegel entfernen: Luecke in der Kette.
     await _trigger_aus("audit_log_siegel")
     try:
-        async with engine.begin() as conn:
-            await _super(conn)
+        async with system_engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM audit_log_siegel WHERE mandant_id = :m AND seq = 2"), {"m": mandant.id}
             )
@@ -151,8 +144,7 @@ async def test_entferntes_oder_eingeschobenes_siegel_wird_erkannt(client, make_m
     mandant2, admin2, token2 = await _admin(client, make_mandant, make_user, "Zweitbetrieb")
     async with system_session(grund="test") as session:
         await audit_service.log_action(session, aktion="echt", mandant_id=mandant2.id)
-    async with engine.begin() as conn:
-        await _super(conn)
+    async with system_engine.begin() as conn:
         await conn.execute(
             text(
                 "INSERT INTO audit_log (mandant_id, aktion, akteur_typ, payload) "
@@ -180,7 +172,7 @@ async def test_ketten_sind_je_mandant_getrennt(client, make_mandant, make_user):
     liste = (await client.get("/api/audit", headers=auth_headers(t2))).json()
     assert all(e["aktion"] != "nur_eins" for e in liste["eintraege"])
     # Unter der RLS-Mandantensession von Mandant 2 ist die Kette von Mandant 1 nicht lesbar.
-    async with tenant_session(mandant_id=m2.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=m2.id) as session:
         assert (await session.execute(select(AuditLogSiegel).where(AuditLogSiegel.mandant_id == m1.id))).first() is None
         assert (await session.execute(select(AuditLog).where(AuditLog.mandant_id == m1.id))).first() is None
 
@@ -190,7 +182,7 @@ async def test_parallele_schreiber_verklemmen_nicht_und_kette_bleibt_gueltig(mak
     mandant = await make_mandant()
 
     async def schreiber(n: int) -> None:
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             # Fachzeile sperren, DANN protokollieren: genau das Muster, das beim Sperren
             # im INSERT-Pfad zu Deadlocks fuehren wuerde.
             await session.execute(select(User).where(User.mandant_id == mandant.id).with_for_update())
@@ -217,7 +209,7 @@ async def test_audit_fehler_laesst_fachaenderung_scheitern(make_mandant, make_us
 
     monkeypatch.setattr(audit_service, "_siegeln", kaputt)
     with pytest.raises(RuntimeError, match="Siegel nicht moeglich"):
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             benutzer = await session.get(User, admin.id)
             benutzer.name = "Geaendert ohne Protokoll"
             await audit_service.log_action(session, aktion="user_geaendert", mandant_id=mandant.id)

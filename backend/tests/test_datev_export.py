@@ -252,7 +252,7 @@ async def _kunden_anlegen(mandant_id, anzahl: int) -> None:
 
 
 async def _vergeben(mandant_id, laenge: int = 4) -> dict:
-    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_id) as session:
         kunden = list((await session.execute(select(Kunde).where(Kunde.mandant_id == mandant_id))).scalars())
         await datev_service.debitorenkonten_vergeben(session, mandant_id, kunden, laenge)
         return {k.id: k.debitorenkonto for k in kunden}
@@ -285,7 +285,7 @@ async def test_numerische_kundennummer_hat_vorrang_wenn_frei(make_mandant):
             session.add(
                 Kunde(mandant_id=mandant.id, kundennummer=nummer, name=nummer, portal_slug=uuid.uuid4().hex)
             )
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         kunden = list((await session.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).scalars())
         await datev_service.debitorenkonten_vergeben(session, mandant.id, kunden, 4)
         konto = {k.kundennummer: k.debitorenkonto for k in kunden}
@@ -374,7 +374,7 @@ async def test_debitorenkonto_mandantentrennung(client, make_mandant, make_user,
     # Dasselbe Konto in einem anderen Mandanten ist kein Konflikt ...
     assert (await client.patch(f"/api/kunden/{kunde_b.id}", headers=h_b, json={"debitorenkonto": "12345"})).status_code == 200
     # ... und kein Mandant sieht das Konto des anderen.
-    async with tenant_session(mandant_id=mandant_b.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_b.id) as session:
         sichtbar = (await session.execute(select(Kunde.id, Kunde.debitorenkonto))).all()
     assert [(r.id, r.debitorenkonto) for r in sichtbar] == [(kunde_b.id, "12345")]
     # Auch die automatische Vergabe zaehlt nur den eigenen Mandanten.
@@ -446,7 +446,7 @@ async def test_lieferant_vergabe_kollisionsfrei(make_mandant):
             session.add(Lieferant(mandant_id=mandant.id, name=f"L{i}"))
 
     async def vergeben():
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             lieferanten = list((await session.execute(select(Lieferant))).scalars())
             await datev_service.kreditorenkonten_vergeben(session, mandant.id, lieferanten, 4)
             return {li.id: li.kreditorenkonto for li in lieferanten}

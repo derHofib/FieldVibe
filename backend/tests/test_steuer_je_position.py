@@ -27,7 +27,7 @@ from app.services import steuer_service
 from app.services.auswertung_service import KontoNichtKonfiguriert, _erloeskonto
 from app.services.datev_service import DatevStammdaten
 from tests.datev_helfer import stammdaten_setzen
-from tests.conftest import auth_headers, login
+from tests.conftest import auth_headers, login, sync_system_engine
 
 _CENT = Decimal("0.01")
 _BACKEND = os.path.dirname(os.path.dirname(__file__))
@@ -322,7 +322,9 @@ def _cfg() -> Config:
 
 
 def _sync_engine():
-    return create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
+    # System-Rolle: rohes SQL (Backfill-Pruefungen) braucht den RLS-Bypass, den frueher
+    # app.is_super_admin lieferte.
+    return sync_system_engine()
 
 
 async def _migrieren(richtung: str, ziel: str) -> None:

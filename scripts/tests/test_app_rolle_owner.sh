@@ -48,6 +48,35 @@ lauf "$REPO/scripts/app_rolle_einrichten.sh" --nur-rolle --getrennter-owner --co
 assert_eq "$VORHER" "$(cat "$REPO/.env.migration")" "zweiter Lauf behaelt das Owner-Passwort"
 testumgebung_loeschen
 
+szenario "System-Rolle: Passwort erzeugt, DATABASE_URL_SYSTEM (asyncpg) in .env, SQL bekommt system_rolle, Passwort maskiert"
+umgebung
+lauf "$REPO/scripts/app_rolle_einrichten.sh" --nur-rolle --compose "docker compose"
+assert_rc 0 "Lauf mit System-Rolle"
+assert_regex "$REPO/.env" '^APP_DB_SYSTEM_USER=fieldvibe_system$' "Standard-Name der System-Rolle"
+assert_regex "$REPO/.env" '^APP_DB_SYSTEM_PASSWORD=[0-9a-f]{48}$' "System-Passwort erzeugt"
+assert_regex "$REPO/.env" '^DATABASE_URL_SYSTEM=postgresql\+asyncpg://fieldvibe_system:[0-9a-f]{48}@postgres:5432/fieldvibe$' "System-URL"
+SYS_PW="$(grep '^APP_DB_SYSTEM_PASSWORD=' "$REPO/.env" | cut -d= -f2)"
+APP_PW="$(grep '^APP_DB_PASSWORD=' "$REPO/.env" | cut -d= -f2)"
+assert_eq "1" "$([[ "$SYS_PW" != "$APP_PW" ]] && echo 1 || echo 0)" "System- und App-Passwort verschieden"
+assert_enthaelt "$T/psql-stdin.bin" "\\set system_rolle fieldvibe_system" "SQL erhaelt die System-Rolle"
+assert_enthaelt_nicht "$OUT" "$SYS_PW" "System-Passwort nicht in der Ausgabe"
+lauf "$REPO/scripts/app_rolle_einrichten.sh" --nur-rolle --compose "docker compose"
+assert_enthaelt "$REPO/.env" "APP_DB_SYSTEM_PASSWORD=$SYS_PW" "zweiter Lauf behaelt das System-Passwort"
+testumgebung_loeschen
+
+szenario "System-Rolle gleich App-Rolle wird abgelehnt; --dry-run nennt die System-Rolle"
+umgebung
+env_schreiben "APP_DB_USER=fieldvibe_app" "APP_DB_PASSWORD=changeme" "APP_DB_SYSTEM_USER=fieldvibe_app"
+lauf "$REPO/scripts/app_rolle_einrichten.sh" --nur-rolle --compose "docker compose"
+assert_rc_nicht0 "gleicher Name"
+env_schreiben "APP_DB_USER=fieldvibe_app" "APP_DB_PASSWORD=changeme"
+lauf "$REPO/scripts/app_rolle_einrichten.sh" --dry-run --compose "docker compose"
+assert_rc 0 "Trockenlauf"
+assert_enthaelt "$OUT" "System-Rolle:     fieldvibe_system" "Trockenlauf nennt die System-Rolle"
+assert_enthaelt "$OUT" "BYPASSRLS" "Trockenlauf beschreibt die Rolle"
+assert_enthaelt_nicht "$REPO/.env" "DATABASE_URL_SYSTEM" "Trockenlauf aendert .env nicht"
+testumgebung_loeschen
+
 szenario "Owner-Name gleich App-Rolle wird abgelehnt"
 umgebung
 printf 'APP_DB_OWNER_USER=fieldvibe_app\n' >"$REPO/.env.migration"

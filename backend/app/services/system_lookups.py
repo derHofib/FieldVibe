@@ -192,7 +192,7 @@ async def konto_session(mandant_id: UUID | None, *, grund: str) -> AsyncIterator
     jeder Mandanten-RLS-Sicht (users-Policy verlangt mandant_id = Kontext) und
     brauchen den Bypass -- dann auch fuer das zugehoerige Audit mit mandant_id NULL."""
     if mandant_id is not None:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             yield session
         return
     async with system_session(grund=grund) as session:
@@ -213,7 +213,7 @@ async def token_version_lookup(
     modell = _TOKEN_MODELLE[typ]
     stmt = select(modell.token_version).where(modell.id == account_id)
     if mandant_id is not None:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             return await session.scalar(stmt)
     async with system_session(grund="auth-request: token-version pruefen", drosselung_s=300) as session:
         return await session.scalar(stmt)

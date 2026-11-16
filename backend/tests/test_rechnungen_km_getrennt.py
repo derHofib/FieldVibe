@@ -15,7 +15,7 @@ from app.db.session import system_session
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.zeiterfassung import Zeiterfassung
 from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
-from tests.conftest import _BACKEND_DIR, auth_headers, login
+from tests.conftest import _BACKEND_DIR, auth_headers, login, sync_system_engine
 from tests.test_rechnungen_sammelrechnung import _svs, _uebernehmen
 
 
@@ -455,7 +455,7 @@ async def test_migration_0097_backfill_und_up_down_up(client, make_mandant, make
     ids, rechnungen = await _alt_zustand(mandant, kunde, admin, v1, v2)
 
     cfg = _cfg()
-    engine = sqlalchemy.create_engine(get_settings().database_url_sync)
+    engine = sync_system_engine()
     command.downgrade(cfg, "0096")
     try:
         command.upgrade(cfg, "head")

@@ -29,7 +29,13 @@ async def rls_tabellen_im_besitz(conn, rolle: str | None = None) -> list[str]:
     return [r[0] for r in (await conn.execute(_BESITZ_SQL, {"rolle": rolle})).all()]
 
 
-async def pruefe_db_rolle(engine: AsyncEngine) -> None:
+async def pruefe_db_rolle(engine: AsyncEngine, system_engine: AsyncEngine) -> None:
+    """Prueft die App-Rolle (engine) und die System-Rolle (system_engine)."""
+    await _pruefe_app_rolle(engine)
+    await _pruefe_system_rolle(engine, system_engine)
+
+
+async def _pruefe_app_rolle(engine: AsyncEngine) -> None:
     """Superuser und BYPASSRLS-Rollen ignorieren jede RLS-Policy (auch mit
     FORCE ROW LEVEL SECURITY) -- die Mandantentrennung waere dann nur noch
     Anwendungslogik. Nur die App-/Worker-Verbindung wird geprueft;
@@ -85,3 +91,52 @@ async def _pruefe_besitz(engine: AsyncEngine, rolle: str) -> None:
     if get_settings().db_besitz_verboten:
         raise UnsichereDbRolleError(meldung)
     logger.warning(meldung)
+
+
+async def _pruefe_system_rolle(engine: AsyncEngine, system_engine: AsyncEngine) -> None:
+    """Die System-Rolle muss BYPASSRLS haben (sonst blockieren die Policies
+    system_session), darf aber weder Superuser noch Tabellen-Eigentuemerin sein
+    und nicht mit der App-Rolle zusammenfallen -- sonst haette die App-
+    Verbindung selbst den Bypass."""
+    async with engine.connect() as conn:
+        app_name = (await conn.execute(text("SELECT current_user"))).scalar_one()
+    async with system_engine.connect() as conn:
+        row = (
+            await conn.execute(
+                text(
+                    "SELECT current_user AS name, rolsuper, rolbypassrls "
+                    "FROM pg_roles WHERE rolname = current_user"
+                )
+            )
+        ).one()
+
+    if row.name == app_name:
+        raise UnsichereDbRolleError(
+            f"DATABASE_URL_SYSTEM und DATABASE_URL verwenden dieselbe Rolle ({row.name}) -- "
+            "die System-Rolle muss eine eigene Rolle sein (scripts/app_rolle_einrichten.sh, "
+            "docs/DEPLOYMENT.md, Abschnitt System-Rolle)."
+        )
+    if row.rolsuper:
+        raise UnsichereDbRolleError(
+            f"System-Rolle {row.name} ist Superuser -- sie braucht nur BYPASSRLS, nicht mehr "
+            "(scripts/app_rolle_einrichten.sh, docs/DEPLOYMENT.md, Abschnitt System-Rolle)."
+        )
+    if not row.rolbypassrls:
+        raise UnsichereDbRolleError(
+            f"System-Rolle {row.name} hat kein BYPASSRLS -- die RLS-Policies wuerden "
+            "system_session blockieren. Fix: scripts/app_rolle_einrichten.sh ausfuehren "
+            "(docs/DEPLOYMENT.md, Abschnitt System-Rolle)."
+        )
+    async with system_engine.connect() as conn:
+        tabellen = await rls_tabellen_im_besitz(conn, row.name)
+    if tabellen:
+        meldung = (
+            f"System-Rolle {row.name} besitzt {len(tabellen)} RLS-Tabellen -- als Eigentuemerin "
+            "koennte sie RLS per ALTER TABLE abschalten; sie soll nur Tabellenrechte haben."
+        )
+        if get_settings().erlaube_rls_bypass_rolle:
+            logger.warning("%s FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE ist gesetzt -- Start wird fortgesetzt.", meldung)
+            return
+        raise UnsichereDbRolleError(
+            meldung + " (Nur fuer Notfaelle ueberschreibbar mit FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1.)"
+        )

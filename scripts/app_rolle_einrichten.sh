@@ -15,6 +15,11 @@ set -euo pipefail
 #   ./scripts/app_rolle_einrichten.sh [--dry-run] [--ohne-backup]
 #                                     [--compose "docker compose -f ... -f ..."]
 #
+# Zusaetzlich entsteht die System-Rolle (Standard fieldvibe_system, LOGIN
+# NOSUPERUSER BYPASSRLS, besitzt keine Tabellen): sie traegt system_session()
+# (DATABASE_URL_SYSTEM). Der RLS-Bypass haengt so an einer DB-Rolle statt an
+# einer Session-Variable, die jede App-Verbindung setzen koennte.
+#
 # Idempotent: ein zweiter Lauf erkennt Rolle und Passwort und laeuft durch.
 #
 # Optionen:
@@ -52,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     --nur-rolle)   NUR_ROLLE=1 ;;
     --getrennter-owner) GETRENNTER_OWNER=1 ;;
     --compose)     shift; [[ $# -gt 0 ]] || err "--compose braucht ein Argument."; COMPOSE_ARG="$1" ;;
-    -h|--help)     sed -n '3,38p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)     sed -n '3,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)             err "Unbekannte Option: $1 (siehe --help)" ;;
   esac
   shift
@@ -102,6 +107,8 @@ PG_USER="$(get_env POSTGRES_USER)"; PG_USER="${PG_USER:-fieldvibe}"
 PG_DB="$(get_env POSTGRES_DB)";     PG_DB="${PG_DB:-fieldvibe}"
 APP_USER="$(get_env APP_DB_USER)";  APP_USER="${APP_USER:-fieldvibe_app}"
 APP_PW="$(get_env APP_DB_PASSWORD)"
+SYS_USER="$(get_env APP_DB_SYSTEM_USER)"; SYS_USER="${SYS_USER:-fieldvibe_system}"
+SYS_PW="$(get_env APP_DB_SYSTEM_PASSWORD)"
 
 # Der Name landet in SQL-Bezeichnern und der Connection-URL -- nur harmlose
 # Zeichen zulassen.
@@ -109,6 +116,10 @@ APP_PW="$(get_env APP_DB_PASSWORD)"
   || err "APP_DB_USER='$APP_USER' ist ungueltig (erlaubt: Kleinbuchstaben, Ziffern, Unterstrich)."
 [[ "$APP_USER" != "$PG_USER" ]] \
   || err "APP_DB_USER darf nicht mit POSTGRES_USER ($PG_USER) identisch sein."
+[[ "$SYS_USER" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] \
+  || err "APP_DB_SYSTEM_USER='$SYS_USER' ist ungueltig (erlaubt: Kleinbuchstaben, Ziffern, Unterstrich)."
+[[ "$SYS_USER" != "$PG_USER" && "$SYS_USER" != "$APP_USER" ]] \
+  || err "APP_DB_SYSTEM_USER muss sich von APP_DB_USER und POSTGRES_USER unterscheiden."
 [[ "$PG_DB" =~ ^[A-Za-z0-9_]+$ ]] || err "POSTGRES_DB='$PG_DB' enthaelt unerwartete Zeichen."
 
 PW_NEU=0
@@ -119,6 +130,14 @@ if [[ -z "$APP_PW" || "$APP_PW" == *changeme* ]]; then
 fi
 [[ "$APP_PW" =~ ^[A-Za-z0-9._~-]+$ ]] \
   || err "APP_DB_PASSWORD in .env enthaelt Zeichen, die in der DATABASE_URL kodiert werden muessten -- Zeile loeschen, dann erzeugt das Skript ein neues."
+
+SYS_PW_NEU=0
+if [[ -z "$SYS_PW" || "$SYS_PW" == *changeme* ]]; then
+  SYS_PW="$(openssl rand -hex 24)"
+  SYS_PW_NEU=1
+fi
+[[ "$SYS_PW" =~ ^[A-Za-z0-9._~-]+$ ]] \
+  || err "APP_DB_SYSTEM_PASSWORD in .env enthaelt Zeichen, die in der DATABASE_URL kodiert werden muessten -- Zeile loeschen, dann erzeugt das Skript ein neues."
 
 # --- Getrennte Owner-Rolle (optional) ---------------------------------------
 MIGR_DATEI=".env.migration"
@@ -131,6 +150,7 @@ if [[ $GETRENNTER_OWNER -eq 1 ]]; then
   [[ "$OWNER_USER" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] || err "APP_DB_OWNER_USER='$OWNER_USER' ist ungueltig."
   [[ "$OWNER_USER" != "$APP_USER" && "$OWNER_USER" != "$PG_USER" ]] \
     || err "APP_DB_OWNER_USER muss sich von APP_DB_USER und POSTGRES_USER unterscheiden."
+  [[ "$OWNER_USER" != "$SYS_USER" ]] || err "APP_DB_OWNER_USER muss sich von APP_DB_SYSTEM_USER unterscheiden."
   [[ "$OWNER_PW" =~ ^[A-Za-z0-9._~-]+$ ]] || err "APP_DB_OWNER_PASSWORD in ${MIGR_DATEI} enthaelt unerwartete Zeichen -- Zeile loeschen."
 fi
 
@@ -138,6 +158,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 ENV_BACKUP=".env.vor-app-rolle.${STAMP}"
 URL_ASYNC="postgresql+asyncpg://${APP_USER}:${APP_PW}@postgres:5432/${PG_DB}"
 URL_SYNC="postgresql+psycopg2://${APP_USER}:${APP_PW}@postgres:5432/${PG_DB}"
+URL_SYSTEM="postgresql+asyncpg://${SYS_USER}:${SYS_PW}@postgres:5432/${PG_DB}"
 
 if [[ $DRY_RUN -eq 1 ]]; then
   log "Trockenlauf -- es wird nichts veraendert."
@@ -145,15 +166,17 @@ if [[ $DRY_RUN -eq 1 ]]; then
   Compose:          ${COMPOSE[*]}
   Admin-User/DB:    ${PG_USER} / ${PG_DB}
   App-Rolle:        ${APP_USER} ($([[ $PW_NEU -eq 1 ]] && echo "Passwort wird neu erzeugt" || echo "Passwort aus .env"))
+  System-Rolle:     ${SYS_USER} ($([[ $SYS_PW_NEU -eq 1 ]] && echo "Passwort wird neu erzeugt" || echo "Passwort aus .env"))
 
   Geplante Schritte:
 PLAN
   [[ $NUR_ROLLE -eq 0 && $OHNE_BACKUP -eq 0 ]] && echo "   1. Sicherung: scripts/backup.sh"
   echo "   2. .env kopieren nach ${ENV_BACKUP}"
   echo "   3. Postgres starten/abwarten: ${COMPOSE[*]} up -d postgres"
-  echo "   4. scripts/sql/app_rolle_einrichten.sql als ${PG_USER} in ${PG_DB} ausfuehren (Rolle anlegen, Eigentum uebertragen)"
+  echo "   4. scripts/sql/app_rolle_einrichten.sql als ${PG_USER} in ${PG_DB} ausfuehren (App-Rolle und System-Rolle ${SYS_USER} anlegen, Eigentum uebertragen)"
+  echo "      System-Rolle ${SYS_USER}: LOGIN NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE, besitzt keine Tabellen, nur DML-Rechte"
   [[ -n "$OWNER_USER" ]] && echo "      mit getrennter Owner-Rolle ${OWNER_USER}: Tabellen gehoeren ihr, ${APP_USER} bekommt nur DML-Rechte; Zugang in ${MIGR_DATEI}"
-  echo "   5. .env: APP_DB_USER/APP_DB_PASSWORD, DATABASE_URL, DATABASE_URL_SYNC setzen; FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE entfernen"
+  echo "   5. .env: APP_DB_USER/APP_DB_PASSWORD, DATABASE_URL, DATABASE_URL_SYNC setzen; APP_DB_SYSTEM_USER/APP_DB_SYSTEM_PASSWORD, DATABASE_URL_SYSTEM setzen; FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE entfernen"
   if [[ $NUR_ROLLE -eq 0 ]]; then
     echo "   6. backend und worker neu erzeugen, bis zu 90 s auf 'healthy' warten"
     echo "   7. alembic upgrade head"
@@ -176,6 +199,7 @@ fi
 # Verzeichnis zumuellen -- nur sichern, wenn sich an .env wirklich etwas aendert.
 if [[ $NUR_ROLLE -eq 0 || "$(get_env DATABASE_URL)" != "$URL_ASYNC" \
       || "$(get_env DATABASE_URL_SYNC)" != "$URL_SYNC" \
+      || "$(get_env DATABASE_URL_SYSTEM)" != "$URL_SYSTEM" \
       || -n "$(get_env FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE)" ]]; then
   cp -p .env "$ENV_BACKUP"
   chmod 600 "$ENV_BACKUP"
@@ -196,15 +220,16 @@ done
 # Die Variablen laufen per \set ueber stdin statt per -v: Kommandozeilen-
 # Argumente waeren in der Prozessliste sichtbar, das Passwort nicht. Die
 # Ausgabe wird zusaetzlich maskiert, falls eine Fehlermeldung es zitiert.
-log "Richte Rolle ${APP_USER} ein und uebertrage das Eigentum an den Tabellen..."
+log "Richte Rollen ${APP_USER} und ${SYS_USER} ein und uebertrage das Eigentum an den Tabellen..."
 if ! {
   printf '\\set app_rolle %s\n\\set app_passwort %s\n\\set db_name %s\n' "$APP_USER" "$APP_PW" "$PG_DB"
+  printf '\\set system_rolle %s\n\\set system_passwort %s\n' "$SYS_USER" "$SYS_PW"
   if [[ -n "$OWNER_USER" ]]; then
     printf '\\set owner_rolle %s\n\\set owner_passwort %s\n' "$OWNER_USER" "$OWNER_PW"
   fi
   cat scripts/sql/app_rolle_einrichten.sql
 } | "${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" -f - 2>&1 \
-  | sed "s/${APP_PW}/***/g; s/${OWNER_PW:-__kein_owner__}/***/g"; then
+  | sed "s/${APP_PW}/***/g; s/${OWNER_PW:-__kein_owner__}/***/g; s/${SYS_PW}/***/g"; then
   err ".env unveraendert (Sicherung: ${ENV_BACKUP}). SQL-Schritt fehlgeschlagen, siehe Ausgabe oben."
 fi
 
@@ -214,6 +239,9 @@ set_env APP_DB_USER "$APP_USER"
 set_env APP_DB_PASSWORD "$APP_PW"
 set_env DATABASE_URL "$URL_ASYNC"
 set_env DATABASE_URL_SYNC "$URL_SYNC"
+set_env APP_DB_SYSTEM_USER "$SYS_USER"
+set_env APP_DB_SYSTEM_PASSWORD "$SYS_PW"
+set_env DATABASE_URL_SYSTEM "$URL_SYSTEM"
 del_env FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE
 if [[ -n "$OWNER_USER" ]]; then
   # Owner-Zugang in eigene Datei: .env wird als env_file in Backend und Worker
@@ -227,7 +255,7 @@ fi
 chmod 600 .env
 
 if [[ $NUR_ROLLE -eq 1 ]]; then
-  log "App-Rolle ${APP_USER} eingerichtet, .env umgestellt (Stack-Start folgt durch den Aufrufer)."
+  log "App-Rolle ${APP_USER} und System-Rolle ${SYS_USER} eingerichtet, .env umgestellt (Stack-Start folgt durch den Aufrufer)."
   exit 0
 fi
 
@@ -263,5 +291,5 @@ done
 log "Wende Migrationen als ${APP_USER} an..."
 ./scripts/migrieren.sh --compose "${COMPOSE[*]}" || rollback
 
-log "Fertig. Backend und Worker laufen als ${APP_USER}; Row-Level-Security ist wirksam."
+log "Fertig. Backend und Worker laufen als ${APP_USER} (System-Zugriffe als ${SYS_USER}); Row-Level-Security ist wirksam."
 echo "  Sicherungen: ${ENV_BACKUP} (die Datei enthaelt das alte Passwort -- nach Kontrolle loeschen)."

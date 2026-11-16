@@ -181,7 +181,7 @@ async def _abmeldung_protokollieren(request: Request) -> None:
         user = await system_lookups.user_kern_by_id(payload["sub"], grund="login: abmeldung protokollieren")
         if user is None or user.mandant_id is None:
             return
-        async with tenant_session(mandant_id=user.mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=user.mandant_id) as session:
             await log_action(
                 session,
                 aktion="logout",
@@ -356,7 +356,7 @@ async def registrieren(body: RegistrierenRequest, request: Request, response: Re
             detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
         )
     mandant_id = await mandant_der_einladung(body.token)
-    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_id) as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="mitarbeiter")
 
         user = User(
@@ -386,7 +386,7 @@ async def me(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> C
             status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
         )
 
-    async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=auth.mandant_id) as session:
         mandant_name: str | None = None
         deaktivierte_module: list[str] = []
         mandant = None

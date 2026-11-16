@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 import os
 import socket
 import uuid
@@ -11,6 +12,10 @@ os.environ.setdefault(
 os.environ.setdefault(
     "DATABASE_URL_SYNC",
     "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
+)
+os.environ.setdefault(
+    "DATABASE_URL_SYSTEM",
+    "postgresql+asyncpg://fieldvibe_test_system:fieldvibe_test_system@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
 # Ohne explizite Dev/Test-Umgebung bricht die Settings-Pruefung bei den
@@ -63,7 +68,7 @@ from app.core.rate_limit import (
     fehlerbericht_service_ip_limiter,
 )
 from app.core.security import hash_password
-from app.db.session import engine, system_session
+from app.db.session import engine, system_engine, system_session
 from app.main import app
 from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
 from app.services.organigramm_sync_service import (
@@ -196,6 +201,7 @@ async def _fresh_engine_pool_per_test():
     next checkout opens a fresh connection on the loop actually running.
     """
     await engine.dispose()
+    await system_engine.dispose()
     yield
 
 
@@ -229,6 +235,71 @@ def _ensure_db_role_is_not_superuser() -> None:
         )
 
 
+@asynccontextmanager
+async def trigger_aus(tabelle: str, trigger: str):
+    """Setzt einen Trigger in eigenen, committeten Transaktionen aus und wieder an.
+    ALTER TABLE darf nur die Eigentuemerin (Test-Rolle); die System-Rolle besitzt
+    keine Tabellen und kann es nicht."""
+    async with engine.begin() as conn:
+        await conn.execute(text(f"ALTER TABLE {tabelle} DISABLE TRIGGER {trigger}"))
+    try:
+        yield
+    finally:
+        async with engine.begin() as conn:
+            await conn.execute(text(f"ALTER TABLE {tabelle} ENABLE TRIGGER {trigger}"))
+
+
+def sync_system_engine():
+    """Synchrone Verbindung der System-Rolle (BYPASSRLS) fuer rohes SQL in Tests,
+    wo frueher app.is_super_admin gesetzt wurde."""
+    return create_engine(_settings.database_url_system.replace("+asyncpg", "+psycopg2"))
+
+
+def _ensure_system_role_ok() -> None:
+    """Die System-Rolle (DATABASE_URL_SYSTEM) muss BYPASSRLS haben, darf aber
+    kein Superuser sein und keine Tabellen besitzen; angelegt wird sie vorab
+    (CI-Schritt bzw. lokal einmalig), nur die Tabellenrechte vergibt
+    _grant_system_role nach der Migration."""
+    url = sqlalchemy.engine.make_url(_settings.database_url_system)
+    rolle = url.username
+    sync_url = sqlalchemy.engine.make_url(_settings.database_url_sync)
+    check_engine = create_engine(sync_url)
+    with check_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = :r"), {"r": rolle}
+        ).one_or_none()
+    check_engine.dispose()
+    if row is None or row.rolsuper or not row.rolbypassrls:
+        raise RuntimeError(
+            f"Die System-Rolle '{rolle}' (DATABASE_URL_SYSTEM) fehlt, ist Superuser oder hat "
+            f"kein BYPASSRLS. Fix: CREATE ROLE {rolle} LOGIN PASSWORD '...' NOSUPERUSER "
+            "BYPASSRLS; (siehe .github/workflows/ci.yml)."
+        )
+
+
+def _grant_system_role() -> None:
+    """Als Eigentuemerin (Test-Rolle) die Rechte der System-Rolle auf Tabellen
+    und Sequenzen setzen -- im Betrieb erledigt das scripts/sql/app_rolle_einrichten.sql."""
+    rolle = sqlalchemy.engine.make_url(_settings.database_url_system).username
+    sync_url = sqlalchemy.engine.make_url(_settings.database_url_sync)
+    grant_engine = create_engine(sync_url, isolation_level="AUTOCOMMIT")
+    with grant_engine.connect() as conn:
+        conn.execute(text(f'GRANT USAGE ON SCHEMA public TO "{rolle}"'))
+        conn.execute(text(f'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{rolle}"'))
+        conn.execute(text(f'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "{rolle}"'))
+        conn.execute(text(f'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO "{rolle}"'))
+        conn.execute(
+            text(
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE '
+                f'ON TABLES TO "{rolle}"'
+            )
+        )
+        conn.execute(
+            text(f'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO "{rolle}"')
+        )
+    grant_engine.dispose()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _migrated_database():
     _ensure_test_database_exists()
@@ -236,6 +307,8 @@ def _migrated_database():
     cfg = Config(os.path.join(_BACKEND_DIR, "alembic.ini"))
     cfg.set_main_option("script_location", os.path.join(_BACKEND_DIR, "alembic"))
     command.upgrade(cfg, "head")
+    _ensure_system_role_ok()
+    _grant_system_role()
     yield
 
 

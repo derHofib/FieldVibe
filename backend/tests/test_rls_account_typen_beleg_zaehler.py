@@ -16,7 +16,7 @@ async def test_account_typen_sind_pro_mandant_getrennt(make_mandant, make_user):
     await make_user(mandant=mandant_a, role="techniker", password="pw-123456")
     await make_user(mandant=mandant_b, role="techniker", password="pw-123456")
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         result = await session.execute(text("SELECT DISTINCT mandant_id FROM account_typen"))
         assert {str(r.mandant_id) for r in result.fetchall()} == {str(mandant_a.id)}
 
@@ -37,13 +37,13 @@ async def test_rechnungsnummern_zaehler_pro_mandant_und_isoliert(make_mandant):
     mandant_a = await make_mandant(name="Mandant A")
     mandant_b = await make_mandant(name="Mandant B")
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         assert await next_rechnungsnummer(session, mandant_a.id) == "R-00001"
         assert await next_rechnungsnummer(session, mandant_a.id) == "R-00002"
-    async with tenant_session(mandant_id=mandant_b.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_b.id) as session:
         assert await next_rechnungsnummer(session, mandant_b.id) == "R-00001"
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         result = await session.execute(text("SELECT mandant_id, naechste_nummer FROM beleg_zaehler"))
         zeilen = result.fetchall()
         assert [(str(z.mandant_id), z.naechste_nummer) for z in zeilen] == [(str(mandant_a.id), 3)]

@@ -44,7 +44,7 @@ async def je_mandant(
     ids = mandant_ids if mandant_ids is not None else await aktive_mandanten_ids()
 
     async def _einer(mandant_id: UUID) -> dict:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             return await arbeit(session, mandant_id)
 
     summe: dict = {}

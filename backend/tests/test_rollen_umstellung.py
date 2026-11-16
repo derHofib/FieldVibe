@@ -240,7 +240,7 @@ async def test_rechte_helfer_der_routen_nutzen_engine(make_mandant, make_user):
     def ctx(user):
         return AuthContext(user_id=user.id, mandant_id=mandant.id, role=user.role, account_typ_id=user.account_typ_id)
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         # projekte.py: _hat_projekte_recht
         assert await projekte_routes._hat_projekte_recht(session, ctx(admin), "bearbeiten")
         assert not await projekte_routes._hat_projekte_recht(session, ctx(disponent), "bearbeiten")
@@ -262,7 +262,7 @@ async def test_rechte_helfer_der_routen_nutzen_engine(make_mandant, make_user):
 async def test_verantwortliche_und_technik_ids_ueber_engine(client, org, make_user):  # noqa: F811
     mandant, ids = org["mandant"], org["ids"]
     admin = await make_user(mandant=mandant, role="mandant_admin")
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         dispo = await zs.dispo_verantwortliche_user_ids(session, mandant.id)
         abrechnung = await zs.abrechnung_verantwortliche_user_ids(session, mandant.id)
         technik = await zs.technik_user_ids(session, mandant.id)

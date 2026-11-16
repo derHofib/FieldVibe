@@ -23,11 +23,21 @@ async_session_maker = async_sessionmaker(
     engine, expire_on_commit=False, autoflush=False
 )
 
+# Eigener, kleiner Pool fuer die BYPASSRLS-Rolle: der Bypass haengt an der
+# DB-Rolle, nicht an einer Session-Variable, die jede App-Verbindung setzen koennte.
+system_engine = create_async_engine(
+    _settings.database_url_system, pool_pre_ping=True, pool_size=2, max_overflow=3
+)
+
+system_session_maker = async_sessionmaker(
+    system_engine, expire_on_commit=False, autoflush=False
+)
+
 
 async def _apply_tenant_context(
-    session: AsyncSession, *, mandant_id: UUID | None, is_super_admin: bool
+    session: AsyncSession, *, mandant_id: UUID | None
 ) -> None:
-    """Sets the Postgres session variables the RLS policies key off of.
+    """Sets the Postgres session variable the RLS policies key off of.
 
     Uses set_config(..., true) inside the open transaction, which is the
     parametrized equivalent of `SET LOCAL` -- it is automatically reset at
@@ -37,16 +47,10 @@ async def _apply_tenant_context(
         text("SELECT set_config('app.current_mandant', :val, true)"),
         {"val": str(mandant_id) if mandant_id else ""},
     )
-    await session.execute(
-        text("SELECT set_config('app.is_super_admin', :val, true)"),
-        {"val": "true" if is_super_admin else "false"},
-    )
 
 
 @asynccontextmanager
-async def tenant_session(
-    *, mandant_id: UUID | None, is_super_admin: bool
-) -> AsyncIterator[AsyncSession]:
+async def tenant_session(*, mandant_id: UUID | None) -> AsyncIterator[AsyncSession]:
     """Session scoped to a single tenant for the lifetime of one transaction.
 
     Every request from an authenticated, tenant-bound user (mandant_admin,
@@ -56,9 +60,7 @@ async def tenant_session(
     """
     async with async_session_maker() as session:
         async with session.begin():
-            await _apply_tenant_context(
-                session, mandant_id=mandant_id, is_super_admin=is_super_admin
-            )
+            await _apply_tenant_context(session, mandant_id=mandant_id)
             yield session
 
 
@@ -89,9 +91,8 @@ def _gedrosselt(grund: str, drosselung_s: int | None) -> bool:
 async def _system_session_protokollieren(grund: str, aufrufer: str) -> None:
     from app.services.audit_service import log_action
 
-    async with async_session_maker() as session:
+    async with system_session_maker() as session:
         async with session.begin():
-            await _apply_tenant_context(session, mandant_id=None, is_super_admin=True)
             await log_action(
                 session,
                 aktion="system_session",
@@ -105,7 +106,9 @@ async def _system_session_protokollieren(grund: str, aufrufer: str) -> None:
 async def system_session(
     *, grund: str, drosselung_s: int | None = None
 ) -> AsyncIterator[AsyncSession]:
-    """Bypasses tenant RLS entirely (app.is_super_admin = true).
+    """Bypasses tenant RLS entirely: laeuft ueber den eigenen Pool der
+    Datenbank-Rolle fieldvibe_system (BYPASSRLS, DATABASE_URL_SYSTEM). Es gibt
+    keine Session-Variable mehr, die den Bypass ausloesen koennte.
 
     Reserved for: the pre-authentication user lookup during login (the
     email is unique platform-wide, so which tenant it belongs to is not yet
@@ -133,7 +136,6 @@ async def system_session(
             await _system_session_protokollieren(grund, _aufrufer())
         except Exception:
             logger.exception("system_session-Audit fehlgeschlagen (grund=%s)", grund)
-    async with async_session_maker() as session:
+    async with system_session_maker() as session:
         async with session.begin():
-            await _apply_tenant_context(session, mandant_id=None, is_super_admin=True)
             yield session

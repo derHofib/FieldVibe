@@ -11,7 +11,7 @@ from sqlalchemy import event
 from app.api.deps import get_db, require_recht
 from app.core.rechte_registry import alle_bereiche
 from app.core.security import hash_password
-from app.db.session import engine, system_session
+from app.db.session import engine, system_engine, system_session
 from app.main import app as haupt_app
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.organigramm import (
@@ -461,7 +461,7 @@ async def test_aufloesung_pro_session_nur_einmal_gecacht(make_mandant):
         def zaehlen(conn, cursor, statement, *args):
             statements.append(statement)
 
-        event.listen(engine.sync_engine, "before_cursor_execute", zaehlen)
+        event.listen(system_engine.sync_engine, "before_cursor_execute", zaehlen)
         try:
             await bs.hat_recht(session, auth, "vorgaenge", "sehen")
             nach_erstem = len(statements)
@@ -474,7 +474,7 @@ async def test_aufloesung_pro_session_nur_einmal_gecacht(make_mandant):
             await bs.hat_recht(session, auth, "vorgaenge", "sehen")
             assert len(statements) == 2 * nach_erstem
         finally:
-            event.remove(engine.sync_engine, "before_cursor_execute", zaehlen)
+            event.remove(system_engine.sync_engine, "before_cursor_execute", zaehlen)
 
 
 async def test_mehrere_require_recht_je_request_loesen_nur_einmal_auf(make_mandant, make_user):

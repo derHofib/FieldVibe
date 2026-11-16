@@ -112,7 +112,7 @@ async def outbox_session(mandant_id: UUID | None) -> AsyncIterator[AsyncSession]
     """Mandanten-Session; nur Plattform-Mails ohne Mandant (mandant_id NULL) sind unter RLS
     unsichtbar und brauchen die System-Session."""
     if mandant_id is not None:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             yield session
     else:
         async with system_session(grund="worker: mail-outbox ohne mandant", drosselung_s=300) as session:

@@ -87,7 +87,7 @@ async def refresh(body: RefreshRequest) -> TokenPair:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
         )
-    async with tenant_session(mandant_id=zugang.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=zugang.mandant_id) as session:
         mandant = await session.get(Mandant, zugang.mandant_id)
     if mandant is None or mandant.status != "aktiv":
         raise HTTPException(
@@ -115,7 +115,7 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
     mandant_id = await mandant_der_einladung(body.token)
-    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_id) as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="partner")
 
         zugang = PartnerZugang(
@@ -184,7 +184,7 @@ async def passwort_vergessen(body: PartnerPasswortVergessenRequest, request: Req
     if zugang is None or not zugang.aktiv:
         return None
 
-    async with tenant_session(mandant_id=zugang.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=zugang.mandant_id) as session:
         token = create_partner_password_reset_token(zugang_id=zugang.id)
         reset_link = f"{_settings.frontend_base_url}/partnerportal/passwort-zuruecksetzen?token={token}"
         try:
@@ -237,7 +237,7 @@ async def passwort_zuruecksetzen(body: PartnerPasswortResetRequest, request: Req
     if gefunden is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")
 
-    async with tenant_session(mandant_id=gefunden.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=gefunden.mandant_id) as session:
         zugang = await session.get(PartnerZugang, gefunden.id)
         if zugang is None or not zugang.aktiv:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")

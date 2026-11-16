@@ -17,6 +17,12 @@
 -- fuer kuenftige Migrationen. Eine Rolle, der die Tabellen gehoeren, koennte RLS
 -- per ALTER TABLE selbst abschalten; die App-Rolle kann es so nicht mehr.
 -- Ohne owner_rolle bleibt es beim bisherigen Verhalten (App-Rolle = Eigentuemerin).
+--
+-- Optional System-Rolle (-v system_rolle=fieldvibe_system -v system_passwort=...):
+-- LOGIN NOSUPERUSER BYPASSRLS, besitzt keine Objekte, nur DML-Rechte (Bestand und
+-- per Default-Privileg alles, was die Eigentuemer-Rolle kuenftig anlegt). Sie
+-- traegt system_session() (DATABASE_URL_SYSTEM) -- der RLS-Bypass haengt damit an
+-- dieser Rolle statt an einer Session-Variable.
 
 \if :{?app_rolle}
 \else
@@ -39,6 +45,11 @@
   \set owner_rolle ''
   \set owner_passwort ''
 \endif
+\if :{?system_rolle}
+\else
+  \set system_rolle ''
+  \set system_passwort ''
+\endif
 
 -- DO-Bloecke sind Dollar-Quotes, psql ersetzt dort keine Variablen; die
 -- Werte reisen deshalb als Session-Settings hinein und werden im Block per
@@ -47,7 +58,9 @@ SELECT set_config('fieldvibe.app_rolle', :'app_rolle', false),
        set_config('fieldvibe.app_passwort', :'app_passwort', false),
        set_config('fieldvibe.db_name', :'db_name', false),
        set_config('fieldvibe.owner_rolle', :'owner_rolle', false),
-       set_config('fieldvibe.owner_passwort', :'owner_passwort', false) \gset ignore_
+       set_config('fieldvibe.owner_passwort', :'owner_passwort', false),
+       set_config('fieldvibe.system_rolle', :'system_rolle', false),
+       set_config('fieldvibe.system_passwort', :'system_passwort', false) \gset ignore_
 
 DO $$
 DECLARE
@@ -56,6 +69,8 @@ DECLARE
   db  text := current_setting('fieldvibe.db_name');
   own text := current_setting('fieldvibe.owner_rolle');
   opw text := current_setting('fieldvibe.owner_passwort');
+  sys text := current_setting('fieldvibe.system_rolle');
+  spw text := current_setting('fieldvibe.system_passwort');
   eigner text;  -- Rolle, der die Objekte in public gehoeren sollen
   r   record;
   n   integer;
@@ -77,6 +92,15 @@ BEGIN
     eigner := own;
   ELSE
     eigner := app;
+  END IF;
+
+  IF sys <> '' THEN
+    IF sys IN (app, own, current_user) THEN
+      RAISE EXCEPTION 'System-Rolle % muss sich von App-Rolle, Owner-Rolle und ausfuehrendem Admin-User unterscheiden.', sys;
+    END IF;
+    IF length(spw) < 8 THEN
+      RAISE EXCEPTION 'Passwort der System-Rolle ist zu kurz (mindestens 8 Zeichen).';
+    END IF;
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app) THEN
@@ -216,9 +240,39 @@ BEGIN
   ELSE
     RAISE NOTICE 'App-Rolle % ist eingerichtet, alle Objekte in public gehoeren ihr.', app;
   END IF;
+
+  IF sys <> '' THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = sys) THEN
+      EXECUTE format('CREATE ROLE %I LOGIN', sys);
+      RAISE NOTICE 'System-Rolle % angelegt.', sys;
+    END IF;
+    -- BYPASSRLS ist hier gewollt: nur diese Rolle darf Policies umgehen.
+    EXECUTE format(
+      'ALTER ROLE %I LOGIN NOSUPERUSER BYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
+      sys, spw);
+    -- Als Eigentuemerin koennte sie RLS per ALTER TABLE abschalten (und haette
+    -- BYPASSRLS ohnehin): ihr duerfen keine Objekte gehoeren.
+    SELECT count(*) INTO n FROM pg_class
+     WHERE relnamespace = 'public'::regnamespace AND pg_get_userbyid(relowner) = sys;
+    IF n <> 0 THEN
+      RAISE EXCEPTION 'System-Rolle % besitzt % Objekt(e) in public -- sie darf nur Tabellenrechte haben.', sys, n;
+    END IF;
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', db, sys);
+    EXECUTE format('REVOKE CREATE ON DATABASE %I FROM %I', db, sys);
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', sys);
+    EXECUTE format('REVOKE CREATE ON SCHEMA public FROM %I', sys);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', sys);
+    EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I', sys);
+    EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO %I', sys);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', eigner, sys);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', eigner, sys);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO %I', eigner, sys);
+    RAISE NOTICE 'System-Rolle % (BYPASSRLS) hat DML-Rechte auf public, besitzt aber nichts.', sys;
+  END IF;
 END
 $$;
 
 -- Bewusst nicht ausgegeben: das Passwort. Nur den Rollenstatus.
 SELECT rolname, rolsuper, rolbypassrls, rolcreaterole, rolcreatedb, rolcanlogin
-FROM pg_roles WHERE rolname = :'app_rolle';
+FROM pg_roles WHERE rolname IN (:'app_rolle', NULLIF(:'system_rolle', ''))
+ORDER BY rolbypassrls;

@@ -51,7 +51,7 @@ def smtp(monkeypatch):
 
 
 async def _einreihen(mandant, *, to="kunde@example.de", betreff="Betreff", log=True, **kwargs):
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         if log:
             eintrag = await enqueue_email_and_log(
                 session, mandant.id, entity_type="kunde", entity_id=uuid.uuid4(), to=to, subject=betreff, body="Text", **kwargs
@@ -83,7 +83,7 @@ def test_backoff_plan_und_naechster_versuch():
 async def test_rollback_der_ausloesenden_transaktion_verschickt_keine_mail(make_mandant, smtp):
     mandant = await make_mandant()
     with pytest.raises(RuntimeError):
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             await enqueue_email_and_log(
                 session, mandant.id, entity_type="kunde", entity_id=uuid.uuid4(), to="x@example.de", subject="S", body="B"
             )
@@ -280,7 +280,7 @@ async def test_mandantentrennung_rls_und_api(client, make_mandant, make_user, sm
     await _einreihen(b, to="an-b@example.de")
     await verarbeite_outbox(jetzt=T0)
 
-    async with tenant_session(mandant_id=a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=a.id) as session:
         zeilen = (await session.execute(select(MailOutbox))).scalars().all()
     assert [z.empfaenger for z in zeilen] == ["an-a@example.de"]
 

@@ -300,7 +300,7 @@ async def loesche_abgelaufene_fehlerberichte(jetzt: datetime | None = None) -> i
     grenze = jetzt - timedelta(days=get_settings().fehlerbericht_aufbewahrung_tage)
 
     async def _mandant(mandant_id: uuid.UUID) -> int:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             rows = await session.execute(
                 select(
                     Fehlerbericht.id,

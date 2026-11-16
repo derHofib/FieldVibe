@@ -105,6 +105,11 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe"
     )
 
+    # Eigene Rolle mit BYPASSRLS fuer system_session() (app/db/rollen_pruefung.py,
+    # docs/DEPLOYMENT.md). Pflicht, kein Default: ein stiller Rueckfall auf die
+    # App-Rolle liesse system_session an den RLS-Policies scheitern.
+    database_url_system: str = Field(default="", validation_alias="DATABASE_URL_SYSTEM")
+
     jwt_secret: str = "change-me-in-env"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -345,6 +350,13 @@ class Settings(BaseSettings):
         """Startabbruch bei Default-/Platzhalter-Secrets ausserhalb einer
         Dev-Umgebung. Laeuft bei jedem Settings() und damit auch fuer Worker,
         Alembic und CLI, nicht nur fuer den Webprozess."""
+        if not self.database_url_system.strip():
+            raise UnsichereKonfigurationError(
+                "DATABASE_URL_SYSTEM fehlt -- die Verbindung der System-Rolle "
+                "(fieldvibe_system, BYPASSRLS) ist Pflicht. Abhilfe: "
+                "scripts/app_rolle_einrichten.sh ausfuehren (schreibt die Variable in "
+                "die .env, siehe docs/DEPLOYMENT.md, Abschnitt System-Rolle)."
+            )
         if self.ist_dev_umgebung:
             return self
 
@@ -362,9 +374,13 @@ class Settings(BaseSettings):
             probleme.append("INTEGRATION_SECRET_KEY ist ein Platzhalter (Erzeugen: openssl rand -base64 48)")
         if _ist_platzhalter(self.s3_secret_key):
             probleme.append("S3_SECRET_KEY (= MINIO_ROOT_PASSWORD bzw. Service-Account-Secret) ist ein Platzhalter/Default")
-        for name, url in (("DATABASE_URL", self.database_url), ("DATABASE_URL_SYNC", self.database_url_sync)):
+        for name, url in (
+            ("DATABASE_URL", self.database_url),
+            ("DATABASE_URL_SYNC", self.database_url_sync),
+            ("DATABASE_URL_SYSTEM", self.database_url_system),
+        ):
             passwort = urlsplit(url).password
-            if _ist_platzhalter(passwort) or passwort in {"fieldvibe", "fieldvibe_app"}:
+            if _ist_platzhalter(passwort) or passwort in {"fieldvibe", "fieldvibe_app", "fieldvibe_system"}:
                 probleme.append(f"{name} enthaelt ein Platzhalter-/Default-Passwort")
 
         if probleme:

@@ -282,6 +282,31 @@ BYPASSRLS ist. Nur für Notfälle lässt sich das mit
 `FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1` in der `.env` übergehen (Start mit
 WARNING im Log, Mandantentrennung per RLS dann ausser Kraft).
 
+**System-Rolle (`fieldvibe_system`, `DATABASE_URL_SYSTEM`).** Dasselbe Skript legt
+eine zweite Rolle an: `LOGIN NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE`, ohne
+Tabellenbesitz, nur mit DML-Rechten (`APP_DB_SYSTEM_USER`/`APP_DB_SYSTEM_PASSWORD`
+in der `.env`, Passwort zufällig, nur wenn noch keines steht). Wozu: Login-
+Lookups vor der Authentifizierung, der Worker und Super-Admin-Requests brauchen
+mandantenübergreifenden Zugriff (`system_session()`). Der Bypass hing früher an
+der Session-Variable `app.is_super_admin`, die jede App-Verbindung selbst hätte
+setzen können; seit Migration 0117 kennen die RLS-Policies nur noch
+`app.current_mandant`, und den Bypass hat allein diese DB-Rolle über einen
+eigenen kleinen Pool (`DATABASE_URL_SYSTEM`, asyncpg-URL). `plattform_integrationen`
+hat dadurch keine Policy mehr: nur die System-Rolle kommt an die Tabelle.
+Die Startprüfung verlangt BYPASSRLS für die System-Rolle und lehnt Superuser,
+Tabellenbesitz und dieselbe Rolle wie die App-Verbindung ab.
+
+Meldung **„DATABASE_URL_SYSTEM fehlt"** beim Start von Backend, Worker oder
+Alembic (Bestandsinstallation nach dem Update): `./scripts/app_rolle_einrichten.sh
+--nur-rolle --compose "…"` ausführen (macht auch `deploy.sh` bei jedem Lauf) und
+backend/worker neu erzeugen. Meldung „System-Rolle … hat kein BYPASSRLS" bzw.
+„besitzt … RLS-Tabellen": dasselbe Skript erneut laufen lassen, es setzt die
+Attribute neu. Hinweis für spätere Migrationen: `alembic/env.py` setzt weiter
+`app.is_super_admin`, das wirkt ab 0117 nicht mehr – Daten-Backfills auf
+RLS-Tabellen brauchen dann eine andere Lösung.
+**Das SQL und die Skriptverdrahtung der System-Rolle sind gegen eine lokale
+Postgres-Instanz geprüft, der Compose-Ablauf (Docker) nicht.**
+
 Danach den Stack starten:
 
 ```bash

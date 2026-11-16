@@ -62,6 +62,16 @@ jobs:
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
           -c "CREATE ROLE fieldvibe_test LOGIN PASSWORD 'fieldvibe_test' NOSUPERUSER NOBYPASSRLS CREATEDB;"
 
+      # System-Rolle fuer system_session() (DATABASE_URL_SYSTEM): BYPASSRLS, aber
+      # kein Superuser und ohne Tabellenbesitz. Die Tabellenrechte vergibt
+      # tests/conftest.py nach der Migration.
+      - name: System-Rolle anlegen
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c "CREATE ROLE fieldvibe_test_system LOGIN PASSWORD 'fieldvibe_test_system' NOSUPERUSER BYPASSRLS;"
+
       # Ohne das Werkzeug werden die Konformitaetstests in `pytest` still
       # uebersprungen (Java ist auf ubuntu-latest vorinstalliert).
       - name: E-Rechnungs-Pruefwerkzeug installieren
@@ -76,6 +86,7 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
           DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
+          DATABASE_URL_SYSTEM: postgresql+asyncpg://fieldvibe_test_system:fieldvibe_test_system@localhost:5432/fieldvibe_test
         run: pytest
 
   # Prueft die ausgehende E-Rechnung (CII, Profil EN 16931 und XRechnung) gegen die CEN-
@@ -122,6 +133,16 @@ jobs:
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
           -c "CREATE ROLE fieldvibe_test LOGIN PASSWORD 'fieldvibe_test' NOSUPERUSER NOBYPASSRLS CREATEDB;"
 
+      # System-Rolle fuer system_session() (DATABASE_URL_SYSTEM): BYPASSRLS, aber
+      # kein Superuser und ohne Tabellenbesitz. Die Tabellenrechte vergibt
+      # tests/conftest.py nach der Migration.
+      - name: System-Rolle anlegen
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c "CREATE ROLE fieldvibe_test_system LOGIN PASSWORD 'fieldvibe_test_system' NOSUPERUSER BYPASSRLS;"
+
       - name: Java pruefen
         run: java -version
 
@@ -133,6 +154,7 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
           DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
+          DATABASE_URL_SYSTEM: postgresql+asyncpg://fieldvibe_test_system:fieldvibe_test_system@localhost:5432/fieldvibe_test
         # -rs zeigt, falls Tests wegen fehlendem Werkzeug uebersprungen wuerden; dann
         # soll der Job rot werden statt faelschlich gruen.
         run: |

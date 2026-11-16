@@ -37,7 +37,7 @@ _PRAEFIX = {"kunde": "K", "vorgang": "V", "angebot": "A", "bestellung": "B"}
 async def _anlegen(typ: str, mandant, user, kunde_id: uuid.UUID, nummer: str | None = None):
     """Legt einen Datensatz mit automatischer (oder explizit gesetzter) Nummer
     in einer eigenen, committeten Mandanten-Transaktion an."""
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         if nummer is None:
             nummer = await _NEXT[typ](session, mandant.id)
         if typ == "kunde":
@@ -63,7 +63,7 @@ async def _anlegen(typ: str, mandant, user, kunde_id: uuid.UUID, nummer: str | N
 
 
 async def _endgueltig_loeschen(typ: str, mandant, user, entity_id: uuid.UUID) -> None:
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         assert await papierkorb_service.soft_delete(
             session, entity_typ=typ, entity_id=entity_id, actor_user_id=user.id
         )
@@ -146,7 +146,7 @@ async def test_manuell_vergebene_nummer_ueber_zaehlerstand_kollidiert_nicht(
     await _anlegen(typ, mandant, user, kunde.id, nummer=f"{p}-00002")
     geloescht_id, _ = await _anlegen(typ, mandant, user, kunde.id, nummer=f"{p}-00003")
     # Soft-geloeschte Datensaetze halten ihre Nummer weiter belegt.
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         await papierkorb_service.soft_delete(
             session, entity_typ=typ, entity_id=geloescht_id, actor_user_id=user.id
         )
@@ -178,7 +178,7 @@ async def test_nummernsuche_bricht_nach_max_versuchen_ab(monkeypatch, make_manda
         await make_kunde(mandant=mandant, kundennummer=f"K-{i:05d}")
     monkeypatch.setattr(numbering_service, "_MAX_VERSUCHE", 3)
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         with pytest.raises(RuntimeError, match="Keine freie Nummer"):
             await next_kundennummer(session, mandant.id)
 
@@ -253,9 +253,9 @@ async def test_migration_initialisiert_zaehler_auf_max_plus_eins(make_mandant, m
         (str(mandant_a.id), "rechnung"): 42,
     }
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         assert await next_kundennummer(session, mandant_a.id) == "K-00013"
         assert await next_vorgangsnummer(session, mandant_a.id) == "V-00021"
     # Mandant B hatte kein passendes Format: Start bei 1.
-    async with tenant_session(mandant_id=mandant_b.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_b.id) as session:
         assert await next_kundennummer(session, mandant_b.id) == "K-00001"

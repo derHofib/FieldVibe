@@ -128,7 +128,7 @@ async def _lauf_session(mandant_id: UUID | None, grund: str) -> AsyncIterator[As
     """Mandanten-Zeilen von job_laeufe schreibt die Mandanten-Session; nur die
     systemweiten Zeilen (mandant_id NULL) brauchen die System-Session."""
     if mandant_id is not None:
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             yield session
     else:
         async with system_session(grund=grund, drosselung_s=300) as session:

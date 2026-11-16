@@ -16,8 +16,8 @@ OHNE_MANDANT_ID: dict[str, str] = {
         "(Policy mandant_isolation)"
     ),
     "plattform_integrationen": (
-        "plattformweiter SMTP-Fallback; RLS mit SELECT fuer alle, Schreiben nur "
-        "super_admin (siehe Migration 0064)"
+        "plattformweiter SMTP-Fallback; seit 0117 RLS+FORCE ohne jede Policy: nur die "
+        "System-Rolle (BYPASSRLS) kommt heran"
     ),
     "dsgvo_dokumente": (
         "plattformweite Compliance-Dokumente (AVV-Vorlage, Impressum ...), "
@@ -108,3 +108,21 @@ def test_ausnahmen_mit_rls_haben_rls_erzwungen(katalog):
     nach_name = {t.name: t for t in tabellen}
     for name in OHNE_MANDANT_ID_ABER_MIT_RLS:
         assert nach_name[name].rls and nach_name[name].erzwungen, f"{name}: RLS nicht aktiv/erzwungen"
+
+
+def test_plattform_integrationen_hat_rls_aber_keine_policy(katalog):
+    tabellen, pol = katalog
+    t = next(t for t in tabellen if t.name == "plattform_integrationen")
+    assert t.rls and t.erzwungen
+    assert pol.get("plattform_integrationen", []) == []
+
+
+def test_keine_policy_kennt_mehr_is_super_admin(katalog):
+    _, pol = katalog
+    treffer = [
+        f"{name}.{p.policyname}"
+        for name, ps in pol.items()
+        for p in ps
+        if "is_super_admin" in f"{p.qual}{p.with_check}"
+    ]
+    assert not treffer, f"Policies mit app.is_super_admin: {treffer}"

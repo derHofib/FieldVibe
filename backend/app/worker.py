@@ -29,7 +29,7 @@ from app.core.config import get_settings
 from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import job_kontext, konfiguriere_logging
 from app.db.rollen_pruefung import pruefe_db_rolle
-from app.db.session import engine
+from app.db.session import engine, system_engine
 from app.services.export_job_service import raeume_auf as raeume_exporte_auf
 from app.services.export_job_service import verarbeite_naechsten as verarbeite_export
 from app.services.heartbeat_service import heartbeat_schleife
@@ -127,7 +127,7 @@ async def _outbox_loop() -> None:
 
 async def main() -> None:
     init_error_tracking(komponente="worker")
-    await pruefe_db_rolle(engine)
+    await pruefe_db_rolle(engine, system_engine)
     logger.info(
         "Worker gestartet -- Scheduler-Tick alle %d Sekunden, Mail-Sync alle %d Sekunden",
         get_settings().scheduler_tick_sekunden, MAIL_SYNC_INTERVAL_SECONDS,

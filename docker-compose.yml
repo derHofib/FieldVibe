@@ -67,6 +67,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe:fieldvibe@postgres:5432/fieldvibe}
       DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe:fieldvibe@postgres:5432/fieldvibe}
+      # Pflicht, bewusst ohne Default: Verbindung der System-Rolle mit BYPASSRLS
+      # (scripts/app_rolle_einrichten.sh); leer -> klare Fehlermeldung beim Start.
+      DATABASE_URL_SYSTEM: ${DATABASE_URL_SYSTEM:-}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-http://localhost:9000}
       # Service-Account mit Bucket-Policy (scripts/minio-service-account.sh);
@@ -130,6 +133,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe:fieldvibe@postgres:5432/fieldvibe}
       DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe:fieldvibe@postgres:5432/fieldvibe}
+      # Pflicht, bewusst ohne Default: Verbindung der System-Rolle mit BYPASSRLS
+      # (scripts/app_rolle_einrichten.sh); leer -> klare Fehlermeldung beim Start.
+      DATABASE_URL_SYSTEM: ${DATABASE_URL_SYSTEM:-}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_PUBLIC_URL_BASE: ${S3_PUBLIC_URL_BASE:-http://localhost:9000}
       # Service-Account mit Bucket-Policy (scripts/minio-service-account.sh);

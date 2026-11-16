@@ -73,7 +73,7 @@ async def verarbeite(limit: int = 50) -> dict[str, int]:
         rest = limit - erledigt - fehlgeschlagen
         if rest <= 0:
             return
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             auftraege = (
                 await session.execute(
                     select(S3Loeschauftrag)

@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.db.session import system_session
 from app.models.notification import Notification
-from tests.conftest import _BACKEND_DIR, auth_headers, login
+from tests.conftest import _BACKEND_DIR, auth_headers, login, sync_system_engine
 from tests.test_projekte import _make_custom_mit_projekte_recht, _make_custom_user
 
 PW = "pw-123456"
@@ -557,7 +557,7 @@ def _alembic_cfg() -> Config:
 async def test_migration_0095_up_down_up_mit_rechte_backfill(make_mandant):
     mandant = await make_mandant()
     cfg = _alembic_cfg()
-    engine = sqlalchemy.create_engine(get_settings().database_url_sync)
+    engine = sync_system_engine()
     command.downgrade(cfg, "0094")
     try:
         with engine.begin() as conn:

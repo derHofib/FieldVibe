@@ -13,7 +13,7 @@ from app.models.s3_loeschauftrag import S3Loeschauftrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.services import papierkorb_service, s3_aufraeumen_service, storage_service
-from tests.conftest import auth_headers, login
+from tests.conftest import auth_headers, login, trigger_aus
 
 
 def _liste(prefix: str) -> list[str]:
@@ -80,7 +80,7 @@ async def test_rollback_hinterlaesst_weder_auftrag_noch_objektverlust(make_manda
     kunde = await make_kunde(mandant=mandant)
     v, keys = await _vorgang_mit_dateien(mandant, kunde, titel="x")
     with pytest.raises(RuntimeError):
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             assert await papierkorb_service.purge(session, entity_typ="vorgang", entity_id=v.id)
             raise RuntimeError("nach dem Loeschen schlaegt etwas fehl")
     await _hintergrund_fertig()
@@ -137,7 +137,7 @@ async def test_nach_max_versuchen_steht_der_auftrag_auf_fehler(make_mandant, mak
         raise RuntimeError("AccessDenied (Object Lock)")
 
     monkeypatch.setattr(storage_service, "delete_prefix", kaputt)
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         await papierkorb_service.purge(session, entity_typ="vorgang", entity_id=v.id)
     await _hintergrund_fertig()
     for _ in range(s3_aufraeumen_service.MAX_VERSUCHE):
@@ -163,14 +163,14 @@ async def test_rechnungsarchiv_wird_nach_ablauf_der_frist_mit_entfernt(make_mand
     assert pdf_key.startswith(f"mandanten/{mandant.id}/rechnungen/{r['id']}/")
     assert _liste(pdf_key) == [pdf_key]
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         await papierkorb_service.soft_delete(session, entity_typ="rechnung", entity_id=uuid.UUID(r["id"]), actor_user_id=admin.id)
     with pytest.raises(papierkorb_service.GobdLoeschsperre):
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             await papierkorb_service.purge(session, entity_typ="rechnung", entity_id=uuid.UUID(r["id"]))
     assert _liste(pdf_key) == [pdf_key]  # gesperrt: Objekt bleibt
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         await papierkorb_service.purge(
             session, entity_typ="rechnung", entity_id=uuid.UUID(r["id"]), heute=date(date.today().year + 9, 1, 1)
         )
@@ -252,15 +252,14 @@ async def test_fremder_mandant_loest_keinen_schluessel_auf_und_altobjekte_bleibe
     assert (await client.get(f"/api/rechnungen/{r['id']}/xml", headers=hb)).status_code == 404
 
     # Altobjekt (Schluessel im frueheren Schema ohne Mandantenpraefix) ist weiter lesbar.
-    async with system_session(grund="test") as session:
-        rechnung = await session.get(Rechnung, uuid.UUID(r["id"]))
-        alt_key = f"rechnungen/{rechnung.id}/versendet-{uuid.uuid4()}.pdf"
-        inhalt = await storage_service.download_bytes(rechnung.pdf_object_key)
-        await storage_service.upload_bytes(alt_key, inhalt, "application/pdf")
-        from sqlalchemy import text
+    from sqlalchemy import text
 
-        await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
-        await session.execute(text("UPDATE rechnungen SET pdf_object_key = :k WHERE id = :i"), {"k": alt_key, "i": rechnung.id})
-        await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
+    async with trigger_aus("rechnungen", "trg_rechnungen_festschreibung"):
+        async with system_session(grund="test") as session:
+            rechnung = await session.get(Rechnung, uuid.UUID(r["id"]))
+            alt_key = f"rechnungen/{rechnung.id}/versendet-{uuid.uuid4()}.pdf"
+            inhalt = await storage_service.download_bytes(rechnung.pdf_object_key)
+            await storage_service.upload_bytes(alt_key, inhalt, "application/pdf")
+            await session.execute(text("UPDATE rechnungen SET pdf_object_key = :k WHERE id = :i"), {"k": alt_key, "i": rechnung.id})
     assert (await client.get(f"/api/rechnungen/{r['id']}/pdf", headers=ha)).content.startswith(b"%PDF")
     assert (await client.get(f"/api/rechnungen/{r['id']}/pdf", headers=hb)).status_code == 404

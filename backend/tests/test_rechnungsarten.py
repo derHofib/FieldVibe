@@ -14,7 +14,7 @@ from app.db.session import system_session
 from app.models.angebot import Angebot
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import mahnwesen_service, rechnung_service
-from tests.conftest import auth_headers, login
+from tests.conftest import auth_headers, login, trigger_aus
 from tests.test_kundenportal import _kunden_login, _make_zugang
 from tests.test_steuer_freischaltung import _E_RECHNUNG, _KUNDE_E_RECHNUNG
 from tests.test_steuer_je_position import _migrieren, _spalten, _sync_engine
@@ -991,13 +991,11 @@ async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make
     # Selbst eine ueberfaellig datierte Gutschrift wird nie gemahnt.
     # Testaufbau: die Faelligkeit eines versendeten Belegs ist per Festschreibungs-Trigger (Migration
     # 0114) unveraenderbar -- nur fuer diese kuenstliche Konstellation wird er kurz ausgesetzt.
-    async with system_session(grund="test") as session:
-        await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
-        gs = await session.get(Rechnung, uuid.UUID(voll_gs["id"]))
-        gs.faellig_am = date.today() - timedelta(days=40)
-        await session.flush()
-        await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
-        await session.commit()
+    async with trigger_aus("rechnungen", "trg_rechnungen_festschreibung"):
+        async with system_session(grund="test") as session:
+            gs = await session.get(Rechnung, uuid.UUID(voll_gs["id"]))
+            gs.faellig_am = date.today() - timedelta(days=40)
+            await session.flush()
 
     ergebnis = await mahnwesen_service.run_mahnwesen_eskalation([mandant.id])
     assert ergebnis["rechnungen_eskaliert"] == 1

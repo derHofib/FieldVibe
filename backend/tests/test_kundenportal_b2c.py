@@ -803,7 +803,7 @@ async def test_nachweis_tabelle_ist_append_only_und_mandantengetrennt(
     # UPDATE/DELETE schlagen laut Trigger fehl -- auch fuer die eigene Zeile und
     # auch mit Super-Admin-Rechten (system_session).
     for mandant_ctx in (
-        lambda: tenant_session(mandant_id=a["mandant"].id, is_super_admin=False),
+        lambda: tenant_session(mandant_id=a["mandant"].id),
         lambda: system_session(grund="test"),
     ):
         for sql in (
@@ -815,14 +815,14 @@ async def test_nachweis_tabelle_ist_append_only_und_mandantengetrennt(
                     await session.execute(text(sql), {"id": nachweis_a.id})
 
     # RLS: Mandant B sieht die Zeile von A nicht, kann sie nicht aendern und nicht fuer A einfuegen.
-    async with tenant_session(mandant_id=b["mandant"].id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=b["mandant"].id) as session:
         assert (await session.execute(select(AngebotAnnahme.id))).scalars().all() != []
         sichtbar = (await session.execute(select(AngebotAnnahme).where(AngebotAnnahme.id == nachweis_a.id))).all()
         assert sichtbar == []
         geaendert = await session.execute(text("UPDATE angebot_annahmen SET ip = 'x' WHERE id = :id"), {"id": nachweis_a.id})
         assert geaendert.rowcount == 0
     with pytest.raises(DBAPIError):
-        async with tenant_session(mandant_id=b["mandant"].id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=b["mandant"].id) as session:
             session.add(
                 AngebotAnnahme(
                     mandant_id=a["mandant"].id, angebot_id=nachweis_a.angebot_id, aktion="annahme",

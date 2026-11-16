@@ -70,7 +70,7 @@ async def test_raw_sql_with_attacker_supplied_filter_still_returns_nothing(
     await make_user(mandant=mandant_b, role="techniker", password="pw-123456")
     await make_user(mandant=mandant_b, role="disponent", password="pw-123456")
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         # Deliberately query for mandant B's data from within mandant A's
         # session context -- simulating a manipulated/forged filter.
         result = await session.execute(
@@ -93,7 +93,7 @@ async def test_raw_sql_cannot_read_other_mandants_row_directly(
     mandant_b = await make_mandant(name="Mandant B")
     await make_user(mandant=mandant_a, role="techniker", password="pw-123456")
 
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         result = await session.execute(
             text("SELECT * FROM mandanten WHERE id = :b"), {"b": str(mandant_b.id)}
         )

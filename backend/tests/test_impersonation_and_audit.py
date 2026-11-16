@@ -138,7 +138,7 @@ async def test_super_admin_impersoniert_und_liest_vorgaenge_nur_des_mandanten(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     """Laeuft mit der NOSUPERUSER-Rolle (conftest erzwingt das): Super-Admin-
-    Zugriff beruht auf der Session-Variable app.is_super_admin, nicht auf
+    Zugriff beruht auf der BYPASSRLS-Rolle des System-Pools, nicht auf
     einem DB-Superuser."""
     mandant_a = await make_mandant(name="Mandant A")
     mandant_b = await make_mandant(name="Mandant B")

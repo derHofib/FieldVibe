@@ -72,14 +72,14 @@ async def verarbeite_naechsten() -> UUID | None:
     """Nimmt den aeltesten wartenden Auftrag und fuehrt ihn aus. None, wenn keiner wartet."""
     jetzt = datetime.now(timezone.utc)
     for h_id, h_mandant in await export_haengende(jetzt - MAX_LAUFZEIT):
-        async with tenant_session(mandant_id=h_mandant, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=h_mandant) as session:
             h = await session.get(MandantExport, h_id)
             if h is not None and h.status == "laeuft":
                 h.status = "fehler"
                 h.fehler = "Abgebrochen (Zeitüberschreitung oder Neustart)"
 
     for kandidat in await export_wartende_mandanten():
-        async with tenant_session(mandant_id=kandidat, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=kandidat) as session:
             job = (
                 await session.execute(
                     select(MandantExport)
@@ -102,7 +102,7 @@ async def verarbeite_naechsten() -> UUID | None:
         ergebnis = await _erzeugen(job_id, mandant_id, art, parameter)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Export %s fehlgeschlagen", job_id)
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             j = await session.get(MandantExport, job_id)
             j.status = "fehler"
             j.fehler = f"{type(exc).__name__}: {exc}"[:500]
@@ -117,7 +117,7 @@ async def verarbeite_naechsten() -> UUID | None:
             )
         return job_id
 
-    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_id) as session:
         j = await session.get(MandantExport, job_id)
         j.status = "fertig"
         j.fertig_am = datetime.now(timezone.utc)
@@ -143,7 +143,7 @@ async def _erzeugen(job_id: UUID, mandant_id: UUID, art: str, parameter: dict) -
     with tempfile.TemporaryFile() as tmp:
         zip_ = ZipSchreiber(tmp)
         try:
-            async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            async with tenant_session(mandant_id=mandant_id) as session:
                 if art == "vollexport":
                     kopf = await vollexport_service.erzeuge(session, zip_, mandant_id)
                 elif art == "z3":
@@ -178,7 +178,7 @@ async def raeume_auf() -> int:
 
     async def _mandant(mandant_id: UUID) -> int:
         entfernt = 0
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             faellig = (
                 await session.execute(
                     select(MandantExport).where(MandantExport.status == "fertig", MandantExport.laeuft_ab_am < jetzt)

@@ -196,7 +196,7 @@ case "$MODUS" in
         (( OHNE_EIGENTUEMER == 1 )) && pg_optionen+=(--no-owner)
         log "Spiele $NAME ein (pg_restore ${pg_optionen[*]})..."
         if ! db_restore_stream "$POSTGRES_DB" "${pg_optionen[@]}" <"$QUELLE"; then
-          fehler "pg_restore ist fehlgeschlagen -- die bisherige Datenbank ist unveraendert. Meldung 'role ... does not exist': zuerst die App-Rolle anlegen (scripts/app_rolle_einrichten.sh, macht auch deploy.sh) oder mit --ohne-eigentuemer erneut versuchen und danach scripts/app_rolle_einrichten.sh ausfuehren."
+          fehler "pg_restore ist fehlgeschlagen -- die bisherige Datenbank ist unveraendert. Meldung 'role ... does not exist': zuerst App- und System-Rolle anlegen (scripts/app_rolle_einrichten.sh, macht auch deploy.sh) oder mit --ohne-eigentuemer erneut versuchen und danach scripts/app_rolle_einrichten.sh ausfuehren."
           exit 1
         fi
         ;;

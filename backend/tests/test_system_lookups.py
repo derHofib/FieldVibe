@@ -77,7 +77,7 @@ async def test_login_schreibt_audit_unter_tenant_kontext(client, make_mandant, m
     resp = await client.post("/api/auth/login", json={"email": user.email, "password": "korrekt-123"})
 
     assert resp.status_code == 200
-    assert aufrufe == [{"mandant_id": mandant.id, "is_super_admin": False}]
+    assert aufrufe == [{"mandant_id": mandant.id}]
     async with system_session(grund="test") as session:
         eintraege = (
             await session.execute(

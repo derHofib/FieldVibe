@@ -365,7 +365,7 @@ async def login_fehlschlag_protokollieren(
 
     if mandant_id is None:
         return
-    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_id) as session:
         await log_action(
             session,
             aktion="login_fehlgeschlagen",

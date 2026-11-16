@@ -90,7 +90,7 @@ from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import konfiguriere_logging
 from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
 from app.db.rollen_pruefung import pruefe_db_rolle
-from app.db.session import engine
+from app.db.session import engine, system_engine
 from app.services.health_service import watchdog_schleife
 from app.services.storage_service import ensure_bucket
 from app.services.system_resources_service import resource_sampler_loop
@@ -105,7 +105,7 @@ init_error_tracking(komponente="backend")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await pruefe_db_rolle(engine)
+    await pruefe_db_rolle(engine, system_engine)
     await ensure_bucket()
     sampler_task = asyncio.create_task(resource_sampler_loop())
     # Erkennt auch einen toten Worker: die Auswertung laeuft im Backend-Prozess.

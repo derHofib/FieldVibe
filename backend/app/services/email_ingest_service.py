@@ -368,7 +368,7 @@ async def run_email_ingest(mandant_ids: list[UUID] | None = None) -> dict:
 
     async def _mandant(mandant_id: UUID) -> None:
         zaehler = _Zaehler()
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             integrationen = (await session.execute(
                 select(MandantIntegration).where(
                     MandantIntegration.typ == "imap", MandantIntegration.aktiv.is_(True)

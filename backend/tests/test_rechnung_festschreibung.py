@@ -11,7 +11,7 @@ from app.db.session import system_session
 from app.models.material import Material
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import storage_service
-from tests.conftest import auth_headers, login
+from tests.conftest import auth_headers, login, trigger_aus
 
 
 async def _versendete_rechnung(client, make_mandant, make_user, make_kunde, *, positionen=None):
@@ -199,13 +199,12 @@ async def test_aufloesen_von_verweisen_bleibt_erlaubt(client, make_mandant, make
         await _sql("UPDATE rechnung_positionen SET material_id = :m WHERE rechnung_id = :i", m=material_id, i=rechnung_id)
     # ... wohl aber das Aufloesen eines vorhandenen: Position in derselben Transaktion anlegen und
     # das Material danach loeschen.
-    async with system_session(grund="test") as session:
-        pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == rechnung_id))).scalar_one()
-        await session.execute(text("ALTER TABLE rechnung_positionen DISABLE TRIGGER trg_rechnung_positionen_festschreibung"))
-        await session.execute(
-            update(RechnungPosition).where(RechnungPosition.id == pos.id).values(material_id=material_id)
-        )
-        await session.execute(text("ALTER TABLE rechnung_positionen ENABLE TRIGGER trg_rechnung_positionen_festschreibung"))
+    async with trigger_aus("rechnung_positionen", "trg_rechnung_positionen_festschreibung"):
+        async with system_session(grund="test") as session:
+            pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == rechnung_id))).scalar_one()
+            await session.execute(
+                update(RechnungPosition).where(RechnungPosition.id == pos.id).values(material_id=material_id)
+            )
     async with system_session(grund="test") as session:
         await session.execute(delete(Material).where(Material.id == material_id))
         pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == rechnung_id))).scalar_one()
@@ -248,10 +247,9 @@ async def test_archivpruefung_erkennt_veraendertes_und_fehlendes_objekt(client, 
 async def test_hash_nachtragen_fuer_altbestand(client, make_mandant, make_user, make_kunde):
     _, _, h, rechnung_id = await _versendete_rechnung(client, make_mandant, make_user, make_kunde)
     # Altbestand simulieren: Hash fehlt (Trigger kurz aus, wie es nur ein Betreiber koennte).
-    async with system_session(grund="test") as session:
-        await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
-        await session.execute(update(Rechnung).where(Rechnung.id == rechnung_id).values(pdf_sha256=None))
-        await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
+    async with trigger_aus("rechnungen", "trg_rechnungen_festschreibung"):
+        async with system_session(grund="test") as session:
+            await session.execute(update(Rechnung).where(Rechnung.id == rechnung_id).values(pdf_sha256=None))
     vorher = (await client.get(f"/api/rechnungen/{rechnung_id}/archiv-pruefung", headers=h)).json()
     assert vorher["objekte"][0]["status"] == "kein_hash" and vorher["ok"] is False
 

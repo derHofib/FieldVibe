@@ -619,7 +619,7 @@ async def test_super_admin_darf_mandanten_nutzer_zuruecksetzen(client, make_mand
 async def test_mfa_spalten_sind_unter_fremder_rls_unsichtbar(make_mandant, make_user, client):
     mandant_a, mandant_b = await make_mandant("A"), await make_mandant("B")
     _, user_b, *_ = await _mit_mfa(client, make_mandant, make_user, role="techniker", mandant=mandant_b)
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         zeilen = (await session.execute(select(User.mfa_secret_enc).where(User.id == user_b.id))).all()
         gesamt = (await session.execute(text("SELECT count(*) FROM users WHERE mfa_aktiv"))).scalar_one()
     assert zeilen == [] and gesamt == 0

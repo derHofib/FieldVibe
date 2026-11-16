@@ -183,7 +183,7 @@ organisatorisch zu regeln: Ein Prüfer kann einen Lesekonto-Account erhalten `[[
 |---|---|---|
 | Hosting | vServer, Docker Compose, Caddy mit TLS (`docs/DEPLOYMENT.md`) | `[[BETRIEB: Anbieter, Standort, AVV vom …]]` |
 | Zugang zum Server | SSH-Schlüssel, kein Root-Passwort | `[[BETRIEB: Wer hat Zugang? Protokollierung?]]` |
-| Datenbankrolle | App-Rolle ohne Superuser/BYPASSRLS (Startprüfung); optional getrennter Eigentümer | `[[BETRIEB: eingerichtet ja/nein]]` |
+| Datenbankrolle | App-Rolle ohne Superuser/BYPASSRLS (Startprüfung); separate System-Rolle mit BYPASSRLS ohne Tabellenbesitz für mandantenübergreifende Zugriffe; optional getrennter Eigentümer | `[[BETRIEB: eingerichtet ja/nein]]` |
 | Updates | `scripts/deploy.sh`, Migrationen nummeriert, Abhängigkeiten per Lockfile | `[[BETRIEB: Wartungsfenster, Freigabe von Updates]]` |
 | Monitoring | `/healthz`, Backup-Überwachung | `[[BETRIEB: Wer wird alarmiert?]]` |
 | Zugriff auf Produktivdaten durch Betreiber | Impersonation durch Super-Admin wird protokolliert (`login_als_mandant`) | `[[BETREIBER: Regel]]` |

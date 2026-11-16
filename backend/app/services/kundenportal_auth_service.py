@@ -30,7 +30,7 @@ async def authenticate_kunde(email: str, password: str) -> TokenPair:
             status_code=status.HTTP_403_FORBIDDEN, detail="Zugang ist deaktiviert"
         )
 
-    async with tenant_session(mandant_id=zugang.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=zugang.mandant_id) as session:
         mandant = await session.get(Mandant, zugang.mandant_id)
     if mandant is None or mandant.status != "aktiv":
         raise HTTPException(

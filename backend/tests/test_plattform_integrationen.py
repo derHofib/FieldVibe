@@ -64,13 +64,12 @@ async def test_mandant_admin_hat_keinen_zugriff_auf_plattform_integrationen(
 
 
 @pytest.mark.asyncio
-async def test_plattform_integration_ist_fuer_mandanten_session_lesbar_aber_nicht_schreibbar(
+async def test_plattform_integration_ist_fuer_mandanten_session_unzugaenglich(
     make_mandant,
 ):
-    """Direkter DB-Test der RLS-Policies: eine ganz normale
-    tenant_session (nicht super_admin) muss die Zeile lesen koennen --
-    genau das braucht send_email() als Fallback fuer jeden Mandanten --
-    darf sie aber nicht selbst anlegen oder aendern."""
+    """Direkter DB-Test: eine ganz normale
+    tenant_session (nicht super_admin) sieht die Zeile nicht und darf sie nicht
+    anlegen; der SMTP-Fallback laeuft ueber die System-Rolle (worker_system)."""
     mandant = await make_mandant()
     async with system_session(grund="test") as session:
         integration = PlattformIntegration(
@@ -80,20 +79,17 @@ async def test_plattform_integration_ist_fuer_mandanten_session_lesbar_aber_nich
         await session.flush()
         integration_id = integration.id
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    # Seit 0117 hat die Tabelle keine Policy mehr: die App-Rolle sieht nichts und
+    # darf nichts schreiben, nur die System-Rolle.
+    async with tenant_session(mandant_id=mandant.id) as session:
         result = await session.execute(
             select(PlattformIntegration).where(PlattformIntegration.id == integration_id)
         )
-        assert result.scalar_one_or_none() is not None
+        assert result.scalar_one_or_none() is None
 
-    # Separater Block: die gesamte Schreiboperation muss an der RLS-Policy
-    # scheitern (WITH CHECK erfordert is_super_admin) -- in einem eigenen
-    # "with pytest.raises", damit eine fehlgeschlagene Transaktion nicht
-    # den obigen Lese-Assert mitreisst oder verschluckt.
     with pytest.raises(Exception):
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
-            gelesen = await session.get(PlattformIntegration, integration_id)
-            gelesen.aktiv = False
+        async with tenant_session(mandant_id=mandant.id) as session:
+            session.add(PlattformIntegration(typ="smtp", config={}, aktiv=True))
             await session.flush()
 
 

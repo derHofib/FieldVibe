@@ -12,7 +12,7 @@ from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import aufbewahrung_service as auf
 from app.services import papierkorb_service
-from tests.conftest import auth_headers, login
+from tests.conftest import auth_headers, login, trigger_aus
 
 
 # --- reine Fristberechnung ------------------------------------------------------
@@ -101,14 +101,14 @@ async def test_purge_verweigert_bis_zum_fristende_und_erlaubt_danach(make_mandan
 
     for heute in (date(2026, 1, 1), date(2033, 12, 31)):
         with pytest.raises(papierkorb_service.GobdLoeschsperre) as exc:
-            async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+            async with tenant_session(mandant_id=mandant.id) as session:
                 await papierkorb_service.purge(session, entity_typ="rechnung", entity_id=r.id, heute=heute)
         assert exc.value.fristende == fristende
         assert "31.12.2033" in str(exc.value)
     async with system_session(grund="test") as session:
         assert await session.get(Rechnung, r.id) is not None
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         assert await papierkorb_service.purge(session, entity_typ="rechnung", entity_id=r.id, heute=date(2034, 1, 1)) is True
     async with system_session(grund="test") as session:
         assert await session.get(Rechnung, r.id) is None
@@ -133,10 +133,10 @@ async def test_angebot_ist_geschaeftsbrief_sechs_jahre_entwurf_nicht(make_mandan
         await session.flush()
         versendet_id, entwurf_id = versendet.id, entwurf.id
     with pytest.raises(papierkorb_service.GobdLoeschsperre) as exc:
-        async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant.id) as session:
             await papierkorb_service.purge(session, entity_typ="angebot", entity_id=versendet_id, heute=date(2030, 1, 1))
     assert exc.value.fristende == date(2032, 12, 31)
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         assert await papierkorb_service.purge(session, entity_typ="angebot", entity_id=versendet_id, heute=date(2033, 1, 1))
         assert await papierkorb_service.purge(session, entity_typ="angebot", entity_id=entwurf_id, heute=date(2026, 1, 1))
 
@@ -175,10 +175,9 @@ async def test_api_sperre_nennt_fristende_und_protokolliert_loeschung(client, ma
     assert "Aufbewahrungspflicht" in detail and f"31.12.{date.today().year + 8}" in detail and "Art. 17 Abs. 3 lit. b DSGVO" in detail
 
     # Frist kuenstlich abgelaufen: Beleg war vor 10 Jahren -> Kunde samt Beleg loeschbar, Protokoll mit Belegdaten.
-    async with system_session(grund="test") as session:
-        await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
-        await session.execute(text("UPDATE rechnungen SET versendet_am = now() - interval '10 years' WHERE id = :i"), {"i": r["id"]})
-        await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
+    async with trigger_aus("rechnungen", "trg_rechnungen_festschreibung"):
+        async with system_session(grund="test") as session:
+            await session.execute(text("UPDATE rechnungen SET versendet_am = now() - interval '10 years' WHERE id = :i"), {"i": r["id"]})
     # Der Beleg selbst liegt nicht im Papierkorb: erst legt der Admin ihn nach der Vorschlagsliste
     # dorthin, dann loescht ihn das Papierkorb-Konto, zuletzt der Kunde.
     assert (await client.post(f"/api/aufbewahrung/loeschvorschlaege/rechnung/{r['id']}/in-papierkorb", headers=h)).status_code == 204

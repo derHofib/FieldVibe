@@ -496,7 +496,7 @@ async def raeume_auf(jetzt: datetime | None = None) -> dict:
 
     async def _mandant(mandant_id: UUID) -> None:
         nonlocal quellen, berichte
-        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+        async with tenant_session(mandant_id=mandant_id) as session:
             alt = (
                 await session.execute(
                     select(ImportLauf).where(ImportLauf.object_key.is_not(None), ImportLauf.created_at < quelle_grenze)

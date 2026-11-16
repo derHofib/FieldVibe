@@ -368,7 +368,7 @@ async def run_mail_sync(account_ids: list | None = None) -> dict:
 
     for account_id, mandant_id in await aktive_postfaecher(account_ids):
         try:
-            async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            async with tenant_session(mandant_id=mandant_id) as session:
                 account = await session.get(MailAccount, account_id)
                 if account is None or not account.aktiv:
                     continue

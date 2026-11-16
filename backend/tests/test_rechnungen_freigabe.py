@@ -272,7 +272,7 @@ async def test_freigabe_und_restore_beruehren_keinen_fremden_mandanten(
         rechnung_id = rechnung.id
 
     # Als Mandant B: Freigabe, Wieder-Sperren und Verweis-Loesen sehen die Zeile nicht
-    async with tenant_session(mandant_id=mandant_b.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_b.id) as session:
         await rechnung_service.zeiterfassung_freigeben_fuer_rechnung(
             session, rechnung_id=rechnung_id, geaendert_von=None, verweis_behalten=False
         )
@@ -285,7 +285,7 @@ async def test_freigabe_und_restore_beruehren_keinen_fremden_mandanten(
     assert e.abgerechnet_rechnung_id == rechnung_id
 
     # Als Mandant A funktioniert dieselbe Freigabe
-    async with tenant_session(mandant_id=mandant_a.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant_a.id) as session:
         await rechnung_service.zeiterfassung_freigeben_fuer_rechnung(
             session, rechnung_id=rechnung_id, geaendert_von=None, verweis_behalten=False
         )

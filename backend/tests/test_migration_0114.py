@@ -8,6 +8,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
 from app.core.config import get_settings
+from tests.conftest import sync_system_engine
 
 _BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _NEUE_TABELLEN = {"audit_log_siegel", "s3_loeschauftraege", "mandant_exporte"}
@@ -30,7 +31,7 @@ async def _migrieren(richtung: str, ziel: str) -> None:
 
 
 def _engine():
-    return create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
+    return sync_system_engine()
 
 
 def _trigger(conn) -> set[tuple[str, str]]:
@@ -52,13 +53,11 @@ async def test_migration_0114_up_down_up_mit_backfill():
             assert not {"pdf_sha256", "xml_sha256"} & {c["name"] for c in inspect(conn).get_columns("rechnungen")}
             assert not _TRIGGER & _trigger(conn)
             # Altbestand: Eintraege mit und ohne Akteur, noch ohne die neuen Spalten.
-            conn.execute(text("SET app.is_super_admin = 'true'"))
             conn.execute(text("INSERT INTO audit_log (aktion, payload) VALUES ('alt_system', '{}'::jsonb)"))
             conn.commit()
 
         await _migrieren("upgrade", "head")
         with engine.connect() as conn:
-            conn.execute(text("SET app.is_super_admin = 'true'"))
             assert _NEUE_TABELLEN <= set(inspect(conn).get_table_names())
             assert _TRIGGER <= _trigger(conn)
             zeile = conn.execute(text("SELECT akteur_typ, legacy FROM audit_log WHERE aktion = 'alt_system'")).one()
@@ -72,8 +71,10 @@ async def test_migration_0114_up_down_up_mit_backfill():
         await _migrieren("upgrade", "head")
     finally:
         await _migrieren("upgrade", "head")
-        with engine.connect() as conn:
-            conn.execute(text("SET app.is_super_admin = 'true'"))
+        # TRUNCATE ist Eigentuemer-Recht (die System-Rolle besitzt keine Tabellen).
+        owner = create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
+        with owner.connect() as conn:
             conn.execute(text("TRUNCATE audit_log RESTART IDENTITY CASCADE"))
             conn.commit()
+        owner.dispose()
         engine.dispose()

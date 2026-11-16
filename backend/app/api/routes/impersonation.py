@@ -39,7 +39,7 @@ async def impersonate_mandant(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mandant nicht gefunden"
         )
 
-    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=mandant.id) as session:
         await log_action(
             session,
             aktion="login_als_mandant",

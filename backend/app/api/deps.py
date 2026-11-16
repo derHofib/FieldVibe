@@ -150,7 +150,7 @@ async def get_db(
     ctx = (
         system_session(grund="super_admin-api-request")
         if is_super_admin
-        else tenant_session(mandant_id=auth.mandant_id, is_super_admin=False)
+        else tenant_session(mandant_id=auth.mandant_id)
     )
     async with ctx as session:
         # Fuer audit_siegel_vor_antwort (app/services/audit_service.py).
@@ -285,7 +285,7 @@ async def get_kunden_db(
     `auth.kunde_id` explicitly; this session alone does not prevent one
     customer from reading another customer's data within the same mandant.
     """
-    async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=auth.mandant_id) as session:
         yield session
 
 
@@ -353,7 +353,7 @@ async def get_partner_db(
     RLS hier nur die Mandanten-Grenze, nicht "gehoert diese Zeile zu diesem
     Partner" -- jede Partnerportal-Route MUSS zusaetzlich explizit nach
     auth.partner_id filtern (siehe app/api/routes/partner_portal.py)."""
-    async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
+    async with tenant_session(mandant_id=auth.mandant_id) as session:
         yield session
 
 

@@ -5,7 +5,7 @@ import pytest
 
 from app.db import rollen_pruefung
 from app.db.rollen_pruefung import UnsichereDbRolleError, pruefe_db_rolle
-from app.db.session import engine
+from app.db.session import engine, system_engine
 
 
 class _Ergebnis:
@@ -15,9 +15,12 @@ class _Ergebnis:
     def one(self):
         return self._row
 
+    def scalar_one(self):
+        return self._row.name
+
     def all(self):
-        # Besitz-Abfrage: die Fake-Rolle besitzt keine Tabellen.
-        return []
+        # Besitz-Abfrage: die Fake-Rolle besitzt standardmaessig keine Tabellen.
+        return [(t,) for t in getattr(self._row, "tabellen", [])]
 
 
 class _Conn:
@@ -35,16 +38,22 @@ class _Conn:
 
 
 class _FakeEngine:
-    def __init__(self, *, rolsuper=False, rolbypassrls=False):
-        self._row = SimpleNamespace(name="app_rolle", rolsuper=rolsuper, rolbypassrls=rolbypassrls)
+    def __init__(self, *, rolsuper=False, rolbypassrls=False, name="app_rolle", tabellen=()):
+        self._row = SimpleNamespace(
+            name=name, rolsuper=rolsuper, rolbypassrls=rolbypassrls, tabellen=list(tabellen)
+        )
 
     def connect(self):
         return _Conn(self._row)
 
 
+def _system(**kw):
+    return _FakeEngine(**{"name": "system_rolle", "rolbypassrls": True, **kw})
+
+
 def _override(monkeypatch, erlaubt: bool):
     monkeypatch.setattr(
-        rollen_pruefung, "get_settings", lambda: SimpleNamespace(erlaube_rls_bypass_rolle=erlaubt)
+        rollen_pruefung, "get_settings", lambda: SimpleNamespace(erlaube_rls_bypass_rolle=erlaubt, db_besitz_verboten=False)
     )
 
 
@@ -52,14 +61,14 @@ def _override(monkeypatch, erlaubt: bool):
 async def test_superuser_bricht_ab(monkeypatch):
     _override(monkeypatch, False)
     with pytest.raises(UnsichereDbRolleError, match="app_rolle.*Superuser/BYPASSRLS"):
-        await pruefe_db_rolle(_FakeEngine(rolsuper=True))
+        await pruefe_db_rolle(_FakeEngine(rolsuper=True), _system())
 
 
 @pytest.mark.asyncio
 async def test_bypassrls_bricht_ab(monkeypatch):
     _override(monkeypatch, False)
     with pytest.raises(UnsichereDbRolleError):
-        await pruefe_db_rolle(_FakeEngine(rolbypassrls=True))
+        await pruefe_db_rolle(_FakeEngine(rolbypassrls=True), _system())
 
 
 @pytest.mark.asyncio
@@ -69,7 +78,7 @@ async def test_env_override_warnt_und_startet(monkeypatch, caplog):
     # importierte Logger.
     monkeypatch.setattr(rollen_pruefung.logger, "disabled", False)
     with caplog.at_level(logging.WARNING, logger="app.db.rollen_pruefung"):
-        await pruefe_db_rolle(_FakeEngine(rolsuper=True))
+        await pruefe_db_rolle(_FakeEngine(rolsuper=True), _system())
     assert any(r.levelno == logging.WARNING and "AUSSER KRAFT" in r.getMessage() for r in caplog.records)
 
 
@@ -77,13 +86,13 @@ async def test_env_override_warnt_und_startet(monkeypatch, caplog):
 async def test_normale_rolle_ok(monkeypatch, caplog):
     _override(monkeypatch, False)
     with caplog.at_level(logging.WARNING):
-        await pruefe_db_rolle(_FakeEngine())
+        await pruefe_db_rolle(_FakeEngine(), _system())
     assert not caplog.records
 
 
 @pytest.mark.asyncio
 async def test_echte_test_rolle_besteht_pruefung():
-    await pruefe_db_rolle(engine)
+    await pruefe_db_rolle(engine, system_engine)
 
 
 def test_settings_liest_env_variable(monkeypatch):
@@ -116,7 +125,7 @@ async def test_besitz_warnt_standardmaessig(monkeypatch, caplog):
         lambda: SimpleNamespace(erlaube_rls_bypass_rolle=False, db_besitz_verboten=False),
     )
     with caplog.at_level(logging.WARNING, logger="app.db.rollen_pruefung"):
-        await pruefe_db_rolle(engine)
+        await pruefe_db_rolle(engine, system_engine)
     assert any("besitzt" in r.getMessage() and "RLS-Tabellen" in r.getMessage() for r in caplog.records)
 
 
@@ -128,7 +137,7 @@ async def test_besitz_bricht_ab_wenn_verboten(monkeypatch):
         lambda: SimpleNamespace(erlaube_rls_bypass_rolle=False, db_besitz_verboten=True),
     )
     with pytest.raises(UnsichereDbRolleError, match="RLS-Tabellen"):
-        await pruefe_db_rolle(engine)
+        await pruefe_db_rolle(engine, system_engine)
 
 
 def test_settings_liest_besitz_schalter(monkeypatch):
@@ -137,3 +146,60 @@ def test_settings_liest_besitz_schalter(monkeypatch):
     assert Settings().db_besitz_verboten is False
     monkeypatch.setenv("FIELDVIBE_DB_BESITZ_VERBOTEN", "1")
     assert Settings().db_besitz_verboten is True
+
+
+# --- System-Rolle (BYPASSRLS, kein Besitz, nicht die App-Rolle) ---------------
+@pytest.mark.asyncio
+async def test_echte_system_rolle_besteht_pruefung(monkeypatch):
+    # Test-Rolle besitzt die Tabellen (Warnung, kein Abbruch); die System-Rolle nicht.
+    monkeypatch.setattr(
+        rollen_pruefung,
+        "get_settings",
+        lambda: SimpleNamespace(erlaube_rls_bypass_rolle=False, db_besitz_verboten=False),
+    )
+    await pruefe_db_rolle(engine, system_engine)
+
+
+@pytest.mark.asyncio
+async def test_system_rolle_ohne_bypassrls_bricht_ab(monkeypatch):
+    _override(monkeypatch, False)
+    with pytest.raises(UnsichereDbRolleError, match="system_rolle.*kein BYPASSRLS"):
+        await pruefe_db_rolle(_FakeEngine(), _system(rolbypassrls=False))
+
+
+@pytest.mark.asyncio
+async def test_system_rolle_superuser_bricht_ab(monkeypatch):
+    _override(monkeypatch, False)
+    with pytest.raises(UnsichereDbRolleError, match="Superuser"):
+        await pruefe_db_rolle(_FakeEngine(), _system(rolsuper=True))
+
+
+@pytest.mark.asyncio
+async def test_system_rolle_gleich_app_rolle_bricht_ab(monkeypatch):
+    _override(monkeypatch, False)
+    with pytest.raises(UnsichereDbRolleError, match="dieselbe Rolle"):
+        await pruefe_db_rolle(_FakeEngine(), _system(name="app_rolle"))
+
+
+@pytest.mark.asyncio
+async def test_system_rolle_mit_tabellenbesitz_bricht_ab(monkeypatch):
+    _override(monkeypatch, False)
+    with pytest.raises(UnsichereDbRolleError, match="besitzt 1 RLS-Tabellen"):
+        await pruefe_db_rolle(_FakeEngine(), _system(tabellen=["users"]))
+
+
+@pytest.mark.asyncio
+async def test_system_rolle_besitz_notschalter_warnt(monkeypatch, caplog):
+    _override(monkeypatch, True)
+    monkeypatch.setattr(rollen_pruefung.logger, "disabled", False)
+    with caplog.at_level(logging.WARNING, logger="app.db.rollen_pruefung"):
+        await pruefe_db_rolle(_FakeEngine(), _system(tabellen=["users"]))
+    assert any("System-Rolle" in r.getMessage() for r in caplog.records)
+
+
+def test_settings_ohne_system_url_bricht_ab(monkeypatch):
+    from app.core.config import Settings, UnsichereKonfigurationError
+
+    monkeypatch.delenv("DATABASE_URL_SYSTEM")
+    with pytest.raises(UnsichereKonfigurationError, match="DATABASE_URL_SYSTEM fehlt"):
+        Settings(_env_file=None)

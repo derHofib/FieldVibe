@@ -159,7 +159,8 @@ fi
 log "Prüfe/generiere Secrets in .env (bereits gesetzte Werte bleiben unverändert)..."
 
 is_placeholder POSTGRES_PASSWORD && set_env POSTGRES_PASSWORD "$(gen_secret)"
-# DATABASE_URL/DATABASE_URL_SYNC setzt scripts/app_rolle_einrichten.sh in
+# DATABASE_URL/DATABASE_URL_SYNC/DATABASE_URL_SYSTEM (System-Rolle mit BYPASSRLS
+# fuer system_session) setzt scripts/app_rolle_einrichten.sh in
 # Abschnitt 8 -- die Anwendung verbindet sich als eigene App-Rolle, nicht als
 # POSTGRES_USER (Bootstrap-Superuser, siehe dort).
 
@@ -314,7 +315,8 @@ export DEPLOY_BACKUP_ERLEDIGT
 # Start mit so einer Rolle (app/db/rollen_pruefung.py). Stattdessen laeuft
 # die Anwendung als eigene Rolle (APP_DB_USER, Standard fieldvibe_app); das
 # Skript legt sie an, uebertraegt das Eigentum an bestehenden Tabellen und
-# stellt DATABASE_URL in .env um. Muss VOR dem Start von Backend/Worker und
+# stellt DATABASE_URL in .env um; dasselbe Skript legt die System-Rolle
+# (APP_DB_SYSTEM_USER, Standard fieldvibe_system) an. Muss VOR dem Start von Backend/Worker und
 # den Migrationen laufen; bei einer Neuinstallation ist das Schema noch
 # leer. Idempotent, bei jedem Lauf sicher wiederholbar.
 log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirksame Mandantentrennung per Row-Level-Security)..."
