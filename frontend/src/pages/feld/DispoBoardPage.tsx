@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { datumZuIso } from "../../utils/format";
 import { AlertTriangle, CalendarX, ChevronLeft, ChevronRight } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type { Termin, TerminWarnung } from "../../types";
@@ -59,7 +63,6 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
-  const uid = useId();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -69,6 +72,7 @@ export function DispoBoardPage() {
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NeuerTerminForm | null>(null);
+  const [formVersucht, setFormVersucht] = useState(false);
 
   const weekStart = useMemo(() => addDays(startOfWeek(new Date()), weekOffset * 7), [weekOffset]);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -90,7 +94,7 @@ export function DispoBoardPage() {
     OFFENE_VORGANG_STATUS.includes(v.status),
   );
 
-  const { data: termine } = useQuery({
+  const { data: termine, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["termine", dateKey(weekStart)],
     queryFn: () =>
       termineApi.list({ von: weekStart.toISOString(), bis: weekEnd.toISOString() }),
@@ -262,6 +266,7 @@ export function DispoBoardPage() {
       <button
         onClick={() => {
           setShowForm(true);
+          setFormVersucht(false);
           const start = new Date();
           start.setMinutes(0, 0, 0);
           start.setHours(start.getHours() + 1);
@@ -274,98 +279,105 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch btn-ap-primary px-4"
+        className={NEU_BUTTON_KLASSE}
       >
         + Neuer Termin
       </button>
 
-      {showForm && form && (
-        <div className="space-y-3 card-ap p-4">
-          <div>
-            <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Vorgang</label>
-            <Select id={`${uid}-0`}
-              value={form.vorgangId}
-              onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
-            >
-              <option value="">Bitte wählen…</option>
-              {wahlbareVorgaenge.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.vorgangsnummer}: {v.titel}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Techniker</label>
-            <Select id={`${uid}-1`}
-              value={form.technikerId}
-              onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
-            >
-              {technikers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Titel</label>
-            <input id={`${uid}-2`}
-              value={form.titel}
-              onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-              placeholder="z.B. E-Check Hauptverteilung"
-            />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label htmlFor={`${uid}-3`} className="mb-1 block text-sekundaer font-medium text-label2">Start</label>
-              <input id={`${uid}-3`}
-                type="datetime-local"
-                value={form.start}
-                onChange={(e) => setForm({ ...form, start: e.target.value })}
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-              />
-            </div>
-            <div className="flex-1">
-              <label htmlFor={`${uid}-4`} className="mb-1 block text-sekundaer font-medium text-label2">Ende</label>
-              <input id={`${uid}-4`}
-                type="datetime-local"
-                value={form.ende}
-                onChange={(e) => setForm({ ...form, ende: e.target.value })}
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setForm(null);
-              }}
-              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sekundaer "
-            >
-              Abbrechen
-            </button>
-            <button
-              disabled={!form.vorgangId || !form.technikerId || !form.titel || createMutation.isPending}
-              onClick={() =>
-                createMutation.mutate({
-                  vorgang_id: form.vorgangId,
-                  techniker_id: form.technikerId,
-                  titel: form.titel,
-                  start_at: new Date(form.start).toISOString(),
-                  ende_at: new Date(form.ende).toISOString(),
-                })
-              }
-              className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sekundaer font-medium disabled:opacity-50"
-            >
+      <AnlegenPanel
+        offen={showForm && !!form}
+        titel="Neuer Termin"
+        onClose={() => {
+          setShowForm(false);
+          setForm(null);
+        }}
+      >
+        {form && (
+          <form
+            noValidate
+            className="space-y-3 p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFormVersucht(true);
+              if (!form.vorgangId || !form.technikerId || !form.titel.trim()) return;
+              createMutation.mutate({
+                vorgang_id: form.vorgangId,
+                techniker_id: form.technikerId,
+                titel: form.titel,
+                start_at: new Date(form.start).toISOString(),
+                ende_at: new Date(form.ende).toISOString(),
+              });
+            }}
+          >
+            <Feld label="Vorgang" pflicht fehler={formVersucht && !form.vorgangId ? "Bitte einen Vorgang wählen" : null}>
+              {(p) => (
+                <Select {...p} value={form.vorgangId} onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}>
+                  <option value="">Bitte wählen…</option>
+                  {wahlbareVorgaenge.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.vorgangsnummer}: {v.titel}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Feld>
+            <Feld label="Techniker" pflicht fehler={formVersucht && !form.technikerId ? "Bitte einen Techniker wählen" : null}>
+              {(p) => (
+                <Select {...p} value={form.technikerId} onChange={(e) => setForm({ ...form, technikerId: e.target.value })}>
+                  {technikers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Feld>
+            <Feld label="Titel" pflicht fehler={formVersucht && !form.titel.trim() ? "Bitte einen Titel angeben" : null}>
+              {(p) => (
+                <input
+                  {...p}
+                  value={form.titel}
+                  onChange={(e) => setForm({ ...form, titel: e.target.value })}
+                  className={FELD_KLASSE}
+                  placeholder="z.B. E-Check Hauptverteilung"
+                />
+              )}
+            </Feld>
+            <Feld label="Start">
+              {(p) => (
+                <input
+                  {...p}
+                  type="datetime-local"
+                  value={form.start}
+                  onChange={(e) => setForm({ ...form, start: e.target.value })}
+                  className={FELD_KLASSE}
+                />
+              )}
+            </Feld>
+            <Feld label="Ende">
+              {(p) => (
+                <input
+                  {...p}
+                  type="datetime-local"
+                  value={form.ende}
+                  onChange={(e) => setForm({ ...form, ende: e.target.value })}
+                  className={FELD_KLASSE}
+                />
+              )}
+            </Feld>
+            <button type="submit" disabled={createMutation.isPending} className={`${NEU_BUTTON_KLASSE} w-full`}>
               Anlegen
             </button>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </AnlegenPanel>
 
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : ladeFehler && !termine ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Termine" onErneut={() => void neuLaden()} />
+      ) : (
+      <>
       <div className="md:hidden">
         {tagesTermine.length === 0 ? (
           <EmptyState icon={CalendarX} text="Keine Termine an diesem Tag." />
@@ -459,6 +471,8 @@ export function DispoBoardPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }

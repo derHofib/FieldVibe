@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Reply } from "lucide-react";
+import { Inbox, Reply } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { mailApi } from "../../api/endpoints";
 import { ComposePanel } from "../../office/postfach/ComposePanel";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { DetailSkeleton } from "../../components/Skeleton";
 
 /** Zeigt entweder eine bestehende Nachricht (inkl. "Antworten" -- kein
@@ -19,13 +21,13 @@ export function PostfachNachrichtPage() {
   const queryClient = useQueryClient();
   const [antwortenOffen, setAntwortenOffen] = useState(false);
 
-  const { data: accounts } = useQuery({
+  const { data: accounts, isLoading: kontenLaden, error: kontenFehler, refetch: kontenNeu } = useQuery({
     queryKey: ["mail-accounts"],
     queryFn: () => mailApi.accounts.list(),
     enabled: id === "neu",
   });
 
-  const { data: detail } = useQuery({
+  const { data: detail, isLoading: detailLaedt, error: detailFehler, refetch: detailNeu } = useQuery({
     queryKey: ["mail-message", id],
     queryFn: () => mailApi.message(id!),
     enabled: id !== "neu" && !!id,
@@ -44,7 +46,23 @@ export function PostfachNachrichtPage() {
   }, [detail?.id]);
 
   if (id === "neu") {
-    if (!accounts?.[0]) return null;
+    if (kontenLaden) return <DetailSkeleton />;
+    if (kontenFehler && !accounts) {
+      return <FehlerZustand fehler={kontenFehler} was="Das Postfach" zurueck onErneut={() => void kontenNeu()} />;
+    }
+    if (!accounts?.[0]) {
+      return (
+        <EmptyState
+          icon={Inbox}
+          text="Es ist noch kein Postfach eingerichtet. Richte zuerst ein Konto ein, um Nachrichten zu schreiben."
+          action={
+            <button type="button" className="btn-touch btn-ap-primary px-4" onClick={() => navigate("/postfach")}>
+              Zum Postfach
+            </button>
+          }
+        />
+      );
+    }
     return (
       <div className="-mx-4 h-[calc(100vh-8rem)]">
         <ComposePanel
@@ -56,9 +74,11 @@ export function PostfachNachrichtPage() {
     );
   }
 
-  if (!detail) {
-    return <DetailSkeleton />;
+  if (detailLaedt) return <DetailSkeleton />;
+  if (detailFehler && !detail) {
+    return <FehlerZustand fehler={detailFehler} was="Die Nachricht" zurueck onErneut={() => void detailNeu()} />;
   }
+  if (!detail) return <DetailSkeleton />;
 
   return (
     <div className="space-y-4">
