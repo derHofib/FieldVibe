@@ -25,7 +25,7 @@ def global_smtp(monkeypatch):
 
 
 async def _make_smtp_integration(mandant, **overrides) -> MandantIntegration:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         integration = MandantIntegration(
             mandant_id=mandant.id,
             typ="smtp",
@@ -52,7 +52,7 @@ async def test_send_email_uses_configured_smtp(make_mandant):
 
     smtp_instance = MagicMock()
     with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance) as verbinde:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(
                 session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo"
             )
@@ -73,7 +73,7 @@ async def test_send_email_with_html_body_sends_multipart_alternative(make_mandan
 
     smtp_instance = MagicMock()
     with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(
                 session,
                 mandant.id,
@@ -99,14 +99,14 @@ async def test_send_email_raises_when_no_smtp_configured(make_mandant):
     mandant = await make_mandant()
 
     with pytest.raises(EmailNichtKonfiguriert):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
 
 
 @pytest.mark.asyncio
 async def test_send_email_raises_when_smtp_config_incomplete(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         integration = MandantIntegration(
             mandant_id=mandant.id, typ="smtp", config={}, aktiv=True
         )
@@ -114,7 +114,7 @@ async def test_send_email_raises_when_smtp_config_incomplete(make_mandant):
         await session.commit()
 
     with pytest.raises(EmailNichtKonfiguriert):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
 
 
@@ -126,7 +126,7 @@ async def test_send_email_faellt_auf_globalen_smtp_zurueck(global_smtp, make_man
     smtp_instance = MagicMock()
     smtp_instance.__enter__.return_value = smtp_instance
     with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo")
 
     smtp_cls.assert_called_once_with("smtp.fieldvibe.de", 2525, timeout=10)
@@ -142,7 +142,7 @@ async def test_mandanten_eigene_smtp_hat_vorrang_vor_global(global_smtp, make_ma
 
     smtp_instance = MagicMock()
     with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance) as verbinde:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo")
 
     verbinde.assert_called_once_with("smtp.example.de", 587, "starttls", 10)
@@ -168,7 +168,7 @@ async def test_send_email_logs_in_when_secret_present(client, make_mandant, make
 
     smtp_instance = MagicMock()
     with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="s", body="b")
 
     smtp_instance.login.assert_called_once_with("bot@example.de", "smtp-passwort")
@@ -182,7 +182,7 @@ async def test_mandanten_smtp_mit_internem_ziel_wird_geblockt(make_mandant, monk
 
     with patch("app.services.mail_netz.socket.create_connection") as verbinden:
         with pytest.raises(MailVerbindungFehler) as exc:
-            async with system_session() as session:
+            async with system_session(grund="test") as session:
                 await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
     verbinden.assert_not_called()
     assert "10.0.0.7" not in str(exc.value)
@@ -194,7 +194,7 @@ async def test_mandanten_smtp_mit_nicht_erlaubtem_port_wird_geblockt(make_mandan
     await _make_smtp_integration(mandant, port=6379)
 
     with pytest.raises(MailVerbindungFehler):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
 
 
@@ -211,6 +211,6 @@ async def test_globaler_smtp_bleibt_ohne_zielpruefung(make_mandant, global_smtp,
     smtp_instance = MagicMock()
     smtp_instance.__enter__.return_value = smtp_instance
     with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
     smtp_cls.assert_called_once_with("mailhog", 1025, timeout=10)

@@ -239,7 +239,7 @@ async def test_stammdaten_werden_normalisiert_und_koennen_entfallen(client, make
 
 
 async def _kunden_anlegen(mandant_id, anzahl: int) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i in range(anzahl):
             session.add(
                 Kunde(
@@ -280,7 +280,7 @@ async def test_sachkontenlaenge_bestimmt_die_kontolaenge(make_mandant):
 
 async def test_numerische_kundennummer_hat_vorrang_wenn_frei(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for nummer in ("K-1", "10002", "99", "70000", "10000"):
             session.add(
                 Kunde(mandant_id=mandant.id, kundennummer=nummer, name=nummer, portal_slug=uuid.uuid4().hex)
@@ -441,7 +441,7 @@ async def test_kreditorenkonto_manuell_validierung_und_konflikt(client, make_man
 
 async def test_lieferant_vergabe_kollisionsfrei(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i in range(50):
             session.add(Lieferant(mandant_id=mandant.id, name=f"L{i}"))
 

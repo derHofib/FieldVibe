@@ -10,7 +10,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _mit_smtp_integration(mandant) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             MandantIntegration(
                 mandant_id=mandant.id,
@@ -23,7 +23,7 @@ async def _mit_smtp_integration(mandant) -> None:
 
 
 async def _make_material(mandant, **kwargs) -> Material:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(
             mandant_id=mandant.id,
             bezeichnung=kwargs.pop("bezeichnung", "Kabel NYM 3x1.5"),

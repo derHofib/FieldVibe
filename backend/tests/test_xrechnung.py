@@ -561,7 +561,7 @@ async def test_neuer_mandant_startet_mit_modus_b2b(client, make_user):
         "/api/admin/mandanten", headers=auth_headers(token), json={"name": "Neu GmbH", "slug": "neu-gmbh-xr"}
     )
     assert angelegt.status_code == 201
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mandant = await session.get(Mandant, uuid.UUID(angelegt.json()["id"]))
         assert mandant.firmendaten["e_rechnung_modus"] == "b2b"
         assert e_invoice_service.e_rechnung_modus(mandant.firmendaten) == "b2b"

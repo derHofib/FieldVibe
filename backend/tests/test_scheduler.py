@@ -14,7 +14,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_pruefzyklus(mandant, anlage, *, faellig_in_tagen: int = 0) -> Pruefzyklus:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zyklus = Pruefzyklus(
             mandant_id=mandant.id,
             anlage_id=anlage.id,
@@ -42,7 +42,7 @@ async def test_scheduler_creates_vorgang_and_notifies_admins(
     ergebnis = await run_pruefzyklen_scheduler()
     assert ergebnis["vorgaenge_erstellt"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Pruefzyklus, zyklus.id)
         assert refreshed.offener_vorgang_id is not None
 
@@ -86,7 +86,7 @@ async def test_completing_linked_vorgang_advances_pruefzyklus(
     zyklus = await _make_pruefzyklus(mandant, anlage)
 
     await run_pruefzyklen_scheduler()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Pruefzyklus, zyklus.id)
         vorgang_id = refreshed.offener_vorgang_id
         alte_naechste_pruefung = refreshed.naechste_pruefung_am
@@ -97,7 +97,7 @@ async def test_completing_linked_vorgang_advances_pruefzyklus(
     )
     assert resp.status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Pruefzyklus, zyklus.id)
         assert refreshed.offener_vorgang_id is None
         assert refreshed.letzte_pruefung_am.date() == date.today()
@@ -116,7 +116,7 @@ async def test_scheduler_notifies_for_due_pruefmittel_without_duplicate(
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mittel = Pruefmittel(
             mandant_id=mandant.id,
             bezeichnung="Multimeter",
@@ -131,7 +131,7 @@ async def test_scheduler_notifies_for_due_pruefmittel_without_duplicate(
     assert first["pruefmittel_faellig"] == 1
     assert second["pruefmittel_faellig"] == 1  # weiterhin "faellig" gezaehlt
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(
                 select(Notification).where(
@@ -159,7 +159,7 @@ async def test_scheduler_scoped_to_mandant_ids_ignores_others(
     ergebnis = await run_pruefzyklen_scheduler(mandant_ids=[mandant1.id])
     assert ergebnis["vorgaenge_erstellt"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zyklen = (
             await session.execute(select(Pruefzyklus).order_by(Pruefzyklus.mandant_id))
         ).scalars().all()
@@ -173,12 +173,12 @@ async def test_mandanten_faellig_um_respects_override_and_default(make_mandant):
     mandant_default = await make_mandant(name="DefaultStunde")
     mandant_eigene = await make_mandant(name="EigeneStunde")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eigene = await session.get(Mandant, mandant_eigene.id)
         eigene.scheduler_stunde_utc = 5
         await session.commit()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         um_3_uhr = await mandanten_faellig_um(session, 3)
         um_5_uhr = await mandanten_faellig_um(session, 5)
 

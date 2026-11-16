@@ -15,7 +15,7 @@ from app.services.organigramm_sync_service import besetzung_pflegen
 async def _make_custom_mit_projekte_recht(mandant, *, aktionen: set[str]) -> AccountTyp:
     """Analog zu test_partner.py:_make_custom_mit_partner_recht -- die
     Legacy-Rollen-Fixtures kennen den neuen Bereich "projekte" nicht."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account_typ = AccountTyp(mandant_id=mandant.id, name=f"Projekt-Rolle-{uuid.uuid4().hex[:6]}")
         session.add(account_typ)
         await session.flush()
@@ -31,7 +31,7 @@ async def _make_custom_mit_projekte_recht(mandant, *, aktionen: set[str]) -> Acc
 
 
 async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = User(
             mandant_id=mandant.id,
             email=f"{uuid.uuid4().hex[:10]}@example.de",
@@ -284,7 +284,7 @@ async def test_projekt_loeschen_wandert_aufgaben_in_papierkorb(client, make_mand
     # /api/papierkorb ist absichtlich nur loesch_ansicht/loesch_operativ
     # vorbehalten (nicht mandant_admin) -- die Kaskade selbst wird deshalb
     # direkt in der DB geprueft statt ueber diesen Endpoint.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_projekt = await session.get(Projekt, projekt["id"])
         db_aufgabe = await session.get(ProjektAufgabe, aufgabe["id"])
         assert db_projekt.geloescht_am is not None
@@ -527,7 +527,7 @@ async def test_aufgabe_mit_anlage_kunde_standort_verknuepfen(
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant, name="Tischlerei Nord")
     anlage = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Kreissäge Halle 2")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         standort = Standort(
             mandant_id=mandant.id, kunde_id=kunde.id, bezeichnung="Werkstatt Nord", adresse={}
         )

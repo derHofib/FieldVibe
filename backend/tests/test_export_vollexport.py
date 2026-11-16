@@ -60,7 +60,7 @@ async def test_vollexport_ablauf_inhalt_manifest_und_mandantentrennung(client, m
     await _rechnung_versenden(client, hb, kunde_b)
 
     # Foto/Dokument-Ereignis mit Objekt (Mandant A) und eins von B; Eingangsbeleg von A.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from app.models.vorgang import Vorgang
 
         v_a = Vorgang(mandant_id=a.id, vorgangsnummer="V-A1", kunde_id=kunde_a.id, titel="Alpha-Vorgang", abrechnungsart="aufwand", leistungstyp="stoerung")
@@ -195,7 +195,7 @@ async def test_ergebnis_wird_nach_sieben_tagen_entfernt(client, make_mandant, ma
     mandant, _, _, h = await _betrieb(client, make_mandant, make_user, make_kunde, name="Eps", kundenname="K")
     export_id = (await client.post("/api/exporte/vollexport", headers=h)).json()["id"]
     await _fertig_abwarten()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         job = await session.get(MandantExport, uuid.UUID(export_id))
         key = job.object_key
         assert key.startswith(f"mandanten/{mandant.id}/exporte/")
@@ -234,7 +234,7 @@ async def test_fehlgeschlagener_export_wird_protokolliert_und_blockiert_nicht(cl
 @pytest.mark.asyncio
 async def test_haengender_auftrag_wird_als_fehler_markiert(client, make_mandant, make_user, make_kunde, monkeypatch):
     mandant, admin, _, h = await _betrieb(client, make_mandant, make_user, make_kunde, name="Eta", kundenname="K")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             MandantExport(
                 mandant_id=mandant.id, art="vollexport", status="laeuft", angefordert_von=admin.id,
@@ -242,7 +242,7 @@ async def test_haengender_auftrag_wird_als_fehler_markiert(client, make_mandant,
             )
         )
     assert await export_job_service.verarbeite_naechsten() is None
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         job = (await session.execute(select(MandantExport))).scalar_one()
         assert job.status == "fehler" and "Zeitüberschreitung" in job.fehler
     assert (await client.post("/api/exporte/vollexport", headers=h)).status_code == 202
@@ -254,7 +254,7 @@ async def test_fremder_objektschluessel_gelangt_nie_in_den_export(client, make_m
     b = await make_mandant("Fremd")
     fremder_key = storage_service.new_object_key(b.id, uuid.uuid4(), "foto.jpg")
     await storage_service.upload_bytes(fremder_key, b"GEHEIMES-FREMDFOTO", "image/jpeg")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from app.models.vorgang import Vorgang
 
         v = Vorgang(mandant_id=a.id, vorgangsnummer="V-T1", kunde_id=kunde_a.id, titel="T", abrechnungsart="aufwand", leistungstyp="stoerung")
@@ -275,7 +275,7 @@ async def test_fremder_objektschluessel_gelangt_nie_in_den_export(client, make_m
 async def test_grosses_objekt_wird_gestreamt_und_stimmt_im_hash(client, make_mandant, make_user, make_kunde):
     a, _, kunde_a, h = await _betrieb(client, make_mandant, make_user, make_kunde, name="Iota", kundenname="K")
     gross = (b"0123456789abcdef" * 65536) * 5  # 5 MiB
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from app.models.vorgang import Vorgang
 
         v = Vorgang(mandant_id=a.id, vorgangsnummer="V-I1", kunde_id=kunde_a.id, titel="T", abrechnungsart="aufwand", leistungstyp="stoerung")

@@ -691,7 +691,7 @@ async def _seed_projekt_vorlagen(session, mandant: Mandant, admin_user: User) ->
 
 
 async def seed() -> None:
-    async with system_session() as session:
+    async with system_session(grund="seed: demo-daten anlegen") as session:
         super_admin = await _get_or_none(session, User, email=SUPER_ADMIN_EMAIL)
         if super_admin is None:
             session.add(

@@ -88,7 +88,7 @@ async def test_migration_0102_up_down_up():
 async def test_downgrade_entfernt_neue_bereiche_und_aktionen(make_mandant, make_user):
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             AccountTypRecht(
                 mandant_id=mandant.id,
@@ -169,7 +169,7 @@ async def test_datenmigration_positionen_besetzungen_scopes():
 
         await _migrieren("upgrade", "head")
 
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             positionen = (await session.execute(select(Position))).scalars().all()
             je_mandant = {m: [p for p in positionen if p.mandant_id == ids[m]] for m in ("m1", "m2")}
             assert len(je_mandant["m1"]) == 4  # Wurzel + 3 Account-Typen
@@ -232,7 +232,7 @@ async def test_rls_mandant_b_sieht_nichts_von_a(make_mandant, make_user):
     a = await make_mandant(name="MandantA")
     b = await make_mandant(name="MandantB")
     user = await make_user(mandant=a, role="techniker")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         pos = Position(mandant_id=a.id, titel="Wurzel A")
         session.add(pos)
         await session.flush()
@@ -256,7 +256,7 @@ async def test_db_werte_sind_teilmenge_der_registry(make_mandant, make_user):
     mandant = await make_mandant()
     await make_user(mandant=mandant, role="techniker")
     await make_user(mandant=mandant, role="disponent")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         paare = (await session.execute(select(AccountTypRecht.bereich, AccountTypRecht.aktion).distinct())).all()
     assert paare
     for bereich, aktion in paare:
@@ -321,7 +321,7 @@ async def test_account_typ_recht_setzen_validiert_gegen_registry(client, make_ma
         resp = await client.put(url, json={"bereich": bereich, "aktion": aktion, "erlaubt": True}, headers=h)
         assert resp.status_code == 422, (bereich, aktion)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zeile = (
             await session.execute(
                 select(AccountTypRecht).where(AccountTypRecht.account_typ_id == uuid.UUID(typ["id"]))
@@ -336,7 +336,7 @@ async def test_account_typ_loeschen_entfernt_position_und_haengt_kinder_um(clien
     h = auth_headers(await login(client, admin.email, "pw-123456"))
     typ = (await client.post("/api/account-typen", json={"name": "Weg"}, headers=h)).json()
     typ_id = uuid.UUID(typ["id"])
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         wurzel = Position(mandant_id=mandant.id, titel="Wurzel")
         session.add(wurzel)
         await session.flush()
@@ -349,6 +349,6 @@ async def test_account_typ_loeschen_entfernt_position_und_haengt_kinder_um(clien
         wurzel_id, kind_id = wurzel.id, kind.id
 
     assert (await client.delete(f"/api/account-typen/{typ['id']}", headers=h)).status_code == 204
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.execute(select(Position).where(Position.account_typ_id == typ_id))).first() is None
         assert (await session.get(Position, kind_id)).parent_id == wurzel_id

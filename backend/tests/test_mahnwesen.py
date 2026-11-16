@@ -15,14 +15,14 @@ from app.services.mahnwesen_service import berechne_verzugszinsen, run_mahnwesen
 
 
 async def _setze_firmendaten(mandant, firmendaten: dict) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = await session.get(Mandant, mandant.id)
         m.firmendaten = firmendaten
         await session.flush()
 
 
 async def _make_rechnung(mandant, kunde, ersteller, *, faellig_vor_tagen: int | None, status: str = "versendet", **kwargs):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rechnung = Rechnung(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -52,7 +52,7 @@ async def test_ueberfaellige_rechnung_eskaliert_auf_stufe_1(
     ergebnis = await run_mahnwesen_eskalation()
     assert ergebnis["rechnungen_eskaliert"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Rechnung, rechnung.id)
         assert refreshed.mahnstufe == 1
         assert refreshed.letzte_mahnung_am is not None
@@ -83,7 +83,7 @@ async def test_wiederholter_lauf_ohne_stufenwechsel_eskaliert_nicht_erneut(
     second = await run_mahnwesen_eskalation()
     assert second["rechnungen_eskaliert"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Rechnung, rechnung.id)
         assert refreshed.mahnstufe == 1
 
@@ -100,7 +100,7 @@ async def test_eskaliert_weiter_auf_stufe_2_bei_laengerer_ueberfaelligkeit(
     ergebnis = await run_mahnwesen_eskalation()
     assert ergebnis["rechnungen_eskaliert"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Rechnung, rechnung.id)
         assert refreshed.mahnstufe == 2
 
@@ -135,7 +135,7 @@ async def test_mahnwesen_scoped_to_mandant_ids_ignores_others(
     ergebnis = await run_mahnwesen_eskalation(mandant_ids=[mandant1.id])
     assert ergebnis["rechnungen_eskaliert"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         r1 = await session.get(Rechnung, rechnung1.id)
         r2 = await session.get(Rechnung, rechnung2.id)
         assert r1.mahnstufe == 1
@@ -172,7 +172,7 @@ async def test_standard_ist_nur_interner_hinweis_kein_automatischer_versand(
     assert ergebnis["rechnungen_eskaliert"] == 1
     assert ergebnis["automatisch_versendet"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         logs = (
             await session.execute(select(EmailLog).where(EmailLog.entity_id == rechnung.id))
         ).scalars().all()
@@ -196,7 +196,7 @@ async def test_mahnung_1_automatisch_versendet_email_mit_verzugszinsen(
     assert ergebnis["rechnungen_eskaliert"] == 1
     assert ergebnis["automatisch_versendet"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         logs = (
             await session.execute(select(EmailLog).where(EmailLog.entity_id == rechnung.id))
         ).scalars().all()
@@ -230,7 +230,7 @@ async def test_mahnung_2_automatisch_bleibt_ohne_wirkung_wenn_nur_stufe_1_aktivi
     assert ergebnis["rechnungen_eskaliert"] == 1
     assert ergebnis["automatisch_versendet"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Rechnung, rechnung.id)
         assert refreshed.mahnstufe == 2
         logs = (
@@ -253,7 +253,7 @@ async def test_automatischer_versand_ohne_kunden_email_faellt_auf_hinweis_zuruec
     ergebnis = await run_mahnwesen_eskalation()
     assert ergebnis["automatisch_versendet"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         logs = (
             await session.execute(select(EmailLog).where(EmailLog.entity_id == rechnung.id))
         ).scalars().all()

@@ -44,7 +44,7 @@ async def test_fahrzeit_abrechnung_keine_zeigt_keine_vorschlaege(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _fahrzeit_eintrag(session, mandant=mandant, vorgang=vorgang, techniker=admin)
 
     created = await client.post(
@@ -79,7 +79,7 @@ async def test_fahrzeit_und_fahrtkosten_vorschlaege_zeit_und_km(
     assert settings_resp.json()["fahrzeit_abrechnung"] == "zeit_und_km"
     assert settings_resp.json()["km_satz_netto"] == "0.30"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _fahrzeit_eintrag(session, mandant=mandant, vorgang=vorgang, techniker=admin, km="50.0", stunden=2.0)
 
     created = await client.post(
@@ -117,7 +117,7 @@ async def test_add_position_fahrzeit_sperrt_zeiterfassung(
         "/api/mandant/einstellungen", headers=auth_headers(token), json={"fahrzeit_abrechnung": "zeit"}
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = await _fahrzeit_eintrag(session, mandant=mandant, vorgang=vorgang, techniker=admin)
         eintrag_id = eintrag.id
 
@@ -136,7 +136,7 @@ async def test_add_position_fahrzeit_sperrt_zeiterfassung(
     assert resp.status_code == 200
     assert resp.json()["positionen"][0]["quelle"] == "fahrzeit"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         aktualisiert = await session.get(Zeiterfassung, eintrag_id)
         assert aktualisiert.buchungsstatus == "abgerechnet"
         assert str(aktualisiert.abgerechnet_rechnung_id) == rechnung_id
@@ -158,7 +158,7 @@ async def test_remove_position_gibt_nur_eigenen_anteil_frei(
         json={"fahrzeit_abrechnung": "zeit_und_km", "km_satz_netto": "0.30"},
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = await _fahrzeit_eintrag(session, mandant=mandant, vorgang=vorgang, techniker=admin)
         eintrag_id = eintrag.id
 
@@ -199,7 +199,7 @@ async def test_remove_position_gibt_nur_eigenen_anteil_frei(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrzeit_position_id}", headers=auth_headers(token)
     )
     assert remove_1.status_code == 200
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
         assert zwischenstand.buchungsstatus == "gebucht"
         assert zwischenstand.abgerechnet_rechnung_id is None
@@ -209,7 +209,7 @@ async def test_remove_position_gibt_nur_eigenen_anteil_frei(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrtkosten_position_id}", headers=auth_headers(token)
     )
     assert remove_2.status_code == 200
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         endstand = await session.get(Zeiterfassung, eintrag_id)
         assert endstand.buchungsstatus == "gebucht"
         assert endstand.abgerechnet_rechnung_id is None
@@ -255,7 +255,7 @@ async def test_fahrtkosten_vorschlag_zaehlt_km_von_auftrag_zeile(
         json={"fahrzeit_abrechnung": "zeit_und_km", "km_satz_netto": "0.30"},
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _auftrag_eintrag_mit_km(session, mandant=mandant, vorgang=vorgang, techniker=admin, km="18.0", stunden=3.0)
 
     created = await client.post(
@@ -298,7 +298,7 @@ async def test_zeit_und_fahrtkosten_sperren_eine_auftrag_zeile_getrennt(
         json={"fahrzeit_abrechnung": "zeit_und_km", "km_satz_netto": "0.30"},
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = await _auftrag_eintrag_mit_km(session, mandant=mandant, vorgang=vorgang, techniker=admin)
         eintrag_id = eintrag.id
 
@@ -331,7 +331,7 @@ async def test_zeit_und_fahrtkosten_sperren_eine_auftrag_zeile_getrennt(
         p["id"] for p in fahrtkosten_resp.json()["positionen"] if p["quelle"] == "fahrtkosten"
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
         assert zwischenstand.buchungsstatus == "abgerechnet"
         assert str(zwischenstand.abgerechnet_rechnung_id) == rechnung_id
@@ -342,7 +342,7 @@ async def test_zeit_und_fahrtkosten_sperren_eine_auftrag_zeile_getrennt(
         f"/api/rechnungen/{rechnung_id}/positionen/{zeit_position_id}", headers=auth_headers(token)
     )
     assert remove_1.status_code == 200
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
         assert zwischenstand.buchungsstatus == "gebucht"
         assert zwischenstand.abgerechnet_rechnung_id is None
@@ -352,7 +352,7 @@ async def test_zeit_und_fahrtkosten_sperren_eine_auftrag_zeile_getrennt(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrtkosten_position_id}", headers=auth_headers(token)
     )
     assert remove_2.status_code == 200
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         endstand = await session.get(Zeiterfassung, eintrag_id)
         assert endstand.buchungsstatus == "gebucht"
         assert endstand.km_abgerechnet_rechnung_id is None

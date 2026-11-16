@@ -113,7 +113,7 @@ async def test_super_admin_session_intentionally_bypasses_rls(
 
     from app.db.session import system_session
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         result = await session.execute(text("SELECT mandant_id FROM users"))
         seen = {str(row.mandant_id) for row in result.fetchall()}
         assert seen == {str(mandant_a.id), str(mandant_b.id)}

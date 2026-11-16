@@ -165,7 +165,7 @@ def test_saldo_tagesgrenze_in_berlin_statt_utc():
 
 
 async def _custom_user(mandant, name, *, verwalten):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = AccountTyp(mandant_id=mandant.id, name=f"Typ-{name}", darf_abwesenheiten_verwalten=verwalten)
         session.add(typ)
         await session.flush()
@@ -304,7 +304,7 @@ async def test_feiertage_generieren_idempotent_und_bearbeitbar(client, make_mand
 
 
 async def _eintrag(mandant, user, start, ende, kategorie="verwaltung"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(mandant_id=mandant.id, techniker_id=user.id, start_at=start, ende_at=ende, kategorie=kategorie)
         )
@@ -376,7 +376,7 @@ async def test_mandantentrennung_soll_feiertage_saldo(client, make_mandant, make
 async def test_neue_tabellen_haben_rls_policy():
     from sqlalchemy import text
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rows = (
             await session.execute(
                 text(

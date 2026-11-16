@@ -163,7 +163,7 @@ def _fehlertext(exc: Exception) -> str:
 
 
 async def _beanspruche(max_anzahl: int, jetzt: datetime) -> list[_Auftrag]:
-    async with system_session() as session:
+    async with system_session(grund="worker: mail-outbox faellige", drosselung_s=300) as session:
         zeilen = (await session.execute(
             select(MailOutbox)
             .where(MailOutbox.status == "pending", MailOutbox.naechster_versuch_am <= jetzt)
@@ -212,7 +212,7 @@ async def _endgueltig_fehlgeschlagen(session: AsyncSession, row: MailOutbox, log
 
 async def _bereinige_haengende(jetzt: datetime) -> int:
     grenze = jetzt - timedelta(minutes=get_settings().mail_outbox_sending_timeout_minuten)
-    async with system_session() as session:
+    async with system_session(grund="worker: mail-outbox haengende bereinigen", drosselung_s=300) as session:
         zeilen = (await session.execute(
             select(MailOutbox)
             .where(MailOutbox.status == "sending", MailOutbox.sending_seit < grenze)
@@ -230,7 +230,7 @@ async def _bereinige_haengende(jetzt: datetime) -> int:
 
 async def _schreibe_ergebnis(auftrag: _Auftrag, jetzt: datetime, exc: Exception | None, stats: dict) -> None:
     geloeschte_keys: list[str] = []
-    async with system_session() as session:
+    async with system_session(grund="worker: mail-outbox ergebnis schreiben", drosselung_s=300) as session:
         row = (await session.execute(
             select(MailOutbox).where(MailOutbox.id == auftrag.id).with_for_update()
         )).scalar_one()
@@ -280,7 +280,7 @@ async def _versende(auftrag: _Auftrag, jetzt: datetime, stats: dict) -> None:
             (a["dateiname"], await storage_service.download_bytes(a["s3_key"]), a["mimetype"])
             for a in auftrag.anhaenge
         ]
-        async with system_session() as session:
+        async with system_session(grund="worker: mail-outbox versenden", drosselung_s=300) as session:
             await email_service.send_email(
                 session,
                 auftrag.mandant_id,

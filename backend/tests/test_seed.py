@@ -22,7 +22,7 @@ async def test_seed_weist_technikern_kunden_zu_und_ist_idempotent(client):
 async def test_seed_abschluss_liegt_nach_anlage():
     await seed()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         vorgaenge = (
             await session.execute(select(Vorgang).where(Vorgang.abgeschlossen_am.isnot(None)))
         ).scalars().all()

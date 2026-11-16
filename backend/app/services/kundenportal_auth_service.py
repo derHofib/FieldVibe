@@ -22,7 +22,7 @@ async def authenticate_kunde(email: str, password: str) -> TokenPair:
     kundenportal_zugaenge (not across users), so the tenant is not yet known
     at lookup time -- the same legitimate pre-authentication use of
     system_session() as the staff login."""
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: kunden-lookup per email") as session:
         result = await session.execute(
             select(KundenportalZugang).where(
                 func.lower(KundenportalZugang.email) == email.strip().lower()

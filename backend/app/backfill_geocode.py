@@ -66,7 +66,7 @@ async def backfill_geocode() -> None:
         print("[backfill_geocode] Kein MAPBOX_ACCESS_TOKEN konfiguriert -- abgebrochen.")
         return
 
-    async with system_session() as session:
+    async with system_session(grund="backfill: geocoding ueber alle mandanten") as session:
         result = await session.execute(select(Mandant))
         mandant_ids = {
             m.id for m in result.scalars().all() if "karten" not in m.deaktivierte_module

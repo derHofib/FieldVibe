@@ -7,7 +7,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_mangel(mandant, vorgang, gemeldet_von, **kwargs) -> Mangel:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mangel = Mangel(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -143,7 +143,7 @@ async def test_angebot_from_maengel_full_workflow(
     assert angenommen.status_code == 200
     assert angenommen.json()["angenommen_am"] is not None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m1 = await session.get(Mangel, mangel1.id)
         m2 = await session.get(Mangel, mangel2.id)
         assert m1.status == "in_bearbeitung"
@@ -164,7 +164,7 @@ async def test_angebot_from_maengel_full_workflow(
     )
     assert resp.status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m1 = await session.get(Mangel, mangel1.id)
         assert m1.status == "behoben"
         assert m1.behoben_am is not None
@@ -195,7 +195,7 @@ async def test_angebot_rejected_reverts_maengel_to_offen(
     assert resp.status_code == 200
     assert resp.json()["abgelehnt_am"] is not None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Mangel, mangel.id)
         assert refreshed.status == "offen"
         assert refreshed.angebot_id is None

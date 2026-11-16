@@ -58,7 +58,7 @@ async def _versenden(client, headers, angebot_id):
 
 
 async def _setze(angebot_id, **felder):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         angebot = await session.get(Angebot, angebot_id)
         for k, v in felder.items():
             setattr(angebot, k, v)
@@ -66,7 +66,7 @@ async def _setze(angebot_id, **felder):
 
 
 async def _anzahl_vorgaenge(mandant) -> int:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return (
             await session.execute(select(func.count()).select_from(Vorgang).where(Vorgang.mandant_id == mandant.id))
         ).scalar_one()
@@ -287,7 +287,7 @@ async def test_steuersatz_aendern_nur_im_entwurf(client, make_mandant, make_user
 
 async def test_kleinunternehmer_erzwingt_steuersatz_null(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Mandant, mandant.id)).firmendaten = {"ist_kleinunternehmer": True}
         await session.commit()
     _, _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde, mandant=mandant)
@@ -348,7 +348,7 @@ async def test_annahme_ohne_vorgang_legt_auftrag_an(client, make_mandant, make_u
     assert auftrag_id is not None
     assert await _anzahl_vorgaenge(mandant) == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from uuid import UUID
 
         vorgang = await session.get(Vorgang, UUID(auftrag_id))
@@ -382,7 +382,7 @@ async def test_annahme_mit_bestehendem_vorgang_legt_keinen_neuen_an(
     assert resp.json()["auftrag_vorgang_id"] == str(vorgang.id)
     assert await _anzahl_vorgaenge(mandant) == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         events = (
             (await session.execute(select(VorgangEvent).where(VorgangEvent.vorgang_id == vorgang.id))).scalars().all()
         )
@@ -585,7 +585,7 @@ async def _versendetes_angebot(client, h, kunde, *, versendet_vor_tagen=0, guelt
 
 
 async def _benachrichtigungen(mandant=None) -> list[Notification]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         stmt = select(Notification).where(Notification.typ == "angebot").order_by(Notification.id)
         if mandant is not None:
             stmt = stmt.where(Notification.mandant_id == mandant.id)
@@ -608,7 +608,7 @@ async def test_nachfassen_nach_n_tagen_genau_einmal(client, make_mandant, make_u
     assert "208,25 € brutto" in n.titel
     assert "seit 8 Tagen unbeantwortet" in n.titel
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from uuid import UUID
 
         assert (await session.get(Angebot, UUID(angebot["id"]))).nachgefasst_am is not None
@@ -684,7 +684,7 @@ async def test_nachfassen_mandantentrennung(client, make_mandant, make_user, mak
     assert sorted(str(n.user_id) for n in await _benachrichtigungen()) == sorted([str(admin1.id), str(admin2.id)])
 
     # Jede Benachrichtigung zeigt auf ein Angebot des eigenen Mandanten.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for n in await _benachrichtigungen():
             assert (await session.get(Angebot, n.ref_entity_id)).mandant_id == n.mandant_id
 

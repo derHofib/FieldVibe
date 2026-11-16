@@ -618,7 +618,7 @@ async def _hochladen(client, headers, daten: bytes, name="rechnung.xml", typ="ap
 
 
 async def _zeile(eingangsrechnung_id) -> Eingangsrechnung:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await session.get(Eingangsrechnung, UUID(eingangsrechnung_id))
 
 
@@ -878,7 +878,7 @@ async def _integration(mandant, monkeypatch, nachrichten, uid=7):
     from app.models.integration import MandantIntegration
     from app.services import email_ingest_service
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             MandantIntegration(
                 mandant_id=mandant.id,
@@ -895,7 +895,7 @@ async def _integration(mandant, monkeypatch, nachrichten, uid=7):
 async def _eingangsrechnungen(mandant) -> list[Eingangsrechnung]:
     from sqlalchemy import select
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return list(
             (await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.mandant_id == mandant.id)))
             .scalars()
@@ -908,7 +908,7 @@ async def _notifications(mandant) -> list[str]:
 
     from app.models.notification import Notification
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rows = (await session.execute(select(Notification).where(Notification.mandant_id == mandant.id))).scalars().all()
         return [n.titel for n in rows]
 
@@ -1137,7 +1137,7 @@ async def test_check_constraints_verhindern_ungueltige_werte(make_mandant):
     mandant = await make_mandant()
     for feld, wert in (("e_rechnung_syntax", "edifact"), ("xml_sha256", "ABC")):
         with pytest.raises(IntegrityError):
-            async with system_session() as session:
+            async with system_session(grund="test") as session:
                 session.add(
                     Eingangsrechnung(
                         mandant_id=mandant.id,

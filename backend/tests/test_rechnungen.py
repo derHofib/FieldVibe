@@ -128,7 +128,7 @@ async def test_bezahlt_setzt_vorgang_auf_abgerechnet(
     assert resp.status_code == 200
     assert resp.json()["bezahlt_am"] is not None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Vorgang, vorgang.id)
         assert refreshed.status == "abgerechnet"
 
@@ -370,7 +370,7 @@ async def test_storno_erzeugt_eigenen_beleg_mit_negativen_betraegen(
     assert storno_pdf.status_code == 200
     assert storno_pdf.content.startswith(b"%PDF")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(Rechnung, storno["id"])
         assert row.pdf_object_key is not None
 
@@ -403,7 +403,7 @@ async def test_versendet_archiviert_pdf(client, make_mandant, make_user, make_ku
     )
     rechnung_id = created.json()["id"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(Rechnung, rechnung_id)
         assert row.pdf_object_key is None
 
@@ -412,7 +412,7 @@ async def test_versendet_archiviert_pdf(client, make_mandant, make_user, make_ku
     )
     assert patched.status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(Rechnung, rechnung_id)
         assert row.pdf_object_key is not None
 
@@ -431,7 +431,7 @@ async def test_positionsvorschlaege_aus_material_und_zeit(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         # Jeder Mandant bekommt bei Anlage automatisch ein Zentrallager (siehe
         # make_mandant/Mandant-Erstellung) -- hier wiederverwendet statt ein
         # zweites anzulegen, dessen Legacy-Pflichtfelder (adresse) das Modell
@@ -541,7 +541,7 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         lv = Leistungsverzeichnis(mandant_id=mandant.id, name="LV")
         session.add(lv)
         await session.flush()

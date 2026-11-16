@@ -41,13 +41,13 @@ async def admin_mit_kopf(client, make_mandant, make_user, name="Admin"):
 
 
 async def audit(aktion: str) -> list[AuditLog]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return list((await session.execute(select(AuditLog).where(AuditLog.aktion == aktion))).scalars())
 
 
 async def typ_mit_rechten(mandant, name, rechte) -> uuid.UUID:
     """rechte: (bereich, aktion, scope)"""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = AccountTyp(mandant_id=mandant.id, name=name)
         session.add(typ)
         await session.flush()
@@ -61,7 +61,7 @@ async def typ_mit_rechten(mandant, name, rechte) -> uuid.UUID:
 
 
 async def custom_user(mandant, name) -> User:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = User(
             mandant_id=mandant.id,
             email=f"{name.lower().replace(' ', '')}-{uuid.uuid4().hex[:6]}@example.de",
@@ -75,7 +75,7 @@ async def custom_user(mandant, name) -> User:
 
 
 async def besetzen(mandant, position_id, user) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             PositionBesetzung(
                 mandant_id=mandant.id,
@@ -117,7 +117,7 @@ async def test_mandant_b_sieht_und_aendert_nichts_von_a(client, make_mandant, ma
 
 
 async def _mandant_von(position_id):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         position = await session.get(Position, uuid.UUID(position_id))
         from app.models.mandant import Mandant
 
@@ -303,10 +303,10 @@ async def test_besetzung_regeln_warnung_vertretung_duplikat_inaktiv(client, make
     v = await client.post(url, headers=k, json={"user_id": str(u3.id), "art": "vertretung", "gueltig_bis": bis})
     assert v.status_code == 201 and v.json()["warnung"] is None
     # Deaktivierter Nutzer / Fremdmandant
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(User, u2.id)).aktiv = False
     u4 = await custom_user(mandant, "Vier")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(User, u4.id)).aktiv = False
     assert (await client.post(url, headers=k, json={"user_id": str(u4.id)})).status_code == 409
     anderer = await make_mandant("Andere")
@@ -364,7 +364,7 @@ async def test_lesen_scope_kontextknoten_und_dsgvo(client, make_mandant, make_us
     mit_namen = await typ_mit_rechten(
         mandant, "MitNamen", [("organigramm", "sehen", "teilbaum"), ("mitarbeiterverwaltung", "sehen", "teilbaum")]
     )
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for pid, tid in ((leiter["id"], sehen_nur),):
             (await session.get(Position, uuid.UUID(pid))).account_typ_id = tid
 
@@ -389,7 +389,7 @@ async def test_lesen_scope_kontextknoten_und_dsgvo(client, make_mandant, make_us
     assert (await client.get(f"/api/organigramm/effektiv?position_id={fremd['id']}", headers=kl)).status_code == 403
 
     # Mit mitarbeiterverwaltung.sehen: Namen im Scope
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Position, uuid.UUID(leiter["id"]))).account_typ_id = mit_namen
     kl = await kopf(client, u_leiter)
     liste = (await client.get("/api/organigramm/positionen", headers=kl)).json()

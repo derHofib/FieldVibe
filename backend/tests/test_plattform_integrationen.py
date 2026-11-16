@@ -72,7 +72,7 @@ async def test_plattform_integration_ist_fuer_mandanten_session_lesbar_aber_nich
     genau das braucht send_email() als Fallback fuer jeden Mandanten --
     darf sie aber nicht selbst anlegen oder aendern."""
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         integration = PlattformIntegration(
             typ="smtp", config={"host": "smtp.fieldvibe.de", "from_address": "account@fieldvibe.de"}
         )
@@ -100,7 +100,7 @@ async def test_plattform_integration_ist_fuer_mandanten_session_lesbar_aber_nich
 @pytest.mark.asyncio
 async def test_send_email_nutzt_plattform_integration_wenn_kein_mandanten_smtp(make_mandant):
     mandant = await make_mandant(name="Elektro Müller GmbH")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             PlattformIntegration(
                 typ="smtp",
@@ -113,7 +113,7 @@ async def test_send_email_nutzt_plattform_integration_wenn_kein_mandanten_smtp(m
     smtp_instance = MagicMock()
     smtp_instance.__enter__.return_value = smtp_instance
     with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo")
 
     smtp_cls.assert_called_once_with("smtp.fieldvibe.de", 2525, timeout=10)

@@ -12,7 +12,7 @@ from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkei
 
 
 async def _make_eingangsrechnung(mandant, ersteller, *, faellig_in_tagen=None, skonto_prozent=None, skonto_tage=None, betrag_netto="100.00"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eingangsrechnung = Eingangsrechnung(
             mandant_id=mandant.id,
             lieferant_name="Sonepar",
@@ -39,7 +39,7 @@ async def test_faelligkeits_erinnerung_wird_erstellt(make_mandant, make_user):
     ergebnis = await run_kreditoren_faelligkeits_check()
     assert ergebnis["faelligkeit_erinnerungen"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(select(Notification).where(Notification.user_id == admin.id))
         ).scalars().all()
@@ -90,7 +90,7 @@ async def test_skonto_erinnerung_wird_erstellt(make_mandant, make_user):
     ergebnis = await run_kreditoren_faelligkeits_check()
     assert ergebnis["skonto_erinnerungen"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(
                 select(Notification).where(
@@ -110,7 +110,7 @@ async def test_skonto_erinnerung_entfaellt_bei_bereits_voller_bezahlung(make_man
     eingangsrechnung = await _make_eingangsrechnung(
         mandant, admin, skonto_prozent="2.00", skonto_tage=1, betrag_netto="100.00"
     )
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             EingangsrechnungZahlung(
                 mandant_id=mandant.id,

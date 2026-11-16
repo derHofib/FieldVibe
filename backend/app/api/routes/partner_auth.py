@@ -73,7 +73,7 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Partnerportal-Refresh-Token"
         )
 
-    async with system_session() as session:
+    async with system_session(grund="partner-auth: refresh-token einloesen") as session:
         zugang = await session.get(PartnerZugang, payload["sub"])
         if zugang is None or not zugang.aktiv:
             raise HTTPException(
@@ -109,7 +109,7 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
-    async with system_session() as session:
+    async with system_session(grund="partner-auth: registrierung") as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="partner")
 
         zugang = PartnerZugang(
@@ -174,7 +174,7 @@ async def passwort_vergessen(body: PartnerPasswortVergessenRequest, request: Req
     password_reset_ip_limiter.check(ip_key)
     password_reset_ip_limiter.record_failure(ip_key)
 
-    async with system_session() as session:
+    async with system_session(grund="partner-auth: passwort vergessen") as session:
         result = await session.execute(
             select(PartnerZugang).where(func.lower(PartnerZugang.email) == body.email)
         )
@@ -228,7 +228,7 @@ async def passwort_zuruecksetzen(body: PartnerPasswortResetRequest, request: Req
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
 
-    async with system_session() as session:
+    async with system_session(grund="partner-auth: passwort zuruecksetzen") as session:
         zugang = await session.get(PartnerZugang, payload["sub"])
         if zugang is None or not zugang.aktiv:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")

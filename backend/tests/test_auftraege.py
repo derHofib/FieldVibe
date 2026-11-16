@@ -12,7 +12,7 @@ from app.services.organigramm_sync_service import besetzung_pflegen
 
 
 async def _make_custom_mit_projekte_recht(mandant, *, aktionen: set[str]) -> AccountTyp:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account_typ = AccountTyp(mandant_id=mandant.id, name=f"Auftrag-Rolle-{uuid.uuid4().hex[:6]}")
         session.add(account_typ)
         await session.flush()
@@ -28,7 +28,7 @@ async def _make_custom_mit_projekte_recht(mandant, *, aktionen: set[str]) -> Acc
 
 
 async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = User(
             mandant_id=mandant.id,
             email=f"{uuid.uuid4().hex[:10]}@example.de",
@@ -212,7 +212,7 @@ async def test_auftrag_loeschen_laesst_vorgang_unangetastet(
     # Referenziell -- der Vorgang selbst bleibt aktiv, nur die Referenz
     # zeigt jetzt auf einen geloeschten Auftrag (gleiches Prinzip wie bei
     # geloeschtem Projekt, siehe test_projekte.py).
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_auftrag = await session.get(Auftrag, uuid.UUID(auftrag["id"]))
         assert db_auftrag.geloescht_am is not None
 

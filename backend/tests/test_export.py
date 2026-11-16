@@ -57,7 +57,7 @@ async def test_export_zeiterfassung_csv(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
 
     start = datetime(2026, 1, 1, 8, 0, tzinfo=timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(
                 mandant_id=mandant.id,

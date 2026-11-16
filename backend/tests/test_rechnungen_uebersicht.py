@@ -19,7 +19,7 @@ async def _make_custom_account_typ_ohne_abrechnung(mandant) -> AccountTyp:
     test_formulare.py::_make_custom_mit_formulare_recht. Es gibt keine
     generische make_account_typ-Fixture in conftest.py, deshalb direkt ueber
     system_session wie dort."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account_typ = AccountTyp(mandant_id=mandant.id, name=f"Ohne-Abrechnung-{uuid.uuid4().hex[:6]}")
         session.add(account_typ)
         await session.flush()
@@ -33,7 +33,7 @@ async def _make_custom_account_typ_ohne_abrechnung(mandant) -> AccountTyp:
 
 async def _make_custom_user(mandant, account_typ) -> User:
     password = "hunter2!!"
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = User(
             mandant_id=mandant.id,
             email=f"{uuid.uuid4().hex[:10]}@example.de",

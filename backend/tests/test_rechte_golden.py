@@ -90,7 +90,7 @@ async def test_me_matrix_und_rechte_service_vor_und_nach_der_umstellung_identisc
         me = (await client.get("/api/auth/me", headers=auth_headers(token))).json()
         role, typ_id = me["role"], me["account_typ_id"]
 
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             from uuid import UUID
 
             typ_uuid = UUID(typ_id) if typ_id else None
@@ -138,7 +138,7 @@ async def test_me_matrix_und_rechte_service_vor_und_nach_der_umstellung_identisc
     assert scopes["kunden"]["sehen"] == "eigene" and scopes["vorgaenge"]["sehen"] == "eigene"
     assert scopes["material"]["sehen"] == "mandant"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ergebnis = await organigramm_pruefen(session, mandant_id=mandant.id)
         assert ergebnis.abweichungen == []
         assert ergebnis.mandanten[0].nutzer_geprueft >= 5
@@ -179,7 +179,7 @@ async def test_flag_nur_zugewiesene_kunden_wird_in_scope_uebersetzt_und_zurueck(
     assert zustand["rechte_scopes"]["material"]["sehen"] == "mandant"  # Bereich kennt eigene nicht
 
     # Erneutes Setzen auf denselben Wert laesst fein eingestellte Scopes in Ruhe
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         from sqlalchemy import update
 
         from app.models.account_typ import AccountTypRecht

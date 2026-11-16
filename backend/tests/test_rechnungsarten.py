@@ -482,7 +482,7 @@ async def test_abschlaege_anrechnen_ueber_angebot_und_gezielte_auswahl(client, m
     a1 = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="10")
     a2 = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="20")
     # Manueller Entwurf, der nur ueber das Angebot (nicht ueber den Vorgang) zugeordnet ist.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         quelle = await session.get(Angebot, uuid.UUID(angebot["id"]))
         entwurf = Rechnung(
             mandant_id=quelle.mandant_id,
@@ -617,7 +617,7 @@ async def _zahlung(client, h, rechnung_id, betrag) -> dict:
 async def _op_regel_sql_gleich_python(mandant) -> dict[uuid.UUID, Decimal]:
     """Die eine Regel in zwei Gestalten: offen_sql() und offene_betraege() muessen
     fuer jede Rechnung des Mandanten dasselbe liefern."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         sql = {
             rid: offen.quantize(Decimal("0.01"))
             for rid, offen in (
@@ -991,7 +991,7 @@ async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make
     # Selbst eine ueberfaellig datierte Gutschrift wird nie gemahnt.
     # Testaufbau: die Faelligkeit eines versendeten Belegs ist per Festschreibungs-Trigger (Migration
     # 0114) unveraenderbar -- nur fuer diese kuenstliche Konstellation wird er kurz ausgesetzt.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
         gs = await session.get(Rechnung, uuid.UUID(voll_gs["id"]))
         gs.faellig_am = date.today() - timedelta(days=40)
@@ -1001,7 +1001,7 @@ async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make
 
     ergebnis = await mahnwesen_service.run_mahnwesen_eskalation([mandant.id])
     assert ergebnis["rechnungen_eskaliert"] == 1
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(Rechnung, uuid.UUID(teil["id"]))).mahnstufe == 1
         assert (await session.get(Rechnung, uuid.UUID(voll["id"]))).mahnstufe == 0
         assert (await session.get(Rechnung, uuid.UUID(voll_gs["id"]))).mahnstufe == 0
@@ -1249,12 +1249,12 @@ async def test_bezahlter_abschlag_schliesst_den_vorgang_nicht_ab(client, make_ma
     abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="40")
     bezahlt = await _zahlung(client, h, abschlag["id"], abschlag["betrag_brutto"])
     assert bezahlt["status"] == "bezahlt" and bezahlt["vorgang_id"] == str(vorgang_id)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(Vorgang, vorgang_id)).status != "abgerechnet"
 
     schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
     await _zahlung(client, h, schluss["id"], schluss["offener_betrag"])
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(Vorgang, vorgang_id)).status == "abgerechnet"
 
 
@@ -1282,7 +1282,7 @@ async def test_schluss_versand_prueft_die_angerechneten_abschlaege(client, make_
     zweiter = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
     assert [a["rechnung_id"] for a in zweiter["angerechnete_abschlaege"]] == [abschlag["id"]]
     # ... und der erste wird wiederhergestellt: nun stehen beide im Entwurf, der Versand des ersten scheitert.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         wieder = await session.get(Rechnung, uuid.UUID(erster["id"]))
         wieder.geloescht_am = None
         await session.commit()

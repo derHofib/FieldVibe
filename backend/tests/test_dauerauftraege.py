@@ -33,7 +33,7 @@ async def _make_dauerauftrag_mit_ziel(
     modus = kwargs.pop("modus", "rollierend")
     toleranz_frueh_tage = kwargs.pop("toleranz_frueh_tage", None)
     toleranz_spaet_tage = kwargs.pop("toleranz_spaet_tage", None)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Dauerauftrag(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -294,7 +294,7 @@ async def test_scheduler_erzeugt_vorgang_wenn_faellig(make_mandant, make_kunde):
     ergebnis = await run_dauerauftraege_scheduler([mandant.id])
     assert ergebnis["vorgaenge_erstellt"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ziel_neu = await session.get(DauerauftragZiel, ziel.id)
         assert ziel_neu.offener_vorgang_id is not None
 
@@ -323,7 +323,7 @@ async def test_scheduler_setzt_faelligkeit_am_auf_echtes_datum_trotz_toleranz_sp
 
     await run_dauerauftraege_scheduler([mandant.id])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ziel_neu = await session.get(DauerauftragZiel, ziel.id)
         vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
         erwartet = datetime.combine(geplante_faelligkeit, datetime.min.time(), tzinfo=timezone.utc)
@@ -342,7 +342,7 @@ async def test_scheduler_setzt_faelligkeit_am_ohne_toleranz(make_mandant, make_k
 
     await run_dauerauftraege_scheduler([mandant.id])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ziel_neu = await session.get(DauerauftragZiel, ziel.id)
         vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
         erwartet = datetime.combine(geplante_faelligkeit, datetime.min.time(), tzinfo=timezone.utc)
@@ -390,7 +390,7 @@ async def test_scheduler_setzt_prioritaet_bei_anlage_nach_formel(make_mandant, m
 
     await run_dauerauftraege_scheduler([mandant.id])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ziel_neu = await session.get(DauerauftragZiel, ziel.id)
         vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
         assert vorgang.prioritaet == 1
@@ -408,7 +408,7 @@ async def test_scheduler_bearbeitet_ziele_eines_buendels_unabhaengig(
     anlage1 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Anlage 1")
     anlage2 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Anlage 2")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Dauerauftrag(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -468,7 +468,7 @@ async def test_abschluss_erzeugten_vorgangs_schreibt_naechste_faelligkeit_fort(
 
     await run_dauerauftraege_scheduler([mandant.id])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ziel = (
             await session.execute(_ziele_stmt(auftrag_id))
         ).scalars().one()
@@ -655,7 +655,7 @@ async def test_dauerauftrag_loeschen(client, make_mandant, make_user, make_kunde
         mandant=mandant, kunde=kunde, titel="Zu loeschen", offener_vorgang=vorgang
     )
     auftrag_id = auftrag.id
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         v = await session.get(type(vorgang), vorgang.id)
         v.dauerauftrag_id = auftrag_id
         await session.flush()

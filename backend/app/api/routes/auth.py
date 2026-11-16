@@ -105,7 +105,7 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Refresh-Token"
         )
 
-    async with system_session() as session:
+    async with system_session(grund="login: refresh-token einloesen") as session:
         result = await session.execute(select(User).where(User.id == payload["sub"]))
         user = result.scalar_one_or_none()
         if user is None or not user.aktiv:
@@ -134,7 +134,7 @@ async def ueberall_abmelden(response: Response, auth: AuthContext = Depends(get_
     aufrufenden). system_session wie bei /me: bei Impersonation ist die
     Zeile des Super-Admins unter der Mandanten-RLS nicht sichtbar -- dann
     trifft der Widerruf bewusst den Super-Admin-Account selbst."""
-    async with system_session() as session:
+    async with system_session(grund="login: ueberall abmelden") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
@@ -170,7 +170,7 @@ async def _abmeldung_protokollieren(request: Request) -> None:
         payload = decode_token(token)
         if payload.get("type") != TokenType.REFRESH.value:
             return
-        async with system_session() as session:
+        async with system_session(grund="login: abmeldung protokollieren") as session:
             user = await session.get(User, payload["sub"])
             if user is None or user.mandant_id is None:
                 return
@@ -195,7 +195,7 @@ async def passwort_vergessen(body: PasswortVergessenRequest, request: Request) -
     password_reset_ip_limiter.check(ip_key)
     password_reset_ip_limiter.record_failure(ip_key)
 
-    async with system_session() as session:
+    async with system_session(grund="login: passwort vergessen lookup") as session:
         result = await session.execute(select(User).where(func.lower(User.email) == body.email))
         user = result.scalar_one_or_none()
         if user is None or not user.aktiv:
@@ -253,7 +253,7 @@ async def passwort_zuruecksetzen(body: PasswortZuruecksetzenRequest, request: Re
         password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
 
-    async with system_session() as session:
+    async with system_session(grund="login: passwort zuruecksetzen") as session:
         user = await session.get(User, payload["sub"])
         # Einmalverwendung: der Link traegt die token_version von seiner
         # Ausstellung; jeder Widerruf (auch dieser Reset selbst) macht ihn ungueltig.
@@ -291,7 +291,7 @@ async def passwort_aendern(
             status_code=status.HTTP_403_FORBIDDEN, detail="Während der Impersonation nicht möglich"
         )
     ip_key = client_ip(request)
-    async with system_session() as session:
+    async with system_session(grund="auth: passwort aendern") as session:
         user = await session.get(User, auth.user_id)
         if user is None or not user.aktiv:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
@@ -340,7 +340,7 @@ async def registrieren(body: RegistrierenRequest, request: Request, response: Re
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
         )
-    async with system_session() as session:
+    async with system_session(grund="login: registrierung per einladung") as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="mitarbeiter")
 
         user = User(
@@ -366,7 +366,7 @@ async def me(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> C
     # mandant_id = NULL and would be invisible under the impersonated
     # tenant's RLS scope. This lookup is read-only, keyed by the token's own
     # verified subject, and never returns another account's data.
-    async with system_session() as session:
+    async with system_session(grund="auth: me (auch super_admin/impersonation)") as session:
         result = await session.execute(select(User).where(User.id == auth.user_id))
         user = result.scalar_one_or_none()
         if user is None:

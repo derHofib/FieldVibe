@@ -299,7 +299,7 @@ async def _service_auth(request: Request) -> None:
 async def _service_db(_: None = Depends(_service_auth)) -> AsyncIterator[AsyncSession]:
     # Von _service_auth abhaengig, damit vor erfolgreicher Authentifizierung
     # keine DB-Session geoeffnet wird.
-    async with system_session() as session:
+    async with system_session(grund="fehlerberichte: service-token-schnittstelle") as session:
         yield session
 
 

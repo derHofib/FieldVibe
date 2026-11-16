@@ -80,7 +80,7 @@ async def _person(session, mandant, name, scope, *, parent=None, einheit=None, t
 async def org(make_mandant, make_kunde, make_vorgang, client):
     mandant = await make_mandant()
     daten: dict = {"mandant": mandant}
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         service = OrgEinheit(mandant_id=mandant.id, name="Service", typ="bereich")
         session.add(service)
         await session.flush()
@@ -122,7 +122,7 @@ async def org(make_mandant, make_kunde, make_vorgang, client):
 
     daten["kunden"], daten["vorgaenge"], daten["termine"], daten["aufgaben"] = {}, {}, {}, {}
     daten["ids"] = user_ids
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         projekt = Projekt(mandant_id=mandant_id, name="Projekt", erstellt_von=user_ids["gf"])
         session.add(projekt)
         await session.flush()
@@ -132,7 +132,7 @@ async def org(make_mandant, make_kunde, make_vorgang, client):
         vorgang = await make_vorgang(
             mandant=mandant, kunde=kunde, titel=f"Vorgang {key}", zugewiesener_user_id=user_ids[key]
         )
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             session.add(KundeZuweisung(mandant_id=mandant_id, kunde_id=kunde.id, user_id=user_ids[key]))
             termin = Termin(
                 mandant_id=mandant_id,
@@ -281,7 +281,7 @@ async def test_erlaubte_ids_und_cache(org):
         return SimpleNamespace(user_id=org["ids"][key], role="custom", account_typ_id=None)
 
     ids = org["ids"]
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await zs.erlaubte_user_ids(session, auth("a1"), "vorgaenge") == {ids["a1"]}
         got = await zs.erlaubte_user_ids(session, auth("tla"), "vorgaenge")
         assert got >= {ids["a1"], ids["a2"]}

@@ -10,7 +10,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_lv(mandant, kunde=None, **kwargs) -> Leistungsverzeichnis:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         lv = Leistungsverzeichnis(mandant_id=mandant.id, name=kwargs.pop("name", "Allgemein"), **kwargs)
         session.add(lv)
         await session.flush()
@@ -22,7 +22,7 @@ async def _make_lv(mandant, kunde=None, **kwargs) -> Leistungsverzeichnis:
 
 
 async def _make_lv_position(mandant, lv, **kwargs) -> LeistungsverzeichnisPosition:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         position = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
             leistungsverzeichnis_id=lv.id,
@@ -158,7 +158,7 @@ async def test_lv_verwendung_erstellt_verwendung_und_event(client, make_mandant,
     assert body["lv_position_id"] == str(position.id)
     assert body["menge"] == "1.00"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         events = (
             await session.execute(select(VorgangEvent).where(VorgangEvent.vorgang_id == vorgang.id))
         ).scalars().all()
@@ -375,7 +375,7 @@ async def test_lv_loeschen_kaskadiert_auf_positionen(client, make_mandant, make_
     resp = await client.delete(f"/api/leistungsverzeichnisse/{lv.id}", headers=auth_headers(token))
     assert resp.status_code == 204
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         position_db = await session.get(LeistungsverzeichnisPosition, position.id)
         assert position_db.geloescht_am is not None
 
@@ -413,7 +413,7 @@ async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant,
     assert up["material_gesamt"] == "495.00"
     assert up["einzelpreis"] == "592.50"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("97.50")
         assert haupt_db.material_gesamt == Decimal("495.00")
@@ -461,7 +461,7 @@ async def test_hauptpunkt_summe_beruecksichtigt_festpreis_unterpunkt(client, mak
     assert berechnet_unterpunkt.status_code == 201
     assert berechnet_unterpunkt.json()["einzelpreis"] == "50.00"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         # 15.00 (Festpreis) + 50.00 (berechnet) -- nicht nur 50.00.
         assert haupt_db.einzelpreis == Decimal("65.00")
@@ -503,7 +503,7 @@ async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, 
     )
     assert zweiter.status_code == 201
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("90.00")
         assert haupt_db.material_gesamt == Decimal("400.00")
@@ -516,7 +516,7 @@ async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, 
 
     # Loeschen eines Unterpunkts berechnet den Hauptpunkt neu.
     await client.delete(f"/api/leistungsverzeichnis/{zweiter.json()['id']}", headers=auth_headers(token))
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("60.00")
         assert haupt_db.einzelpreis == Decimal("460.00")

@@ -11,7 +11,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_zugang(mandant, kunde, *, email=None, password="alt-passwort-123", aktiv=True):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -52,7 +52,7 @@ async def test_passwort_vergessen_sends_email_and_reset_flow_works(client, make_
     kunde = await make_kunde(mandant=mandant)
     await _make_zugang(mandant, kunde, email="reset-flow@example.de", password="altes-passwort-123")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             MandantIntegration(
                 mandant_id=mandant.id,

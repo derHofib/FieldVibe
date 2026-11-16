@@ -137,14 +137,14 @@ async def test_teilzahlung_setzt_vorgang_nicht_auf_abgerechnet(
         f"/api/rechnungen/{rechnung_id}/zahlungen", headers=auth_headers(token), json={"betrag": "500.00"}
     )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         aktuell = await session.get(Vorgang, vorgang.id)
         assert aktuell.status != "abgerechnet"
 
     await client.post(
         f"/api/rechnungen/{rechnung_id}/zahlungen", headers=auth_headers(token), json={"betrag": "690.00"}
     )
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         aktuell = await session.get(Vorgang, vorgang.id)
         assert aktuell.status == "abgerechnet"
 

@@ -34,7 +34,7 @@ def _rfc822_ohne_anhang(*, absender: str, betreff: str) -> bytes:
 async def test_run_email_ingest_legt_entwurf_pro_pdf_anhang_an(make_mandant, monkeypatch):
     mandant = await make_mandant()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         integration = MandantIntegration(
             mandant_id=mandant.id,
             typ="imap",
@@ -61,7 +61,7 @@ async def test_run_email_ingest_legt_entwurf_pro_pdf_anhang_an(make_mandant, mon
     assert ergebnis["neue_entwuerfe"] == 1
     assert ergebnis["fehler"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         entwuerfe = (
             (await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.mandant_id == mandant.id)))
             .scalars()

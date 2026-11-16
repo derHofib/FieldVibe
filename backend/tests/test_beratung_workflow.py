@@ -10,7 +10,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_material(mandant, **kwargs) -> Material:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(
             mandant_id=mandant.id,
             bezeichnung=kwargs.pop("bezeichnung", "Kabel NYM 3x1.5"),
@@ -103,7 +103,7 @@ async def test_folge_auftrag_erstellen_auf_bereits_abgerechnetem_vorgang(
     quelle_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
     assert quelle_resp.json()["status"] == "abgerechnet"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         events = (
             await session.execute(
                 select(VorgangEvent).where(VorgangEvent.vorgang_id == vorgang.id)

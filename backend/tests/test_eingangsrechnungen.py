@@ -471,7 +471,7 @@ async def test_export_csv_enthaelt_offenen_betrag(client, make_mandant, make_use
 
 
 async def _make_entwurf(mandant_id, *, email_absender="rechnung@lieferant.de", email_betreff="Ihre Rechnung"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eingangsrechnung = Eingangsrechnung(
             mandant_id=mandant_id,
             lieferant_name=email_absender,

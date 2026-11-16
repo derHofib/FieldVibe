@@ -69,7 +69,7 @@ async def anfordern(
 async def verarbeite_naechsten() -> UUID | None:
     """Nimmt den aeltesten wartenden Auftrag und fuehrt ihn aus. None, wenn keiner wartet."""
     jetzt = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="worker: export-job beanspruchen", drosselung_s=300) as session:
         haengende = (
             await session.execute(
                 select(MandantExport).where(
@@ -99,7 +99,7 @@ async def verarbeite_naechsten() -> UUID | None:
         ergebnis = await _erzeugen(job_id, mandant_id, art, parameter)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Export %s fehlgeschlagen", job_id)
-        async with system_session() as session:
+        async with system_session(grund="worker: export-job abschliessen", drosselung_s=300) as session:
             j = await session.get(MandantExport, job_id)
             j.status = "fehler"
             j.fehler = f"{type(exc).__name__}: {exc}"[:500]
@@ -114,7 +114,7 @@ async def verarbeite_naechsten() -> UUID | None:
             )
         return job_id
 
-    async with system_session() as session:
+    async with system_session(grund="worker: export-job fehlschlag", drosselung_s=300) as session:
         j = await session.get(MandantExport, job_id)
         j.status = "fertig"
         j.fertig_am = datetime.now(timezone.utc)
@@ -173,7 +173,7 @@ async def raeume_auf() -> int:
     """Entfernt abgelaufene Ergebnis-ZIPs (7 Tage); die Zeile bleibt als Nachweis."""
     jetzt = datetime.now(timezone.utc)
     entfernt = 0
-    async with system_session() as session:
+    async with system_session(grund="worker: export-jobs aufraeumen", drosselung_s=300) as session:
         faellig = (
             await session.execute(
                 select(MandantExport).where(MandantExport.status == "fertig", MandantExport.laeuft_ab_am < jetzt)

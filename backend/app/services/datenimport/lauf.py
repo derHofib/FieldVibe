@@ -491,7 +491,7 @@ async def raeume_auf(jetzt: datetime | None = None) -> dict:
     quelle_grenze = (jetzt - timedelta(hours=einstellungen.import_zwischenspeicher_stunden)).replace(tzinfo=None)
     bericht_grenze = (jetzt - timedelta(days=einstellungen.import_fehlerbericht_tage)).replace(tzinfo=None)
     quellen = berichte = 0
-    async with system_session() as session:
+    async with system_session(grund="worker: datenimport aufraeumen") as session:
         alt = (
             await session.execute(
                 select(ImportLauf).where(ImportLauf.object_key.is_not(None), ImportLauf.created_at < quelle_grenze)

@@ -26,7 +26,7 @@ def test_umstellungstage_haben_23_bzw_25_stunden():
 
 async def _eintrag(mandant, techniker, vorgang, lokal: datetime) -> None:
     start = lokal.replace(tzinfo=BERLIN).astimezone(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(
                 mandant_id=mandant.id, vorgang_id=vorgang.id, techniker_id=techniker.id,

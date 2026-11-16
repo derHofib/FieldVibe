@@ -127,12 +127,12 @@ async def faellige_mandanten(session, job: str, jetzt: datetime) -> list[UUID]:
 
 async def _fehlgeschlagen(job: str, mandant_id: UUID | None, exc: Exception, jetzt: datetime) -> None:
     # Nur Typ und Kurztext: der Text steht in job_laeufe und damit im Health-Endpunkt.
-    async with system_session() as session:
+    async with system_session(grund="worker: job fehlgeschlagen vermerken", drosselung_s=300) as session:
         await markiere_lauf(session, job, mandant_id, erfolg=False, fehler=f"{type(exc).__name__}: {exc}", jetzt=jetzt)
 
 
 async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: datetime) -> dict | None:
-    async with system_session() as session:
+    async with system_session(grund="worker: taeglicher job pruefen", drosselung_s=300) as session:
         ids = await faellige_mandanten(session, job, jetzt)
     if not ids:
         return None
@@ -146,7 +146,7 @@ async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: dateti
                 await _fehlgeschlagen(job, ids[0], exc, jetzt)
                 return {"mandanten": 1, "fehler": 1}
         else:
-            async with system_session() as session:
+            async with system_session(grund="worker: taeglicher job ausfuehren", drosselung_s=300) as session:
                 for mandant_id in ids:
                     await markiere_lauf(session, job, mandant_id, erfolg=True, ergebnis=gesamt, jetzt=jetzt)
             logger.info("Job %s fuer %d Mandant(en) abgeschlossen: %s", job, len(ids), gesamt)
@@ -163,7 +163,7 @@ async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: dateti
                 logger.exception("Job %s fuer Mandant %s fehlgeschlagen", job, mandant_id)
                 await _fehlgeschlagen(job, mandant_id, exc, jetzt)
             else:
-                async with system_session() as session:
+                async with system_session(grund="worker: taeglicher job abschliessen", drosselung_s=300) as session:
                     await markiere_lauf(session, job, mandant_id, erfolg=True, ergebnis=einzel, jetzt=jetzt)
     return {"mandanten": len(ids), "einzeln": True, "fehler": fehler}
 
@@ -175,7 +175,7 @@ async def _fuehre_systemjob(job: str, funktion: SystemJob, takt: str, jetzt: dat
         if takt == "stuendlich"
         else letzter_slot(jetzt, s.scheduler_default_stunde_utc)
     )
-    async with system_session() as session:
+    async with system_session(grund="worker: systemjob starten", drosselung_s=300) as session:
         lauf = (await lade_laeufe(session, job)).get(None)
     if not ist_faellig(lauf, slot, jetzt, s.scheduler_retry_minuten):
         return False
@@ -187,7 +187,7 @@ async def _fuehre_systemjob(job: str, funktion: SystemJob, takt: str, jetzt: dat
             logger.exception("Job %s fehlgeschlagen", job)
             await _fehlgeschlagen(job, None, exc, jetzt)
             return False
-        async with system_session() as session:
+        async with system_session(grund="worker: systemjob abschliessen", drosselung_s=300) as session:
             await markiere_lauf(session, job, None, erfolg=True, ergebnis=ergebnis if isinstance(ergebnis, dict) else None, jetzt=jetzt)
         if ergebnis:
             logger.info("Job %s abgeschlossen: %s", job, ergebnis)

@@ -84,7 +84,7 @@ async def test_partner_zuweisung_scope_ausserhalb_404(client, org):  # noqa: F81
 async def zeiten(org):  # noqa: F811
     """Je ein Zeiteintrag fuer a1, a2, b1 an deren Vorgang."""
     start = datetime.now(timezone.utc) - timedelta(hours=3)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for key in ("a1", "a2", "b1"):
             session.add(
                 Zeiterfassung(

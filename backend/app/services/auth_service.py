@@ -56,7 +56,7 @@ async def authenticate(email: str, password: str) -> LoginResponse:
     itself never returns tenant data to the caller, only a token for the
     single matched account.
     """
-    async with system_session() as session:
+    async with system_session(grund="login: user-lookup per email") as session:
         # func.lower() auf beiden Seiten statt eines vorab normalisierten
         # `email`-Arguments zu vertrauen -- so bleibt der Login auch dann
         # case-insensitiv, wenn ein Aufrufer (Seed-Skript, direkter

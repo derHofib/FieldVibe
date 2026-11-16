@@ -29,7 +29,7 @@ async def _erstellen(mandant, name, *, darf_buchen):
     """Ein role='custom'-User mit einem eigenen Account-Typ -- zeigt u.a.,
     dass das Recht "Zeiten buchen" an keine Rolle gebunden ist (Konzept
     5.4), anders als ein 'mandant_admin', der es ohnehin immer hat."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account_typ = AccountTyp(
             mandant_id=mandant.id, name=f"Typ-{name}-{darf_buchen}", darf_zeiten_buchen=darf_buchen
         )
@@ -63,7 +63,7 @@ async def _erstellen(mandant, name, *, darf_buchen):
 
 
 async def _fertigen_eintrag(mandant, vorgang, techniker, *, taetigkeit="Erledigt", stunden=1, start_offset_h=-3):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc) + timedelta(hours=start_offset_h)
         eintrag = Zeiterfassung(
             mandant_id=mandant.id,
@@ -129,7 +129,7 @@ async def test_vormerken_laufender_timer_schlaegt_fehl(client, make_mandant, mak
     techniker = await _erstellen(mandant, "Techniker Drei", darf_buchen=False)
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = Zeiterfassung(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -166,7 +166,7 @@ async def test_vormerken_fremde_zeit_ohne_recht_verboten(client, make_mandant, m
     assert resp.status_code == 400
     assert "nicht deine Zeit" in resp.json()["detail"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         unveraendert = await session.get(Zeiterfassung, eintrag.id)
         assert unveraendert.buchungsstatus == "vermerkt"
 
@@ -296,7 +296,7 @@ async def test_alles_oder_nichts_beim_vormerken(client, make_mandant, make_kunde
     )
     assert resp.status_code == 400
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_gueltig = await session.get(Zeiterfassung, gueltig.id)
         assert db_gueltig.buchungsstatus == "vermerkt"
 
@@ -352,7 +352,7 @@ async def test_fremden_laufenden_timer_beenden_erfordert_grund(client, make_mand
     buchende = await _erstellen(mandant, "Buchende Siebzehn", darf_buchen=True)
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         laufend = Zeiterfassung(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -385,7 +385,7 @@ async def test_fremden_timer_beenden_ohne_recht_404(client, make_mandant, make_k
     techniker2 = await _erstellen(mandant, "Techniker Neunzehn", darf_buchen=False)
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         laufend = Zeiterfassung(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,

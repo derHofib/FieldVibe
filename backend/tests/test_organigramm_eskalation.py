@@ -36,7 +36,7 @@ TEAMLEITER_RECHTE = [
 
 
 async def _setze_typ(position_id: str, typ_id) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Position, uuid.UUID(position_id))).account_typ_id = typ_id
 
 
@@ -125,7 +125,7 @@ async def test_teamleiter_kann_nicht_eskalieren(client, umfeld):
     )
     assert r.status_code == 403
     # Nichts davon hat etwas veraendert
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.execute(select(PositionBesetzung).where(PositionBesetzung.user_id == u["frei_user"].id))).first() is None
     # Users-PATCH: Account-Typ mit mehr Rechten, Rolle, Deaktivieren
     url = f"/api/users/{u['tech_user'].id}"
@@ -246,7 +246,7 @@ async def test_letzter_admin_nicht_deaktivierbar_herabstufbar_loeschbar(client, 
     assert (await client.patch(url, headers=ka, json={"aktiv": False})).status_code == 409
     # Loeschen des letzten Admins durch einen anderen Admin (Fremd-Admin im selben Mandanten ist nicht moeglich:
     # ein zweiter Admin waere ja nicht der letzte) -> Stand bleibt unveraendert
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(User, admin.id)).aktiv is True
 
     dritter = await make_user(mandant=mandant, role="mandant_admin", password=PW, name="Dritter")
@@ -267,13 +267,13 @@ async def test_verwaltung_bleibt_erhalten_ohne_admin(make_mandant):
     """Ohne mandant_admin muss ein Nutzer mit mandantweitem rechte_verwalten uebrig bleiben."""
     mandant = await make_mandant()
     typ = await typ_mit_rechten(mandant, "Verwalter", [("organigramm", "rechte_verwalten", "mandant")])
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         wurzel = (await session.execute(select(Position).where(Position.mandant_id == mandant.id))).scalars().first()
         wurzel.account_typ_id = typ
     verwalter = await custom_user(mandant, "Verwalter")
     await besetzen(mandant, str(wurzel.id), verwalter)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await esk.verwaltung_vorhanden(session, mandant.id)
         with pytest.raises(HTTPException) as fehler:
             async with esk.verwaltung_bleibt_erhalten(session, mandant.id):

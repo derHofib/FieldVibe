@@ -46,12 +46,12 @@ def _code(secret, offset=0):
 
 
 async def _user_laden(user_id):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await session.get(User, user_id)
 
 
 async def _audit_aktionen():
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return [a.aktion for a in (await session.execute(select(AuditLog))).scalars()]
 
 
@@ -64,7 +64,7 @@ async def _mit_mfa(client, make_mandant, make_user, role="mandant_admin", mandan
 
 
 async def _pflicht_setzen(mandant_id, wert=True):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mandant = await session.get(Mandant, mandant_id)
         mandant.firmendaten = {**(mandant.firmendaten or {}), "mfa_pflicht": wert}
 
@@ -353,7 +353,7 @@ async def test_erfolgreiche_verifizierung_leert_zaehler(client, make_mandant, ma
 async def test_verifizieren_blockt_deaktivierten_account_und_mandanten(client, make_mandant, make_user):
     mandant, user, secret, *_ = await _mit_mfa(client, make_mandant, make_user)
     token = (await _login(client, user.email))["mfa_token"]
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Mandant, mandant.id)).status = "pausiert"
     resp = await client.post("/api/auth/mfa/verifizieren", json={"mfa_token": token, "code": _code(secret, +30)})
     assert resp.status_code == 403
@@ -564,7 +564,7 @@ async def test_admin_setzt_mfa_zurueck_mit_audit_und_abmeldung(client, make_mand
     assert gespeichert.mfa_aktiv is False and gespeichert.mfa_secret_enc is None
     assert (await client.get("/api/auth/me", headers=auth_headers(user_access))).status_code == 401
     assert "access_token" in await _login(client, user.email)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = (
             await session.execute(select(AuditLog).where(AuditLog.aktion == "mfa_zurueckgesetzt"))
         ).scalar_one()
@@ -640,7 +640,7 @@ async def test_anonymisierung_entfernt_mfa(client, make_mandant, make_user):
     from app.services.user_anonymisierung_service import anonymisiere_user
 
     _, user, *_ = await _mit_mfa(client, make_mandant, make_user, role="techniker")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await anonymisiere_user(session, await session.get(User, user.id))
     gespeichert = await _user_laden(user.id)
     assert gespeichert.mfa_aktiv is False and gespeichert.mfa_secret_enc is None

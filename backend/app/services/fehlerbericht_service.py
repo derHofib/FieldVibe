@@ -296,7 +296,7 @@ async def loesche_abgelaufene_fehlerberichte(jetzt: datetime | None = None) -> i
     aelter als die Aufbewahrungsfrist sind."""
     jetzt = jetzt or datetime.now(timezone.utc)
     grenze = jetzt - timedelta(days=get_settings().fehlerbericht_aufbewahrung_tage)
-    async with system_session() as session:
+    async with system_session(grund="worker: fehlerberichte aufbewahrung", drosselung_s=300) as session:
         rows = await session.execute(
             select(
                 Fehlerbericht.id,

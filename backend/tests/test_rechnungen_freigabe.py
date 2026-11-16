@@ -22,7 +22,7 @@ async def _sammelrechnung(client, token, kunde, *vorgaenge):
 
 
 async def _zeilen(*ids):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return [await session.get(Zeiterfassung, i) for i in ids]
 
 
@@ -62,7 +62,7 @@ async def test_entwurf_loeschen_gibt_stunden_frei_und_restore_sperrt_wieder(
         assert e.buchungsstatus == "abgerechnet"
         assert str(e.abgerechnet_rechnung_id) == rechnung["id"]
     assert await _abrechenbar(client, token, kunde) == set()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         aktionen = (
             await session.execute(
                 select(ZeiterfassungAenderung.aktion).where(ZeiterfassungAenderung.zeiterfassung_id == ids[0])
@@ -143,7 +143,7 @@ async def test_storno_gibt_stunden_frei_und_schreibt_events_an_alle_vorgaenge(
     assert [v["id"] for v in storno["vorgaenge"]] == [str(va.id), str(vb.id)]
     assert await _abrechenbar(client, token, kunde) == {str(va.id), str(vb.id)}
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         events = (
             await session.execute(
                 select(VorgangEvent.vorgang_id).where(
@@ -160,7 +160,7 @@ async def test_svs_zeit_wird_gesperrt_und_gezielt_freigegeben(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs1 = await _svs(session, mandant)
         svs2 = await _svs(session, mandant)
         s1 = await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=1, lv_position_id=svs1.id)
@@ -192,7 +192,7 @@ async def test_zeit_und_leistung_teilen_sich_keine_zeilen(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs = await _svs(session, mandant)
         svs_zeile = await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=1, lv_position_id=svs.id)
         ohne = await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
@@ -260,7 +260,7 @@ async def test_freigabe_und_restore_beruehren_keinen_fremden_mandanten(
 
     from app.models.rechnung import Rechnung
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rechnung = Rechnung(
             mandant_id=mandant_a.id, kunde_id=kunde_a.id, rechnungsnummer="R-RLS-1", betrag_netto=Decimal("0"),
             mwst_satz=Decimal("19"), erstellt_von=admin_a.id,

@@ -83,7 +83,7 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
     automatisch_versendet = 0
     mandanten_cache: dict[UUID, Mandant] = {}
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: mahnwesen-eskalation", drosselung_s=300) as session:
         # teilweise_bezahlt mahnt weiter -- eine Rechnung, die zu 90%
         # bezahlt ist, aber ueberfaellig bleibt, soll nicht aufhoeren zu
         # mahnen, nur weil sie den Status gewechselt hat.

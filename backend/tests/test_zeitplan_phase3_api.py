@@ -290,7 +290,7 @@ async def test_neue_tabellen_haben_rls_und_policy():
         "projekt_basisplaene", "projekt_basisplan_eintraege", "projekt_vorlagen",
         "projekt_vorlage_elemente", "projekt_vorlage_abhaengigkeiten",
     ]
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         flags = (await session.execute(
             text("SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = ANY(:t)"),
             {"t": tabellen},

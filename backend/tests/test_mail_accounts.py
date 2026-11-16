@@ -50,7 +50,7 @@ async def test_create_mail_account_verschluesselt_passwort_und_gibt_es_nie_zurue
     assert "passwort" not in body
     assert "passwort_verschluesselt" not in body
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailAccount, body["id"])
         assert row.passwort_verschluesselt != "super-geheim"
         assert decrypt_secret(row.passwort_verschluesselt) == "super-geheim"
@@ -154,7 +154,7 @@ async def test_update_ohne_passwort_laesst_gespeichertes_passwort_unveraendert(
     assert updated.status_code == 200
     assert updated.json()["signatur"] == "Mit freundlichen Grüßen"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailAccount, account_id)
         assert decrypt_secret(row.passwort_verschluesselt) == "super-geheim"
 
@@ -176,7 +176,7 @@ async def test_update_mit_neuem_passwort_prueft_verbindung_erneut_und_verschlues
     )
     assert updated.status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailAccount, account_id)
         assert decrypt_secret(row.passwort_verschluesselt) == "neues-passwort"
 
@@ -199,7 +199,7 @@ async def test_update_mit_falschem_neuem_passwort_wird_abgelehnt(
     )
     assert updated.status_code == 400
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailAccount, account_id)
         assert decrypt_secret(row.passwort_verschluesselt) == "super-geheim"
 
@@ -280,7 +280,7 @@ async def test_bestehendes_klartext_konto_bleibt_ohne_umstellung_aenderbar(
     user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     token = await login(client, user.email, "pw-123456")
     angelegt = await client.post("/api/mail-accounts", headers=auth_headers(token), json=_KONTO_PAYLOAD)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(MailAccount, angelegt.json()["id"])).imap_verschluesselung = "keine"
 
     resp = await client.patch(

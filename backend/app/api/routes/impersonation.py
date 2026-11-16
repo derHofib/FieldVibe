@@ -33,7 +33,7 @@ async def impersonate_mandant(
     (deactivate, password change, "ueberall abmelden") also kills every
     impersonation token it issued.
     """
-    async with system_session() as session:
+    async with system_session(grund="impersonation: mandant laden") as session:
         mandant = await session.get(Mandant, mandant_id)
         if mandant is None:
             raise HTTPException(

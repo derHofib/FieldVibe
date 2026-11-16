@@ -54,7 +54,7 @@ async def test_system_tag_cannot_be_deleted(client, make_mandant, make_user):
     from app.db.session import system_session
     from app.models.tag import Tag
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         tag = Tag(mandant_id=mandant.id, label="wiederkehrend", system_tag=True)
         session.add(tag)
         await session.flush()

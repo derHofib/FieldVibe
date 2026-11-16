@@ -11,7 +11,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_material(mandant, **kwargs) -> Material:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(
             mandant_id=mandant.id,
             bezeichnung=kwargs.pop("bezeichnung", "Kabel NYM 3x1.5"),
@@ -182,7 +182,7 @@ async def test_list_material_bedarfe_filter_projekt_id(
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         projekt = Projekt(mandant_id=mandant.id, name="Testprojekt", erstellt_von=admin.id)
         session.add(projekt)
         await session.flush()
@@ -285,7 +285,7 @@ async def test_bestellung_from_bedarfe_gruppiert_gleiches_material_und_markiert_
     assert position["menge"] == "25.00"
     assert position["beschreibung"] == "Kabel NYM 3x1.5"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         b1 = await session.get(MaterialBedarf, bedarf1.json()["id"])
         b2 = await session.get(MaterialBedarf, bedarf2.json()["id"])
         assert b1.status == "bestellt"
@@ -390,7 +390,7 @@ async def test_bestellung_status_eingegangen_bucht_wareneingang_und_markiert_bed
     assert resp.status_code == 200
     assert resp.json()["status"] == "eingegangen"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         bestand = (
             await session.execute(
                 select(MaterialBestand).where(MaterialBestand.material_id == material.id)
@@ -592,7 +592,7 @@ async def test_angebot_from_material_bedarfe_gruppiert_und_markiert_in_angebot(
     assert position["einzelpreis"] == "650.00"
     assert position["beschreibung"] == "Wallbox 11kW"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         b1 = await session.get(MaterialBedarf, bedarf1.json()["id"])
         b2 = await session.get(MaterialBedarf, bedarf2.json()["id"])
         assert b1.status == "in_angebot"

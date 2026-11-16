@@ -37,7 +37,7 @@ async def test_wartet_kunde_appears_after_threshold(
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, status="wartet_kunde")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_vorgang = await session.get(Vorgang, vorgang.id)
         db_vorgang.last_activity_at = datetime.now(timezone.utc) - timedelta(days=5)
         await session.flush()
@@ -63,7 +63,7 @@ async def test_heute_shows_own_termine_only(
     vorgang2 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V2")
 
     now = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Termin(
                 mandant_id=mandant.id,
@@ -104,7 +104,7 @@ async def test_fristen_include_pruefzyklen_and_pruefmittel_with_ampel(
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Verteilung Keller")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Pruefzyklus(
                 mandant_id=mandant.id,
@@ -145,7 +145,7 @@ async def test_fristen_excludes_pruefzyklus_beyond_horizon(
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Pruefzyklus(
                 mandant_id=mandant.id,

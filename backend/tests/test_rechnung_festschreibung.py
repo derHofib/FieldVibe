@@ -32,7 +32,7 @@ async def _versendete_rechnung(client, make_mandant, make_user, make_kunde, *, p
 
 
 async def _sql(sql: str, **params):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text(sql), params)
 
 
@@ -132,10 +132,10 @@ async def test_rechnung_loeschen_nur_mit_freigabe(client, make_mandant, make_use
         await _sql("DELETE FROM rechnungen WHERE id = :i", i=rechnung_id)
 
     # Freigabe (setzt papierkorb_service.purge nach der Fristpruefung): Kaskade auf die Positionen.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text("SELECT set_config('app.gobd_loeschfreigabe', 'true', true)"))
         await session.execute(delete(Rechnung).where(Rechnung.id == rechnung_id))
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await session.get(Rechnung, rechnung_id) is None
         assert (await session.execute(select(RechnungPosition))).first() is None
 
@@ -146,7 +146,7 @@ async def test_belege_duerfen_in_derselben_transaktion_fertig_befuellt_werden(ma
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin")
     kunde = await make_kunde(mandant=mandant)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         r = Rechnung(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -189,7 +189,7 @@ async def test_aufloesen_von_verweisen_bleibt_erlaubt(client, make_mandant, make
         make_kunde,
         positionen=[{"beschreibung": "Kabel", "menge": "1", "einheit": "m", "einzelpreis": "2.00"}],
     )
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(mandant_id=mandant.id, bezeichnung="Kabel", einheit="m", einzelpreis=Decimal("2"))
         session.add(material)
         await session.flush()
@@ -199,14 +199,14 @@ async def test_aufloesen_von_verweisen_bleibt_erlaubt(client, make_mandant, make
         await _sql("UPDATE rechnung_positionen SET material_id = :m WHERE rechnung_id = :i", m=material_id, i=rechnung_id)
     # ... wohl aber das Aufloesen eines vorhandenen: Position in derselben Transaktion anlegen und
     # das Material danach loeschen.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == rechnung_id))).scalar_one()
         await session.execute(text("ALTER TABLE rechnung_positionen DISABLE TRIGGER trg_rechnung_positionen_festschreibung"))
         await session.execute(
             update(RechnungPosition).where(RechnungPosition.id == pos.id).values(material_id=material_id)
         )
         await session.execute(text("ALTER TABLE rechnung_positionen ENABLE TRIGGER trg_rechnung_positionen_festschreibung"))
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(delete(Material).where(Material.id == material_id))
         pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == rechnung_id))).scalar_one()
         assert pos.material_id is None
@@ -215,7 +215,7 @@ async def test_aufloesen_von_verweisen_bleibt_erlaubt(client, make_mandant, make
 @pytest.mark.asyncio
 async def test_versand_speichert_sha256_des_archivierten_pdf(client, make_mandant, make_user, make_kunde):
     _, _, h, rechnung_id = await _versendete_rechnung(client, make_mandant, make_user, make_kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         r = await session.get(Rechnung, rechnung_id)
         inhalt = await storage_service.download_bytes(r.pdf_object_key)
         assert r.pdf_sha256 == hashlib.sha256(inhalt).hexdigest()
@@ -229,7 +229,7 @@ async def test_archivpruefung_erkennt_veraendertes_und_fehlendes_objekt(client, 
     assert ok["ok"] is True
     assert ok["objekte"][0]["art"] == "pdf" and ok["objekte"][0]["status"] == "ok"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         key = (await session.get(Rechnung, rechnung_id)).pdf_object_key
     await storage_service.upload_bytes(key, b"%PDF-manipuliert", "application/pdf")
     abw = (await client.get(f"/api/rechnungen/{rechnung_id}/archiv-pruefung", headers=h)).json()
@@ -248,7 +248,7 @@ async def test_archivpruefung_erkennt_veraendertes_und_fehlendes_objekt(client, 
 async def test_hash_nachtragen_fuer_altbestand(client, make_mandant, make_user, make_kunde):
     _, _, h, rechnung_id = await _versendete_rechnung(client, make_mandant, make_user, make_kunde)
     # Altbestand simulieren: Hash fehlt (Trigger kurz aus, wie es nur ein Betreiber koennte).
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
         await session.execute(update(Rechnung).where(Rechnung.id == rechnung_id).values(pdf_sha256=None))
         await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
@@ -287,7 +287,7 @@ async def test_object_lock_retention_bis_fristende_wenn_aktiviert(client, make_m
     monkeypatch.setattr(storage_service._settings, "s3_rechnungen_retention", "governance")
 
     _, _, h, rechnung_id = await _versendete_rechnung(client, make_mandant, make_user, make_kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         key = (await session.get(Rechnung, rechnung_id)).pdf_object_key
     kopf = storage_service._internal_client.head_object(Bucket=bucket, Key=key)
     assert kopf["ObjectLockMode"] == "GOVERNANCE"
@@ -300,7 +300,7 @@ async def test_object_lock_retention_bis_fristende_wenn_aktiviert(client, make_m
 @pytest.mark.asyncio
 async def test_ohne_retention_einstellung_bleibt_upload_unveraendert(client, make_mandant, make_user, make_kunde):
     _, _, h, rechnung_id = await _versendete_rechnung(client, make_mandant, make_user, make_kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         key = (await session.get(Rechnung, rechnung_id)).pdf_object_key
     kopf = storage_service._internal_client.head_object(Bucket=storage_service.BUCKET, Key=key)
     assert "ObjectLockMode" not in kopf

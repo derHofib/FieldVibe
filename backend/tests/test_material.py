@@ -11,7 +11,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _zentrallager(mandant) -> Anlage:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         result = await session.execute(
             select(Anlage).where(Anlage.mandant_id == mandant.id, Anlage.objekttyp == "lager")
         )
@@ -19,7 +19,7 @@ async def _zentrallager(mandant) -> Anlage:
 
 
 async def _make_material(mandant, *, lager: Anlage | None = None, bestand: Decimal | None = None, **kwargs) -> Material:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(
             mandant_id=mandant.id,
             bezeichnung=kwargs.pop("bezeichnung", "Kabel NYM 3x1.5"),
@@ -141,7 +141,7 @@ async def test_techniker_can_record_verwendung_and_stock_decrements(
     assert body["menge"] == "3.00"
     assert body["verwendet_von"] == str(techniker.id)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         bestand = (
             await session.execute(
                 select(MaterialBestand).where(
@@ -185,7 +185,7 @@ async def test_verwendung_rejected_when_bestand_insufficient(
     )
     assert resp.status_code == 400
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         bestand = (
             await session.execute(
                 select(MaterialBestand).where(
@@ -202,7 +202,7 @@ async def test_material_bestand_cannot_go_negative_at_db_level(make_mandant):
     lager = await _zentrallager(mandant)
 
     with pytest.raises(IntegrityError):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             material = Material(mandant_id=mandant.id, bezeichnung="Test")
             session.add(material)
             await session.flush()

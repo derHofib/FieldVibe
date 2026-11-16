@@ -18,7 +18,7 @@ from app.models.user import User
 
 
 async def create_super_admin(email: str, name: str) -> None:
-    async with system_session() as session:
+    async with system_session(grund="cli: super_admin anlegen") as session:
         existing = await session.execute(select(User).where(User.email == email))
         if existing.scalar_one_or_none() is not None:
             print(f"Fehler: Es existiert bereits ein Account mit E-Mail {email}", file=sys.stderr)
@@ -59,7 +59,7 @@ async def organigramm_pruefen_cmd(mandant_id: str | None) -> int:
 
     from app.services.organigramm_pruefung_service import organigramm_pruefen
 
-    async with system_session() as session:
+    async with system_session(grund="cli: organigramm pruefen") as session:
         ergebnis = await organigramm_pruefen(session, mandant_id=UUID(mandant_id) if mandant_id else None)
 
     for m in ergebnis.mandanten:

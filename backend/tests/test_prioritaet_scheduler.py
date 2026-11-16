@@ -9,7 +9,7 @@ from app.services.scheduler_service import run_prioritaet_scheduler
 
 
 async def _make_dauerauftrag(mandant, kunde, *, toleranz_frueh_tage=2, toleranz_spaet_tage=2) -> Dauerauftrag:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Dauerauftrag(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -46,7 +46,7 @@ async def test_prioritaet_scheduler_schreibt_faellige_dauerauftrag_vorgaenge_for
     ergebnis = await run_prioritaet_scheduler([mandant.id])
     assert ergebnis["vorgaenge_aktualisiert"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Vorgang, vorgang.id)
         assert refreshed.prioritaet == 5
 
@@ -86,7 +86,7 @@ async def test_prioritaet_scheduler_ruehrt_manuelle_vorgaenge_nicht_an(
     ergebnis = await run_prioritaet_scheduler([mandant.id])
     assert ergebnis["vorgaenge_aktualisiert"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Vorgang, vorgang.id)
         assert refreshed.prioritaet == 3
 

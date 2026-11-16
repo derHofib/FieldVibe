@@ -20,7 +20,7 @@ from app.services.organigramm_sync_service import besetzung_pflegen
 
 
 async def _bestellung(mandant, admin, *, liefertermin=None, nummer=None, lieferant_name=None, **kw) -> Bestellung:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         lieferant_id = None
         if lieferant_name:
             lf = Lieferant(mandant_id=mandant.id, name=lieferant_name)
@@ -134,7 +134,7 @@ async def test_vorgang_verknuepfen_status_und_termine(client, make_mandant, make
     assert el["termine"] == [] and el["erledigt"] is False and el["fortschritt"] == 0
 
     jetzt = datetime(2026, 6, 2, 8, 0, tzinfo=timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i, (name, geloescht) in enumerate([("Spaeter", None), ("Frueh", None), ("Weg", jetzt)]):
             start = jetzt + timedelta(days=1 if name == "Spaeter" else 0)
             session.add(
@@ -149,13 +149,13 @@ async def test_vorgang_verknuepfen_status_und_termine(client, make_mandant, make
     assert termine[0]["techniker_name"] == admin.name and termine[0]["ende"] is not None
 
     # Status abgeschlossen -> erledigt, Fortschritt 100 im Read
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         obj = await session.get(type(v), v.id)
         obj.status = "abgeschlossen"
     el = _finde((await client.get(_url(pid), headers=h)).json(), "Installation")
     assert el["erledigt"] is True and el["fortschritt"] == 100
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         obj = await session.get(type(v), v.id)
         obj.status = "storniert"
     el = _finde((await client.get(_url(pid), headers=h)).json(), "Installation")
@@ -225,7 +225,7 @@ async def test_vorgang_auswahl_sortierung_filter_und_zuweisung(client, make_mand
     assert (await client.get(_url(pid, "/auswahl/vorgaenge?q=%25"), headers=h)).json() == []
 
     # nur_zugewiesene_kunden: Custom-Typ mit projekte sehen/bearbeiten
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         at = AccountTyp(mandant_id=mandant.id, name="Eingeschraenkt", nur_zugewiesene_kunden=True)
         session.add(at)
         await session.flush()
@@ -245,7 +245,7 @@ async def test_vorgang_auswahl_sortierung_filter_und_zuweisung(client, make_mand
 
     from app.models.kunde_zuweisung import KundeZuweisung
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(KundeZuweisung(mandant_id=mandant.id, kunde_id=k_ok.id, user_id=user.id))
     body = (await client.get(_url(pid, "/auswahl/vorgaenge"), headers=h2)).json()
     assert {x["id"] for x in body} == {str(v_proj.id), str(v_fremd.id)}

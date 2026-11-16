@@ -142,7 +142,7 @@ async def test_z3_zeitraum_und_nicht_darstellbare_zeichen(client, make_mandant, 
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant, name="Emoji \U0001F600 Kunde")
     h = auth_headers(await login(client, admin.email, "pw-123456"))
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for nr, tag in (("R-ALT", date(2023, 12, 31)), ("R-IN-1", date(2024, 1, 1)), ("R-IN-2", date(2024, 12, 31)), ("R-NEU", date(2025, 1, 1))):
             session.add(
                 Rechnung(

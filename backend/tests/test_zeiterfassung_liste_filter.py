@@ -21,7 +21,7 @@ async def test_filter_nach_auftrag_und_vorgang_kontext_felder(
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Auftrag(mandant_id=mandant.id, kunde_id=kunde.id, titel="Testauftrag", erstellt_von=admin.id)
         session.add(auftrag)
         await session.flush()
@@ -30,7 +30,7 @@ async def test_filter_nach_auftrag_und_vorgang_kontext_felder(
     vorgang_im_auftrag = await make_vorgang(mandant=mandant, kunde=kunde, auftrag_id=auftrag_id)
     anderer_vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc)
         session.add(
             Zeiterfassung(
@@ -71,7 +71,7 @@ async def test_filter_laufend(client, make_mandant, make_user, make_kunde, make_
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc)
         session.add(
             Zeiterfassung(
@@ -104,7 +104,7 @@ async def test_filter_vermerkt_aelter_als_tage(client, make_mandant, make_user, 
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         alt_start = datetime.now(timezone.utc) - timedelta(days=10)
         session.add(
             Zeiterfassung(

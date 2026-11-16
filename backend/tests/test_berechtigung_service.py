@@ -99,7 +99,7 @@ async def _rechte(session, user) -> bs.EffektiveRechte:
 
 async def test_typ_basis_mit_scope_und_herkunft(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(
             session, mandant, "Disponent", [("vorgaenge", "sehen"), ("kunden", "sehen", "eigene")]
         )
@@ -129,7 +129,7 @@ async def test_typ_basis_mit_scope_und_herkunft(make_mandant):
 
 async def test_positions_override_erlauben_erweitert_scope_und_fuegt_hinzu(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "Techniker", [("kunden", "sehen", "eigene")])
         pos = await _pos(session, mandant, "Teamleiter", typ=typ)
         user = await _user(session, mandant)
@@ -147,7 +147,7 @@ async def test_positions_override_erlauben_erweitert_scope_und_fuegt_hinzu(make_
 
 async def test_override_erlauben_kann_scope_nicht_verkleinern(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "T", [("kunden", "sehen", "bereich")])
         pos = await _pos(session, mandant, "P", typ=typ)
         user = await _user(session, mandant)
@@ -158,7 +158,7 @@ async def test_override_erlauben_kann_scope_nicht_verkleinern(make_mandant):
 
 async def test_positions_verweigern_wirkt_nur_lokal(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ_a = await _typ(session, mandant, "A", [("material", "sehen"), ("vorgaenge", "sehen")])
         typ_b = await _typ(session, mandant, "B", [("material", "sehen")])
         pos_a = await _pos(session, mandant, "Pos A", typ=typ_a)
@@ -182,7 +182,7 @@ async def test_positions_verweigern_wirkt_nur_lokal(make_mandant):
 
 async def test_user_verweigern_gilt_global_und_user_erlauben_fuegt_hinzu(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ_a = await _typ(session, mandant, "A", [("material", "sehen")])
         typ_b = await _typ(session, mandant, "B", [("material", "sehen"), ("statistik", "sehen")])
         user = await _user(session, mandant)
@@ -201,7 +201,7 @@ async def test_user_verweigern_gilt_global_und_user_erlauben_fuegt_hinzu(make_ma
 
 async def test_scope_vereinigung_groesster_gewinnt_mit_herkunft(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ_a = await _typ(session, mandant, "A", [("vorgaenge", "sehen", "team")])
         typ_b = await _typ(session, mandant, "B", [("vorgaenge", "sehen", "bereich")])
         typ_c = await _typ(session, mandant, "C", [("vorgaenge", "sehen", "eigene")])
@@ -224,7 +224,7 @@ async def test_scope_vereinigung_groesster_gewinnt_mit_herkunft(make_mandant):
 async def test_vertretung_und_besetzung_nur_im_zeitfenster(make_mandant):
     mandant = await make_mandant()
     jetzt = JETZT()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "Chef", [("abrechnung", "sehen")])
         pos = await _pos(session, mandant, "Chef", typ=typ)
         zukunft = await _user(session, mandant, "Z")
@@ -258,7 +258,7 @@ async def test_vertretung_und_besetzung_nur_im_zeitfenster(make_mandant):
 
 async def test_ohne_besetzung_keine_rechte_auch_nicht_ueber_user_override(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "Vorlage", [("vorgaenge", "sehen")])
         await _pos(session, mandant, "Geplante Stelle", typ=typ, geplant=True)
         await _pos(session, mandant, "Vakant", typ=typ)
@@ -278,7 +278,7 @@ async def test_ohne_besetzung_keine_rechte_auch_nicht_ueber_user_override(make_m
 
 async def test_archivierte_und_abgelaufene_position_gibt_nichts(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "T", [("vorgaenge", "sehen")])
         user = await _user(session, mandant)
         heute = date.today()
@@ -299,7 +299,7 @@ async def test_archivierte_und_abgelaufene_position_gibt_nichts(make_mandant):
 @pytest.mark.parametrize("rolle", ["super_admin", "mandant_admin", "loesch_operativ", "loesch_ansicht", "disponent"])
 async def test_nicht_custom_rollen_haben_alle_rechte(make_mandant, rolle):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = await _user(session, mandant)
         rechte = await bs.effektive_rechte(session, user_id=user.id, rolle=rolle)
         assert rechte.alle_rechte
@@ -315,7 +315,7 @@ async def test_nicht_custom_rollen_haben_alle_rechte(make_mandant, rolle):
 
 async def test_stabsstelle_teilbaum(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         gf = await wurzel_position(session, mandant.id)
         qm = await _pos(session, mandant, "QM", parent=gf)
         qm.typ = "stabsstelle"
@@ -334,7 +334,7 @@ async def test_stabsstelle_teilbaum(make_mandant):
 
 async def test_user_ids_fuer_scope(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         gf = await wurzel_position(session, mandant.id)
         bereich = OrgEinheit(mandant_id=mandant.id, name="Technik", typ="bereich")
         session.add(bereich)
@@ -400,7 +400,7 @@ async def test_user_ids_fuer_scope(make_mandant):
 
 async def test_user_ids_fuer_recht_vereinigt_scopes_je_position(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         gf = await wurzel_position(session, mandant.id)
         typ_team = await _typ(session, mandant, "TypTeam", [("vorgaenge", "sehen", "teilbaum")])
         typ_eigene = await _typ(session, mandant, "TypEigene", [("vorgaenge", "sehen", "eigene")])
@@ -419,7 +419,7 @@ async def test_user_ids_fuer_recht_vereinigt_scopes_je_position(make_mandant):
 
 async def test_flags_ueber_aktive_positionen_vereinigt_und_nur_zugewiesene_kunden(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         buchen = await _typ(session, mandant, "Buchen", [], darf_zeiten_buchen=True)
         eingeschraenkt = await _typ(
             session, mandant, "Eingeschraenkt", [("kunden", "sehen", "eigene")], nur_zugewiesene_kunden=True
@@ -450,7 +450,7 @@ async def test_flags_ueber_aktive_positionen_vereinigt_und_nur_zugewiesene_kunde
 
 async def test_aufloesung_pro_session_nur_einmal_gecacht(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = await _typ(session, mandant, "T", [("vorgaenge", "sehen"), ("kunden", "sehen")])
         user = await _user(session, mandant)
         await _besetze(session, mandant, await _pos(session, mandant, "P", typ=typ), user)

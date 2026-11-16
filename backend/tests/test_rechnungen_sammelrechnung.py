@@ -57,7 +57,7 @@ async def _setup(client, make_mandant, make_user, make_kunde, make_vorgang):
 
 
 async def _daten_zwei_vorgaenge(mandant, admin, va, vb):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs = await _svs(session, mandant)
         a = await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
         b_ohne = await _zeit(session, mandant=mandant, vorgang=vb, techniker=admin, stunden=1)
@@ -137,7 +137,7 @@ async def test_sammelrechnung_zwei_vorgaenge(client, make_mandant, make_user, ma
     assert pos[2]["einzelpreis"] == "65.00"
     assert pos[2]["beschreibung"] == "Stundensatz Monteur"
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for eintrag_id in (a, b_ohne, b_svs):
             e = await session.get(Zeiterfassung, eintrag_id)
             assert e.buchungsstatus == "abgerechnet"
@@ -147,7 +147,7 @@ async def test_sammelrechnung_zwei_vorgaenge(client, make_mandant, make_user, ma
 @pytest.mark.asyncio
 async def test_uebernahme_stundensatz_default_null(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
 
     rechnung = await _rechnung_anlegen(client, token, kunde)
@@ -219,7 +219,7 @@ async def test_position_entfernen_entsperrt_nur_eigenen_vorgang(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         a = await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
         b = await _zeit(session, mandant=mandant, vorgang=vb, techniker=admin, stunden=1)
 
@@ -232,7 +232,7 @@ async def test_position_entfernen_entsperrt_nur_eigenen_vorgang(
     )
     assert resp.status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ea = await session.get(Zeiterfassung, a)
         eb = await session.get(Zeiterfassung, b)
         assert ea.buchungsstatus == "gebucht"
@@ -248,7 +248,7 @@ async def test_abrechenbare_vorgaenge(client, make_mandant, make_user, make_kund
     fremder = await make_vorgang(mandant=mandant, kunde=anderer_kunde, vorgangsnummer="V-X")
     leer = await make_vorgang(mandant=mandant, kunde=kunde, vorgangsnummer="V-C")
     schon_abgerechnet = await make_vorgang(mandant=mandant, kunde=kunde, vorgangsnummer="V-D")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs = await _svs(session, mandant)
         await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
         await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=0.5, lv_position_id=svs.id)
@@ -285,7 +285,7 @@ async def test_abrechenbare_vorgaenge(client, make_mandant, make_user, make_kund
 async def test_position_bearbeiten(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
     headers = auth_headers(token)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
 
     rechnung = await _rechnung_anlegen(client, token, kunde, mwst_satz="0")

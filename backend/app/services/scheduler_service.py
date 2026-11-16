@@ -94,7 +94,7 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
     faellige_pruefmittel = 0
     faellige_inventurzyklen = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: pruefzyklen faellige mandanten", drosselung_s=300) as session:
         pruefzyklen_stmt = select(Pruefzyklus).where(
             Pruefzyklus.aktiv.is_(True),
             Pruefzyklus.naechste_pruefung_am <= horizont,
@@ -287,7 +287,7 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
     heute = date.today()
     erstellte_vorgaenge = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: dauerauftraege faellige mandanten", drosselung_s=300) as session:
         stmt = (
             select(DauerauftragZiel, Dauerauftrag)
             .join(Dauerauftrag, DauerauftragZiel.dauerauftrag_id == Dauerauftrag.id)
@@ -394,7 +394,7 @@ async def run_prioritaet_scheduler(mandant_ids: list[UUID] | None = None) -> dic
     heute = date.today()
     aktualisiert = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: prioritaet faellige mandanten", drosselung_s=300) as session:
         stmt = (
             select(Vorgang, Dauerauftrag)
             .join(Dauerauftrag, Vorgang.dauerauftrag_id == Dauerauftrag.id)
@@ -447,7 +447,7 @@ async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> 
     jetzt = datetime.now(timezone.utc)
     benachrichtigt = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: wiedervorlage faellige mandanten", drosselung_s=300) as session:
         stmt = select(Vorgang).where(
             Vorgang.status == "wartet_kunde",
             Vorgang.wiedervorlage_am.is_not(None),
@@ -532,7 +532,7 @@ async def run_angebot_nachfassen(mandant_ids: list[UUID] | None = None) -> dict:
     ablauf_grenze = heute + timedelta(days=ANGEBOT_ABLAUF_VORLAUF_TAGE)
     benachrichtigt = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: angebot-nachfassen faellige mandanten", drosselung_s=300) as session:
         stmt = select(Angebot).where(
             Angebot.status == "versendet",
             Angebot.nachgefasst_am.is_(None),
@@ -602,7 +602,7 @@ async def run_angebot_nachfassen(mandant_ids: list[UUID] | None = None) -> dict:
 
 
 async def get_last_scheduler_run() -> datetime | None:
-    async with system_session() as session:
+    async with system_session(grund="scheduler: letzter lauf lesen", drosselung_s=300) as session:
         result = await session.execute(
             select(AuditLog.created_at)
             .where(AuditLog.aktion == SCHEDULER_AKTION)

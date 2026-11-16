@@ -23,7 +23,7 @@ async def authenticate_partner(email: str, password: str) -> TokenPair:
     Mandant ist beim Lookup also noch nicht bekannt -- dieselbe legitime
     Pre-Auth-Nutzung von system_session() wie beim Staff- und
     Kundenportal-Login."""
-    async with system_session() as session:
+    async with system_session(grund="partner-auth: lookup per email") as session:
         result = await session.execute(
             select(PartnerZugang).where(
                 func.lower(PartnerZugang.email) == email.strip().lower()

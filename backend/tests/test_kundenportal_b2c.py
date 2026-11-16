@@ -51,7 +51,7 @@ def mails(monkeypatch):
 
 
 async def _firmendaten(mandant, **werte) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = await session.get(Mandant, mandant.id)
         m.firmendaten = {**(m.firmendaten or {}), **werte}
 
@@ -105,7 +105,7 @@ def _b2c_body(belehrung_version: str, **extra) -> dict:
 
 
 async def _nachweise(angebot_id) -> list[AngebotAnnahme]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         result = await session.execute(
             select(AngebotAnnahme)
             .where(AngebotAnnahme.angebot_id == uuid.UUID(str(angebot_id)))
@@ -500,7 +500,7 @@ async def test_b2c_annahme_speichert_belehrung_und_sendet_bestaetigung_mit_pdf(
     dateiname, inhalt, mimetype = mail["attachment"]
     assert dateiname.endswith(".pdf") and mimetype == "application/pdf" and inhalt.startswith(b"%PDF")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         logs = (await session.execute(select(EmailLog).where(EmailLog.entity_id == uuid.UUID(ctx["angebot_id"])))).scalars().all()
     assert [(log.status, log.anhang_dateiname) for log in logs] == [("gesendet", dateiname)]
 
@@ -522,7 +522,7 @@ async def test_mailfehler_macht_die_annahme_nicht_rueckgaengig_wird_wiederholt_u
     assert len(await _nachweise(ctx["angebot_id"])) == 1
     assert any("fehlgeschlagen" in r.message and "SMTP kaputt" in r.message for r in caplog.records)
     # Transienter Fehler: der Verlauf zeigt "ausstehend" samt Grund und naechstem Versuch.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (log,) = (await session.execute(select(EmailLog).where(EmailLog.entity_id == angebot_id))).scalars().all()
     assert log.status == "ausstehend" and "SMTP kaputt" in log.fehlermeldung and "nächster Versuch" in log.fehlermeldung
 
@@ -531,7 +531,7 @@ async def test_mailfehler_macht_die_annahme_nicht_rueckgaengig_wird_wiederholt_u
     for _ in range(6):
         spaeter += timedelta(days=1)
         await verarbeite_outbox(jetzt=spaeter)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (log,) = (await session.execute(select(EmailLog).where(EmailLog.entity_id == angebot_id))).scalars().all()
     assert log.status == "fehler" and "SMTP kaputt" in log.fehlermeldung
 
@@ -542,7 +542,7 @@ async def test_annahme_ohne_konfiguriertes_smtp_klappt(client, make_mandant, mak
     body = await _b2c_annehmen(client, ctx)
 
     assert body["status"] == "angenommen"
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (log,) = (
             await session.execute(select(EmailLog).where(EmailLog.entity_id == uuid.UUID(ctx["angebot_id"])))
         ).scalars().all()
@@ -589,7 +589,7 @@ async def test_widerruf_setzt_status_schreibt_nachweis_und_benachrichtigt(
     assert str(nachweise[1].id) in empfaenger["portal@example.de"]["body"]
     assert ctx["admin"].email in empfaenger and "widerrufen" in empfaenger[ctx["admin"].email]["body"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         benachrichtigungen = (
             await session.execute(select(Notification).where(Notification.ref_entity_id == uuid.UUID(ctx["angebot_id"])))
         ).scalars().all()
@@ -612,7 +612,7 @@ async def test_widerruf_vermerkt_ereignis_am_entstandenen_auftrag(
 
     assert (await _widerruf(client, ctx)).status_code == 200
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         events = (
             await session.execute(select(VorgangEvent).where(VorgangEvent.vorgang_id == uuid.UUID(auftrag_id)))
         ).scalars().all()
@@ -658,7 +658,7 @@ async def test_widerrufsfrist_14_tage(client, make_mandant, make_user, make_kund
     await _b2c_annehmen(client, ctx)
 
     async def annahme_vor(tage: int) -> None:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             angebot = await session.get(Angebot, uuid.UUID(ctx["angebot_id"]))
             # Mittag Ortszeit, damit der Test nicht von der Tageszeit abhaengt: kurz vor
             # Mitternacht liegen "heute" in UTC und in Ortszeit auf verschiedenen Tagen.
@@ -687,7 +687,7 @@ def test_widerrufsfrist_endet_mit_ablauf_des_14_tages_in_lokaler_zeit():
 
 
 async def _rechnung(ctx, *, status, **kwargs) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Rechnung(
                 mandant_id=ctx["mandant"].id,
@@ -804,7 +804,7 @@ async def test_nachweis_tabelle_ist_append_only_und_mandantengetrennt(
     # auch mit Super-Admin-Rechten (system_session).
     for mandant_ctx in (
         lambda: tenant_session(mandant_id=a["mandant"].id, is_super_admin=False),
-        lambda: system_session(),
+        lambda: system_session(grund="test"),
     ):
         for sql in (
             "UPDATE angebot_annahmen SET ip = 'manipuliert' WHERE id = :id",
@@ -843,7 +843,7 @@ async def test_aktion_und_hashlaenge_werden_von_der_datenbank_geprueft(client, m
     )
     for abweichung in ({"aktion": "loeschen", "fassung_sha256": "0" * 64}, {"aktion": "annahme", "fassung_sha256": "abc"}):
         with pytest.raises(DBAPIError):
-            async with system_session() as session:
+            async with system_session(grund="test") as session:
                 session.add(AngebotAnnahme(**basis, **abweichung))
                 await session.flush()
 
@@ -928,7 +928,7 @@ async def test_neuer_mandant_startet_mit_nur_privatkunden(client, make_user):
     )
 
     assert r.status_code == 201
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mandant = (await session.execute(select(Mandant).where(Mandant.slug == "frisch-gmbh"))).scalar_one()
     assert mandant.firmendaten["portal_verbraucherschutz"] == "nur_privatkunden"
     assert vs.modus(mandant) == "nur_privatkunden"

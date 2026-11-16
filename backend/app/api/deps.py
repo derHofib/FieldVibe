@@ -54,7 +54,7 @@ async def token_version_gueltig(
         tv = 0
     if not isinstance(tv, int) or isinstance(tv, bool):
         raise _nicht_authentifiziert()
-    async with system_session() as session:
+    async with system_session(grund="auth-request: token-version pruefen", drosselung_s=300) as session:
         aktuell = await session.scalar(
             select(modell.token_version).where(modell.id == account_id)
         )
@@ -139,7 +139,7 @@ async def get_db(
     hard-pinned to its own mandant_id via Row Level Security."""
     is_super_admin = ist_plattform_admin(auth)
     ctx = (
-        system_session()
+        system_session(grund="super_admin-api-request")
         if is_super_admin
         else tenant_session(mandant_id=auth.mandant_id, is_super_admin=False)
     )

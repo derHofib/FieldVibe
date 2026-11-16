@@ -61,7 +61,7 @@ async def _einreihen(mandant, *, to="kunde@example.de", betreff="Betreff", log=T
 
 
 async def _outbox(mandant=None) -> list[MailOutbox]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         stmt = select(MailOutbox).order_by(MailOutbox.created_at)
         if mandant is not None:
             stmt = stmt.where(MailOutbox.mandant_id == mandant.id)
@@ -69,7 +69,7 @@ async def _outbox(mandant=None) -> list[MailOutbox]:
 
 
 async def _log(log_id) -> EmailLog:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await session.get(EmailLog, log_id)
 
 
@@ -90,7 +90,7 @@ async def test_rollback_der_ausloesenden_transaktion_verschickt_keine_mail(make_
             raise RuntimeError("spaeterer Fehler im Request")
 
     assert await _outbox() == []
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.execute(select(EmailLog))).scalars().all() == []
     await verarbeite_outbox(jetzt=T0)
     assert smtp.aufrufe == []
@@ -138,7 +138,7 @@ async def test_retry_plan_mit_exponentiellem_backoff_dann_failed_und_benachricht
     assert zeile.status == "failed" and "SMTP nicht erreichbar" in zeile.letzter_fehler
     eintrag = await _log(log.id)
     assert eintrag.status == "fehler" and "SMTP nicht erreichbar" in eintrag.fehlermeldung
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         meldungen = (await session.execute(select(Notification).where(Notification.user_id == ersteller.id))).scalars().all()
     assert len(meldungen) == 1 and "nicht zugestellt" in meldungen[0].titel
     assert any(getattr(r, "event", "") == "mail_outbox_failed" for r in caplog.records)
@@ -266,7 +266,7 @@ async def test_abgestuerzter_worker_fuehrt_nicht_zum_doppelversand(make_mandant,
     assert (await _outbox(mandant))[0].status == "failed"
     eintrag = await _log(log.id)
     assert eintrag.status == "fehler" and "Zustellung unbekannt" in eintrag.fehlermeldung
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.execute(select(Notification).where(Notification.user_id == ersteller.id))).scalars().all()
 
 

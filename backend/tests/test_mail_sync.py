@@ -32,7 +32,7 @@ def _rfc822(
 async def _make_account(make_mandant, make_user) -> MailAccount:
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account = MailAccount(
             mandant_id=mandant.id,
             user_id=user.id,
@@ -80,12 +80,12 @@ async def test_sync_account_legt_ordner_und_nachricht_mit_anhang_an(make_mandant
 
     monkeypatch.setattr(mail_sync_service, "_sync_account_blockierend", fake_sync)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         acc = await session.get(MailAccount, account.id)
         ergebnis = await mail_sync_service.sync_account(session, acc)
         assert ergebnis == {"ordner": 1, "neue_nachrichten": 1}
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ordner = (
             (await session.execute(select(MailFolder).where(MailFolder.mail_account_id == account.id)))
             .scalars().all()
@@ -131,7 +131,7 @@ async def test_sync_account_zweiter_lauf_ohne_neue_uids_bleibt_unveraendert(make
         ]
 
     monkeypatch.setattr(mail_sync_service, "_sync_account_blockierend", fake_sync_erster_lauf)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         acc = await session.get(MailAccount, account.id)
         await mail_sync_service.sync_account(session, acc)
 
@@ -145,12 +145,12 @@ async def test_sync_account_zweiter_lauf_ohne_neue_uids_bleibt_unveraendert(make
         ]
 
     monkeypatch.setattr(mail_sync_service, "_sync_account_blockierend", fake_sync_zweiter_lauf)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         acc = await session.get(MailAccount, account.id)
         ergebnis = await mail_sync_service.sync_account(session, acc)
         assert ergebnis == {"ordner": 1, "neue_nachrichten": 0}
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         nachrichten = (
             (await session.execute(select(MailMessage).where(MailMessage.mail_account_id == account.id)))
             .scalars().all()
@@ -172,7 +172,7 @@ async def test_sync_account_uidvalidity_wechsel_baut_ordner_neu_auf(make_mandant
         ]
 
     monkeypatch.setattr(mail_sync_service, "_sync_account_blockierend", fake_sync_erster_lauf)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         acc = await session.get(MailAccount, account.id)
         await mail_sync_service.sync_account(session, acc)
 
@@ -187,11 +187,11 @@ async def test_sync_account_uidvalidity_wechsel_baut_ordner_neu_auf(make_mandant
         ]
 
     monkeypatch.setattr(mail_sync_service, "_sync_account_blockierend", fake_sync_nach_uidvalidity_wechsel)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         acc = await session.get(MailAccount, account.id)
         await mail_sync_service.sync_account(session, acc)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ordner = (
             (await session.execute(select(MailFolder).where(MailFolder.mail_account_id == account.id)))
             .scalars().all()
@@ -213,7 +213,7 @@ async def test_run_mail_sync_ein_fehlerhaftes_konto_stoppt_nicht_die_anderen(mak
     konto_ok = await _make_account(make_mandant, make_user)
     mandant2 = await make_mandant(name="Betrieb2")
     user2 = await make_user(mandant=mandant2, role="techniker")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         konto_kaputt = MailAccount(
             mandant_id=mandant2.id,
             user_id=user2.id,
@@ -249,7 +249,7 @@ async def test_run_mail_sync_ein_fehlerhaftes_konto_stoppt_nicht_die_anderen(mak
     ergebnis = await mail_sync_service.run_mail_sync([konto_ok.id, konto_kaputt.id])
     assert ergebnis == {"konten_synchronisiert": 1, "fehler": 1}
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         kaputt = await session.get(MailAccount, konto_kaputt.id)
         assert kaputt.letzter_sync_fehler is not None
 
@@ -288,12 +288,12 @@ def test_parse_fetch_flags_erkennt_seen():
 @pytest.mark.asyncio
 async def test_sync_bestehendes_klartext_konto_meldet_umstellung(make_mandant, make_user):
     konto = await _make_account(make_mandant, make_user)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(MailAccount, konto.id)).imap_verschluesselung = "keine"
 
     ergebnis = await mail_sync_service.run_mail_sync([konto.id])
     assert ergebnis == {"konten_synchronisiert": 0, "fehler": 1}
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailAccount, konto.id)
         assert row.letzter_sync_fehler == (
             "Unverschlüsselte Verbindung nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen"

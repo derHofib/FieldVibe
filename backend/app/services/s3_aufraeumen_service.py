@@ -65,7 +65,7 @@ async def verarbeite(limit: int = 50) -> dict[str, int]:
     """Arbeitet faellige Auftraege ab. Idempotent und parallel sicher (SKIP LOCKED)."""
     erledigt = fehlgeschlagen = 0
     jetzt = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="worker: s3-loeschauftraege", drosselung_s=300) as session:
         auftraege = (
             await session.execute(
                 select(S3Loeschauftrag)

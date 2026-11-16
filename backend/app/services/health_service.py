@@ -133,7 +133,7 @@ async def heartbeats(jetzt: datetime | None = None) -> list[dict]:
     jetzt = jetzt or datetime.now(timezone.utc)
     ergebnis: list[dict] = []
 
-    async with system_session() as session:
+    async with system_session(grund="health: heartbeats pruefen", drosselung_s=300) as session:
         worker = (await lade_laeufe(session, "worker_tick")).get(None)
         ergebnis.append(_eintrag(
             "worker_tick", worker.letzter_lauf_am if worker else None, s.heartbeat_worker_max_alter_sekunden, jetzt,

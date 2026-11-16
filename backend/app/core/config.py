@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
     # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
     zeitzone: str = Field(default="Europe/Berlin", validation_alias="FIELDVIBE_ZEITZONE")
+    # Audit-Eintrag je system_session()-Oeffnung (app/db/session.py). Aus nur fuer
+    # die Testsuite, damit bestehende Audit-Zaehltests unberuehrt bleiben.
+    system_session_audit: bool = Field(
+        default=True, validation_alias="FIELDVIBE_SYSTEM_SESSION_AUDIT"
+    )
 
     # Notausgang fuer die Startpruefung der DB-Rolle (app/db/rollen_pruefung.py):
     # nur setzen, wenn bewusst eine Superuser-/BYPASSRLS-Rolle genutzt wird und

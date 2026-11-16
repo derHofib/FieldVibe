@@ -139,7 +139,7 @@ async def test_heartbeats_mail_konten_veraltet_je_mandant(make_mandant, make_use
 
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="mandant_admin")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(MailAccount(
             mandant_id=mandant.id, user_id=user.id, name="Info", email_adresse="info@example.de",
             imap_host="imap.example.de", imap_benutzername="info", smtp_host="smtp.example.de",
@@ -172,20 +172,20 @@ def test_alarme_nur_bei_zustandswechsel_geloggt(caplog):
 
 async def test_markiere_lauf_upsert_system_und_mandant(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await markiere_lauf(session, "demo", None, erfolg=True, ergebnis={"n": 1})
         await markiere_lauf(session, "demo", None, erfolg=True, ergebnis={"n": 2})
         await markiere_lauf(session, "demo", mandant.id, erfolg=False, fehler="kaputt")
         await markiere_lauf(session, "demo", mandant.id, erfolg=False, fehler="immer noch")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         laeufe = await lade_laeufe(session, "demo")
         assert len(laeufe) == 2
         assert laeufe[None].ergebnis == {"n": 2} and laeufe[None].fehler_in_folge == 0
         m = laeufe[mandant.id]
         assert m.fehler_in_folge == 2 and m.letzter_fehler == "immer noch" and m.letzter_lauf_am is None
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await markiere_lauf(session, "demo", mandant.id, erfolg=True)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = (await lade_laeufe(session, "demo"))[mandant.id]
         assert m.fehler_in_folge == 0 and m.letzter_fehler is None and m.letzter_lauf_am is not None
         assert (await session.execute(select(JobLauf).where(JobLauf.job == "demo"))).scalars().all().__len__() == 2

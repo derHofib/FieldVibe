@@ -6,7 +6,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_foto_event(mandant, vorgang, **kwargs) -> VorgangEvent:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         kwargs.setdefault("event_type", "foto")
         kwargs.setdefault("payload", {"key": "fotos/test.jpg", "thumbnail_key": "fotos/test_thumb.jpg"})
         event = VorgangEvent(

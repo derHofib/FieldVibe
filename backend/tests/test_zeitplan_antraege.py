@@ -196,7 +196,7 @@ async def test_liefer_meilenstein_nur_problem(client, make_mandant, make_user):
 
     mandant, admin, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
-    async with ss() as session:
+    async with ss(grund="test") as session:
         b = Bestellung(mandant_id=mandant.id, bestellnummer=f"B-{uuid.uuid4().hex[:6]}", status="bestellt", liefertermin=HEUTE + timedelta(days=5), erstellt_von=admin.id)
         session.add(b)
         await session.flush()
@@ -356,7 +356,7 @@ async def test_notifications(client, make_mandant, make_user):
     await _mitarbeit(client, h, pid, techniker)
     antrag = (await _antrag(client, th, pid, el["id"], art="problem")).json()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rows = (await session.execute(select(Notification).where(Notification.typ == "zeitplan_antrag"))).scalars().all()
         assert [(n.user_id, n.ref_entity_type, str(n.ref_entity_id)) for n in rows] == [(admin.id, "projekt", pid)]
     # ueber die API lesbar (Schema-Literal)
@@ -378,7 +378,7 @@ async def test_notification_zustaendiger_office_nutzer(client, make_mandant, mak
     u_th, th = await _techniker(client, make_user, mandant)
     await _mitarbeit(client, h, pid, u_th)
     await _antrag(client, th, pid, el["id"], art="problem")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ids = {
             n.user_id
             for n in (await session.execute(select(Notification).where(Notification.typ == "zeitplan_antrag"))).scalars()
@@ -445,7 +445,7 @@ async def test_lesen_mit_mitarbeit_als_vorgang_techniker_und_termin(
     user, th = await _techniker(client, make_user, mandant)
     v1 = await make_vorgang(mandant=mandant, kunde=kunde, zugewiesener_user_id=user.id)
     v2 = await make_vorgang(mandant=mandant, kunde=kunde)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc)
         session.add(
             Termin(
@@ -478,7 +478,7 @@ async def test_lesen_mit_mitarbeit_als_zugewiesener_kunde(
     p_fremd = await _projekt(client, h, "Fremder Kunde")
 
     # Vor der Zuweisung: kein Zugriff, auch wenn die Projekte schon am Kunden haengen.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Auftrag(mandant_id=mandant.id, projekt_id=uuid.UUID(p_auftrag), kunde_id=kunde.id, titel="A", erstellt_von=admin.id)
         )

@@ -38,7 +38,7 @@ async def test_insights_aggregation_correctness(
     await make_vorgang(mandant=mandant, kunde=kunde, status="neu")
     await make_vorgang(mandant=mandant, kunde=kunde, status="abgeschlossen")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add_all(
             [
                 Rechnung(
@@ -65,7 +65,7 @@ async def test_insights_aggregation_correctness(
 
     vorgang_fuer_zeit = await make_vorgang(mandant=mandant, kunde=kunde)
     jetzt = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(
                 mandant_id=mandant.id,
@@ -215,7 +215,7 @@ async def test_insights_ignoriert_geloeschte_datensaetze(client, make_mandant, m
     await make_vorgang(mandant=mandant, kunde=kunde, status="abgeschlossen", geloescht_am=jetzt)
     vorgang_fuer_zeit = await make_vorgang(mandant=mandant, kunde=kunde, status="in_arbeit")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for nummer, geloescht in (("R-DEL-1", None), ("R-DEL-2", jetzt)):
             rechnung = Rechnung(
                 mandant_id=mandant.id,

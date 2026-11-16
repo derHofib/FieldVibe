@@ -15,7 +15,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_zugang(mandant, kunde, *, email=None, password="kunden-pw-123", aktiv=True, name="Kundenportal-Nutzer"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -162,7 +162,7 @@ async def test_kunde_sees_only_own_vorgaenge_und_kundensichtbare_events(
     await _make_zugang(mandant, kunde1, email="kunde6@example.de")
     admin_token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             VorgangEvent(
                 mandant_id=mandant.id,
@@ -216,7 +216,7 @@ async def test_kunde_kann_angebot_annehmen_und_reparatur_vorgang_entsteht(
     await _make_zugang(mandant, kunde, email="kunde7@example.de")
     admin_token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         mangel = Mangel(
             mandant_id=mandant.id, vorgang_id=vorgang.id, beschreibung="Kabelbruch", gemeldet_von=admin.id
         )
@@ -244,7 +244,7 @@ async def test_kunde_kann_angebot_annehmen_und_reparatur_vorgang_entsteht(
     assert accept_resp.status_code == 200
     assert accept_resp.json()["angenommen_am"] is not None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed_mangel = await session.get(Mangel, mangel_id)
         assert refreshed_mangel.status == "in_bearbeitung"
         assert refreshed_mangel.reparatur_vorgang_id is not None
@@ -295,7 +295,7 @@ async def test_kunde_darf_nicht_direkt_versenden(client, make_mandant, make_user
     kunde = await make_kunde(mandant=mandant)
     await _make_zugang(mandant, kunde, email="kunde9@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         angebot = Angebot(
             mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-TEST-1", erstellt_von=admin.id
         )
@@ -321,7 +321,7 @@ async def test_kunde_sieht_nur_eigene_rechnungen(client, make_mandant, make_user
     kunde2 = await make_kunde(mandant=mandant)
     await _make_zugang(mandant, kunde1, email="kunde10@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         r1 = Rechnung(
             mandant_id=mandant.id,
             kunde_id=kunde1.id,
@@ -436,7 +436,7 @@ async def test_kundenportal_storno_pdf_nennt_originalrechnung(client, make_manda
     kunde = await make_kunde(mandant=mandant)
     await _make_zugang(mandant, kunde, email="kunde11@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         original = Rechnung(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -534,7 +534,7 @@ async def test_portal_events_ohne_interne_felder_und_nur_freigegebene_typen(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     headers = await _portal_headers(client, mandant, kunde, "kunde-events@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for event_type, body in (
             ("kommentar", "Fuer den Kunden"),
             ("zeit_start", "Interne Zeit"),
@@ -573,7 +573,7 @@ async def test_portal_geloeschte_datensaetze_nicht_sichtbar(
     headers = await _portal_headers(client, mandant, kunde, "kunde-geloescht@example.de")
 
     jetzt = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rechnung = Rechnung(
             mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-DEL-1",
             status="versendet", betrag_netto=Decimal("10"), erstellt_von=admin.id, geloescht_am=jetzt,
@@ -613,7 +613,7 @@ async def test_portal_entwurf_rechnung_und_angebot_nicht_sichtbar(
     kunde = await make_kunde(mandant=mandant)
     headers = await _portal_headers(client, mandant, kunde, "kunde-entwurf@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rechnung = Rechnung(
             mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-ENT-1",
             betrag_netto=Decimal("10"), erstellt_von=admin.id,
@@ -655,7 +655,7 @@ async def test_portal_angebot_und_rechnung_ohne_interne_felder(
     kunde = await make_kunde(mandant=mandant)
     headers = await _portal_headers(client, mandant, kunde, "kunde-intern2@example.de")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         angebot = Angebot(
             mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-INT-1",
             status="versendet", erstellt_von=admin.id,

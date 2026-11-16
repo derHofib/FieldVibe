@@ -720,7 +720,7 @@ async def update_own_bottom_nav(
     # system_session() (analog auth.me), da die Route auch fuer
     # super_admin (mandant_id NULL, ausserhalb jeder RLS-Session) und
     # waehrend Impersonation greifen muss.
-    async with system_session() as session:
+    async with system_session(grund="users: eigene bottom-nav speichern") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
@@ -739,7 +739,7 @@ async def update_own_office_nav(
     body: OfficeNavUpdate, auth: AuthContext = Depends(get_current_user)
 ) -> OfficeNavUpdate:
     # Rein selbstbezogene Praeferenz, analog zu update_own_bottom_nav.
-    async with system_session() as session:
+    async with system_session(grund="users: eigene office-nav speichern") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")

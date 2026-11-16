@@ -25,7 +25,7 @@ async def _material(mandant, vorgang, user, *, bezeichnung: str, menge: str, pre
     """Legt ein Material samt Verwendung(en) am Vorgang an. Der Bestand wird
     bewusst nicht ueber die Route gebucht -- die Tests pruefen, dass die
     Sperre daran nichts aendert."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         lager = (
             await session.execute(
                 select(Anlage).where(Anlage.mandant_id == mandant.id, Anlage.objekttyp == "lager")
@@ -54,12 +54,12 @@ async def _material(mandant, vorgang, user, *, bezeichnung: str, menge: str, pre
 
 
 async def _verwendungen(*ids):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return [await session.get(MaterialVerwendung, i) for i in ids]
 
 
 async def _bestand_stand(material_id):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         bestand = (
             await session.execute(select(MaterialBestand.menge).where(MaterialBestand.material_id == material_id))
         ).scalar_one()
@@ -83,7 +83,7 @@ async def _loeschen_user_token(client, make_user, mandant):
 @pytest.mark.asyncio
 async def test_vorschlaege_endpoint_liefert_alle_quellen_mit_ids(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs = await _svs(session, mandant)
         await _zeit(session, mandant=mandant, vorgang=vb, techniker=admin, stunden=1)
         await _zeit(session, mandant=mandant, vorgang=vb, techniker=admin, stunden=3, lv_position_id=svs.id)
@@ -133,7 +133,7 @@ async def test_vorschlaege_endpoint_validierung(client, make_mandant, make_user,
 @pytest.mark.asyncio
 async def test_teilauswahl_sperrt_nur_gewaehltes(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _zeit(session, mandant=mandant, vorgang=va, techniker=admin, stunden=2)
     kabel_id, kabel_v = await _material(mandant, va, admin, bezeichnung="Kabel", menge="5", preis="1.20", verwendungen=2)
     dose_id, dose_v = await _material(mandant, va, admin, bezeichnung="Dose", menge="1", preis="4.50")
@@ -350,7 +350,7 @@ async def test_pdf_gruppierte_rechnung_mit_gedankenstrich(client, make_mandant, 
     headers = auth_headers(token)
     vc = await make_vorgang(mandant=mandant, kunde=kunde, titel="Dach – Ost Ω", vorgangsnummer="V-C")
     await _daten_zwei_vorgaenge(mandant, admin, va, vb)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await _zeit(session, mandant=mandant, vorgang=vc, techniker=admin, stunden=1)
     await _material(mandant, vc, admin, bezeichnung="Dose – groß", menge="1", preis="4.50")
 

@@ -142,7 +142,7 @@ async def test_wiedervorlage_scheduler_benachrichtigt_zugewiesenen_user(
     ergebnis = await run_wiedervorlage_scheduler()
     assert ergebnis["vorgaenge_benachrichtigt"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         refreshed = await session.get(Vorgang, vorgang.id)
         assert refreshed.wiedervorlage_am is None
 
@@ -172,7 +172,7 @@ async def test_wiedervorlage_scheduler_faellt_ohne_zuweisung_auf_admin_zurueck(
     ergebnis = await run_wiedervorlage_scheduler()
     assert ergebnis["vorgaenge_benachrichtigt"] == 1
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(select(Notification).where(Notification.user_id == admin.id))
         ).scalars().all()

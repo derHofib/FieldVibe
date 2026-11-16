@@ -162,7 +162,7 @@ async def test_anlegen_mit_screenshots_und_loeschen_entfernt_s3(client, make_man
     assert detail["screenshot_original_url"].startswith("http")
     assert detail["screenshot_annotiert_url"] is not None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         b = await session.get(Fehlerbericht, uuid.UUID(bericht_id))
         keys = [b.screenshot_original_key, b.screenshot_annotiert_key]
     assert all(k and k.startswith("mandanten/") for k in keys)
@@ -214,7 +214,7 @@ async def test_mandant_und_user_kommen_aus_auth_nicht_aus_payload(client, make_m
         data=_payload(mandant_id=str(fremd.id), user_id=str(uuid.uuid4())),
     )
     assert resp.status_code == 201
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         b = await session.get(Fehlerbericht, uuid.UUID(resp.json()["id"]))
         assert b.mandant_id == mandant.id
 
@@ -229,7 +229,7 @@ async def test_recht_fehlt_403_und_custom_mit_recht_201(client, make_mandant, ma
     assert (await client.post("/api/fehlerberichte", headers=h, data=_payload())).status_code == 403
     assert (await client.get("/api/fehlerberichte", headers=h)).status_code == 403
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = (await session.execute(select(User).where(User.id == techniker.id))).scalar_one()
         for aktion in ("sehen", "erstellen"):
             session.add(
@@ -431,7 +431,7 @@ async def test_service_api_liest_mandantenuebergreifend_und_auditiert(client, ma
 
     from app.models.audit_log import AuditLog
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintraege = (await session.execute(select(AuditLog).where(AuditLog.aktion == "fehlerbericht.service_zugriff"))).scalars().all()
     assert any(e.entity_id == uuid.UUID(bid_a) and e.mandant_id is not None for e in eintraege)
     assert len(eintraege) >= 4
@@ -466,7 +466,7 @@ async def test_loeschjob_entfernt_alte_berichte_und_s3_objekte(make_mandant, mon
     alt_id, neu_id = uuid.uuid4(), uuid.uuid4()
     key = storage_service.new_fehlerbericht_screenshot_key(mandant.id, alt_id, "original")
     await storage_service.upload_bytes(key, PNG, "image/png")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for bid, alter, k in ((alt_id, 91, key), (neu_id, 89, None)):
             session.add(
                 Fehlerbericht(
@@ -476,7 +476,7 @@ async def test_loeschjob_entfernt_alte_berichte_und_s3_objekte(make_mandant, mon
             )
 
     assert await loesche_abgelaufene_fehlerberichte() == 1
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ids = (await session.execute(select(Fehlerbericht.id))).scalars().all()
     assert ids == [neu_id]
     with pytest.raises(ClientError):
@@ -512,7 +512,7 @@ async def test_idee_anlegen_ohne_fingerprint_default_art_fehler(client, make_man
     assert resp.status_code == 201 and resp.json()["duplikat_von_id"] is None
     detail = (await client.get(f"/api/fehlerberichte/{resp.json()['id']}", headers=h)).json()
     assert detail["art"] == "idee" and detail["freigegeben_am"] is None
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         b = await session.get(Fehlerbericht, uuid.UUID(resp.json()["id"]))
         assert b.fingerprint is None and b.duplikat_von_id is None
 

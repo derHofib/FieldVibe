@@ -181,7 +181,7 @@ def test_storno_negation_summiert_auf_null():
 
 async def _belege_anlegen(mandant, kunde, user, faelle: list[tuple[str, list[tuple], str | None]]) -> None:
     """faelle: (Beleg-Satz, Positionen als (menge, preis, satz, kategorie), betrag_netto ohne Positionen)."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i, (beleg_satz, positionen, netto_ohne) in enumerate(faelle):
             rechnung = Rechnung(
                 mandant_id=mandant.id,
@@ -242,7 +242,7 @@ async def test_sql_summen_gleich_python_summen(make_mandant, make_user, make_kun
     ]
     await _belege_anlegen(mandant, kunde, user, faelle)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zeilen = (
             await session.execute(
                 select(
@@ -287,7 +287,7 @@ async def test_constraints_lehnen_unzulaessige_steuerfelder_ab(make_mandant, mak
     user = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     with pytest.raises(IntegrityError):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             rechnung = Rechnung(
                 mandant_id=mandant.id,
                 kunde_id=kunde.id,

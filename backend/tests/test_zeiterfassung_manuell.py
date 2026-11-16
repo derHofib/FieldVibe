@@ -404,7 +404,7 @@ async def test_bearbeiten_und_loeschen_bei_stornierten_vorgang_gesperrt(
     assert create.status_code == 201
     eintrag_id = create.json()["id"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_vorgang = await session.get(Vorgang, vorgang.id)
         db_vorgang.status = "storniert"
         await session.flush()

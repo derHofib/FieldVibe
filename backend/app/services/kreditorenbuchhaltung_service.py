@@ -54,7 +54,7 @@ async def run_kreditoren_faelligkeits_check(mandant_ids: list[UUID] | None = Non
     faelligkeit_erinnerungen = 0
     skonto_erinnerungen = 0
 
-    async with system_session() as session:
+    async with system_session(grund="scheduler: kreditoren-faelligkeit", drosselung_s=300) as session:
         stmt = select(Eingangsrechnung).where(Eingangsrechnung.status == "offen")
         if mandant_ids is not None:
             stmt = stmt.where(Eingangsrechnung.mandant_id.in_(mandant_ids))

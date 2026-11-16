@@ -10,7 +10,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _account_und_ordner(mandant, user) -> tuple[MailAccount, MailFolder]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account = MailAccount(
             mandant_id=mandant.id,
             user_id=user.id,
@@ -45,7 +45,7 @@ async def _nachricht(
     account, ordner, *, uid: int, betreff: str, von_adresse: str = "kunde@example.de",
     message_id_header: str | None = None, gelesen: bool = False,
 ) -> MailMessage:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         nachricht = MailMessage(
             mandant_id=account.mandant_id,
             mail_account_id=account.id,
@@ -149,7 +149,7 @@ async def test_update_message_setzt_gelesen(client, make_mandant, make_user):
     assert resp.status_code == 200
     assert resp.json()["gelesen"] is True
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MailMessage, nachricht.id)
         assert row.gelesen is True
 
@@ -160,7 +160,7 @@ async def test_attachment_url_liefert_presigned_link(client, make_mandant, make_
     user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     account, ordner = await _account_und_ordner(mandant, user)
     nachricht = await _nachricht(account, ordner, uid=1, betreff="Mit Anhang")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         anhang = MailAttachment(
             mandant_id=mandant.id, message_id=nachricht.id, dateiname="beleg.pdf",
             mimetype="application/pdf", groesse_bytes=100, object_key="mail-nachrichten/test/beleg.pdf",

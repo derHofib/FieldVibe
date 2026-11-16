@@ -7,7 +7,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _account_typ_darf_uebernehmen_setzen(mandant_id, *, erlaubt: bool) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         result = await session.execute(
             select(AccountTyp).where(AccountTyp.mandant_id == mandant_id, AccountTyp.name == "Techniker")
         )

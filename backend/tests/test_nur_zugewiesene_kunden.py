@@ -24,7 +24,7 @@ async def szenario(client, make_mandant, make_user, make_kunde, make_vorgang, ma
     # fuer den Test gezielt eingeschaltet, damit auch Mutationen (nicht nur
     # Lesen wie beim Techniker) bis zur Zuweisungspruefung kommen.
     eingeschraenkt = await make_user(mandant=mandant, role="disponent", password="pw-123456")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = await session.get(User, eingeschraenkt.id)
         typ = await session.get(AccountTyp, user.account_typ_id)
         typ.nur_zugewiesene_kunden = True
@@ -300,7 +300,7 @@ async def test_maengel(client, szenario):
 
 
 async def _foto_event(mandant, vorgang) -> int:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         event = VorgangEvent(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -355,7 +355,7 @@ async def _anfrage(mandant, kunde, titel) -> str:
     from app.models.kundenportal import KundenportalZugang
     from app.models.vorgang_anfrage import VorgangAnfrage
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -453,7 +453,7 @@ async def test_material_bedarfe(client, szenario):
     from app.models.material_bedarf import MaterialBedarf
 
     s = szenario
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         material = Material(mandant_id=s["mandant"].id, bezeichnung="Kabel", einheit="m")
         session.add(material)
         await session.flush()
@@ -478,7 +478,7 @@ async def test_material_bedarfe(client, szenario):
         )
     ).status_code == 403
     assert (await client.delete(f"/api/material-bedarfe/{ids['fremd']}", headers=s["user"])).status_code == 404
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(MaterialBedarf, ids["fremd"])).geloescht_am is None
     assert (await client.delete(f"/api/material-bedarfe/{ids['eigen']}", headers=s["user"])).status_code == 204
 
@@ -632,7 +632,7 @@ async def test_zeitplan_read_ohne_fremden_vorgang(client, szenario):
     from app.models.termin import Termin
 
     s = szenario
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         admin_user = (
             await session.execute(select(User).where(User.mandant_id == s["mandant"].id, User.role == "mandant_admin"))
         ).scalars().one()
@@ -705,7 +705,7 @@ async def test_zuweisung_anonymisierter_oder_deaktivierter_nutzer_400(
     anonym = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     deaktiviert = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     aktiv = await make_user(mandant=mandant, role="techniker", password="pw-123456")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         u = await session.get(User, anonym.id)
         u.aktiv = False
         u.email = f"geloescht-{uuid.uuid4()}@invalid.fieldvibe"

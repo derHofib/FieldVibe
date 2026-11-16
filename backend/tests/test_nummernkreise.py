@@ -218,7 +218,7 @@ async def test_migration_initialisiert_zaehler_auf_max_plus_eins(make_mandant, m
         await make_kunde(mandant=mandant_a, kundennummer=nummer)
     await make_kunde(mandant=mandant_b, kundennummer="X-9")
     await make_kunde(mandant=mandant_b, kundennummer="K-77x")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(
             text("UPDATE kunden SET geloescht_am = now() WHERE mandant_id = :m AND kundennummer = 'K-00007'"),
             {"m": str(mandant_a.id)},
@@ -238,7 +238,7 @@ async def test_migration_initialisiert_zaehler_auf_max_plus_eins(make_mandant, m
         )
 
     modul = _migration_0103()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.run_sync(lambda s: modul.initialisiere_zaehler(s.connection()))
         # Zweiter Lauf aendert nichts (ON CONFLICT DO NOTHING).
         await session.run_sync(lambda s: modul.initialisiere_zaehler(s.connection()))

@@ -55,7 +55,7 @@ async def get_rechtliches(portal_slug: str | None = None) -> RechtlichesRead:
     dieses Kunden, sonst nur bei genau einem aktiven Mandanten dieser -- bei
     mehreren ohne Kontext bewusst keine Firmenangaben, damit die Route keine
     Mandanten aufzaehlt."""
-    async with system_session() as session:
+    async with system_session(grund="public: rechtstexte per portal-slug") as session:
         if portal_slug:
             # Gleiches Verhalten wie kundenportal_auth.link_info: unbekannter
             # Slug oder nicht aktiver Mandant -> 404.

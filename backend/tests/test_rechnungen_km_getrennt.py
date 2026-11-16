@@ -24,7 +24,7 @@ async def _zeile(
     status="gebucht",
 ) -> Zeiterfassung:
     start = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = Zeiterfassung(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -44,12 +44,12 @@ async def _zeile(
 
 
 async def _lade(zeile_id) -> Zeiterfassung:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await session.get(Zeiterfassung, zeile_id)
 
 
 async def _aktionen(zeile_id) -> list[str]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return list(
             (
                 await session.execute(
@@ -274,7 +274,7 @@ async def test_loeschen_restore_und_storno_pro_anteil(client, make_mandant, make
 async def _km_gesperrt(zeile_id) -> bool:
     from app.services.rechnung_service import km_gesperrt
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await km_gesperrt(session, await session.get(Zeiterfassung, zeile_id))
 
 
@@ -294,7 +294,7 @@ async def test_purge_entwurf_loest_km_verweis(client, make_mandant, make_user, m
 @pytest.mark.asyncio
 async def test_svs_leistung_und_km_derselben_zeile_getrennt(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant, admin, kunde, vorgang, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs_id = (await _svs(session, mandant)).id
     zeile = await _zeile(mandant=mandant, vorgang=vorgang, techniker=admin, lv_position_id=svs_id, km="10.0")
     r1 = await _rechnung(client, token, kunde, vorgang)
@@ -350,7 +350,7 @@ async def test_fahrzeit_satz_im_vorschlag_und_in_uebernahme(client, make_mandant
 
     resp = await _uebernehmen(client, token, r1, vorgang, nur=lambda v: v["quelle"] == "fahrzeit")
     assert resp.status_code in (200, 201), resp.text
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         pos = (await session.execute(select(RechnungPosition).where(RechnungPosition.quelle == "fahrzeit"))).scalar_one()
         assert pos.einzelpreis == Decimal("55.50")
 
@@ -373,7 +373,7 @@ def _cfg() -> Config:
 async def _alt_zustand(mandant, kunde, admin, v1, v2):
     """Zeilen im Alt-Zustand (vor 0097: eine abgerechnete Zeile zeigt nur ueber
     abgerechnet_rechnung_id auf die Rechnung, km_abgerechnet_rechnung_id noch NULL)."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         svs = await _svs(session, mandant)
 
         async def rechnung(vorgang_id, nr, positionen):

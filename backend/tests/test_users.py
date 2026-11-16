@@ -16,7 +16,7 @@ async def _extrahiere_token(link: str) -> str:
 
 
 async def _make_smtp_integration(mandant) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             MandantIntegration(
                 mandant_id=mandant.id,
@@ -380,7 +380,7 @@ async def test_user_delete_anonymizes_when_zeiterfassung_exists(
     token = await login(client, admin.email, "pw-123456")
 
     start = datetime.now(timezone.utc)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(
                 mandant_id=mandant.id,
@@ -596,7 +596,7 @@ async def test_me_tolerates_legacy_flat_list_bottom_nav_items(client, make_manda
     # nur auf die Standardauswahl zurueck, statt komplett zu scheitern.
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(
             update(User).where(User.id == user.id).values(bottom_nav_items=["dispo", "feed"])
         )

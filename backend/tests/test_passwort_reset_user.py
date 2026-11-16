@@ -52,7 +52,7 @@ async def _refresh_status(client, refresh):
 
 
 async def _audit(aktion):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return list((await session.execute(select(AuditLog).where(AuditLog.aktion == aktion))).scalars())
 
 
@@ -138,7 +138,7 @@ async def test_vergessen_super_admin_ohne_mandant_nutzt_globalen_fallback(client
 async def test_send_email_ohne_mandant_und_ohne_smtp_wirft_nicht_konfiguriert(monkeypatch):
     settings = get_settings()
     monkeypatch.setattr(settings, "global_smtp_host", None)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         with pytest.raises(EmailNichtKonfiguriert):
             await send_email(session, None, to="x@example.de", subject="s", body="b")
 
@@ -285,7 +285,7 @@ async def test_reset_inaktiver_user_abgelehnt(client, make_mandant, make_user):
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker", password=_PW)
     token = create_user_password_reset_token(user_id=user.id, token_version=user.token_version)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(User, user.id)).aktiv = False
     resp = await client.post(
         "/api/auth/passwort-zuruecksetzen", json={"token": token, "new_password": _NEU}

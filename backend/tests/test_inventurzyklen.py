@@ -168,7 +168,7 @@ async def test_faelliger_zyklus_erscheint_in_fristen(client, make_mandant, make_
 
 
 async def _make_inventurzyklus(mandant, lager, *, faellig_in_tagen: int = 0) -> InventurZyklus:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zyklus = InventurZyklus(
             mandant_id=mandant.id,
             lager_id=lager.id,
@@ -194,7 +194,7 @@ async def test_scheduler_benachrichtigt_admins_ohne_vorgang_zu_erzeugen(
     assert ergebnis["inventurzyklen_faellig"] == 1
     assert ergebnis["vorgaenge_erstellt"] == 0
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(select(Notification).where(Notification.user_id == admin.id))
         ).scalars().all()
@@ -222,7 +222,7 @@ async def test_scheduler_benachrichtigt_zugewiesenen_techniker(
 
     await run_pruefzyklen_scheduler()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(select(Notification).where(Notification.user_id == techniker.id))
         ).scalars().all()
@@ -239,7 +239,7 @@ async def test_scheduler_dedupliziert_ungelesene_erinnerung(make_mandant, make_u
     await run_pruefzyklen_scheduler()
     await run_pruefzyklen_scheduler()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         notifications = (
             await session.execute(select(Notification).where(Notification.user_id == admin.id))
         ).scalars().all()
@@ -252,7 +252,7 @@ async def test_scheduler_ignoriert_pausierten_zyklus(make_mandant, make_user, ma
     await make_user(mandant=mandant, role="mandant_admin")
     fahrzeug = await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Transporter")
     zyklus = await _make_inventurzyklus(mandant, fahrzeug)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_zyklus = await session.get(InventurZyklus, zyklus.id)
         db_zyklus.aktiv = False
         await session.flush()

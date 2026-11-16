@@ -9,7 +9,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _make_zugang(mandant, kunde, *, email=None, password="kunden-pw-123", name="Portal-Kontakt"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,

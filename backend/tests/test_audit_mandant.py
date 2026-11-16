@@ -14,7 +14,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _eintraege(mandant_id, aktion: str | None = None) -> list[AuditLog]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         stmt = select(AuditLog).where(AuditLog.mandant_id == mandant_id).order_by(AuditLog.id)
         if aktion:
             stmt = stmt.where(AuditLog.aktion == aktion)
@@ -46,18 +46,18 @@ async def _trigger_an(tabelle: str):
 @pytest.mark.asyncio
 async def test_append_only_auch_fuer_super_admin_kontext(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = await audit_service.log_action(session, aktion="test", mandant_id=mandant.id)
         eintrag_id = eintrag.id
 
     with pytest.raises(DBAPIError, match="append-only"):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await session.execute(update(AuditLog).where(AuditLog.id == eintrag_id).values(aktion="manipuliert"))
     with pytest.raises(DBAPIError, match="append-only"):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await session.execute(text("DELETE FROM audit_log WHERE id = :i"), {"i": eintrag_id})
     with pytest.raises(DBAPIError, match="append-only"):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await session.execute(text("UPDATE audit_log_siegel SET hash = repeat('a', 64)"))
 
 
@@ -65,7 +65,7 @@ async def test_append_only_auch_fuer_super_admin_kontext(make_mandant):
 async def test_kette_wird_gebildet_und_ist_gueltig(client, make_mandant, make_user):
     mandant, admin, token = await _admin(client, make_mandant, make_user)
     for i in range(3):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await audit_service.log_action(
                 session, aktion=f"test_{i}", mandant_id=mandant.id, actor_user_id=admin.id, payload={"i": i}
             )
@@ -78,7 +78,7 @@ async def test_kette_wird_gebildet_und_ist_gueltig(client, make_mandant, make_us
     assert body["ohne_siegel"] == 0
     assert body["kopf_seq"] == body["geprueft"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         siegel = (
             await session.execute(
                 select(AuditLogSiegel).where(AuditLogSiegel.mandant_id == mandant.id).order_by(AuditLogSiegel.seq)
@@ -93,10 +93,10 @@ async def test_kette_wird_gebildet_und_ist_gueltig(client, make_mandant, make_us
 @pytest.mark.asyncio
 async def test_mehrere_eintraege_in_einer_transaktion_werden_in_reihenfolge_verkettet(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i in range(5):
             await audit_service.log_action(session, aktion="serie", mandant_id=mandant.id, payload={"i": i})
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ergebnis = await audit_service.kette_pruefen(session, mandant.id)
     assert ergebnis.ok and ergebnis.geprueft == 5
 
@@ -104,7 +104,7 @@ async def test_mehrere_eintraege_in_einer_transaktion_werden_in_reihenfolge_verk
 @pytest.mark.asyncio
 async def test_manipulation_am_inhalt_wird_erkannt(client, make_mandant, make_user):
     mandant, admin, token = await _admin(client, make_mandant, make_user)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await audit_service.log_action(
             session, aktion="zahlung_gebucht", mandant_id=mandant.id, actor_user_id=admin.id, payload={"betrag": "100.00"}
         )
@@ -130,7 +130,7 @@ async def test_manipulation_am_inhalt_wird_erkannt(client, make_mandant, make_us
 async def test_entferntes_oder_eingeschobenes_siegel_wird_erkannt(client, make_mandant, make_user):
     mandant, admin, token = await _admin(client, make_mandant, make_user)
     for i in range(3):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             await audit_service.log_action(session, aktion=f"k_{i}", mandant_id=mandant.id, actor_user_id=admin.id)
 
     # Mittleres Siegel entfernen: Luecke in der Kette.
@@ -149,7 +149,7 @@ async def test_entferntes_oder_eingeschobenes_siegel_wird_erkannt(client, make_m
 
     # Nachtraeglich eingefuegter, nicht gesiegelter Eintrag.
     mandant2, admin2, token2 = await _admin(client, make_mandant, make_user, "Zweitbetrieb")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await audit_service.log_action(session, aktion="echt", mandant_id=mandant2.id)
     async with engine.begin() as conn:
         await _super(conn)
@@ -169,9 +169,9 @@ async def test_entferntes_oder_eingeschobenes_siegel_wird_erkannt(client, make_m
 async def test_ketten_sind_je_mandant_getrennt(client, make_mandant, make_user):
     m1, a1, t1 = await _admin(client, make_mandant, make_user, "Eins")
     m2, a2, t2 = await _admin(client, make_mandant, make_user, "Zwei")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await audit_service.log_action(session, aktion="nur_eins", mandant_id=m1.id)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         siegel = (await session.execute(select(AuditLogSiegel).order_by(AuditLogSiegel.id))).scalars().all()
     assert {s.mandant_id for s in siegel} == {m1.id, m2.id}
     for mid in (m1.id, m2.id):
@@ -199,7 +199,7 @@ async def test_parallele_schreiber_verklemmen_nicht_und_kette_bleibt_gueltig(mak
 
     await asyncio.wait_for(asyncio.gather(*(schreiber(n) for n in range(12))), timeout=60)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         ergebnis = await audit_service.kette_pruefen(session, mandant.id)
     assert ergebnis.ok, ergebnis.fehler
     assert ergebnis.geprueft == 24
@@ -223,7 +223,7 @@ async def test_audit_fehler_laesst_fachaenderung_scheitern(make_mandant, make_us
             await audit_service.log_action(session, aktion="user_geaendert", mandant_id=mandant.id)
     monkeypatch.undo()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(User, admin.id)).name != "Geaendert ohne Protokoll"
     assert await _eintraege(mandant.id, "user_geaendert") == []
 
@@ -253,7 +253,7 @@ async def test_siegel_fehler_liefert_http_500_statt_scheinerfolg(client, make_ma
         )
     monkeypatch.undo()
     assert resp.status_code == 500
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.execute(select(Rechnung))).first() is None
     assert await _eintraege(mandant.id, "rechnung_erstellt") == []
 
@@ -261,7 +261,7 @@ async def test_siegel_fehler_liefert_http_500_statt_scheinerfolg(client, make_ma
 @pytest.mark.asyncio
 async def test_zurueckgerollter_savepoint_hinterlaesst_kein_siegel(make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await audit_service.log_action(session, aktion="bleibt", mandant_id=mandant.id)
         try:
             async with session.begin_nested():
@@ -270,7 +270,7 @@ async def test_zurueckgerollter_savepoint_hinterlaesst_kein_siegel(make_mandant)
         except ValueError:
             pass
     assert [e.aktion for e in await _eintraege(mandant.id)] == ["bleibt"]
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await audit_service.kette_pruefen(session, mandant.id)).ok
 
 
@@ -306,7 +306,7 @@ async def test_login_ereignisse(client, make_mandant, make_user):
     assert fehl[0].request_id
     assert len(await _eintraege(mandant.id, "login")) == 1
     # Unbekannte Adresse: kein Mandant, kein Eintrag im Mandantenprotokoll.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         alle = (await session.execute(select(AuditLog).where(AuditLog.mandant_id.is_(None)))).scalars().all()
     assert alle == []
 
@@ -326,7 +326,7 @@ async def test_einsicht_nur_fuer_mandant_admin_mit_filtern_und_paginierung(clien
     assert (await client.get("/api/audit")).status_code == 401
 
     objekt = uuid.uuid4()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for i in range(7):
             await audit_service.log_action(
                 session,
@@ -360,7 +360,7 @@ async def test_einsicht_nur_fuer_mandant_admin_mit_filtern_und_paginierung(clien
 async def test_csv_export_mit_formelschutz_und_selbst_protokolliert(client, make_mandant, make_user):
     mandant, admin, token = await _admin(client, make_mandant, make_user)
     boese = await make_user(mandant=mandant, role="techniker", name="=HYPERLINK(\"http://x\")")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await audit_service.log_action(
             session, aktion="test_csv", mandant_id=mandant.id, actor_user_id=boese.id, payload={"x": "=1+1"}
         )
@@ -384,7 +384,7 @@ async def test_rechnungsereignisse_zahlung_storno_export(client, make_mandant, m
     assert z.status_code == 201
     from app.models.rechnung import RechnungZahlung
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zahlung = (await session.execute(select(RechnungZahlung))).scalars().first()
     assert (await client.post(f"/api/rechnungen/{r['id']}/zahlungen/{zahlung.id}/storno", headers=h)).status_code == 201
     assert (await client.post(f"/api/rechnungen/{r['id']}/storno", headers=h)).status_code == 201

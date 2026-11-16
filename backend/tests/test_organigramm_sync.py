@@ -16,7 +16,7 @@ PW = "pw-123456"
 
 async def _aktive_positionen(user_id) -> dict[str, str]:
     """titel -> art der aktiven Besetzungen."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zeilen = await session.execute(
             select(Position.titel, PositionBesetzung.art)
             .join(PositionBesetzung, PositionBesetzung.position_id == Position.id)
@@ -26,7 +26,7 @@ async def _aktive_positionen(user_id) -> dict[str, str]:
 
 
 async def _alle_besetzungen(user_id) -> list[PositionBesetzung]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return list(
             (await session.execute(select(PositionBesetzung).where(PositionBesetzung.user_id == UUID(str(user_id)))))
             .scalars()
@@ -103,7 +103,7 @@ async def test_manuelle_besetzungen_bleiben_beim_sync_unberuehrt(client, make_ma
     lager = await _typ(client, kopf, "Lager")
     user = await _user_anlegen(client, kopf, mandant, "manuell@x.de", dispo["id"])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         manuell = Position(mandant_id=mandant.id, titel="Projektleitung Neubau")
         session.add(manuell)
         await session.flush()
@@ -124,7 +124,7 @@ async def test_anonymisieren_beendet_alle_besetzungen(client, make_mandant, make
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker", password=PW)
     assert await _aktive_positionen(user.id) == {"Techniker": "regulaer"}
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await anonymisiere_user(session, await session.get(User, user.id))
     assert await _aktive_positionen(user.id) == {}
 
@@ -137,13 +137,13 @@ async def test_neuer_account_typ_erzeugt_position_unter_wurzel_und_umbenennen_fo
     typ = await _typ(client, kopf, "Azubi")
 
     async def typ_positionen():
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             return list(
                 (await session.execute(select(Position).where(Position.account_typ_id == UUID(typ["id"])))).scalars().all()
             )
 
     (position,) = await typ_positionen()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         wurzel = (
             await session.execute(select(Position).where(Position.mandant_id == mandant.id, Position.parent_id.is_(None)))
         ).scalar_one()
@@ -166,7 +166,7 @@ async def test_neuer_mandant_erzeugt_wurzelposition(client, make_mandant, make_u
         "/api/admin/mandanten", headers=auth_headers(token), json={"name": "Neu GmbH", "slug": "neu-gmbh"}
     )
     assert r.status_code == 201, r.text
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         positionen = (
             (await session.execute(select(Position).where(Position.mandant_id == UUID(r.json()["id"])))).scalars().all()
         )

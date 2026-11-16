@@ -365,7 +365,7 @@ async def run_mail_sync(account_ids: list | None = None) -> dict:
     konten_synchronisiert = 0
     fehler = 0
 
-    async with system_session() as session:
+    async with system_session(grund="worker: mail-sync postfaecher", drosselung_s=300) as session:
         stmt = select(MailAccount).where(MailAccount.aktiv.is_(True))
         if account_ids is not None:
             stmt = stmt.where(MailAccount.id.in_(account_ids))

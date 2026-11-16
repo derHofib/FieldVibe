@@ -19,6 +19,9 @@ os.environ.setdefault("ENVIRONMENT", "test")
 # Bestehende Tests nutzen das Refresh-Token aus dem Body -- die Uebergangsfrist
 # (config.refresh_body_bis) darf sie nicht mit dem Kalender kippen lassen.
 os.environ.setdefault("FIELDVIBE_REFRESH_BODY_BIS", "2999-12-31")
+# Der Audit-Eintrag je system_session() wuerde bestehende Audit-Zaehltests
+# verfaelschen; tests/test_system_session_audit.py schaltet ihn gezielt ein.
+os.environ["FIELDVIBE_SYSTEM_SESSION_AUDIT"] = "false"
 
 
 def _moto_port_ermitteln() -> int:
@@ -323,7 +326,7 @@ async def client():
 @pytest_asyncio.fixture
 async def make_mandant():
     async def _make(name: str = "Testbetrieb", status: str = "aktiv") -> Mandant:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             mandant = Mandant(name=name, slug=f"{name.lower()}-{uuid.uuid4().hex[:8]}", status=status)
             session.add(mandant)
             await session.flush()
@@ -358,7 +361,7 @@ async def make_user():
         name: str = "Test User",
         aktiv: bool = True,
     ) -> User:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             account_typ_id = None
             effective_role = role
             if role in _LEGACY_ROLLEN:
@@ -391,7 +394,7 @@ async def make_user():
 @pytest_asyncio.fixture
 async def make_kunde():
     async def _make(*, mandant: Mandant, name: str = "Testkunde", **kwargs) -> Kunde:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             kunde = Kunde(
                 mandant_id=mandant.id,
                 kundennummer=kwargs.pop("kundennummer", f"K-{uuid.uuid4().hex[:6]}"),
@@ -412,7 +415,7 @@ async def make_anlage():
     async def _make(
         *, mandant: Mandant, kunde: Kunde | None = None, bezeichnung: str = "Hauptverteilung", **kwargs
     ) -> Anlage:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             anlage = Anlage(
                 mandant_id=mandant.id,
                 kunde_id=kunde.id if kunde is not None else None,
@@ -433,7 +436,7 @@ async def make_vertrag():
     async def _make(
         *, mandant: Mandant, kunde: Kunde, abrechnungsart: str = "wartungsvertrag", **kwargs
     ) -> Vertrag:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             vertrag = Vertrag(
                 mandant_id=mandant.id,
                 kunde_id=kunde.id,
@@ -460,7 +463,7 @@ async def make_vorgang():
         leistungstyp: str = "stoerung",
         **kwargs,
     ) -> Vorgang:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             vorgang = Vorgang(
                 mandant_id=mandant.id,
                 vorgangsnummer=kwargs.pop("vorgangsnummer", f"V-{uuid.uuid4().hex[:6]}"),
@@ -481,7 +484,7 @@ async def make_vorgang():
 @pytest_asyncio.fixture
 async def make_partner():
     async def _make(*, mandant: Mandant, name: str = "Testpartner GmbH", **kwargs) -> Partner:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             partner = Partner(mandant_id=mandant.id, name=name, **kwargs)
             session.add(partner)
             await session.flush()
@@ -494,7 +497,7 @@ async def make_partner():
 @pytest_asyncio.fixture
 async def make_kunde_zuweisung():
     async def _make(*, mandant: Mandant, kunde: Kunde, techniker: User) -> KundeZuweisung:
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             zuweisung = KundeZuweisung(
                 mandant_id=mandant.id, kunde_id=kunde.id, user_id=techniker.id
             )

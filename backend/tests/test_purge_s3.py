@@ -28,7 +28,7 @@ async def _hintergrund_fertig() -> None:
 
 
 async def _vorgang_mit_dateien(mandant, kunde, *, titel: str, legacy: bool = False) -> tuple[Vorgang, list[str]]:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         v = Vorgang(
             mandant_id=mandant.id, vorgangsnummer=f"V-{uuid.uuid4().hex[:6]}", kunde_id=kunde.id, titel=titel,
             abrechnungsart="aufwand", leistungstyp="stoerung",
@@ -69,7 +69,7 @@ async def test_purge_loescht_objekte_nach_commit_und_nur_die_eigenen(client, mak
         assert _liste(key) == [], key
     for key in (*keys_b, *keys_bleibt):
         assert _liste(key) == [key], key  # fremde und nicht geloeschte Objekte bleiben
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftraege = (await session.execute(select(S3Loeschauftrag))).scalars().all()
     assert {x.status for x in auftraege} == {"erledigt"} and len(auftraege) == 4  # 2 Vorgaenge x (neues, altes Praefix)
 
@@ -86,7 +86,7 @@ async def test_rollback_hinterlaesst_weder_auftrag_noch_objektverlust(make_manda
     await _hintergrund_fertig()
     for key in keys:
         assert _liste(key) == [key]
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await session.get(Vorgang, v.id) is not None
         assert (await session.execute(select(S3Loeschauftrag))).first() is None
 
@@ -118,7 +118,7 @@ async def test_s3_fehler_wird_tolerant_protokolliert_und_wiederholt(client, make
     # Backoff: sofort erneut ist nichts faellig; nach Ablauf der Wartezeit klappt es mit funktionierendem S3.
     assert await s3_aufraeumen_service.verarbeite() == {"erledigt": 0, "fehlgeschlagen": 0}
     monkeypatch.undo()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for a in (await session.execute(select(S3Loeschauftrag))).scalars():
             a.naechster_versuch_am = datetime.now(timezone.utc)
     assert await s3_aufraeumen_service.verarbeite() == {"erledigt": 2, "fehlgeschlagen": 0}
@@ -141,11 +141,11 @@ async def test_nach_max_versuchen_steht_der_auftrag_auf_fehler(make_mandant, mak
         await papierkorb_service.purge(session, entity_typ="vorgang", entity_id=v.id)
     await _hintergrund_fertig()
     for _ in range(s3_aufraeumen_service.MAX_VERSUCHE):
-        async with system_session() as session:
+        async with system_session(grund="test") as session:
             for a in (await session.execute(select(S3Loeschauftrag).where(S3Loeschauftrag.status == "offen"))).scalars():
                 a.naechster_versuch_am = datetime.now(timezone.utc)
         await s3_aufraeumen_service.verarbeite()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         status = {a.status for a in (await session.execute(select(S3Loeschauftrag))).scalars()}
     assert status == {"fehler"}
 
@@ -158,7 +158,7 @@ async def test_rechnungsarchiv_wird_nach_ablauf_der_frist_mit_entfernt(make_mand
     h = auth_headers(await login(client, admin.email, "pw-123456"))
     r = (await client.post("/api/rechnungen", headers=h, json={"kunde_id": str(kunde.id), "betrag_netto": "10"})).json()
     await client.patch(f"/api/rechnungen/{r['id']}", headers=h, json={"status": "versendet"})
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         pdf_key = (await session.get(Rechnung, uuid.UUID(r["id"]))).pdf_object_key
     assert pdf_key.startswith(f"mandanten/{mandant.id}/rechnungen/{r['id']}/")
     assert _liste(pdf_key) == [pdf_key]
@@ -252,7 +252,7 @@ async def test_fremder_mandant_loest_keinen_schluessel_auf_und_altobjekte_bleibe
     assert (await client.get(f"/api/rechnungen/{r['id']}/xml", headers=hb)).status_code == 404
 
     # Altobjekt (Schluessel im frueheren Schema ohne Mandantenpraefix) ist weiter lesbar.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rechnung = await session.get(Rechnung, uuid.UUID(r["id"]))
         alt_key = f"rechnungen/{rechnung.id}/versendet-{uuid.uuid4()}.pdf"
         inhalt = await storage_service.download_bytes(rechnung.pdf_object_key)

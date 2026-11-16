@@ -89,13 +89,13 @@ async def test_probelauf_und_import_kunden_konsistent(client, make_mandant, make
     fehler = [x for x in p.json()["zeilen"] if x["status"] == "fehler"]
     assert fehler[0]["zeile"] == 4 and "Name" in fehler[0]["meldungen"][0]
     # Probelauf schreibt nichts
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         assert (await s.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).first() is None
     r = await client.post(f"/api/import/{a['import_lauf_id']}/ausfuehren", headers=kopf, json=k)
     assert r.status_code == 200, r.text
     assert r.json()["zusammenfassung"] == z
     assert r.json()["status"] == "abgeschlossen"
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         kunden = (await s.execute(select(Kunde).where(Kunde.mandant_id == mandant.id).order_by(Kunde.kundennummer))).scalars().all()
         nummern = [x.kundennummer for x in kunden]
         assert "K-00007" in nummern and len(kunden) == 2
@@ -131,7 +131,7 @@ async def test_alles_oder_nichts(client, make_mandant, make_user, make_kunde):
     a, k, _ = await kompletter_lauf(client, kopf, "kunden", csv_bytes(KUNDEN_CSV), modus="alles_oder_nichts")
     r = await client.post(f"/api/import/{a['import_lauf_id']}/ausfuehren", headers=kopf, json=k)
     assert r.json()["status"] == "abgebrochen"
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         assert (await s.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).first() is None
 
 
@@ -187,7 +187,7 @@ async def test_xlsx_datum_zahlen_fuehrende_nullen(client, make_mandant, make_use
     a, k, p = await kompletter_lauf(client, kopf, "kunden", puffer.getvalue(), name="k.xlsx")
     assert a["format"] == "xlsx" and a["blatt"]
     await client.post(f"/api/import/{a['import_lauf_id']}/ausfuehren", headers=kopf, json=k)
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         kunde = (await s.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).scalar_one()
         assert kunde.kundennummer == "010023" and kunde.adresse["plz"] == "01067"
 
@@ -229,7 +229,7 @@ async def test_steuerzeichen_bereinigt(client, make_mandant, make_user):
     mandant, _, kopf = await _admin(client, make_mandant, make_user)
     a, k, _ = await kompletter_lauf(client, kopf, "kunden", csv_bytes("Firma;Ort\nA\x00B\x07C‮;Dre\x01sden\n"))
     await client.post(f"/api/import/{a['import_lauf_id']}/ausfuehren", headers=kopf, json=k)
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         kunde = (await s.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).scalar_one()
         assert kunde.name == "ABC" and kunde.adresse["ort"] == "Dresden"
 
@@ -254,7 +254,7 @@ async def test_rechte_und_mandantentrennung(client, make_mandant, make_user):
 
 async def test_modul_gesperrt(client, make_mandant, make_user):
     mandant, _, kopf = await _admin(client, make_mandant, make_user)
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         m = await s.get(type(mandant), mandant.id)
         m.deaktivierte_module = ["material"]
     assert (await analyse(client, kopf, "material", csv_bytes("Bezeichnung\nX\n"))).status_code == 403
@@ -287,7 +287,7 @@ async def test_performance_5000_kunden(client, make_mandant, make_user):
     dauer = time.monotonic() - t
     assert r.json()["zusammenfassung"]["anlegen"] == 5000
     assert dauer < 20, dauer
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         n = len((await s.execute(select(Kunde.id).where(Kunde.mandant_id == mandant.id))).all())
         assert n == 5000
 

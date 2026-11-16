@@ -20,7 +20,7 @@ async def test_zeit_summen_je_status_fuer_auftrag(
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Auftrag(mandant_id=mandant.id, kunde_id=kunde.id, titel="Testauftrag", erstellt_von=admin.id)
         session.add(auftrag)
         await session.flush()
@@ -29,7 +29,7 @@ async def test_zeit_summen_je_status_fuer_auftrag(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, auftrag_id=auftrag_id)
     anderer_vorgang = await make_vorgang(mandant=mandant, kunde=kunde)  # nicht Teil des Auftrags
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc)
         # Arbeitszeit "vermerkt" (2 Std)
         session.add(
@@ -97,7 +97,7 @@ async def test_zeit_summen_zaehlt_km_auch_bei_kategorie_auftrag(
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         auftrag = Auftrag(mandant_id=mandant.id, kunde_id=kunde.id, titel="Testauftrag", erstellt_von=admin.id)
         session.add(auftrag)
         await session.flush()
@@ -105,7 +105,7 @@ async def test_zeit_summen_zaehlt_km_auch_bei_kategorie_auftrag(
 
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, auftrag_id=auftrag_id)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc)
         session.add(
             Zeiterfassung(

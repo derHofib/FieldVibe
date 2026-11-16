@@ -158,7 +158,7 @@ async def test_statistik_berechnet_wochen_monats_jahresstunden(
     letzter_monat = (heute - timedelta(days=40)).replace(hour=8, minute=0, second=0, microsecond=0)
     letztes_jahr = (heute - timedelta(days=400)).replace(hour=8, minute=0, second=0, microsecond=0)
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         for start, dauer_stunden in (
             (diese_woche, 2),
             (letzter_monat, 3),

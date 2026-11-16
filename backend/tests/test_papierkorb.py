@@ -345,7 +345,7 @@ async def test_kunde_mit_events_zeiterfassung_highlight_und_portal_zugang_kann_e
     # app/api/routes/highlights.py) -- ein echter Foto-Upload braucht MinIO,
     # daher wird das Foto-Event hier direkt angelegt statt ueber den Upload-
     # Endpoint.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         foto_event = VorgangEvent(
             mandant_id=mandant.id,
             vorgang_id=vorgang.id,
@@ -525,7 +525,7 @@ async def test_unbestaetigter_email_entwurf_kann_endgueltig_geloescht_werden(
     # haengen bleiben.
     mandant = await make_mandant()
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eingangsrechnung = Eingangsrechnung(
             mandant_id=mandant.id,
             lieferant_name="spam@nirgendwo.de",

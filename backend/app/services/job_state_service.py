@@ -61,7 +61,7 @@ async def markiere_lauf(
 
 async def heartbeat(job: str, *, jetzt: datetime | None = None) -> None:
     """Systemweiter Lebenszeichen-Eintrag (eigene kurze Transaktion)."""
-    async with system_session() as session:
+    async with system_session(grund="worker: job-state heartbeat", drosselung_s=300) as session:
         await markiere_lauf(session, job, None, erfolg=True, jetzt=jetzt)
 
 

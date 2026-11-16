@@ -115,7 +115,7 @@ async def _b_daten_anlegen(mandant_b, user_b, kunde, vorgang, anlage) -> None:
     m = mandant_b.id
     u = user_b.id
     heute = date(2026, 1, 15)
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         await s.execute(text("UPDATE anlagen SET qr_code = :q WHERE id = :i"), {"q": f"QR-{MARKER}", "i": anlage.id})
         await _insert(s, "standorte", mandant_id=m, kunde_id=kunde.id, bezeichnung=f"Standort {MARKER}", adresse={"ort": MARKER})
         mat = await _insert(s, "material", mandant_id=m, bezeichnung=f"Material {MARKER}")
@@ -155,7 +155,7 @@ async def _b_daten_anlegen(mandant_b, user_b, kunde, vorgang, anlage) -> None:
 async def _id_menge(mandant_id: uuid.UUID) -> set[str]:
     """Alle UUID-Werte aller UUID-Spalten (inkl. FK-Spalten) aller Zeilen eines
     Mandanten, generisch ueber information_schema."""
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         tabellen = (
             await s.execute(
                 text(
@@ -187,7 +187,7 @@ async def _id_menge(mandant_id: uuid.UUID) -> set[str]:
 
 
 async def _pk_nach_tabelle(mandant_id: uuid.UUID) -> dict[str, list[str]]:
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         tabellen = (
             await s.execute(
                 text(
@@ -219,7 +219,7 @@ def _kandidaten(param: str, pk_b: dict[str, list[str]]) -> list[str]:
 
 async def _fremde_ids_ausschliessen(b_ids: set[str], mandant_a) -> set[str]:
     a_ids = await _id_menge(mandant_a.id)
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         global_ids = {
             str(r[0])
             for r in (
@@ -265,7 +265,7 @@ async def test_get_endpunkte_leaken_keine_fremden_mandantendaten(
     # Sanity: der Test hat nur Aussagekraft, wenn B wirklich viele Entitaeten hat.
     assert len(pk_b) >= 35, f"zu wenige B-Tabellen befuellt: {sorted(pk_b)}"
     string_werte = {}
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         for name, (tabelle, spalte) in STRING_PARAMETER.items():
             string_werte[name] = (
                 await s.execute(text(f"SELECT {spalte} FROM {tabelle} WHERE mandant_id = :m AND {spalte} IS NOT NULL"), {"m": mandant_b.id})

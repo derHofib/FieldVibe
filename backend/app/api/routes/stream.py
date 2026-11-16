@@ -25,7 +25,7 @@ _PRUEFINTERVALL_SEKUNDEN = 15
 
 
 async def _ticket_noch_gueltig(user_id: UUID, tv: int) -> bool:
-    async with system_session() as session:
+    async with system_session(grund="stream: ticket token-version pruefen", drosselung_s=300) as session:
         row = (
             await session.execute(
                 select(User.token_version, User.aktiv).where(User.id == user_id)

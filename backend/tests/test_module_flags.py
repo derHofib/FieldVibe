@@ -135,7 +135,7 @@ async def test_kundenportal_login_blockiert_wenn_modul_deaktiviert(
     super_admin_token = await login(client, super_admin.email, "admin-pass-1")
 
     kunde = await make_kunde(mandant=mandant)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,

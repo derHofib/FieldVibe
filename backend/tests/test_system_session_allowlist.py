@@ -89,3 +89,20 @@ def test_allowlist_enthaelt_keine_ungenutzten_eintraege():
         "Diese Dateien benutzen system_session() nicht mehr -- aus SYSTEM_SESSION_ALLOWLIST "
         "entfernen:\n  " + "\n  ".join(veraltet)
     )
+
+
+def test_jeder_aufruf_hat_grund():
+    ohne = []
+    for pfad in _APP.rglob("*.py"):
+        rel = pfad.relative_to(_BACKEND).as_posix()
+        if rel == _DEFINITION:
+            continue
+        for knoten in ast.walk(ast.parse(pfad.read_text(encoding="utf-8"))):
+            if (
+                isinstance(knoten, ast.Call)
+                and isinstance(knoten.func, ast.Name)
+                and knoten.func.id == "system_session"
+                and not any(k.arg == "grund" for k in knoten.keywords)
+            ):
+                ohne.append(f"{rel}:{knoten.lineno}")
+    assert not ohne, "system_session() ohne grund=...:\n  " + "\n  ".join(ohne)

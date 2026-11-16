@@ -37,7 +37,7 @@ async def test_anlagen_import_mit_standort_und_pruefzyklus(client, make_mandant,
     assert z[6]["status"] == "fehler" and "unbekannt" in z[6]["meldungen"][0]
     assert z[7]["dublette_art"] == "seriennummer_kunde"
     assert erg["zusammenfassung"] == probe["zusammenfassung"]
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         standorte = (await s.execute(select(Standort).where(Standort.kunde_id == kunde.id))).scalars().all()
         assert len(standorte) == 1 and standorte[0].adresse["plz"] == "01067"
         anlagen = {x.bezeichnung: x for x in (await s.execute(select(Anlage).where(Anlage.kunde_id == kunde.id))).scalars()}
@@ -85,7 +85,7 @@ async def test_anlagen_pruefdaten_fehler_und_dublette_aktualisieren(client, make
     assert z[4]["aktion"] == "aktualisieren"
     r = await client.post(f"/api/import/{a['import_lauf_id']}/ausfuehren", headers=kopf, json=k)
     assert r.json()["zusammenfassung"]["aktualisieren"] == 1
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         alt = (await s.execute(select(Anlage).where(Anlage.bezeichnung == "Alt"))).scalar_one()
         assert alt.hersteller == "Bosch"
         assert len((await s.execute(select(Pruefzyklus).where(Pruefzyklus.anlage_id == alt.id))).scalars().all()) == 1
@@ -99,12 +99,12 @@ async def test_anlagen_rueckgaengig(client, make_mandant, make_user, make_kunde)
     assert r.status_code == 200, r.text
     zr = r.json()["ergebnis"]["rueckgaengig"]["zurueckgesetzt"]
     assert zr == {"pruefzyklus": 2, "anlage": 3, "standort": 1}
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         assert all(x.geloescht_am is not None for x in (await s.execute(select(Anlage).where(Anlage.objekttyp == "kundenanlage"))).scalars())
     # im Papierkorb wiederherstellbar
     from app.services import papierkorb_service
 
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         papierkorb = await papierkorb_service.list_papierkorb(s, mandant_id=mandant.id)
     assert {e.entity_typ for e in papierkorb} == {"anlage", "standort", "pruefzyklus"}
 
@@ -125,7 +125,7 @@ async def test_material_import(client, make_mandant, make_user):
     z = {x["zeile"]: x for x in probe["zeilen"]}
     assert z[5]["dublette_art"] == "artikelnummer" and z[6]["status"] == "fehler"
     assert erg["zusammenfassung"]["anlegen"] == 3
-    async with system_session() as s:
+    async with system_session(grund="test") as s:
         m = {x.bezeichnung: x for x in (await s.execute(select(Material).where(Material.mandant_id == mandant.id))).scalars()}
         assert str(m["Schalter"].einzelpreis) == "1234.50" and m["Schalter"].einheit == "Stk"
         kabel = m["Kabel NYM 3x1,5"]

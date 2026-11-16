@@ -19,7 +19,7 @@ async def _make_custom_mit_partner_recht(mandant, *, aktionen: set[str]) -> Acco
     Legacy-Rollen-Fixtures (siehe conftest._LEGACY_RECHTE) kennen den Bereich
     "partner" nicht, daher hier direkt, analog zu
     test_formulare.py:_make_custom_mit_formulare_recht."""
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         account_typ = AccountTyp(mandant_id=mandant.id, name=f"Partner-Rolle-{uuid.uuid4().hex[:6]}")
         session.add(account_typ)
         await session.flush()
@@ -35,7 +35,7 @@ async def _make_custom_mit_partner_recht(mandant, *, aktionen: set[str]) -> Acco
 
 
 async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         user = User(
             mandant_id=mandant.id,
             email=f"{uuid.uuid4().hex[:10]}@example.de",
@@ -52,7 +52,7 @@ async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
 
 
 async def _make_zugang(mandant, partner, *, email=None, password="partner-pw-123", aktiv=True, name="Partner-Nutzer"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = PartnerZugang(
             mandant_id=mandant.id,
             partner_id=partner.id,
@@ -212,7 +212,7 @@ async def test_partner_ist_mandantengetrennt(client, make_mandant, make_user, ma
 @pytest.mark.asyncio
 async def test_deaktiviertes_modul_sperrt_partner_endpoints(client, make_mandant, make_user):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = await session.get(Mandant, mandant.id)
         m.deaktivierte_module = ["nachunternehmer"]
         await session.flush()
@@ -349,7 +349,7 @@ async def test_partner_zuweisung_ohne_warnung_mit_gueltiger_freistellung(
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     partner = await make_partner(mandant=mandant)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             PartnerNachweis(
                 mandant_id=mandant.id,
@@ -868,7 +868,7 @@ async def test_partner_me_enthaelt_mandantenname(client, make_mandant, make_part
     assert me.json()["mandant_name"] == mandant.name
     assert me.json()["mandant_logo_url"] is None
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = await session.get(Mandant, mandant.id)
         m.logo_object_key = "logos/test.png"
     me = await client.get("/api/partnerportal/auth/me", headers=auth_headers(tokens["access_token"]))

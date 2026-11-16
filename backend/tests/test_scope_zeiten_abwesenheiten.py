@@ -82,7 +82,7 @@ async def org(make_mandant, make_kunde, make_vorgang, client):
     """Bereichsleiter -> Teamleiter A (A1, A2), Teamleiter B (B1); Ohne-MV = Flag ohne
     mitarbeiterverwaltung-Recht; Admin = mandant_admin."""
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         bereich = OrgEinheit(mandant_id=mandant.id, name="Service", typ="bereich")
         session.add(bereich)
         await session.flush()
@@ -276,7 +276,7 @@ async def test_soll_setzen_nur_im_bereich(client, org):
 
 async def test_selbstgenehmigung_erlaubt_wenn_sonst_niemand_freigeben_kann(client, make_mandant):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         _, solo = await _person(session, mandant, "Solo", flags=True, mv_scope="teilbaum")
         email = solo.email
     headers = auth_headers(await login(client, email, PW))
@@ -291,7 +291,7 @@ async def test_selbstgenehmigung_erlaubt_wenn_sonst_niemand_freigeben_kann(clien
 
 
 async def _eintrag(org, key: str) -> uuid.UUID:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         start = datetime.now(timezone.utc) - timedelta(hours=3)
         e = Zeiterfassung(
             mandant_id=org["mandant"].id,

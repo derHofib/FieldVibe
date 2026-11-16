@@ -30,7 +30,7 @@ async def test_admin_can_create_smtp_integration_with_encrypted_secret(
     assert "secret" not in body
     integration_id = body["id"]
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MandantIntegration, integration_id)
         assert row.secret_ref != "super-geheimes-passwort"
         assert decrypt_secret(row.secret_ref) == "super-geheimes-passwort"
@@ -108,7 +108,7 @@ async def test_update_config_without_secret_leaves_secret_untouched(
     assert updated.json()["config"] == {"host": "b"}
     assert updated.json()["hat_secret"] is True
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         row = await session.get(MandantIntegration, integration_id)
         assert decrypt_secret(row.secret_ref) == "geheim"
 

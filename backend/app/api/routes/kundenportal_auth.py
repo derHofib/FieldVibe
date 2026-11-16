@@ -82,7 +82,7 @@ async def link_info(portal_slug: str) -> KundenportalLinkInfo:
     Rate-Limiting: der Slug ist selbst schon ein hochentropisches Geheimnis
     (secrets.token_urlsafe(12), siehe app/api/routes/kunden.py), kein
     erratbarer Bezeichner wie eine E-Mail-Adresse."""
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: link-info") as session:
         kunde = await _kunde_fuer_slug(session, portal_slug)
         mandant = await session.get(Mandant, kunde.mandant_id)
         return KundenportalLinkInfo(
@@ -94,7 +94,7 @@ async def link_info(portal_slug: str) -> KundenportalLinkInfo:
 
 @router.get("/link/{portal_slug}/logo-url", response_model=KundeLogoUrl)
 async def link_logo_url(portal_slug: str) -> KundeLogoUrl:
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: link-logo-url") as session:
         kunde = await _kunde_fuer_slug(session, portal_slug)
         if kunde.logo_object_key is None:
             return KundeLogoUrl(url=None)
@@ -115,7 +115,7 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Kundenportal-Refresh-Token"
         )
 
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: refresh-token einloesen") as session:
         zugang = await session.get(KundenportalZugang, payload["sub"])
         if zugang is None or not zugang.aktiv:
             raise HTTPException(
@@ -151,7 +151,7 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: registrierung") as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="kunde")
 
         zugang = KundenportalZugang(
@@ -213,7 +213,7 @@ async def passwort_vergessen(body: KundenPasswortVergessenRequest, request: Requ
     password_reset_ip_limiter.check(ip_key)
     password_reset_ip_limiter.record_failure(ip_key)
 
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: passwort vergessen") as session:
         result = await session.execute(
             select(KundenportalZugang).where(func.lower(KundenportalZugang.email) == body.email)
         )
@@ -278,7 +278,7 @@ async def passwort_zuruecksetzen(body: KundenPasswortResetRequest, request: Requ
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
 
-    async with system_session() as session:
+    async with system_session(grund="portal-auth: passwort zuruecksetzen") as session:
         zugang = await session.get(KundenportalZugang, payload["sub"])
         if zugang is None or not zugang.aktiv:
             password_reset_ip_limiter.record_failure(ip_key)

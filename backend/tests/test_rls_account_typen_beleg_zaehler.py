@@ -27,7 +27,7 @@ async def test_account_typen_sind_pro_mandant_getrennt(make_mandant, make_user):
                     {"m": str(mandant_b.id)},
                 )
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         result = await session.execute(text("SELECT DISTINCT mandant_id FROM account_typen"))
         assert {str(r.mandant_id) for r in result.fetchall()} == {str(mandant_a.id), str(mandant_b.id)}
 

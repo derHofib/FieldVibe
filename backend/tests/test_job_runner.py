@@ -50,12 +50,12 @@ def nur_job(monkeypatch):
 
 
 async def _stunde_setzen(mandant, stunde: int | None):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(update(Mandant).where(Mandant.id == mandant.id).values(scheduler_stunde_utc=stunde))
 
 
 async def _lauf(job: str, mandant) -> JobLauf | None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return (await lade_laeufe(session, job)).get(mandant.id if mandant else None)
 
 
@@ -107,7 +107,7 @@ async def test_neustart_kurz_nach_der_stunde_holt_den_lauf_nach(make_mandant, nu
 
 
 async def markiere_lauf_system(mandant, job, zeitpunkt):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await markiere_lauf(session, job, mandant.id, erfolg=True, jetzt=zeitpunkt)
 
 
@@ -249,7 +249,7 @@ async def test_dauerauftrag_nach_ausfall_und_doppeltem_tick_nur_ein_vorgang(make
     await fuehre_tick(jetzt + timedelta(minutes=1))
     await run_dauerauftraege_scheduler([mandant.id])
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         anzahl = len((await session.execute(select(Vorgang).where(Vorgang.dauerauftrag_id == auftrag.id))).scalars().all())
     assert anzahl == 1
 
@@ -261,7 +261,7 @@ async def test_dauerauftrag_zeile_in_bearbeitung_wird_uebersprungen_nicht_doppel
         mandant=mandant, kunde=kunde, naechste_faelligkeit_am=date.today() - timedelta(days=1)
     )
     # Ein zweiter Prozess hat die Zeile gerade pausiert (FOR UPDATE).
-    async with system_session() as sperre:
+    async with system_session(grund="test") as sperre:
         await sperre.execute(select(DauerauftragZiel).where(DauerauftragZiel.id == ziel.id).with_for_update())
         waehrend = await run_dauerauftraege_scheduler([mandant.id])
         assert waehrend["vorgaenge_erstellt"] == 0

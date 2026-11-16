@@ -15,7 +15,7 @@ from tests.conftest import auth_headers, login
 
 
 async def _zeiterfassung_anlegen(mandant, user) -> uuid.UUID:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintrag = Zeiterfassung(
             mandant_id=mandant.id,
             techniker_id=user.id,
@@ -29,7 +29,7 @@ async def _zeiterfassung_anlegen(mandant, user) -> uuid.UUID:
 
 
 async def _user_laden(user_id) -> User | None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         return await session.get(User, user_id)
 
 
@@ -61,7 +61,7 @@ async def test_nutzer_mit_daten_wird_anonymisiert(client, make_mandant, make_use
     erledigt = await make_vorgang(
         mandant=mandant, kunde=kunde, zugewiesener_user_id=opfer.id, status="abgeschlossen"
     )
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(KundeZuweisung(mandant_id=mandant.id, kunde_id=kunde.id, user_id=opfer.id))
 
     resp = await client.delete(f"/api/users/{opfer.id}", headers=auth_headers(token))
@@ -82,7 +82,7 @@ async def test_nutzer_mit_daten_wird_anonymisiert(client, make_mandant, make_use
         )
         assert login_resp.status_code == 401
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await session.get(Zeiterfassung, zeit_id) is not None
         assert (await session.get(Vorgang, offen.id)).zugewiesener_user_id is None
         assert (await session.get(Vorgang, erledigt.id)).zugewiesener_user_id == opfer.id
@@ -122,7 +122,7 @@ async def test_audit_log_ohne_alte_email(client, make_mandant, make_user):
 
     assert (await client.delete(f"/api/users/{opfer.id}", headers=auth_headers(token))).status_code == 204
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         eintraege = (
             await session.execute(select(AuditLog).where(AuditLog.entity_id == opfer.id))
         ).scalars().all()
@@ -138,7 +138,7 @@ async def test_echtes_loeschen_loggt_user_geloescht(client, make_mandant, make_u
     mandant, _, token = await _admin_token(client, make_mandant, make_user)
     opfer = await make_user(mandant=mandant, role="techniker")
     await client.delete(f"/api/users/{opfer.id}", headers=auth_headers(token))
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         aktionen = (
             await session.execute(select(AuditLog.aktion).where(AuditLog.entity_id == opfer.id))
         ).scalars().all()

@@ -62,7 +62,7 @@ async def test_raw_sql_cannot_read_other_mandants_vorgang_events(
     from app.db.session import system_session
     from app.models.vorgang_event import VorgangEvent
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             VorgangEvent(
                 mandant_id=mandant_b.id,

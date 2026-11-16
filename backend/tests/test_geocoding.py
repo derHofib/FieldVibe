@@ -115,7 +115,7 @@ async def test_geocode_falls_modul_aktiv_ueberspringt_wenn_karten_deaktiviert(ma
     mandant = await make_mandant()  # "karten" ist per Default deaktiviert
     with patch.object(get_settings(), "mapbox_access_token", "pk.test-token"):
         with patch("app.services.geocoding_service.httpx.AsyncClient", _AbortIfCalledAsyncClient):
-            async with system_session() as session:
+            async with system_session(grund="test") as session:
                 koordinaten = await geocode_falls_modul_aktiv(
                     session, mandant.id, {"strasse": "Teststr. 1", "ort": "Berlin"}
                 )

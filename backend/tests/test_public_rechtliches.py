@@ -22,7 +22,7 @@ _FIRMENDATEN = {
 
 
 async def _firmendaten_setzen(mandant, firmendaten: dict) -> None:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         m = await session.get(Mandant, mandant.id)
         m.firmendaten = firmendaten
 

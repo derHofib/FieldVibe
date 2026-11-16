@@ -74,7 +74,7 @@ def test_entwuerfe_und_andere_entitaeten_haben_keine_frist():
 
 
 async def _rechnung_im_papierkorb(mandant, kunde, admin, *, versendet: date, mit_position=True) -> Rechnung:
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         r = Rechnung(
             mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer=f"R-{versendet.isoformat()}",
             betrag_netto=Decimal("10"), mwst_satz=Decimal("19"), status="versendet", erstellt_von=admin.id,
@@ -105,12 +105,12 @@ async def test_purge_verweigert_bis_zum_fristende_und_erlaubt_danach(make_mandan
                 await papierkorb_service.purge(session, entity_typ="rechnung", entity_id=r.id, heute=heute)
         assert exc.value.fristende == fristende
         assert "31.12.2033" in str(exc.value)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await session.get(Rechnung, r.id) is not None
 
     async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
         assert await papierkorb_service.purge(session, entity_typ="rechnung", entity_id=r.id, heute=date(2034, 1, 1)) is True
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert await session.get(Rechnung, r.id) is None
         assert (await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == r.id))).first() is None
 
@@ -120,7 +120,7 @@ async def test_angebot_ist_geschaeftsbrief_sechs_jahre_entwurf_nicht(make_mandan
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin")
     kunde = await make_kunde(mandant=mandant)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         versendet = Angebot(
             mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-1", status="versendet", erstellt_von=admin.id,
             versendet_am=datetime(2026, 3, 1, tzinfo=timezone.utc), geloescht_am=datetime.now(timezone.utc), geloescht_von=admin.id,
@@ -144,7 +144,7 @@ async def test_angebot_ist_geschaeftsbrief_sechs_jahre_entwurf_nicht(make_mandan
 @pytest.mark.asyncio
 async def test_eingangsrechnung_fristbeginn_ist_der_eingang(make_mandant, make_user):
     mandant = await make_mandant()
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         e = Eingangsrechnung(
             mandant_id=mandant.id, lieferant_name="L", rechnungsnummer_lieferant="1", rechnungsdatum=date(2025, 12, 20),
             eingegangen_am=date(2026, 1, 3), status="offen", betrag_netto=Decimal("1"),
@@ -175,7 +175,7 @@ async def test_api_sperre_nennt_fristende_und_protokolliert_loeschung(client, ma
     assert "Aufbewahrungspflicht" in detail and f"31.12.{date.today().year + 8}" in detail and "Art. 17 Abs. 3 lit. b DSGVO" in detail
 
     # Frist kuenstlich abgelaufen: Beleg war vor 10 Jahren -> Kunde samt Beleg loeschbar, Protokoll mit Belegdaten.
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
         await session.execute(text("UPDATE rechnungen SET versendet_am = now() - interval '10 years' WHERE id = :i"), {"i": r["id"]})
         await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
@@ -204,7 +204,7 @@ async def test_loeschvorschlaege_nur_abgelaufene_und_nur_nach_bestaetigung(clien
 
     alt = await _rechnung_im_papierkorb(mandant, kunde, admin, versendet=date(2015, 3, 1))
     jung = await _rechnung_im_papierkorb(mandant, kunde, admin, versendet=date.today())
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         await session.execute(text("UPDATE rechnungen SET geloescht_am = NULL, geloescht_von = NULL"))  # beide aktiv
 
     liste = (await client.get("/api/aufbewahrung/loeschvorschlaege", headers=h)).json()
@@ -213,11 +213,11 @@ async def test_loeschvorschlaege_nur_abgelaufene_und_nur_nach_bestaetigung(clien
     assert liste["gesamt"] == 1 and liste["stichtag"] == papierkorb_service.heute_lokal().isoformat()
 
     # Nichts wird automatisch geloescht; Bestaetigung legt nur in den Papierkorb ...
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(Rechnung, alt.id)).geloescht_am is None
     assert (await client.post(f"/api/aufbewahrung/loeschvorschlaege/rechnung/{jung.id}/in-papierkorb", headers=h)).status_code == 409
     assert (await client.post(f"/api/aufbewahrung/loeschvorschlaege/rechnung/{alt.id}/in-papierkorb", headers=h)).status_code == 204
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         assert (await session.get(Rechnung, alt.id)).geloescht_am is not None
     liste = (await client.get("/api/aufbewahrung/loeschvorschlaege", headers=h)).json()
     assert liste["eintraege"][0]["im_papierkorb"] is True

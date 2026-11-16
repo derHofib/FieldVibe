@@ -365,7 +365,7 @@ async def login_fehlschlag_protokollieren(
 
     if mandant_id is None:
         return
-    async with system_session() as session:
+    async with system_session(grund="login: fehlschlag protokollieren") as session:
         await log_action(
             session,
             aktion="login_fehlgeschlagen",

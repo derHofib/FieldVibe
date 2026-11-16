@@ -151,7 +151,7 @@ _SOLL = {"gueltig_ab": "2026-01-01", "stunden_mo": "8", "stunden_di": "8", "stun
 
 
 async def _custom_user(mandant, name, *, verwalten):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         typ = AccountTyp(mandant_id=mandant.id, name=f"Typ-{name}", darf_abwesenheiten_verwalten=verwalten)
         session.add(typ)
         await session.flush()
@@ -190,7 +190,7 @@ async def _setup(client, make_mandant, make_user):
 
 
 async def _eintraege(user_id, kategorie=None, abwesenheit_id=None, geloescht=False):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         stmt = select(Zeiterfassung).where(Zeiterfassung.techniker_id == user_id)
         if kategorie:
             stmt = stmt.where(Zeiterfassung.kategorie == kategorie)
@@ -341,7 +341,7 @@ async def test_ueberschneidung_409_und_kein_arbeitstag_422(client, make_mandant,
 async def test_vergangenheit_jahresgrenze_und_kein_doppelanlegen(client, make_mandant, make_user):
     s = await _setup(client, make_mandant, make_user)
     # Von Hand nachgetragener Urlaubseintrag am 29.12.2026 (Di) -> wird nicht verdoppelt
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         session.add(
             Zeiterfassung(
                 mandant_id=s.mandant.id, techniker_id=s.ma.id, kategorie="urlaub",
@@ -509,7 +509,7 @@ async def test_mandantentrennung(client, make_mandant, make_user):
 @pytest.mark.asyncio
 async def test_neue_tabellen_haben_rls_policy():
     tabellen = ("abwesenheitsantraege", "urlaubsanspruch")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         rows = (
             await session.execute(
                 text(

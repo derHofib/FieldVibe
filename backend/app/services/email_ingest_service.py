@@ -364,7 +364,7 @@ async def run_email_ingest(mandant_ids: list[UUID] | None = None) -> dict:
     Meldung), fehler (Abruf je Integration gescheitert)."""
     zaehler = _Zaehler()
 
-    async with system_session() as session:
+    async with system_session(grund="worker: email-ingest postfaecher", drosselung_s=300) as session:
         stmt = select(MandantIntegration).where(
             MandantIntegration.typ == "imap", MandantIntegration.aktiv.is_(True)
         )

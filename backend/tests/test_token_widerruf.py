@@ -154,7 +154,7 @@ async def test_anonymisieren_erhoeht_token_version(client, make_mandant, make_us
     from app.services.user_anonymisierung_service import anonymisiere_user
 
     _, _, _, user, access, refresh = await _setup(client, make_mandant, make_user)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         db_user = await session.get(User, user.id)
         await anonymisiere_user(session, db_user)
     await _assert_widerrufen(client, access, refresh)
@@ -212,7 +212,7 @@ async def test_admin_abmelden_rechtegrenzen(client, make_mandant, make_user):
 @pytest.mark.asyncio
 async def test_refresh_bei_inaktivem_mandant_401(client, make_mandant, make_user):
     mandant, _, _, _, access, refresh = await _setup(client, make_mandant, make_user)
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Mandant, mandant.id)).status = "pausiert"
     assert await _refresh(client, refresh) == 401
 
@@ -253,7 +253,7 @@ async def test_impersonation_unabhaengig_vom_widerruf_des_mandant_admins(client,
 # --- Kundenportal -----------------------------------------------------------
 
 async def _kunden_zugang(mandant, kunde, password="kunden-pw-123"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = KundenportalZugang(
             mandant_id=mandant.id,
             kunde_id=kunde.id,
@@ -323,7 +323,7 @@ async def test_kundenportal_token_ohne_tv_und_mandant_inaktiv(client, make_manda
     )
     assert (await client.get(f"{base}/me", headers=auth_headers(alt))).status_code == 401
 
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Mandant, mandant.id)).status = "pausiert"
     assert (await client.post(f"{base}/refresh", json={"refresh_token": refresh})).status_code == 401
 
@@ -350,7 +350,7 @@ async def test_kundenportal_passwort_reset_widerruft(client, make_mandant, make_
 # --- Partnerportal ----------------------------------------------------------
 
 async def _partner_zugang(mandant, partner, password="partner-pw-123"):
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         zugang = PartnerZugang(
             mandant_id=mandant.id,
             partner_id=partner.id,
@@ -415,7 +415,7 @@ async def test_partnerportal_ohne_tv_passwort_und_mandant(client, make_mandant, 
     assert (await client.post(f"{base}/refresh", json={"refresh_token": alt_refresh})).status_code == 401
 
     neu_access, neu_refresh = await _portal_login(client, base, zugang.email, "reset-passwort-12")
-    async with system_session() as session:
+    async with system_session(grund="test") as session:
         (await session.get(Mandant, mandant.id)).status = "pausiert"
     assert (await client.post(f"{base}/refresh", json={"refresh_token": neu_refresh})).status_code == 401
 
