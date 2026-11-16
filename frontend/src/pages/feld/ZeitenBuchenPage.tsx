@@ -19,58 +19,12 @@ import {
   buchungsstatusZuToken,
   formatUhrzeit,
 } from "../../utils/zeiterfassung";
+import { dauerSekunden, gruppenBilden, gruppenSumme, summeSekunden } from "../../utils/zeitenBuchen";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { Select } from "../../components/apple/Select";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
-
-interface Gruppe {
-  key: string;
-  vorgangId: string | null;
-  vorgangsnummer: string | null;
-  kategorieLabel: string | null;
-  kontext: string | null;
-  eintraege: Zeiterfassung[];
-}
-
-function gruppenBilden(
-  eintraege: Zeiterfassung[],
-  kunden: { id: string; name: string }[] | undefined,
-  auftraege: { id: string; titel: string }[] | undefined,
-  projekte: { id: string; name: string }[] | undefined,
-): Gruppe[] {
-  const map = new Map<string, Gruppe>();
-  for (const e of eintraege) {
-    const key = e.vorgang_id ?? `kategorie:${e.kategorie}`;
-    let gruppe = map.get(key);
-    if (!gruppe) {
-      const kontextTeile = [
-        e.vorgang_kunde_id ? kunden?.find((k) => k.id === e.vorgang_kunde_id)?.name : undefined,
-        e.vorgang_auftrag_id ? auftraege?.find((a) => a.id === e.vorgang_auftrag_id)?.titel : undefined,
-        e.vorgang_projekt_id ? projekte?.find((p) => p.id === e.vorgang_projekt_id)?.name : undefined,
-      ].filter((teil): teil is string => !!teil);
-      gruppe = {
-        key,
-        vorgangId: e.vorgang_id,
-        vorgangsnummer: e.vorgangsnummer,
-        kategorieLabel: e.vorgang_id ? null : (ZEITERFASSUNG_KATEGORIE_LABEL[e.kategorie] ?? e.kategorie),
-        kontext: kontextTeile.length > 0 ? kontextTeile.join(" · ") : null,
-        eintraege: [],
-      };
-      map.set(key, gruppe);
-    }
-    gruppe.eintraege.push(e);
-  }
-  return [...map.values()].sort((a, b) => (a.vorgangsnummer ?? a.kategorieLabel ?? "").localeCompare(b.vorgangsnummer ?? b.kategorieLabel ?? ""));
-}
-
-function gruppenSumme(gruppe: Gruppe): number {
-  return gruppe.eintraege.reduce(
-    (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
-    0,
-  );
-}
 
 /** Zentrale Seite fuer Buchungsberechtigte: mandantenweite Sicht auf zur
  * Buchung anstehende Zeiteintraege (Filter + Sammel-Aktionsleiste wie im
@@ -207,12 +161,7 @@ export function ZeitenBuchenPage() {
     });
   }
   async function handleBuchen() {
-    const stunden = formatSekundenAlsHHMM(
-      ausgewaehlteEintraege.reduce(
-        (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
-        0,
-      ),
-    );
+    const stunden = formatSekundenAlsHHMM(summeSekunden(ausgewaehlteEintraege));
     if (
       await bestaetigen({ titel: `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen?`, text: `Gebuchte Einträge kannst du danach nicht mehr ändern.`, bestaetigenLabel: "Buchen", destruktiv: false })
     ) {
@@ -335,7 +284,6 @@ export function ZeitenBuchenPage() {
                 </div>
                 <div className="space-y-1 pt-1.5">
                   {gruppe.eintraege.map((e) => {
-                    const dauerSekunden = (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                     return (
                       <div key={e.id} className="flex items-center gap-2">
                         {kannZeitAuswaehlen(e) && (
@@ -359,7 +307,7 @@ export function ZeitenBuchenPage() {
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="font-medium text-label">
-                              {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                              {formatSekundenAlsHHMM(dauerSekunden(e))} Std.
                               {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
                             </span>
                             <StatusPille
