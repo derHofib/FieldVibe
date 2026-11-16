@@ -299,13 +299,17 @@ Gesperrt: `GesperrtZustand` (`components/EmptyState.tsx`; Schloss, Erklärsatz, 
 
 Token `live` / `live-text` / `live-bg` (Logo-Lime, in Hell abgedunkelt). Genau eine Rolle: „läuft gerade“ (`LaeuftPille`/`LaeuftPunkt`, `components/apple/LaeuftPille.tsx`). Immer mit Text „Läuft“ und pulsierendem Punkt (nur `motion-safe`), nie dekorativ, nie für Status. Kontrast: Text ≥5,0:1, Punkt ≥3,9:1 auf den Flächen.
 
+## Listenmuster (jede Liste/Übersicht)
+
+Ladezustand `SkeletonList`/`DetailSkeleton` (nie „Lädt…“-Text), Fehler `FehlerZustand` mit „Erneut versuchen“, leer `EmptyState` (mit Anlegen-Aktion, wenn das Recht da ist; eigener Text bei Suche ohne Treffer), Anlegen über `NEU_BUTTON_KLASSE` + `AnlegenPanel` (kein Inline-Formular), Suche `SearchField` (mit `useDebouncedValue`, bei kleinen Listen clientseitig), Filter `FilterChip`/`SegmentedControl`/`Select`, Zeilen `card-ap`, Status über `StatusPille`/`VorgangStatusPille`, Löschen im `AktionsMenue` mit `useBestaetigung`. Seitentitel: unter dem Plattform-`Layout` kommt das h1 aus dem Layout, sonst `SeitenKopf` (Office) bzw. `text-titel-mobil` (Feld).
+
 ## Was offen bleibt (ehrlich dokumentiert, siehe `docs/ui-redesign/REVIEW.md`)
 
 - **Hartkodierte Farben nicht restlos entfernt**: kategoriale Icon-Töne und einzelne Randfälle (React-Flow-Handles, Modal-Scrim, `disabled:`-Varianten) bleiben auf Tailwind-Palettenfarben, siehe REVIEW.md Abschnitt 5
 - **Cross-Browser** nur Chromium (kein WebKit), Tablet-Breiten nicht geprüft
 - **Board-Knoten** (`office/boards/nodes/*`) behalten rohe Schriftgrößen und Versalien (Nutzerinhalt)
 - **`RechteTab`-Select** bleibt nativ (Zustandsfarbe am Select)
-- **Löschen im Menü**: Material, Angebot, Bestellung, Rechnung, Eingangsrechnung, Standort, Partner, Anlage, Dauerauftrag und das Auftrags-Panel zeigen „… löschen“ noch dauerhaft als roten Text statt im „…“-Menü
 - **Office-Panels**: Aufträge- und Projekt-Detail nutzen `.office-panel` noch nicht
+- **Listenmuster**: Ausnahmen bewusst ohne Muster: Board-Inhalte, Notiz-Sheet „Löschen“ (ohne Bestätigung), Entfernen-Aktionen ohne Bestätigungsdialog (Nachweis, Beleg, Bedarf, Verwendung), Rechnungssuche nur nach Nummer, `ProjekteTabelle`/`AuftraegeTabelle` mit Status-Paletten
 - **Seitenleisten-Kacheln** zählen clientseitig (max. 200, dann „200+“); ein Zähl-Endpoint fehlt
 - **`e2e/portal-a11y.spec.ts`** läuft im lokalen Stack nicht durch (Seiten rendern unter dem Mock nicht, schon vor diesem Stand)

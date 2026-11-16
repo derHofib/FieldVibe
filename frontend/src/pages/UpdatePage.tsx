@@ -19,7 +19,6 @@ export function UpdatePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-titel-desktop font-bold text-label">Update</h1>
       <p className="text-fliess text-label">
         Diese Ansicht zeigt nur an, ob eine neuere Version verfügbar ist. Ein
         Update wird bewusst nicht automatisch aus der Web-App heraus
