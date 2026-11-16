@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ScrollText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { auditLogApi, mandantenApi, systemApi, usersApi } from "../api/endpoints";
+import { EmptyState } from "../components/EmptyState";
+import { FehlerZustand } from "../components/FehlerZustand";
+import { Skeleton, SkeletonList } from "../components/Skeleton";
 import { Sparkline } from "../components/Sparkline";
 import { useAuth } from "../context/AuthContext";
 import { aktivitaetLabel } from "../utils/anzeigeNamen";
@@ -16,7 +19,7 @@ function SystemStatus() {
     retry: 1,
   });
 
-  if (isLoading) return null;
+  if (isLoading) return <Skeleton className="h-12 w-full rounded-lg" />;
 
   const ok = !isError && health?.status === "ok";
   return (
@@ -92,13 +95,14 @@ function ServerAuslastung() {
   // Alle 15s neu laden, passend zum Sample-Takt im Backend (siehe
   // app/services/system_resources_service.py) -- so hinkt die Anzeige nicht
   // unnoetig hinter frischen Werten her.
-  const { data } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["system-resources"],
     queryFn: systemApi.resources,
     refetchInterval: 15000,
   });
 
-  if (!data) return null;
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-lg" />;
+  if (!data) return <FehlerZustand fehler={error} was="Die Server-Auslastung" onErneut={() => void refetch()} />;
   const { aktuell, verlauf } = data;
   // Ringpuffer-Verlauf + aktueller Live-Wert als letzter Punkt, damit die
   // Sparkline nicht bis zum naechsten Poll hinter der Prozent-Zahl zurueckbleibt.
@@ -110,7 +114,7 @@ function ServerAuslastung() {
   return (
     <section>
       <h2 className="mb-3 text-zeile font-bold text-label">Server-Auslastung</h2>
-      <div className="grid grid-cols-1 gap-5 rounded-lg bg-card p-4 shadow-xs sm:grid-cols-3 dark:shadow-none dark:ring-1 ">
+      <div className="card-ap grid grid-cols-1 gap-5 p-4 sm:grid-cols-3">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
           label="RAM"
@@ -129,13 +133,17 @@ function ServerAuslastung() {
   );
 }
 
-function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatKachel({ label, value, sub, laedt = false }: { label: string; value: string; sub?: string; laedt?: boolean }) {
   return (
     <div className="card-ap p-4">
       <div className="text-meta font-medium text-label2">
         {label}
       </div>
-      <div className="mt-1 text-titel-mobil font-bold text-label">{value}</div>
+      {laedt ? (
+        <Skeleton className="mt-2 h-6 w-12" />
+      ) : (
+        <div className="mt-1 text-titel-mobil font-bold text-label">{value}</div>
+      )}
       {sub && <div className="mt-0.5 text-sekundaer text-label2">{sub}</div>}
     </div>
   );
@@ -145,13 +153,16 @@ export function UebersichtPage() {
   // mandanten/audit-log sind super_admin-only: siehe MandantenPage fuer den
   // Impersonation-Race, den dieses Disablen abfaengt.
   const { isImpersonating } = useAuth();
-  const { data: mandanten } = useQuery({
+  const { data: mandanten, isLoading: mandantenLaedt, error: mandantenFehler, refetch: mandantenNeu } = useQuery({
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
-  const { data: letzteEintraege } = useQuery({
+  const { data: users, isLoading: usersLaedt, error: usersFehler, refetch: usersNeu } = useQuery({
+    queryKey: ["users", "auswahl"],
+    queryFn: usersApi.auswahl,
+  });
+  const { data: letzteEintraege, isLoading: eintraegeLaedt, error: eintraegeFehler, refetch: eintraegeNeu } = useQuery({
     queryKey: ["audit-log", { limit: 5 }],
     queryFn: () => auditLogApi.list({ limit: 5 }),
     enabled: !isImpersonating,
@@ -164,20 +175,34 @@ export function UebersichtPage() {
     <div className="space-y-8">
       <SystemStatus />
 
+      {((mandantenFehler && !mandanten) || (usersFehler && !users)) && (
+        <FehlerZustand
+          fehler={mandantenFehler ?? usersFehler}
+          was="Die Kennzahlen"
+          onErneut={() => {
+            void mandantenNeu();
+            void usersNeu();
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatKachel
           label="Mandanten"
-          value={mandanten ? String(mandantenAktiv) : "…"}
+          value={mandanten ? String(mandantenAktiv) : "–"}
+          laedt={mandantenLaedt}
           sub={mandanten ? `${mandantenAktiv} aktiv von ${mandanten.length} gesamt` : undefined}
         />
         <StatKachel
           label="Accounts"
-          value={users ? String(accountsAktiv) : "…"}
+          value={users ? String(accountsAktiv) : "–"}
+          laedt={usersLaedt}
           sub={users ? `${accountsAktiv} aktiv von ${users.length} gesamt` : undefined}
         />
         <StatKachel
           label="Audit-Log"
-          value={letzteEintraege ? String(letzteEintraege.length) : "…"}
+          value={letzteEintraege ? String(letzteEintraege.length) : "–"}
+          laedt={eintraegeLaedt}
           sub="letzte Einträge (siehe unten)"
         />
       </div>
@@ -194,8 +219,12 @@ export function UebersichtPage() {
             Gesamtes Audit-Log →
           </Link>
         </div>
-        {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-sep rounded-lg bg-card text-fliess shadow-xs dark:shadow-none dark:ring-1 ">
+        {eintraegeLaedt ? (
+          <SkeletonList count={3} />
+        ) : eintraegeFehler && !letzteEintraege ? (
+          <FehlerZustand fehler={eintraegeFehler} was="Die letzte Aktivität" onErneut={() => void eintraegeNeu()} />
+        ) : letzteEintraege && letzteEintraege.length > 0 ? (
+          <ul className="card-ap divide-y divide-sep text-fliess">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
                 <span className="font-medium text-label">{aktivitaetLabel(e.aktion)}</span>
@@ -206,7 +235,7 @@ export function UebersichtPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sekundaer text-label2">Noch keine Einträge.</p>
+          <EmptyState icon={ScrollText} text="Noch keine Aktivität. Anmeldungen als Mandant und andere Plattform-Aktionen erscheinen hier." />
         )}
       </section>
     </div>

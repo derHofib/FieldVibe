@@ -1,10 +1,12 @@
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ScrollText } from "lucide-react";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { aktivitaetLabel } from "../utils/anzeigeNamen";
 import { auditLabel } from "../utils/auditLabel";
+import { EmptyState } from "../components/EmptyState";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 import { Select } from "../components/apple/Select";
@@ -42,8 +44,6 @@ export function AuditLogPage() {
 
   return (
     <div>
-      <h2 className="mb-4 text-zeile font-bold text-label">Audit-Log</h2>
-
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
           <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Mandant</label>
@@ -105,37 +105,69 @@ export function AuditLogPage() {
         <SkeletonList count={4} />
       ) : ladeFehler && !entries ? (
         <FehlerZustand fehler={ladeFehler} was="Das Protokoll" onErneut={() => void neuLaden()} />
+      ) : !entries || entries.length === 0 ? (
+        <EmptyState
+          icon={ScrollText}
+          text={
+            mandantId || aktion || von || bis
+              ? "Keine Einträge zu diesen Filtern."
+              : "Noch keine Einträge im Audit-Log. Hier erscheinen Anmeldungen als Mandant und andere Plattform-Aktionen."
+          }
+        />
       ) : (
-        <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
-          <thead className="bg-fill text-fliess text-label ">
-            <tr>
-              <th className="px-4 py-3">Zeitpunkt</th>
-              <th className="px-4 py-3">Mandant</th>
-              <th className="px-4 py-3">Aktion</th>
-              <th className="px-4 py-3">Entität</th>
-              <th className="px-4 py-3">Details</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-sep text-fliess ">
-            {entries?.map((e) => (
-              <tr key={e.id}>
-                <td className="whitespace-nowrap px-4 py-3 text-label2">
+        <>
+          <ul className="space-y-2 md:hidden">
+            {entries.map((e) => (
+              <li key={e.id} className="card-ap space-y-1 p-3">
+                <p className="text-fliess font-medium text-label">{aktivitaetLabel(e.aktion)}</p>
+                <p className="text-sekundaer text-label2">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
-                </td>
-                <td className="px-4 py-3 text-label2">
-                  {e.mandant_id ? mandantNameById.get(e.mandant_id) ?? "–" : "–"}
-                </td>
-                <td className="px-4 py-3 font-medium text-label">{aktivitaetLabel(e.aktion)}</td>
-                <td className="px-4 py-3 text-label2">
-                  {e.entity_type ? `${auditLabel(e.entity_type)} · ${e.entity_id?.slice(0, 8)}` : "–"}
-                </td>
-                <td className="px-4 py-3 font-mono text-sekundaer text-label2">
-                  {JSON.stringify(e.payload)}
-                </td>
-              </tr>
+                  {e.mandant_id ? ` · ${mandantNameById.get(e.mandant_id) ?? "–"}` : ""}
+                </p>
+                {e.entity_type && (
+                  <p className="text-sekundaer text-label2">
+                    {auditLabel(e.entity_type)} · {e.entity_id?.slice(0, 8)}
+                  </p>
+                )}
+                {e.payload && Object.keys(e.payload).length > 0 && (
+                  <p className="break-all font-mono text-sekundaer text-label2">{JSON.stringify(e.payload)}</p>
+                )}
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+          <div className="card-ap hidden overflow-hidden md:block">
+            <table className="w-full text-left">
+              <thead className="bg-fill text-fliess text-label">
+                <tr>
+                  <th className="px-4 py-3">Zeitpunkt</th>
+                  <th className="px-4 py-3">Mandant</th>
+                  <th className="px-4 py-3">Aktion</th>
+                  <th className="px-4 py-3">Entität</th>
+                  <th className="px-4 py-3">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sep text-fliess">
+                {entries.map((e) => (
+                  <tr key={e.id}>
+                    <td className="whitespace-nowrap px-4 py-3 text-label2">
+                      {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
+                    </td>
+                    <td className="px-4 py-3 text-label2">
+                      {e.mandant_id ? mandantNameById.get(e.mandant_id) ?? "–" : "–"}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-label">{aktivitaetLabel(e.aktion)}</td>
+                    <td className="px-4 py-3 text-label2">
+                      {e.entity_type ? `${auditLabel(e.entity_type)} · ${e.entity_id?.slice(0, 8)}` : "–"}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sekundaer text-label2">
+                      {JSON.stringify(e.payload)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

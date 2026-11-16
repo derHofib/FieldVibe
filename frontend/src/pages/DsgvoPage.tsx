@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { Download, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { AktionsMenue } from "../components/AktionsMenue";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
 import { dsgvoApi } from "../api/endpoints";
@@ -84,27 +86,30 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
         <div className="flex shrink-0 items-center gap-2">
           {dokument && (
             <>
-              <button
-                onClick={handleDownload}
-                className="btn-touch rounded-md border border-sep px-3 py-2 text-sekundaer font-medium text-label hover:bg-fill"
-              >
+              <button onClick={handleDownload} className="btn-touch btn-ap px-3">
+                <Download size={14} strokeWidth={2} aria-hidden="true" />
                 Herunterladen
               </button>
-              <button
-                onClick={async () => {
-                  if (await bestaetigen({ titel: `"${DOKUMENT_LABEL[typ]}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
-                }}
-                disabled={removeMutation.isPending}
-                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sekundaer font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
-              >
-                Löschen
-              </button>
+              <AktionsMenue
+                label={`Weitere Aktionen für ${DOKUMENT_LABEL[typ]}`}
+                eintraege={[
+                  {
+                    label: "Löschen",
+                    icon: Trash2,
+                    destruktiv: true,
+                    disabled: removeMutation.isPending,
+                    onClick: async () => {
+                      if (await bestaetigen({ titel: `"${DOKUMENT_LABEL[typ]}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
+                    },
+                  },
+                ]}
+              />
             </>
           )}
           <button
             onClick={() => inputRef.current?.click()}
             disabled={uploadMutation.isPending}
-            className="btn-touch btn-ap-primary"
+            className={`btn-touch px-3 ${dokument ? "btn-ap" : "btn-ap-primary"}`}
           >
             {uploadMutation.isPending ? "Lädt hoch…" : dokument ? "Ersetzen" : "Hochladen"}
           </button>
