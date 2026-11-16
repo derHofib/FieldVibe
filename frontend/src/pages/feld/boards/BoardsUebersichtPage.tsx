@@ -1,13 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Compass, LayoutGrid, Plus, StickyNote, Trash2, Workflow } from "lucide-react";
+import { Compass, LayoutGrid, StickyNote, Workflow } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { boardsApi } from "../../../api/endpoints";
+import { AktionsMenue } from "../../../components/AktionsMenue";
+import { AnlegenPanel } from "../../../components/AnlegenPanel";
 import { EmptyState } from "../../../components/EmptyState";
 import type { BoardTyp } from "../../../types";
 import { FehlerZustand } from "../../../components/FehlerZustand";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
+import { SkeletonList } from "../../../components/Skeleton";
+import { SegmentedControl } from "../../../components/apple/SegmentedControl";
+import { SymbolKachel, type KachelFarbe } from "../../../components/apple/SymbolKachel";
 import { Select } from "../../../components/apple/Select";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
@@ -22,17 +28,17 @@ const TYP_LABEL: Record<BoardTyp, string> = {
   prozess: "Prozess",
 };
 
-const TYP_TON: Record<BoardTyp, string> = {
-  frei: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
-  bauplanung: "bg-st-arbeit-bg text-st-arbeit  ",
-  prozess: "bg-st-erledigt-bg text-st-erledigt  ",
+const TYP_FARBE: Record<BoardTyp, KachelFarbe> = {
+  frei: "indigo",
+  bauplanung: "orange",
+  prozess: "green",
 };
 
-const FILTER_OPTIONEN: { key: "alle" | BoardTyp; label: string }[] = [
-  { key: "alle", label: "Alle" },
-  { key: "frei", label: "Frei" },
-  { key: "bauplanung", label: "Bauplanung" },
-  { key: "prozess", label: "Prozess" },
+const FILTER_OPTIONEN: { wert: "alle" | BoardTyp; label: string }[] = [
+  { wert: "alle", label: "Alle" },
+  { wert: "frei", label: "Frei" },
+  { wert: "bauplanung", label: "Bauplanung" },
+  { wert: "prozess", label: "Prozess" },
 ];
 
 function relativeZeit(iso: string): string {
@@ -57,6 +63,7 @@ export function BoardsUebersichtPage() {
   const [zeigeNeu, setZeigeNeu] = useState(false);
   const [name, setName] = useState("");
   const [typ, setTyp] = useState<BoardTyp>("frei");
+  const [nameVersucht, setNameVersucht] = useState(false);
 
   const { data: boards, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
 
@@ -75,111 +82,110 @@ export function BoardsUebersichtPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-2">
-          <h1 className="text-titel-mobil font-bold text-label">Boards</h1>
-          <span className="text-sekundaer font-medium text-label2">{boards?.length ?? 0}</span>
-        </div>
-        <button
-          onClick={() => setZeigeNeu((v) => !v)}
-          aria-label="Neues Board"
-          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-titel-mobil font-bold text-label">Boards</h1>
+        <span className="text-sekundaer font-medium text-label2">{boards?.length ?? 0}</span>
+      </div>
+
+      <button type="button" onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
+        + Neues Board
+      </button>
+
+      <AnlegenPanel offen={zeigeNeu} titel="Neues Board" onClose={() => {
+          setZeigeNeu(false);
+          setNameVersucht(false);
+        }}>
+        <form
+          noValidate
+          className="space-y-3 p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setNameVersucht(true);
+            if (name.trim()) erstellen.mutate();
+          }}
         >
-          <Plus size={19} strokeWidth={2.25} />
-        </button>
-      </div>
-
-      {zeigeNeu && (
-        <div className="space-y-2.5 rounded-xl bg-card p-3.5 shadow-xs dark:shadow-none dark:ring-1 ">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="z. B. Projektplanung Rheinblick"
-            className="w-full border border-sep bg-transparent px-3 py-2 text-zeile text-label"
-          />
-          <Select
-            value={typ}
-            onChange={(e) => setTyp(e.target.value as BoardTyp)}
-          >
-            {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
-              <option key={t} value={t}>
-                {TYP_LABEL[t]}
-              </option>
-            ))}
-          </Select>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => erstellen.mutate()}
-              disabled={!name.trim() || erstellen.isPending}
-              className="btn-ap-primary flex-1 py-2 text-sekundaer"
-            >
-              Anlegen
-            </button>
-            <button
-              onClick={() => setZeigeNeu(false)}
-              className="text-sekundaer font-medium text-label2"
-            >
-              Abbrechen
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {FILTER_OPTIONEN.map((o) => (
-          <button
-            key={o.key}
-            onClick={() => setFilter(o.key)}
-            className={`btn-touch shrink-0 rounded-full px-3.5 py-1.5 text-meta font-semibold whitespace-nowrap ${
-              filter === o.key
-                ? "bg-slate-800 text-white dark:bg-stone-100 "
-                : "bg-card text-label shadow-xs dark:shadow-none dark:ring-1 "
-            }`}
-          >
-            {o.label}
+          <Feld label="Name" pflicht fehler={nameVersucht && !name.trim() ? "Bitte einen Namen angeben" : null}>
+            {(p) => (
+              <input
+                {...p}
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="z. B. Projektplanung Rheinblick"
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+          <Feld label="Art">
+            {(p) => (
+              <Select {...p} value={typ} onChange={(e) => setTyp(e.target.value as BoardTyp)}>
+                {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
+                  <option key={t} value={t}>
+                    {TYP_LABEL[t]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Feld>
+          <button type="submit" disabled={erstellen.isPending} className={`${NEU_BUTTON_KLASSE} w-full`}>
+            Anlegen
           </button>
-        ))}
-      </div>
+        </form>
+      </AnlegenPanel>
+
+      <SegmentedControl ariaLabel="Boardart" optionen={FILTER_OPTIONEN} wert={filter} onChange={setFilter} groesse="mobil" volleBreite />
 
       {isLoading ? (
-        <p className="py-8 text-center text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !boards ? (
         <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : gefiltert.length === 0 ? (
-        <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
+        <EmptyState
+          icon={StickyNote}
+          text={
+            boards && boards.length > 0
+              ? "Keine Boards dieser Art."
+              : "Noch keine Boards angelegt. Ein Board sammelt Notizen und Vorgänge für ein Vorhaben."
+          }
+          action={
+            boards && boards.length > 0 ? undefined : (
+              <button type="button" onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
+                + Neues Board
+              </button>
+            )
+          }
+        />
       ) : (
         <div className="space-y-2.5">
           {gefiltert.map((b) => {
             const Icon = TYP_ICON[b.board_typ];
             return (
-              <button
-                key={b.id}
-                onClick={() => navigate(`/boards/${b.id}`)}
-                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left shadow-xs dark:shadow-none dark:ring-1 "
-              >
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
-                  <Icon size={19} strokeWidth={2} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-fliess font-bold text-label">{b.name}</p>
-                  <p className="mt-0.5 text-meta text-label2">
-                    {TYP_LABEL[b.board_typ]} &middot; {relativeZeit(b.updated_at)}
-                  </p>
-                </div>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${b.name} löschen`}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
-                  }}
-                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-label3 hover:text-st-fehlt dark:hover:text-st-fehlt"
+              <div key={b.id} className="card-interactive card-ap flex items-center gap-1 pr-1">
+                <button
+                  onClick={() => navigate(`/boards/${b.id}`)}
+                  className="btn-touch flex min-w-0 flex-1 items-center gap-3 p-3 text-left"
                 >
-                  <Trash2 size={16} strokeWidth={2} />
-                </span>
-              </button>
+                  <SymbolKachel icon={Icon} farbe={TYP_FARBE[b.board_typ]} groesse={36} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-fliess font-bold text-label">{b.name}</p>
+                    <p className="mt-0.5 text-meta text-label2">
+                      {TYP_LABEL[b.board_typ]} &middot; {relativeZeit(b.updated_at)}
+                    </p>
+                  </div>
+                </button>
+                <AktionsMenue
+                  label={`Aktionen für ${b.name}`}
+                  eintraege={[
+                    {
+                      label: "Löschen",
+                      destruktiv: true,
+                      onClick: async () => {
+                        if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
+                      },
+                    },
+                  ]}
+                />
+              </div>
             );
           })}
         </div>
