@@ -1,22 +1,19 @@
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Literal
 from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging_config import kontext_ergaenzen
 from app.core.security import decode_token
 from app.core.rollen import ist_plattform_admin
 from app.db.session import system_session, tenant_session
-from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
-from app.models.partner_zugang import PartnerZugang
-from app.models.user import User
-from app.services import berechtigung_service
+from app.services import berechtigung_service, system_lookups
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -32,13 +29,24 @@ class AuthContext:
     # Nur ueber get_current_user_mfa_einrichtung erreichbar (siehe dort).
     mfa_einrichtung: bool = False
 
+    @property
+    def konto_mandant_id(self) -> UUID | None:
+        """Mandant der eigenen Konto-Zeile: bei Impersonation ist sub der Super-
+        Admin (mandant_id NULL), nicht der impersonierte Mandant."""
+        return None if self.impersonated_by is not None else self.mandant_id
+
 
 def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
 
 async def token_version_gueltig(
-    modell, account_id: UUID, payload: dict, *, tv_pflicht: bool = False
+    typ: Literal["user", "kunde", "partner"],
+    account_id: UUID,
+    payload: dict,
+    *,
+    mandant_id: UUID | None = None,
+    tv_pflicht: bool = False,
 ) -> int:
     """Prueft den "tv"-Claim gegen den aktuellen Zaehler des Accounts und
     liefert ihn zurueck. Ein fehlender Claim gilt als 0 (vor Einfuehrung des
@@ -46,18 +54,14 @@ async def token_version_gueltig(
     sonst wuerde der Deploy alle Nutzer ausloggen und die Feld-App die
     Offline-Outbox leeren); nach dem ersten Widerruf (Zaehler > 0) sind sie
     sofort ungueltig. tv_pflicht=True (Impersonation, Stream-Tickets, nie im
-    Altbestand) verlangt den Claim. Ueber system_session, weil die
-    Mandanten-RLS-Session erst aus dem Token entstuende, den wir gerade
-    pruefen; gelesen wird ausschliesslich der Zaehler des Token-Subjects."""
+    Altbestand) verlangt den Claim. mandant_id ist der Mandant der Konto-Zeile
+    (None nur fuer Konten ohne Mandant, siehe system_lookups.token_version_lookup)."""
     tv = payload.get("tv")
     if tv is None and not tv_pflicht:
         tv = 0
     if not isinstance(tv, int) or isinstance(tv, bool):
         raise _nicht_authentifiziert()
-    async with system_session(grund="auth-request: token-version pruefen", drosselung_s=300) as session:
-        aktuell = await session.scalar(
-            select(modell.token_version).where(modell.id == account_id)
-        )
+    aktuell = await system_lookups.token_version_lookup(typ, account_id, mandant_id)
     if aktuell is None or aktuell != tv:
         raise _nicht_authentifiziert()
     return tv
@@ -115,8 +119,13 @@ async def _auth_context_aus_token(
     )
     user_id = UUID(payload["sub"])
     # Bei Impersonation ist sub der echte Super-Admin -- dessen Zaehler gilt.
+    impersonation = payload.get("type") == "impersonation"
     token_version = await token_version_gueltig(
-        User, user_id, payload, tv_pflicht=payload.get("type") == "impersonation"
+        "user",
+        user_id,
+        payload,
+        mandant_id=None if impersonation else mandant_id,
+        tv_pflicht=impersonation,
     )
     kontext_ergaenzen(user_id=user_id, mandant_id=mandant_id)
     return AuthContext(
@@ -256,10 +265,11 @@ async def get_current_kunde(
         )
 
     zugang_id = UUID(payload["sub"])
-    await token_version_gueltig(KundenportalZugang, zugang_id, payload)
+    mandant_id = UUID(payload["mandant_id"])
+    await token_version_gueltig("kunde", zugang_id, payload, mandant_id=mandant_id)
     return KundenAuthContext(
         zugang_id=zugang_id,
-        mandant_id=UUID(payload["mandant_id"]),
+        mandant_id=mandant_id,
         kunde_id=UUID(payload["kunde_id"]),
     )
 
@@ -327,10 +337,11 @@ async def get_current_partner(
         )
 
     zugang_id = UUID(payload["sub"])
-    await token_version_gueltig(PartnerZugang, zugang_id, payload)
+    mandant_id = UUID(payload["mandant_id"])
+    await token_version_gueltig("partner", zugang_id, payload, mandant_id=mandant_id)
     return PartnerAuthContext(
         zugang_id=zugang_id,
-        mandant_id=UUID(payload["mandant_id"]),
+        mandant_id=mandant_id,
         partner_id=UUID(payload["partner_id"]),
     )
 

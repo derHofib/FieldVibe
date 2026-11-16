@@ -361,11 +361,11 @@ async def login_fehlschlag_protokollieren(
 ) -> None:
     """Eigene Transaktion: der Login-Pfad bricht danach mit 401 ab, dessen
     Rollback wuerde einen Eintrag in der Aufrufer-Session mitnehmen."""
-    from app.db.session import system_session
+    from app.db.session import tenant_session
 
     if mandant_id is None:
         return
-    async with system_session(grund="login: fehlschlag protokollieren") as session:
+    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
         await log_action(
             session,
             aktion="login_fehlgeschlagen",

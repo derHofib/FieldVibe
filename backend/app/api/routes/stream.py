@@ -6,14 +6,12 @@ from uuid import UUID
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.deps import AuthContext, get_current_user, token_version_gueltig
 from app.core.rollen import MITARBEITER_ROLLEN, ist_mitarbeiter_account
 from app.core.security import TokenType, create_stream_ticket, decode_token
-from app.db.session import system_session
-from app.models.user import User
+from app.services import system_lookups
 from app.services.event_bus import event_bus
 
 router = APIRouter(prefix="/api/stream", tags=["stream"])
@@ -25,12 +23,7 @@ _PRUEFINTERVALL_SEKUNDEN = 15
 
 
 async def _ticket_noch_gueltig(user_id: UUID, tv: int) -> bool:
-    async with system_session(grund="stream: ticket token-version pruefen", drosselung_s=300) as session:
-        row = (
-            await session.execute(
-                select(User.token_version, User.aktiv).where(User.id == user_id)
-            )
-        ).one_or_none()
+    row = await system_lookups.user_token_status(user_id)
     return row is not None and row.aktiv and row.token_version == tv
 
 
@@ -81,7 +74,7 @@ async def stream(request: Request, ticket: str | None = Query(None)) -> EventSou
     if not payload.get("mandant_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Mandant im Ticket")
     user_id = UUID(payload["sub"])
-    await token_version_gueltig(User, user_id, payload, tv_pflicht=True)
+    await token_version_gueltig("user", user_id, payload, tv_pflicht=True)
 
     mandant_id = UUID(payload["mandant_id"])
     queue = event_bus.subscribe(mandant_id)

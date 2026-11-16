@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import AuthContext, require_roles
 from app.core.config import get_settings
 from app.core.security import create_impersonation_token
-from app.db.session import system_session
-from app.models.mandant import Mandant
+from app.db.session import tenant_session
 from app.schemas.auth import ImpersonateResponse
+from app.services import system_lookups
 from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/api/admin", tags=["super-admin: impersonation"])
@@ -33,13 +33,13 @@ async def impersonate_mandant(
     (deactivate, password change, "ueberall abmelden") also kills every
     impersonation token it issued.
     """
-    async with system_session(grund="impersonation: mandant laden") as session:
-        mandant = await session.get(Mandant, mandant_id)
-        if mandant is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Mandant nicht gefunden"
-            )
+    mandant = await system_lookups.mandant_kern_lookup(mandant_id)
+    if mandant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mandant nicht gefunden"
+        )
 
+    async with tenant_session(mandant_id=mandant.id, is_super_admin=False) as session:
         await log_action(
             session,
             aktion="login_als_mandant",
@@ -50,15 +50,15 @@ async def impersonate_mandant(
             payload={"mandant_name": mandant.name},
         )
 
-        token = create_impersonation_token(
-            subject=auth.user_id,
-            role="mandant_admin",
-            mandant_id=mandant.id,
-            impersonated_by=auth.user_id,
-            token_version=auth.token_version,
-        )
-        return ImpersonateResponse(
-            access_token=token,
-            mandant_id=mandant.id,
-            expires_in_minutes=_settings.impersonation_token_expire_minutes,
-        )
+    token = create_impersonation_token(
+        subject=auth.user_id,
+        role="mandant_admin",
+        mandant_id=mandant.id,
+        impersonated_by=auth.user_id,
+        token_version=auth.token_version,
+    )
+    return ImpersonateResponse(
+        access_token=token,
+        mandant_id=mandant.id,
+        expires_in_minutes=_settings.impersonation_token_expire_minutes,
+    )

@@ -2,7 +2,6 @@ import logging
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db
@@ -20,7 +19,7 @@ from app.core.security import (
     decode_token,
     hash_password,
 )
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
@@ -32,10 +31,14 @@ from app.schemas.kundenportal import (
     KundenPasswortVergessenRequest,
     KundenportalLinkInfo,
 )
-from app.services import storage_service
+from app.services import storage_service, system_lookups
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.token_widerruf_service import widerrufe_tokens
-from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
+from app.services.einladung_service import (
+    als_angenommen_markieren,
+    mandant_der_einladung,
+    resolve_offene_einladung,
+)
 from app.services.kundenportal_auth_service import authenticate_kunde
 from app.schemas.user import MIN_PASSWORT_LAENGE
 
@@ -61,15 +64,11 @@ async def login(body: LoginRequest, request: Request) -> TokenPair:
     return result
 
 
-async def _kunde_fuer_slug(session: AsyncSession, portal_slug: str) -> Kunde:
-    result = await session.execute(select(Kunde).where(Kunde.portal_slug == portal_slug))
-    kunde = result.scalar_one_or_none()
-    if kunde is None:
+async def _link_fuer_slug(portal_slug: str, *, grund: str) -> system_lookups.KundeLink:
+    link = await system_lookups.kunde_link_lookup(portal_slug, grund=grund)
+    if link is None or not link.mandant_aktiv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link ungültig")
-    mandant = await session.get(Mandant, kunde.mandant_id)
-    if mandant is None or mandant.status != "aktiv":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link ungültig")
-    return kunde
+    return link
 
 
 @router.get("/link/{portal_slug}", response_model=KundenportalLinkInfo)
@@ -82,23 +81,20 @@ async def link_info(portal_slug: str) -> KundenportalLinkInfo:
     Rate-Limiting: der Slug ist selbst schon ein hochentropisches Geheimnis
     (secrets.token_urlsafe(12), siehe app/api/routes/kunden.py), kein
     erratbarer Bezeichner wie eine E-Mail-Adresse."""
-    async with system_session(grund="portal-auth: link-info") as session:
-        kunde = await _kunde_fuer_slug(session, portal_slug)
-        mandant = await session.get(Mandant, kunde.mandant_id)
-        return KundenportalLinkInfo(
-            kunde_name=kunde.name,
-            mandant_name=mandant.name,
-            hat_logo=kunde.logo_object_key is not None,
-        )
+    link = await _link_fuer_slug(portal_slug, grund="portal-auth: link-info")
+    return KundenportalLinkInfo(
+        kunde_name=link.kunde_name,
+        mandant_name=link.mandant_name,
+        hat_logo=link.logo_object_key is not None,
+    )
 
 
 @router.get("/link/{portal_slug}/logo-url", response_model=KundeLogoUrl)
 async def link_logo_url(portal_slug: str) -> KundeLogoUrl:
-    async with system_session(grund="portal-auth: link-logo-url") as session:
-        kunde = await _kunde_fuer_slug(session, portal_slug)
-        if kunde.logo_object_key is None:
-            return KundeLogoUrl(url=None)
-        return KundeLogoUrl(url=storage_service.presigned_get_url(kunde.logo_object_key))
+    link = await _link_fuer_slug(portal_slug, grund="portal-auth: link-logo-url")
+    if link.logo_object_key is None:
+        return KundeLogoUrl(url=None)
+    return KundeLogoUrl(url=storage_service.presigned_get_url(link.logo_object_key))
 
 
 @router.post("/refresh", response_model=TokenPair)
@@ -115,32 +111,34 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Kundenportal-Refresh-Token"
         )
 
-    async with system_session(grund="portal-auth: refresh-token einloesen") as session:
-        zugang = await session.get(KundenportalZugang, payload["sub"])
-        if zugang is None or not zugang.aktiv:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
-            )
-        if payload.get("tv", 0) != zugang.token_version:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
-            )
-        mandant = await session.get(Mandant, zugang.mandant_id)
-        if mandant is None or mandant.status != "aktiv":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
-            )
-
-        return TokenPair(
-            access_token=create_kundenportal_access_token(
-                token_version=zugang.token_version,
-                subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
-            ),
-            refresh_token=create_kundenportal_refresh_token(
-                token_version=zugang.token_version,
-                subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
-            ),
+    zugang = await system_lookups.kundenzugang_by_id(
+        payload["sub"], grund="portal-auth: refresh-token einloesen"
+    )
+    if zugang is None or not zugang.aktiv:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
         )
+    if payload.get("tv", 0) != zugang.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
+        )
+    async with tenant_session(mandant_id=zugang.mandant_id, is_super_admin=False) as session:
+        mandant = await session.get(Mandant, zugang.mandant_id)
+    if mandant is None or mandant.status != "aktiv":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
+        )
+
+    return TokenPair(
+        access_token=create_kundenportal_access_token(
+            token_version=zugang.token_version,
+            subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
+        ),
+        refresh_token=create_kundenportal_refresh_token(
+            token_version=zugang.token_version,
+            subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
+        ),
+    )
 
 
 @router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
@@ -151,7 +149,8 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
-    async with system_session(grund="portal-auth: registrierung") as session:
+    mandant_id = await mandant_der_einladung(body.token)
+    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="kunde")
 
         zugang = KundenportalZugang(
@@ -213,14 +212,11 @@ async def passwort_vergessen(body: KundenPasswortVergessenRequest, request: Requ
     password_reset_ip_limiter.check(ip_key)
     password_reset_ip_limiter.record_failure(ip_key)
 
-    async with system_session(grund="portal-auth: passwort vergessen") as session:
-        result = await session.execute(
-            select(KundenportalZugang).where(func.lower(KundenportalZugang.email) == body.email)
-        )
-        zugang = result.scalar_one_or_none()
-        if zugang is None or not zugang.aktiv:
-            return None
+    zugang = await system_lookups.kundenzugang_by_email(body.email, grund="portal-auth: passwort vergessen")
+    if zugang is None or not zugang.aktiv:
+        return None
 
+    async with tenant_session(mandant_id=zugang.mandant_id, is_super_admin=False) as session:
         token = create_kundenportal_password_reset_token(zugang_id=zugang.id)
         reset_link = f"{_settings.frontend_base_url}/portal/passwort-zuruecksetzen?token={token}"
         try:
@@ -278,8 +274,15 @@ async def passwort_zuruecksetzen(body: KundenPasswortResetRequest, request: Requ
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
 
-    async with system_session(grund="portal-auth: passwort zuruecksetzen") as session:
-        zugang = await session.get(KundenportalZugang, payload["sub"])
+    gefunden = await system_lookups.kundenzugang_by_id(
+        payload["sub"], grund="portal-auth: passwort zuruecksetzen"
+    )
+    if gefunden is None:
+        password_reset_ip_limiter.record_failure(ip_key)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")
+
+    async with tenant_session(mandant_id=gefunden.mandant_id, is_super_admin=False) as session:
+        zugang = await session.get(KundenportalZugang, gefunden.id)
         if zugang is None or not zugang.aktiv:
             password_reset_ip_limiter.record_failure(ip_key)
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")

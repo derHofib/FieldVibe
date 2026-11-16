@@ -3,7 +3,6 @@ import logging
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import ValidationError
-from sqlalchemy import func, select
 
 from app.api.deps import AuthContext, get_current_user, get_current_user_mfa_einrichtung
 from app.core.config import get_settings
@@ -21,7 +20,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.account_typ import AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
@@ -40,10 +39,14 @@ from app.schemas.auth import (
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.audit_service import log_action
 from app.services.auth_service import authenticate, token_paar_fuer
-from app.services import mfa_service
+from app.services import mfa_service, system_lookups
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.token_widerruf_service import widerrufe_tokens
-from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
+from app.services.einladung_service import (
+    als_angenommen_markieren,
+    mandant_der_einladung,
+    resolve_offene_einladung,
+)
 from app.services import berechtigung_service
 from app.services.berechtigung_service import effektive_rechte_gecacht
 from app.services.organigramm_sync_service import besetzung_pflegen
@@ -105,17 +108,22 @@ async def refresh(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Refresh-Token"
         )
 
-    async with system_session(grund="login: refresh-token einloesen") as session:
-        result = await session.execute(select(User).where(User.id == payload["sub"]))
-        user = result.scalar_one_or_none()
-        if user is None or not user.aktiv:
+    gefunden = await system_lookups.user_kern_by_id(payload["sub"], grund="login: refresh-token einloesen")
+    if gefunden is None or not gefunden.aktiv:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig"
+        )
+    # Fehlender Claim (Altbestand) gilt als 0, siehe token_version_gueltig.
+    if payload.get("tv", 0) != gefunden.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
+        )
+
+    async with system_lookups.konto_session(gefunden.mandant_id, grund="login: refresh super_admin-konto") as session:
+        user = await session.get(User, gefunden.id)
+        if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig"
-            )
-        # Fehlender Claim (Altbestand) gilt als 0, siehe token_version_gueltig.
-        if payload.get("tv", 0) != user.token_version:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
             )
         mandant = None
         if user.mandant_id is not None:
@@ -131,10 +139,10 @@ async def refresh(
 @router.post("/ueberall-abmelden", status_code=status.HTTP_204_NO_CONTENT)
 async def ueberall_abmelden(response: Response, auth: AuthContext = Depends(get_current_user)) -> None:
     """Entwertet alle Tokens des eigenen Accounts (alle Geraete, inkl. des
-    aufrufenden). system_session wie bei /me: bei Impersonation ist die
-    Zeile des Super-Admins unter der Mandanten-RLS nicht sichtbar -- dann
-    trifft der Widerruf bewusst den Super-Admin-Account selbst."""
-    async with system_session(grund="login: ueberall abmelden") as session:
+    aufrufenden). Bei Impersonation ist die Zeile des Super-Admins unter der
+    Mandanten-RLS nicht sichtbar -- dann trifft der Widerruf bewusst den
+    Super-Admin-Account selbst (konto_mandant_id)."""
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="login: ueberall abmelden") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
@@ -170,10 +178,10 @@ async def _abmeldung_protokollieren(request: Request) -> None:
         payload = decode_token(token)
         if payload.get("type") != TokenType.REFRESH.value:
             return
-        async with system_session(grund="login: abmeldung protokollieren") as session:
-            user = await session.get(User, payload["sub"])
-            if user is None or user.mandant_id is None:
-                return
+        user = await system_lookups.user_kern_by_id(payload["sub"], grund="login: abmeldung protokollieren")
+        if user is None or user.mandant_id is None:
+            return
+        async with tenant_session(mandant_id=user.mandant_id, is_super_admin=False) as session:
             await log_action(
                 session,
                 aktion="logout",
@@ -195,11 +203,11 @@ async def passwort_vergessen(body: PasswortVergessenRequest, request: Request) -
     password_reset_ip_limiter.check(ip_key)
     password_reset_ip_limiter.record_failure(ip_key)
 
-    async with system_session(grund="login: passwort vergessen lookup") as session:
-        result = await session.execute(select(User).where(func.lower(User.email) == body.email))
-        user = result.scalar_one_or_none()
-        if user is None or not user.aktiv:
-            return None
+    user = await system_lookups.user_kern_by_email(body.email)
+    if user is None or not user.aktiv:
+        return None
+
+    async with system_lookups.konto_session(user.mandant_id, grund="login: passwort vergessen super_admin-konto") as session:
         if user.mandant_id is not None:
             # Wie beim Login: fuer einen deaktivierten Mandanten gibt es kein
             # nutzbares Konto, also auch keinen Link.
@@ -253,8 +261,15 @@ async def passwort_zuruecksetzen(body: PasswortZuruecksetzenRequest, request: Re
         password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
 
-    async with system_session(grund="login: passwort zuruecksetzen") as session:
-        user = await session.get(User, payload["sub"])
+    gefunden = await system_lookups.user_kern_by_id(payload["sub"], grund="login: passwort zuruecksetzen")
+    if gefunden is None:
+        password_reset_ip_limiter.record_failure(ip_key)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Reset-Link ist ungültig oder abgelaufen"
+        )
+
+    async with system_lookups.konto_session(gefunden.mandant_id, grund="login: passwort zuruecksetzen super_admin-konto") as session:
+        user = await session.get(User, gefunden.id)
         # Einmalverwendung: der Link traegt die token_version von seiner
         # Ausstellung; jeder Widerruf (auch dieser Reset selbst) macht ihn ungueltig.
         if user is None or not user.aktiv or payload.get("tv") != user.token_version:
@@ -291,7 +306,7 @@ async def passwort_aendern(
             status_code=status.HTTP_403_FORBIDDEN, detail="Während der Impersonation nicht möglich"
         )
     ip_key = client_ip(request)
-    async with system_session(grund="auth: passwort aendern") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="auth: passwort aendern") as session:
         user = await session.get(User, auth.user_id)
         if user is None or not user.aktiv:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
@@ -340,7 +355,8 @@ async def registrieren(body: RegistrierenRequest, request: Request, response: Re
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
         )
-    async with system_session(grund="login: registrierung per einladung") as session:
+    mandant_id = await mandant_der_einladung(body.token)
+    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="mitarbeiter")
 
         user = User(
@@ -361,19 +377,16 @@ async def registrieren(body: RegistrierenRequest, request: Request, response: Re
 
 @router.get("/me", response_model=CurrentUser)
 async def me(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> CurrentUser:
-    # Looked up via system_session deliberately: during impersonation the
-    # token's `sub` is the real super_admin's user id, whose own row has
-    # mandant_id = NULL and would be invisible under the impersonated
-    # tenant's RLS scope. This lookup is read-only, keyed by the token's own
-    # verified subject, and never returns another account's data.
-    async with system_session(grund="auth: me (auch super_admin/impersonation)") as session:
-        result = await session.execute(select(User).where(User.id == auth.user_id))
-        user = result.scalar_one_or_none()
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
-            )
+    # Die eigene Zeile kommt ueber den schmalen Lookup: bei Impersonation ist
+    # sub der echte Super-Admin (mandant_id NULL), dessen Zeile unter der
+    # Mandanten-RLS unsichtbar waere. Read-only, nur zum verifizierten Subject.
+    user = await system_lookups.user_profil_by_id(auth.user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
+        )
 
+    async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
         mandant_name: str | None = None
         deaktivierte_module: list[str] = []
         mandant = None
@@ -421,7 +434,7 @@ async def me(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> C
             office_nav_items = OfficeNavUpdate(items=user.office_nav_items)
 
         return CurrentUser(
-            id=user.id,
+            id=auth.user_id,
             mandant_id=auth.mandant_id,
             role=auth.role,
             account_typ_id=auth.account_typ_id,

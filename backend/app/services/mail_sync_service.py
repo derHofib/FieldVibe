@@ -13,13 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.security import decrypt_secret
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.mail_account import MailAccount
 from app.models.mail_attachment import MailAttachment
 from app.models.mail_folder import MailFolder
 from app.models.mail_message import MailMessage
 from app.services import storage_service
 from app.services.mail_netz import MailVerbindungFehler, uebersetze_fehler, verbinde_imap
+from app.services.worker_system import aktive_postfaecher
 
 # Schutz gegen einen Erst-Sync mit zehntausenden alten Nachrichten, der einen
 # einzelnen Worker-Tick blockieren wuerde -- last_uid ist bereits der
@@ -365,24 +366,27 @@ async def run_mail_sync(account_ids: list | None = None) -> dict:
     konten_synchronisiert = 0
     fehler = 0
 
-    async with system_session(grund="worker: mail-sync postfaecher", drosselung_s=300) as session:
-        stmt = select(MailAccount).where(MailAccount.aktiv.is_(True))
-        if account_ids is not None:
-            stmt = stmt.where(MailAccount.id.in_(account_ids))
-        konten = (await session.execute(stmt)).scalars().all()
-
-        for account in konten:
-            try:
-                await sync_account(session, account)
-                konten_synchronisiert += 1
-            except Exception as exc:
-                fehler += 1
-                # letzter_sync_fehler geht ueber MailAccountRead an den Client
-                # -- daher keine rohen Exception-Texte.
-                logger.warning("Mail-Sync fuer Konto %s fehlgeschlagen: %s", account.id, exc)
-                account.letzter_sync_fehler = (
-                    str(exc) if isinstance(exc, MailVerbindungFehler) else "Synchronisation fehlgeschlagen"
-                )
-                await session.flush()
+    for account_id, mandant_id in await aktive_postfaecher(account_ids):
+        try:
+            async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+                account = await session.get(MailAccount, account_id)
+                if account is None or not account.aktiv:
+                    continue
+                try:
+                    await sync_account(session, account)
+                    konten_synchronisiert += 1
+                except Exception as exc:
+                    fehler += 1
+                    # letzter_sync_fehler geht ueber MailAccountRead an den Client
+                    # -- daher keine rohen Exception-Texte.
+                    logger.warning("Mail-Sync fuer Konto %s fehlgeschlagen: %s", account.id, exc)
+                    account.letzter_sync_fehler = (
+                        str(exc) if isinstance(exc, MailVerbindungFehler) else "Synchronisation fehlgeschlagen"
+                    )
+                    await session.flush()
+        except Exception:
+            # Ein Konto darf die uebrigen nicht abbrechen (z. B. Fehlerstatus nicht schreibbar).
+            fehler += 1
+            logger.exception("Mail-Sync: Konto %s nicht verarbeitbar", account_id)
 
     return {"konten_synchronisiert": konten_synchronisiert, "fehler": fehler}

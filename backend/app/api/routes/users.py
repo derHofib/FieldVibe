@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.core.rollen import PAPIERKORB_ROLLEN, hat_admin_rechte_im_mandant, ist_mandant_admin, ist_plattform_admin
 from app.core.security import hash_password
-from app.db.session import system_session
 from app.models.account_typ import AccountTyp
 from app.models.einladung import Einladung
 from app.models.mandant import Mandant
@@ -18,7 +17,7 @@ from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserAuswahl, UserCreate, UserRead, UserUpdate
 from app.services import eskalation_service as esk
-from app.services import mfa_service
+from app.services import mfa_service, system_lookups
 from app.services.audit_service import log_action, log_aenderung
 from app.services.organigramm_sync_service import besetzung_pflegen
 from app.services.einladung_service import (
@@ -717,10 +716,10 @@ async def update_own_bottom_nav(
 ) -> BottomNavUpdate:
     # Rein selbstbezogene Praeferenz -- jede Rolle darf sie fuer sich selbst
     # setzen, unabhaengig von mitarbeiterverwaltung-Rechten. Ueber
-    # system_session() (analog auth.me), da die Route auch fuer
+    # konto_session (analog auth.me), da die Route auch fuer
     # super_admin (mandant_id NULL, ausserhalb jeder RLS-Session) und
     # waehrend Impersonation greifen muss.
-    async with system_session(grund="users: eigene bottom-nav speichern") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="users: eigene bottom-nav speichern") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
@@ -739,7 +738,7 @@ async def update_own_office_nav(
     body: OfficeNavUpdate, auth: AuthContext = Depends(get_current_user)
 ) -> OfficeNavUpdate:
     # Rein selbstbezogene Praeferenz, analog zu update_own_bottom_nav.
-    async with system_session(grund="users: eigene office-nav speichern") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="users: eigene office-nav speichern") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")

@@ -16,7 +16,6 @@ from app.api.deps import AuthContext, get_db, require_recht, require_roles
 from app.core.config import get_settings
 from app.core.rollen import ist_plattform_admin
 from app.core.rate_limit import client_ip, fehlerbericht_service_ip_limiter, fehlerbericht_user_limiter
-from app.db.session import system_session
 from app.models.fehlerbericht import Fehlerbericht
 from app.schemas.fehlerbericht import (
     FehlerberichtArt,
@@ -30,7 +29,7 @@ from app.schemas.fehlerbericht import (
     FehlerberichtUpdate,
     FehlerberichtZaehler,
 )
-from app.services import audit_service, fehlerbericht_service, storage_service
+from app.services import audit_service, fehlerbericht_service, storage_service, system_lookups
 
 _PAYLOAD_PARSE_MAX_BYTES = 4 * 1024 * 1024
 _ROLLEN = ("super_admin", "mandant_admin", "custom")
@@ -299,7 +298,7 @@ async def _service_auth(request: Request) -> None:
 async def _service_db(_: None = Depends(_service_auth)) -> AsyncIterator[AsyncSession]:
     # Von _service_auth abhaengig, damit vor erfolgreicher Authentifizierung
     # keine DB-Session geoeffnet wird.
-    async with system_session(grund="fehlerberichte: service-token-schnittstelle") as session:
+    async with system_lookups.fehlerbericht_service_session() as session:
         yield session
 
 

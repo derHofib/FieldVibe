@@ -13,17 +13,17 @@ Mehrfach-Worker: der gesamte Tick laeuft unter einem Postgres-Advisory-Lock
 FOR UPDATE SKIP LOCKED.
 """
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.logging_config import job_kontext
-from app.db.session import system_session
+from app.db.session import system_session, tenant_session
 from app.models.job_lauf import JobLauf
-from app.models.mandant import Mandant
 from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
 from app.services.email_ingest_service import run_email_ingest
 from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
@@ -38,6 +38,7 @@ from app.services.scheduler_service import (
     run_wiedervorlage_scheduler,
 )
 from app.services.worker_lock import worker_lock
+from app.services.worker_system import aktive_mandanten_mit_stunde
 
 logger = logging.getLogger("app.worker")
 
@@ -113,10 +114,7 @@ async def faellige_mandanten(session, job: str, jetzt: datetime) -> list[UUID]:
     s = get_settings()
     laeufe = await lade_laeufe(session, job)
     ergebnis: list[UUID] = []
-    mandanten = (await session.execute(
-        select(Mandant.id, Mandant.scheduler_stunde_utc).where(Mandant.status == "aktiv")
-    )).all()
-    for mandant_id, stunde in mandanten:
+    for mandant_id, stunde in await aktive_mandanten_mit_stunde():
         slot = letzter_slot(jetzt, stunde if stunde is not None else s.scheduler_default_stunde_utc)
         lauf = laeufe.get(mandant_id)
         if ist_faellig(lauf, slot, jetzt, s.scheduler_retry_minuten):
@@ -125,9 +123,21 @@ async def faellige_mandanten(session, job: str, jetzt: datetime) -> list[UUID]:
     return ergebnis
 
 
+@asynccontextmanager
+async def _lauf_session(mandant_id: UUID | None, grund: str) -> AsyncIterator[AsyncSession]:
+    """Mandanten-Zeilen von job_laeufe schreibt die Mandanten-Session; nur die
+    systemweiten Zeilen (mandant_id NULL) brauchen die System-Session."""
+    if mandant_id is not None:
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            yield session
+    else:
+        async with system_session(grund=grund, drosselung_s=300) as session:
+            yield session
+
+
 async def _fehlgeschlagen(job: str, mandant_id: UUID | None, exc: Exception, jetzt: datetime) -> None:
     # Nur Typ und Kurztext: der Text steht in job_laeufe und damit im Health-Endpunkt.
-    async with system_session(grund="worker: job fehlgeschlagen vermerken", drosselung_s=300) as session:
+    async with _lauf_session(mandant_id, "worker: job fehlgeschlagen vermerken") as session:
         await markiere_lauf(session, job, mandant_id, erfolg=False, fehler=f"{type(exc).__name__}: {exc}", jetzt=jetzt)
 
 
@@ -146,8 +156,8 @@ async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: dateti
                 await _fehlgeschlagen(job, ids[0], exc, jetzt)
                 return {"mandanten": 1, "fehler": 1}
         else:
-            async with system_session(grund="worker: taeglicher job ausfuehren", drosselung_s=300) as session:
-                for mandant_id in ids:
+            for mandant_id in ids:
+                async with _lauf_session(mandant_id, "worker: taeglicher job ausfuehren") as session:
                     await markiere_lauf(session, job, mandant_id, erfolg=True, ergebnis=gesamt, jetzt=jetzt)
             logger.info("Job %s fuer %d Mandant(en) abgeschlossen: %s", job, len(ids), gesamt)
             return {"mandanten": len(ids), "ergebnis": gesamt}
@@ -163,7 +173,7 @@ async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: dateti
                 logger.exception("Job %s fuer Mandant %s fehlgeschlagen", job, mandant_id)
                 await _fehlgeschlagen(job, mandant_id, exc, jetzt)
             else:
-                async with system_session(grund="worker: taeglicher job abschliessen", drosselung_s=300) as session:
+                async with _lauf_session(mandant_id, "worker: taeglicher job abschliessen") as session:
                     await markiere_lauf(session, job, mandant_id, erfolg=True, ergebnis=einzel, jetzt=jetzt)
     return {"mandanten": len(ids), "einzeln": True, "fehler": fehler}
 
@@ -187,7 +197,7 @@ async def _fuehre_systemjob(job: str, funktion: SystemJob, takt: str, jetzt: dat
             logger.exception("Job %s fehlgeschlagen", job)
             await _fehlgeschlagen(job, None, exc, jetzt)
             return False
-        async with system_session(grund="worker: systemjob abschliessen", drosselung_s=300) as session:
+        async with _lauf_session(None, "worker: systemjob abschliessen") as session:
             await markiere_lauf(session, job, None, erfolg=True, ergebnis=ergebnis if isinstance(ergebnis, dict) else None, jetzt=jetzt)
         if ergebnis:
             logger.info("Job %s abgeschlossen: %s", job, ergebnis)

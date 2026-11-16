@@ -19,9 +19,11 @@ from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.s3_loeschauftrag import S3Loeschauftrag
 from app.services import storage_service
+from app.services.mandanten_lauf import je_mandant_ergebnisse
+from app.services.worker_system import s3_mandanten_mit_offenen_auftraegen
 
 logger = logging.getLogger("app.s3_aufraeumen")
 
@@ -65,32 +67,40 @@ async def verarbeite(limit: int = 50) -> dict[str, int]:
     """Arbeitet faellige Auftraege ab. Idempotent und parallel sicher (SKIP LOCKED)."""
     erledigt = fehlgeschlagen = 0
     jetzt = datetime.now(timezone.utc)
-    async with system_session(grund="worker: s3-loeschauftraege", drosselung_s=300) as session:
-        auftraege = (
-            await session.execute(
-                select(S3Loeschauftrag)
-                .where(S3Loeschauftrag.status == "offen", S3Loeschauftrag.naechster_versuch_am <= jetzt)
-                .order_by(S3Loeschauftrag.erstellt_am)
-                .limit(limit)
-                .with_for_update(skip_locked=True)
-            )
-        ).scalars().all()
-        for auftrag in auftraege:
-            try:
-                await storage_service.delete_prefix(auftrag.prefix)
-            except Exception as exc:  # noqa: BLE001 -- jeder S3-Fehler heisst: spaeter erneut
-                auftrag.versuche += 1
-                auftrag.letzter_fehler = str(exc)[:500]
-                auftrag.naechster_versuch_am = jetzt + timedelta(minutes=min(2**auftrag.versuche, 24 * 60))
-                if auftrag.versuche >= MAX_VERSUCHE:
-                    auftrag.status = "fehler"
-                fehlgeschlagen += 1
-                logger.warning("S3-Aufraeumen fehlgeschlagen (%s, Versuch %d): %s", auftrag.prefix, auftrag.versuche, exc)
-            else:
-                auftrag.status = "erledigt"
-                auftrag.erledigt_am = jetzt
-                auftrag.letzter_fehler = None
-                erledigt += 1
+
+    async def _mandant(mandant_id: UUID) -> None:
+        nonlocal erledigt, fehlgeschlagen
+        rest = limit - erledigt - fehlgeschlagen
+        if rest <= 0:
+            return
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            auftraege = (
+                await session.execute(
+                    select(S3Loeschauftrag)
+                    .where(S3Loeschauftrag.status == "offen", S3Loeschauftrag.naechster_versuch_am <= jetzt)
+                    .order_by(S3Loeschauftrag.erstellt_am)
+                    .limit(rest)
+                    .with_for_update(skip_locked=True)
+                )
+            ).scalars().all()
+            for auftrag in auftraege:
+                try:
+                    await storage_service.delete_prefix(auftrag.prefix)
+                except Exception as exc:  # noqa: BLE001 -- jeder S3-Fehler heisst: spaeter erneut
+                    auftrag.versuche += 1
+                    auftrag.letzter_fehler = str(exc)[:500]
+                    auftrag.naechster_versuch_am = jetzt + timedelta(minutes=min(2**auftrag.versuche, 24 * 60))
+                    if auftrag.versuche >= MAX_VERSUCHE:
+                        auftrag.status = "fehler"
+                    fehlgeschlagen += 1
+                    logger.warning("S3-Aufraeumen fehlgeschlagen (%s, Versuch %d): %s", auftrag.prefix, auftrag.versuche, exc)
+                else:
+                    auftrag.status = "erledigt"
+                    auftrag.erledigt_am = jetzt
+                    auftrag.letzter_fehler = None
+                    erledigt += 1
+
+    await je_mandant_ergebnisse(await s3_mandanten_mit_offenen_auftraegen(jetzt), _mandant)
     return {"erledigt": erledigt, "fehlgeschlagen": fehlgeschlagen}
 
 

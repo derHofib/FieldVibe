@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.import_lauf import ImportLauf, ImportLaufEintrag
 from app.models.mandant import Mandant
 from app.services import audit_service, csv_service, storage_service
@@ -35,6 +35,8 @@ from app.services.datenimport.basis import (
 from app.services.datenimport.felder import EntitaetDef, entitaet as entitaet_def
 from app.services.datenimport.kunden import KundenVerarbeiter
 from app.services.datenimport.material import MaterialVerarbeiter
+from app.services.mandanten_lauf import je_mandant_ergebnisse
+from app.services.worker_system import mandanten_mit_import_altlasten
 from app.services.datenimport.parser import ImportDateiFehler, Limits, Tabelle, lese_tabelle
 
 logger = logging.getLogger(__name__)
@@ -491,31 +493,36 @@ async def raeume_auf(jetzt: datetime | None = None) -> dict:
     quelle_grenze = (jetzt - timedelta(hours=einstellungen.import_zwischenspeicher_stunden)).replace(tzinfo=None)
     bericht_grenze = (jetzt - timedelta(days=einstellungen.import_fehlerbericht_tage)).replace(tzinfo=None)
     quellen = berichte = 0
-    async with system_session(grund="worker: datenimport aufraeumen") as session:
-        alt = (
-            await session.execute(
-                select(ImportLauf).where(ImportLauf.object_key.is_not(None), ImportLauf.created_at < quelle_grenze)
-            )
-        ).scalars().all()
-        for lauf in alt:
-            await _objekt_loeschen(lauf.object_key)
-            lauf.object_key = None
-            if lauf.status in ("analysiert", "geprueft"):
-                lauf.status = "abgelaufen"
-            quellen += 1
-        berichte_alt = (
-            await session.execute(
-                select(ImportLauf).where(
-                    ImportLauf.fehlerbericht_key.is_not(None),
-                    ImportLauf.updated_at < bericht_grenze,
-                    ImportLauf.status.in_(("abgeschlossen", "rueckgaengig", "abgelaufen", "abgebrochen")),
+
+    async def _mandant(mandant_id: UUID) -> None:
+        nonlocal quellen, berichte
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            alt = (
+                await session.execute(
+                    select(ImportLauf).where(ImportLauf.object_key.is_not(None), ImportLauf.created_at < quelle_grenze)
                 )
-            )
-        ).scalars().all()
-        for lauf in berichte_alt:
-            await _objekt_loeschen(lauf.fehlerbericht_key)
-            lauf.fehlerbericht_key = None
-            berichte += 1
+            ).scalars().all()
+            for lauf in alt:
+                await _objekt_loeschen(lauf.object_key)
+                lauf.object_key = None
+                if lauf.status in ("analysiert", "geprueft"):
+                    lauf.status = "abgelaufen"
+                quellen += 1
+            berichte_alt = (
+                await session.execute(
+                    select(ImportLauf).where(
+                        ImportLauf.fehlerbericht_key.is_not(None),
+                        ImportLauf.updated_at < bericht_grenze,
+                        ImportLauf.status.in_(("abgeschlossen", "rueckgaengig", "abgelaufen", "abgebrochen")),
+                    )
+                )
+            ).scalars().all()
+            for lauf in berichte_alt:
+                await _objekt_loeschen(lauf.fehlerbericht_key)
+                lauf.fehlerbericht_key = None
+                berichte += 1
+
+    await je_mandant_ergebnisse(await mandanten_mit_import_altlasten(quelle_grenze, bericht_grenze), _mandant)
     return {"quellen": quellen, "fehlerberichte": berichte}
 
 

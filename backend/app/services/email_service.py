@@ -14,8 +14,8 @@ from app.core.security import decrypt_secret
 from app.models.email_log import EmailLog
 from app.models.integration import MandantIntegration
 from app.models.mandant import Mandant
-from app.models.plattform_integration import PlattformIntegration
 from app.services.mail_netz import uebersetze_fehler, verbinde_smtp
+from app.services.worker_system import plattform_smtp
 
 
 class EmailNichtKonfiguriert(Exception):
@@ -76,14 +76,9 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID | None) -> _Smtp
                 ist_global=False,
             )
 
-    plattform_result = await session.execute(
-        select(PlattformIntegration).where(
-            PlattformIntegration.typ == "smtp", PlattformIntegration.aktiv.is_(True)
-        )
-    )
-    plattform = plattform_result.scalar_one_or_none()
+    plattform = await plattform_smtp()
     if plattform is not None:
-        config = plattform.config
+        config, secret_ref = plattform
         host = config.get("host")
         from_address = config.get("from_address") or config.get("user")
         if host and from_address:
@@ -91,7 +86,7 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID | None) -> _Smtp
                 host=host,
                 port=int(config.get("port", 587)),
                 user=config.get("user"),
-                password=decrypt_secret(plattform.secret_ref) if plattform.secret_ref else None,
+                password=decrypt_secret(secret_ref) if secret_ref else None,
                 from_address=from_address,
                 ist_global=True,
             )

@@ -11,7 +11,9 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.db.session import system_session
+from app.db.session import tenant_session
+from app.services.mandanten_lauf import je_mandant_ergebnisse
+from app.services.worker_system import mandanten_mit_abgelaufenen_fehlerberichten
 from app.models.fehlerbericht import FEHLERBERICHT_ERLEDIGT_STATUS, Fehlerbericht
 from app.models.mandant import Mandant
 from app.models.user import User
@@ -292,26 +294,30 @@ def wende_update_an(bericht: Fehlerbericht, daten: dict) -> None:
 
 
 async def loesche_abgelaufene_fehlerberichte(jetzt: datetime | None = None) -> int:
-    """Alle Mandanten (system_session); loescht Berichte samt S3-Objekten, die
-    aelter als die Aufbewahrungsfrist sind."""
+    """Alle Mandanten (je Mandant eine tenant_session); loescht Berichte samt
+    S3-Objekten, die aelter als die Aufbewahrungsfrist sind."""
     jetzt = jetzt or datetime.now(timezone.utc)
     grenze = jetzt - timedelta(days=get_settings().fehlerbericht_aufbewahrung_tage)
-    async with system_session(grund="worker: fehlerberichte aufbewahrung", drosselung_s=300) as session:
-        rows = await session.execute(
-            select(
-                Fehlerbericht.id,
-                Fehlerbericht.screenshot_original_key,
-                Fehlerbericht.screenshot_annotiert_key,
-            ).where(Fehlerbericht.created_at < grenze)
-        )
-        treffer = rows.all()
-        if not treffer:
-            return 0
-        await session.execute(delete(Fehlerbericht).where(Fehlerbericht.id.in_([t[0] for t in treffer])))
-    # Erst nach dem Commit: scheitert die DB-Transaktion, bleiben die Objekte
-    # sonst nicht ohne Bericht zurueck.
-    await loesche_screenshots([k for t in treffer for k in (t[1], t[2])])
-    return len(treffer)
+
+    async def _mandant(mandant_id: uuid.UUID) -> int:
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            rows = await session.execute(
+                select(
+                    Fehlerbericht.id,
+                    Fehlerbericht.screenshot_original_key,
+                    Fehlerbericht.screenshot_annotiert_key,
+                ).where(Fehlerbericht.created_at < grenze)
+            )
+            treffer = rows.all()
+            if not treffer:
+                return 0
+            await session.execute(delete(Fehlerbericht).where(Fehlerbericht.id.in_([t[0] for t in treffer])))
+        # Erst nach dem Commit: scheitert die DB-Transaktion, bleiben die Objekte
+        # sonst nicht ohne Bericht zurueck.
+        await loesche_screenshots([k for t in treffer for k in (t[1], t[2])])
+        return len(treffer)
+
+    return sum(await je_mandant_ergebnisse(await mandanten_mit_abgelaufenen_fehlerberichten(grenze), _mandant))
 
 
 async def zaehler_je_status(

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.core.security import decrypt_secret
-from app.db.session import system_session
+from app.db.session import tenant_session
 from app.models.audit_log import AuditLog
 from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.integration import MandantIntegration
@@ -21,6 +21,8 @@ from app.models.user import User
 from app.services import e_rechnung_empfang_service as empfang
 from app.services import storage_service
 from app.services.mail_netz import verbinde_imap
+from app.services.mandanten_lauf import je_mandant_ergebnisse
+from app.services.worker_system import mandanten_mit_imap
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 logger = logging.getLogger(__name__)
@@ -362,47 +364,61 @@ async def run_email_ingest(mandant_ids: list[UUID] | None = None) -> dict:
     Rueckgabe: neue_entwuerfe (PDF), neue_e_rechnungen, uebersprungen (Anzahl
     je Grund), uebersprungen_details (Mandant, Absender, Betreff, Anhang,
     Meldung), fehler (Abruf je Integration gescheitert)."""
-    zaehler = _Zaehler()
+    gesamt = _Zaehler()
 
-    async with system_session(grund="worker: email-ingest postfaecher", drosselung_s=300) as session:
-        stmt = select(MandantIntegration).where(
-            MandantIntegration.typ == "imap", MandantIntegration.aktiv.is_(True)
-        )
-        if mandant_ids is not None:
-            stmt = stmt.where(MandantIntegration.mandant_id.in_(mandant_ids))
-        integrationen = (await session.execute(stmt)).scalars().all()
-
-        for integration in integrationen:
-            try:
-                rohnachrichten, hoechste_uid = await run_in_threadpool(
-                    _fetch_neue_nachrichten, integration
+    async def _mandant(mandant_id: UUID) -> None:
+        zaehler = _Zaehler()
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            integrationen = (await session.execute(
+                select(MandantIntegration).where(
+                    MandantIntegration.typ == "imap", MandantIntegration.aktiv.is_(True)
                 )
-            except Exception:
-                zaehler.fehler += 1
-                continue
+            )).scalars().all()
 
-            lauf = _Lauf(session, integration, zaehler)
-            for rohdaten in rohnachrichten:
-                await lauf.verarbeite(rohdaten)
-            await lauf.abschliessen(hoechste_uid)
+            for integration in integrationen:
+                try:
+                    rohnachrichten, hoechste_uid = await run_in_threadpool(
+                        _fetch_neue_nachrichten, integration
+                    )
+                except Exception:
+                    zaehler.fehler += 1
+                    continue
 
-        ergebnis = {
-            "neue_entwuerfe": zaehler.neue_entwuerfe,
-            "neue_e_rechnungen": zaehler.neue_e_rechnungen,
-            "uebersprungen": zaehler.uebersprungen,
-            "uebersprungen_details": zaehler.details,
-            "fehler": zaehler.fehler,
-        }
-        session.add(
-            AuditLog(
-                mandant_id=None,
-                actor_user_id=None,
-                aktion=EMAIL_INGEST_AKTION,
-                entity_type="scheduler",
-                # Ohne Details: Absender/Betreff fremder Mandanten gehoeren nicht in den plattformweiten Log.
-                payload={k: v for k, v in ergebnis.items() if k != "uebersprungen_details"},
+                lauf = _Lauf(session, integration, zaehler)
+                for rohdaten in rohnachrichten:
+                    await lauf.verarbeite(rohdaten)
+                await lauf.abschliessen(hoechste_uid)
+
+            session.add(
+                AuditLog(
+                    mandant_id=mandant_id,
+                    actor_user_id=None,
+                    aktion=EMAIL_INGEST_AKTION,
+                    entity_type="scheduler",
+                    # Ohne Details: Absender/Betreff gehoeren nicht in den Log.
+                    payload={
+                        "neue_entwuerfe": zaehler.neue_entwuerfe,
+                        "neue_e_rechnungen": zaehler.neue_e_rechnungen,
+                        "uebersprungen": zaehler.uebersprungen,
+                        "fehler": zaehler.fehler,
+                    },
+                )
             )
-        )
-        await session.flush()
+            await session.flush()
+        gesamt.neue_entwuerfe += zaehler.neue_entwuerfe
+        gesamt.neue_e_rechnungen += zaehler.neue_e_rechnungen
+        gesamt.fehler += zaehler.fehler
+        for grund, anzahl in zaehler.uebersprungen.items():
+            gesamt.uebersprungen[grund] = gesamt.uebersprungen.get(grund, 0) + anzahl
+        gesamt.details.extend(zaehler.details[: max(0, _MAX_DETAILS - len(gesamt.details))])
 
-    return ergebnis
+    # Ein defekter Mandant stoppt die uebrigen nicht; der Fehler wird danach erneut geworfen.
+    await je_mandant_ergebnisse(await mandanten_mit_imap(mandant_ids), _mandant)
+
+    return {
+        "neue_entwuerfe": gesamt.neue_entwuerfe,
+        "neue_e_rechnungen": gesamt.neue_e_rechnungen,
+        "uebersprungen": gesamt.uebersprungen,
+        "uebersprungen_details": gesamt.details,
+        "fehler": gesamt.fehler,
+    }

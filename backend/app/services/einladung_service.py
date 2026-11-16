@@ -17,6 +17,7 @@ from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.partner_zugang import PartnerZugang
 from app.models.user import User
+from app.services import system_lookups
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 
 _settings = get_settings()
@@ -340,7 +341,7 @@ def to_read_model(einladung: Einladung, *, registrierungslink: str | None = None
     }
 
 
-async def resolve_offene_einladung(session: AsyncSession, token: str, *, erwartete_art: str) -> Einladung:
+def _einladung_id_aus_token(token: str) -> str:
     try:
         payload = decode_token(token)
     except jwt.PyJWTError as exc:
@@ -351,14 +352,31 @@ async def resolve_offene_einladung(session: AsyncSession, token: str, *, erwarte
 
     if payload.get("type") != "einladung":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Einladungslink")
+    return payload["sub"]
 
-    einladung = await session.get(Einladung, payload["sub"])
+
+async def mandant_der_einladung(token: str) -> UUID:
+    """Die Annahme ist unauthentifiziert, der Mandant steht erst in der Einladung --
+    danach laeuft alles in dessen tenant_session."""
+    mandant_id = await system_lookups.einladung_mandant_id(_einladung_id_aus_token(token))
+    if mandant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Einladung ist nicht mehr gültig",
+        )
+    return mandant_id
+
+
+async def resolve_offene_einladung(session: AsyncSession, token: str, *, erwartete_art: str) -> Einladung:
+    einladung = await session.get(Einladung, _einladung_id_aus_token(token))
     if einladung is None or einladung.art != erwartete_art or einladung.status != "offen":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Einladung ist nicht mehr gültig",
         )
-    if await konto_existiert_bereits(session, einladung.art, einladung.email):
+    # Plattformweit statt ueber die Mandanten-Session: ein Konto in einem anderen
+    # Mandanten waere dort unsichtbar und liefe erst am Unique-Index auf.
+    if await system_lookups.konto_existiert_plattformweit(einladung.art, einladung.email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Für diese E-Mail-Adresse existiert bereits ein Account",

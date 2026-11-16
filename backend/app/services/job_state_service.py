@@ -1,8 +1,8 @@
 """Zustand der Hintergrundjobs (Tabelle job_laeufe): Lese- und Schreibzugriff.
 
-Immer ueber system_session -- die Tabelle hat zwar RLS, enthaelt aber auch
-systemweite Zeilen (mandant_id NULL) und wird nur vom Worker/der Health-Pruefung
-benutzt.
+Die Aufrufer waehlen die Session: Mandanten-Zeilen ueber tenant_session, die
+systemweiten Zeilen (mandant_id NULL) enthalten nur die System-Session sichtbar.
+Wird nur vom Worker/der Health-Pruefung benutzt.
 """
 from datetime import datetime, timezone
 from uuid import UUID
@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import system_session
 from app.models.job_lauf import JobLauf
+from app.services.worker_system import heartbeat_schreiben
 
 # Fehlertext in der DB begrenzen -- Exception-Texte koennen sehr lang werden.
 _MAX_FEHLER_ZEICHEN = 500
@@ -61,8 +61,7 @@ async def markiere_lauf(
 
 async def heartbeat(job: str, *, jetzt: datetime | None = None) -> None:
     """Systemweiter Lebenszeichen-Eintrag (eigene kurze Transaktion)."""
-    async with system_session(grund="worker: job-state heartbeat", drosselung_s=300) as session:
-        await markiere_lauf(session, job, None, erfolg=True, jetzt=jetzt)
+    await heartbeat_schreiben(job, jetzt)
 
 
 async def lade_laeufe(session: AsyncSession, job: str) -> dict[UUID | None, JobLauf]:

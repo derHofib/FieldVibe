@@ -6,7 +6,6 @@ from app.api.deps import AuthContext, get_current_user, get_current_user_mfa_ein
 from app.core import refresh_cookie
 from app.core.rate_limit import client_ip, login_account_limiter, login_ip_limiter
 from app.core.security import TokenType, decode_token, verify_password
-from app.db.session import system_session
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import TokenPair
@@ -19,7 +18,7 @@ from app.schemas.mfa import (
     MfaVerifizierenRequest,
     MfaWiederherstellungscodes,
 )
-from app.services import mfa_service
+from app.services import mfa_service, system_lookups
 from app.services.audit_service import log_action, login_fehlschlag_protokollieren
 from app.services.auth_service import token_paar_fuer
 from app.services.mfa_service import MfaFehler
@@ -37,9 +36,9 @@ def _fehler(exc: MfaFehler) -> HTTPException:
 
 async def _eigener_user(session, auth: AuthContext) -> User:
     """Zeile des Token-Subjects mit Zeilensperre (Replay-/Doppelverbrauch-
-    Schutz). system_session wie bei /passwort-aendern: bei Impersonation waere
-    die Zeile des Super-Admins unter der Mandanten-RLS unsichtbar -- und MFA-
-    Aenderungen am echten Account sind waehrend der Impersonation ohnehin tabu."""
+    Schutz). Konten ohne Mandant (super_admin) liegen ausserhalb der Mandanten-RLS,
+    siehe system_lookups.konto_session -- MFA-Aenderungen am echten Account sind
+    waehrend der Impersonation ohnehin tabu."""
     if auth.impersonated_by is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Während der Impersonation nicht möglich"
@@ -78,7 +77,7 @@ async def _mandant_von(session, user: User) -> Mandant | None:
 
 @router.get("/status", response_model=MfaStatus)
 async def mfa_status(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> MfaStatus:
-    async with system_session(grund="mfa: status") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="mfa: status") as session:
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
@@ -97,7 +96,7 @@ async def mfa_einrichten(auth: AuthContext = Depends(get_current_user_mfa_einric
     """Startet die Einrichtung: erzeugt ein neues, noch unbestaetigtes Secret
     (ein frueheres unbestaetigtes wird ersetzt). Aktiv wird MFA erst mit
     /bestaetigen."""
-    async with system_session(grund="mfa: einrichten") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="mfa: einrichten") as session:
         user = await _eigener_user(session, auth)
         try:
             secret = mfa_service.einrichtung_beginnen(user)
@@ -119,7 +118,7 @@ async def mfa_bestaetigen(
     """Schliesst die Einrichtung mit einem gueltigen Code ab. Alle bisherigen
     Tokens werden widerrufen (andere Geraete/gestohlene Sitzungen verlieren den
     Zugang); die aufrufende Sitzung bekommt direkt ein frisches Paar."""
-    async with system_session(grund="mfa: bestaetigen") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="mfa: bestaetigen") as session:
         user = await _eigener_user(session, auth)
         ip_key, account_key = _limiter_pruefen(request, user)
         try:
@@ -170,7 +169,7 @@ async def mfa_deaktivieren(
     """Nur mit Passwort UND Code (bzw. Wiederherstellungscode). Ist MFA fuer den
     Mandanten Pflicht, bleibt sie an -- sonst stuende der Account sofort wieder
     vor der Einrichtung."""
-    async with system_session(grund="mfa: deaktivieren") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="mfa: deaktivieren") as session:
         user = await _passwort_und_code_pruefen(session, request, auth, body)
         if mfa_service.mandant_verlangt_mfa(await _mandant_von(session, user)) and user.role != "super_admin":
             raise HTTPException(
@@ -196,7 +195,7 @@ async def mfa_wiederherstellungscodes_erneuern(
 ) -> MfaWiederherstellungscodes:
     """Ersetzt alle Wiederherstellungscodes durch zehn neue (die alten werden
     ungueltig). Wie das Deaktivieren nur mit Passwort und Code."""
-    async with system_session(grund="mfa: wiederherstellungscodes erneuern") as session:
+    async with system_lookups.konto_session(auth.konto_mandant_id, grund="mfa: wiederherstellungscodes erneuern") as session:
         user = await _passwort_und_code_pruefen(session, request, auth, body)
         codes = mfa_service.neue_wiederherstellungscodes(user)
         await log_action(
@@ -241,7 +240,11 @@ async def _mfa_verifizieren_pruefen(
     ungueltig = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Anmeldung abgelaufen. Bitte erneut anmelden."
     )
-    async with system_session(grund="mfa: verifizierung pruefen") as session:
+    # Das MFA-Token nennt nur die User-ID; die Zeile wird danach unter ihrem Mandanten gesperrt.
+    gefunden = await system_lookups.user_kern_by_id(payload["sub"], grund="mfa: verifizierung pruefen")
+    if gefunden is None:
+        raise ungueltig
+    async with system_lookups.konto_session(gefunden.mandant_id, grund="mfa: verifizierung super_admin-konto") as session:
         user = (
             await session.execute(select(User).where(User.id == payload["sub"]).with_for_update())
         ).scalar_one_or_none()

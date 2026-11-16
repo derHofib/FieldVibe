@@ -20,10 +20,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from app.db.session import system_session, tenant_session
+from app.db.session import tenant_session
 from app.models.mandant_export import MandantExport
 from app.services import audit_service, storage_service, vollexport_service
 from app.services.export_zip import ZipSchreiber
+from app.services.mandanten_lauf import je_mandant_ergebnisse
+from app.services.worker_system import export_abgelaufene_mandanten, export_haengende, export_wartende_mandanten
 
 logger = logging.getLogger("app.export")
 
@@ -69,37 +71,38 @@ async def anfordern(
 async def verarbeite_naechsten() -> UUID | None:
     """Nimmt den aeltesten wartenden Auftrag und fuehrt ihn aus. None, wenn keiner wartet."""
     jetzt = datetime.now(timezone.utc)
-    async with system_session(grund="worker: export-job beanspruchen", drosselung_s=300) as session:
-        haengende = (
-            await session.execute(
-                select(MandantExport).where(
-                    MandantExport.status == "laeuft", MandantExport.gestartet_am < jetzt - MAX_LAUFZEIT
+    for h_id, h_mandant in await export_haengende(jetzt - MAX_LAUFZEIT):
+        async with tenant_session(mandant_id=h_mandant, is_super_admin=False) as session:
+            h = await session.get(MandantExport, h_id)
+            if h is not None and h.status == "laeuft":
+                h.status = "fehler"
+                h.fehler = "Abgebrochen (Zeitüberschreitung oder Neustart)"
+
+    for kandidat in await export_wartende_mandanten():
+        async with tenant_session(mandant_id=kandidat, is_super_admin=False) as session:
+            job = (
+                await session.execute(
+                    select(MandantExport)
+                    .where(MandantExport.status == "wartend")
+                    .order_by(MandantExport.angefordert_am)
+                    .limit(1)
+                    .with_for_update(skip_locked=True)
                 )
-            )
-        ).scalars().all()
-        for h in haengende:
-            h.status = "fehler"
-            h.fehler = "Abgebrochen (Zeitüberschreitung oder Neustart)"
-        job = (
-            await session.execute(
-                select(MandantExport)
-                .where(MandantExport.status == "wartend")
-                .order_by(MandantExport.angefordert_am)
-                .limit(1)
-                .with_for_update(skip_locked=True)
-            )
-        ).scalar_one_or_none()
-        if job is None:
-            return None
-        job.status = "laeuft"
-        job.gestartet_am = jetzt
-        job_id, mandant_id, art, parameter, user_id = job.id, job.mandant_id, job.art, dict(job.parameter), job.angefordert_von
+            ).scalar_one_or_none()
+            if job is None:
+                continue
+            job.status = "laeuft"
+            job.gestartet_am = jetzt
+            job_id, mandant_id, art, parameter, user_id = job.id, job.mandant_id, job.art, dict(job.parameter), job.angefordert_von
+        break
+    else:
+        return None
 
     try:
         ergebnis = await _erzeugen(job_id, mandant_id, art, parameter)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Export %s fehlgeschlagen", job_id)
-        async with system_session(grund="worker: export-job abschliessen", drosselung_s=300) as session:
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
             j = await session.get(MandantExport, job_id)
             j.status = "fehler"
             j.fehler = f"{type(exc).__name__}: {exc}"[:500]
@@ -114,7 +117,7 @@ async def verarbeite_naechsten() -> UUID | None:
             )
         return job_id
 
-    async with system_session(grund="worker: export-job fehlschlag", drosselung_s=300) as session:
+    async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
         j = await session.get(MandantExport, job_id)
         j.status = "fertig"
         j.fertig_am = datetime.now(timezone.utc)
@@ -172,32 +175,36 @@ async def _erzeugen(job_id: UUID, mandant_id: UUID, art: str, parameter: dict) -
 async def raeume_auf() -> int:
     """Entfernt abgelaufene Ergebnis-ZIPs (7 Tage); die Zeile bleibt als Nachweis."""
     jetzt = datetime.now(timezone.utc)
-    entfernt = 0
-    async with system_session(grund="worker: export-jobs aufraeumen", drosselung_s=300) as session:
-        faellig = (
-            await session.execute(
-                select(MandantExport).where(MandantExport.status == "fertig", MandantExport.laeuft_ab_am < jetzt)
-            )
-        ).scalars().all()
-        for job in faellig:
-            try:
-                if job.object_key:
-                    await storage_service.delete_object(job.object_key)
-            except Exception:  # noqa: BLE001
-                logger.warning("Export-ZIP %s konnte nicht entfernt werden, naechster Versuch folgt", job.id, exc_info=True)
-                continue
-            job.status = "abgelaufen"
-            job.object_key = None
-            entfernt += 1
-            await audit_service.log_action(
-                session,
-                aktion=f"export_{job.art}_abgelaufen",
-                mandant_id=job.mandant_id,
-                entity_type="export",
-                entity_id=job.id,
-                akteur_typ="system",
-            )
-    return entfernt
+
+    async def _mandant(mandant_id: UUID) -> int:
+        entfernt = 0
+        async with tenant_session(mandant_id=mandant_id, is_super_admin=False) as session:
+            faellig = (
+                await session.execute(
+                    select(MandantExport).where(MandantExport.status == "fertig", MandantExport.laeuft_ab_am < jetzt)
+                )
+            ).scalars().all()
+            for job in faellig:
+                try:
+                    if job.object_key:
+                        await storage_service.delete_object(job.object_key)
+                except Exception:  # noqa: BLE001
+                    logger.warning("Export-ZIP %s konnte nicht entfernt werden, naechster Versuch folgt", job.id, exc_info=True)
+                    continue
+                job.status = "abgelaufen"
+                job.object_key = None
+                entfernt += 1
+                await audit_service.log_action(
+                    session,
+                    aktion=f"export_{job.art}_abgelaufen",
+                    mandant_id=job.mandant_id,
+                    entity_type="export",
+                    entity_id=job.id,
+                    akteur_typ="system",
+                )
+        return entfernt
+
+    return sum(await je_mandant_ergebnisse(await export_abgelaufene_mandanten(jetzt), _mandant))
 
 
 def download_url(job: MandantExport) -> tuple[str, datetime]:

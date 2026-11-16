@@ -24,12 +24,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.logging_config import schwaerze
 from app.core.zeit import in_lokal
-from app.db.session import system_session
 from app.models.email_log import EmailLog
 from app.models.mail_outbox import MailOutbox
 from app.models.notification import Notification
 from app.services import email_service, storage_service
 from app.services.event_bus import event_bus
+from app.services.worker_system import outbox_faellige_mandanten, outbox_haengende_mandanten, outbox_session
 from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 
 logger = logging.getLogger("app.mail_outbox")
@@ -163,20 +163,25 @@ def _fehlertext(exc: Exception) -> str:
 
 
 async def _beanspruche(max_anzahl: int, jetzt: datetime) -> list[_Auftrag]:
-    async with system_session(grund="worker: mail-outbox faellige", drosselung_s=300) as session:
-        zeilen = (await session.execute(
-            select(MailOutbox)
-            .where(MailOutbox.status == "pending", MailOutbox.naechster_versuch_am <= jetzt)
-            .order_by(MailOutbox.naechster_versuch_am)
-            .limit(max_anzahl)
-            .with_for_update(skip_locked=True)
-        )).scalars().all()
-        auftraege = []
-        for z in zeilen:
-            z.status = "sending"
-            z.versuche += 1
-            z.sending_seit = jetzt
-            auftraege.append(_Auftrag(z.id, z.mandant_id, z.empfaenger, z.betreff, z.body, z.html_body, list(z.anhaenge)))
+    auftraege: list[_Auftrag] = []
+    for mandant_id in await outbox_faellige_mandanten(jetzt):
+        if len(auftraege) >= max_anzahl:
+            break
+        async with outbox_session(mandant_id) as session:
+            stmt = (
+                select(MailOutbox)
+                .where(MailOutbox.status == "pending", MailOutbox.naechster_versuch_am <= jetzt)
+                .order_by(MailOutbox.naechster_versuch_am)
+                .limit(max_anzahl - len(auftraege))
+                .with_for_update(skip_locked=True)
+            )
+            if mandant_id is None:
+                stmt = stmt.where(MailOutbox.mandant_id.is_(None))
+            for z in (await session.execute(stmt)).scalars().all():
+                z.status = "sending"
+                z.versuche += 1
+                z.sending_seit = jetzt
+                auftraege.append(_Auftrag(z.id, z.mandant_id, z.empfaenger, z.betreff, z.body, z.html_body, list(z.anhaenge)))
     return auftraege
 
 
@@ -212,25 +217,31 @@ async def _endgueltig_fehlgeschlagen(session: AsyncSession, row: MailOutbox, log
 
 async def _bereinige_haengende(jetzt: datetime) -> int:
     grenze = jetzt - timedelta(minutes=get_settings().mail_outbox_sending_timeout_minuten)
-    async with system_session(grund="worker: mail-outbox haengende bereinigen", drosselung_s=300) as session:
-        zeilen = (await session.execute(
-            select(MailOutbox)
-            .where(MailOutbox.status == "sending", MailOutbox.sending_seit < grenze)
-            .with_for_update(skip_locked=True)
-        )).scalars().all()
-        for row in zeilen:
-            log = await session.get(EmailLog, row.email_log_id) if row.email_log_id else None
-            await _endgueltig_fehlgeschlagen(
-                session, row, log,
-                "Worker-Abbruch während des Versands: Zustellung unbekannt, nicht automatisch wiederholt "
-                "(sonst droht ein Doppelversand). Bitte prüfen und bei Bedarf erneut senden.",
+    anzahl = 0
+    for mandant_id in await outbox_haengende_mandanten(grenze):
+        async with outbox_session(mandant_id) as session:
+            stmt = (
+                select(MailOutbox)
+                .where(MailOutbox.status == "sending", MailOutbox.sending_seit < grenze)
+                .with_for_update(skip_locked=True)
             )
-        return len(zeilen)
+            if mandant_id is None:
+                stmt = stmt.where(MailOutbox.mandant_id.is_(None))
+            zeilen = (await session.execute(stmt)).scalars().all()
+            for row in zeilen:
+                log = await session.get(EmailLog, row.email_log_id) if row.email_log_id else None
+                await _endgueltig_fehlgeschlagen(
+                    session, row, log,
+                    "Worker-Abbruch während des Versands: Zustellung unbekannt, nicht automatisch wiederholt "
+                    "(sonst droht ein Doppelversand). Bitte prüfen und bei Bedarf erneut senden.",
+                )
+            anzahl += len(zeilen)
+    return anzahl
 
 
 async def _schreibe_ergebnis(auftrag: _Auftrag, jetzt: datetime, exc: Exception | None, stats: dict) -> None:
     geloeschte_keys: list[str] = []
-    async with system_session(grund="worker: mail-outbox ergebnis schreiben", drosselung_s=300) as session:
+    async with outbox_session(auftrag.mandant_id) as session:
         row = (await session.execute(
             select(MailOutbox).where(MailOutbox.id == auftrag.id).with_for_update()
         )).scalar_one()
@@ -280,7 +291,7 @@ async def _versende(auftrag: _Auftrag, jetzt: datetime, stats: dict) -> None:
             (a["dateiname"], await storage_service.download_bytes(a["s3_key"]), a["mimetype"])
             for a in auftrag.anhaenge
         ]
-        async with system_session(grund="worker: mail-outbox versenden", drosselung_s=300) as session:
+        async with outbox_session(auftrag.mandant_id) as session:
             await email_service.send_email(
                 session,
                 auftrag.mandant_id,
