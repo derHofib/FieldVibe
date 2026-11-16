@@ -5,6 +5,9 @@ import { Link } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { projektVorlagenApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { Sheet } from "../../components/apple/Sheet";
 import { EmptyState } from "../../components/EmptyState";
 import type { ProjektVorlage, ProjektVorlageDetail, ProjektVorlageElement } from "../../types";
@@ -80,9 +83,9 @@ function MiniGantt({ detail }: { detail: ProjektVorlageDetail }) {
 }
 
 function VorlagenVorschau({ vorlage }: { vorlage: ProjektVorlage }) {
-  const { data, isLoading, error } = useQuery({ queryKey: ["projekt-vorlage", vorlage.id], queryFn: () => projektVorlagenApi.get(vorlage.id) });
-  if (isLoading) return <p className="text-sekundaer text-label2">Vorschau wird geladen …</p>;
-  if (error || !data) return <p role="alert" className="text-fliess text-st-fehlt">Vorschau konnte nicht geladen werden.</p>;
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: ["projekt-vorlage", vorlage.id], queryFn: () => projektVorlagenApi.get(vorlage.id) });
+  if (isLoading) return <SkeletonList count={3} />;
+  if (error || !data) return <FehlerZustand fehler={error} was="Die Vorschau" onErneut={() => void refetch()} />;
   return (
     <div className="space-y-3">
       <p className="text-sekundaer text-label2">
@@ -145,7 +148,7 @@ function BearbeitenSheet({ vorlage, onClose }: { vorlage: ProjektVorlage; onClos
 export function OfficeProjektVorlagenPage() {
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
-  const { data: vorlagen, isLoading, error } = useQuery({ queryKey: ["projekt-vorlagen"], queryFn: projektVorlagenApi.list });
+  const { data: vorlagen, isLoading, error, refetch: vorlagenNeuLaden } = useQuery({ queryKey: ["projekt-vorlagen"], queryFn: projektVorlagenApi.list });
   const [auswahlId, setAuswahlId] = useState<string | null>(null);
   const [bearbeiten, setBearbeiten] = useState<ProjektVorlage | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -177,8 +180,8 @@ export function OfficeProjektVorlagenPage() {
           </button>
         </div>
       )}
-      {isLoading && <p className="text-sekundaer text-label2">Vorlagen werden geladen …</p>}
-      {error && <p role="alert" className="text-fliess text-st-fehlt">Vorlagen konnten nicht geladen werden.</p>}
+      {isLoading && <SkeletonList count={3} />}
+      {error && !vorlagen && <FehlerZustand fehler={error} was="Die Vorlagen" onErneut={() => void vorlagenNeuLaden()} />}
 
       {vorlagen && vorlagen.length === 0 && (
         <Karte className="p-4">
@@ -222,19 +225,22 @@ export function OfficeProjektVorlagenPage() {
                   <Pencil size={14} strokeWidth={2} aria-hidden="true" />
                   Umbenennen
                 </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (await bestaetigen({ titel: `Vorlage „${aktiv.name}“ löschen?`, text: `Bereits angewendete Zeitpläne bleiben unverändert.`, bestaetigenLabel: "Löschen" })) {
-                      setFehler(null);
-                      loeschen.mutate(aktiv.id);
-                    }
-                  }}
-                  className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg"
-                >
-                  <Trash2 size={14} strokeWidth={2} aria-hidden="true" />
-                  Löschen
-                </button>
+                <AktionsMenue
+                  label={`Aktionen für Vorlage ${aktiv.name}`}
+                  eintraege={[
+                    {
+                      label: "Löschen",
+                      icon: Trash2,
+                      destruktiv: true,
+                      onClick: async () => {
+                        if (await bestaetigen({ titel: `Vorlage „${aktiv.name}“ löschen?`, text: `Bereits angewendete Zeitpläne bleiben unverändert.`, bestaetigenLabel: "Löschen" })) {
+                          setFehler(null);
+                          loeschen.mutate(aktiv.id);
+                        }
+                      },
+                    },
+                  ]}
+                />
               </div>
               <VorlagenVorschau vorlage={aktiv} />
             </Karte>

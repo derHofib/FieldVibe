@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FileCheck2, Plus, Receipt } from "lucide-react";
-import { useId, useState } from "react";
+import { ExternalLink, FileCheck2, Plus, Receipt, Search } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { useAuth } from "../../context/AuthContext";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { EmptyState } from "../../components/EmptyState";
@@ -72,9 +76,9 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
   });
 
   return (
-    <Karte className="mb-4 space-y-3 p-4">
+    <div className="space-y-3 p-4">
       <div>
-        <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Kunde</label>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Kunde</label>
         <SearchableSelect id={`${uid}-0`}
           value={kundeId}
           onChange={setKundeId}
@@ -82,19 +86,22 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
           options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
         />
       </div>
-      <div className="flex items-center gap-2">
+      {erstellen.isError && (
+        <p role="alert" className="text-sekundaer text-st-fehlt">Das Angebot konnte nicht angelegt werden.</p>
+      )}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onAbbrechen} className="btn-touch btn-ap px-4">
+          Abbrechen
+        </button>
         <button
           disabled={!kundeId || erstellen.isPending}
           onClick={() => erstellen.mutate()}
-          className="btn-ap-primary flex-1 px-4 py-2 text-sekundaer"
+          className={NEU_BUTTON_KLASSE}
         >
           Angebot anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sekundaer font-medium text-label2">
-          Abbrechen
-        </button>
       </div>
-    </Karte>
+    </div>
   );
 }
 
@@ -113,6 +120,9 @@ export function OfficeRechnungenPage() {
   const [bereich, setBereich] = useState<Bereich>("rechnungen");
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   const [zeigeNeu, setZeigeNeu] = useState(false);
+  const { hatRecht } = useAuth();
+  const darfAnlegen = hatRecht("abrechnung", "erstellen");
+  const [suche, setSuche] = useState("");
   const [artFilter, setArtFilter] = useState<Rechnungsart | null>(null);
 
   const rechnungen = useQuery({
@@ -130,6 +140,7 @@ export function OfficeRechnungenPage() {
     setBereich(neu);
     setGewaehlt(null);
     setZeigeNeu(false);
+    setSuche("");
   };
 
   const neuAngelegt = (id: string) => {
@@ -138,7 +149,7 @@ export function OfficeRechnungenPage() {
     queryClient.invalidateQueries({ queryKey: [bereich === "rechnungen" ? "rechnungen" : "angebote"] });
   };
 
-  const eintraege =
+  const alleEintraege =
     bereich === "rechnungen"
       ? (rechnungen.data?.eintraege ?? []).map((r) => ({
           id: r.id,
@@ -167,6 +178,12 @@ export function OfficeRechnungenPage() {
           label: ANGEBOT_STATUS_LABEL[a.status],
         }));
 
+  // Beide Listen werden vollständig geladen, daher genügt ein Client-Filter.
+  const eintraege = useMemo(() => {
+    const q = suche.trim().toLowerCase();
+    return q ? alleEintraege.filter((e) => e.nummer.toLowerCase().includes(q)) : alleEintraege;
+  }, [alleEintraege, suche]);
+
   const aktuelleAbfrage = bereich === "rechnungen" ? rechnungen : angebote;
   const laedt = aktuelleAbfrage.isLoading;
   const aktiv = gewaehlt && eintraege.some((e) => e.id === gewaehlt) ? gewaehlt : eintraege[0]?.id;
@@ -175,23 +192,32 @@ export function OfficeRechnungenPage() {
     <div>
       <SeitenKopf titel={bereich === "rechnungen" ? "Rechnungen" : "Angebote"} anzahl={eintraege.length}>
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
-        <button
-          onClick={() => setZeigeNeu((v) => !v)}
-          className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-semibold"
-        >
-          <Plus size={13} strokeWidth={2.5} />
-          {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
-        </button>
+        <SearchField
+          value={suche}
+          onChange={setSuche}
+          placeholder="Nummer…"
+          ariaLabel={bereich === "rechnungen" ? "Rechnungen suchen" : "Angebote suchen"}
+          className="w-48"
+        />
+        {darfAnlegen && (
+          <button onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
+            <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
+            {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
+          </button>
+        )}
       </SeitenKopf>
 
-      {zeigeNeu &&
-        (bereich === "rechnungen" ? (
-          <div className="mb-4">
-            <NeueRechnungForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
-          </div>
+      <AnlegenPanel
+        offen={zeigeNeu}
+        titel={bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
+        onClose={() => setZeigeNeu(false)}
+      >
+        {bereich === "rechnungen" ? (
+          <NeueRechnungForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
         ) : (
           <NeuesAngebotForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
-        ))}
+        )}
+      </AnlegenPanel>
 
       {bereich === "rechnungen" && (
         <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
@@ -233,10 +259,25 @@ export function OfficeRechnungenPage() {
           onErneut={() => void aktuelleAbfrage.refetch()}
         />
       ) : eintraege.length === 0 ? (
-        <EmptyState
-          icon={bereich === "rechnungen" ? Receipt : FileCheck2}
-          text={bereich === "rechnungen" ? "Keine Rechnungen vorhanden." : "Keine Angebote vorhanden."}
-        />
+        suche.trim() && alleEintraege.length > 0 ? (
+          <EmptyState icon={Search} text="Kein Eintrag entspricht der Suche." />
+        ) : (
+          <EmptyState
+            icon={bereich === "rechnungen" ? Receipt : FileCheck2}
+            text={
+              bereich === "rechnungen"
+                ? "Keine Rechnungen vorhanden. Rechnungen entstehen aus Vorgängen oder werden hier neu angelegt."
+                : "Keine Angebote vorhanden. Angebote entstehen aus Mängeln oder werden hier neu angelegt."
+            }
+            action={
+              darfAnlegen ? (
+                <button type="button" onClick={() => setZeigeNeu(true)} className="btn-ap px-4 py-2 text-sekundaer">
+                  {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
+                </button>
+              ) : undefined
+            }
+          />
+        )
       ) : (
         <div className="grid grid-cols-[minmax(260px,320px)_1fr] gap-4">
           <Karte className="max-h-[calc(100vh-15rem)] overflow-y-auto">
