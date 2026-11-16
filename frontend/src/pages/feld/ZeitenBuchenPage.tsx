@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { auftraegeApi, kundenApi, projekteApi, usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { StatusPille } from "../../components/apple/StatusPille";
@@ -306,7 +307,7 @@ export function ZeitenBuchenPage() {
 
       <div className="card-ap p-3">
         {isLoading ? (
-          <p className="text-sekundaer text-label2">Lädt…</p>
+          <SkeletonList count={3} />
         ) : ladeFehler && !eintraege ? (
           <FehlerZustand fehler={ladeFehler} was="Die Zeiten" onErneut={() => void neuLaden()} />
         ) : gruppen.length === 0 ? (

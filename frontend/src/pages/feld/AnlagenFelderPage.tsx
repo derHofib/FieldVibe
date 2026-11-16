@@ -1,11 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useId, useMemo, useState } from "react";
+import { ListPlus } from "lucide-react";
+import { type FormEvent, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, anlagenFeldDefinitionenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { AnlagenFeldTyp } from "../../types";
 import { Select } from "../../components/apple/Select";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { SkeletonList } from "../../components/Skeleton";
 
 const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
   text: "Text",
@@ -14,15 +22,17 @@ const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
 };
 
 export function AnlagenFelderPage() {
-  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [anlagentyp, setAnlagentyp] = useState("");
   const [feldName, setFeldName] = useState("");
   const [feldTyp, setFeldTyp] = useState<AnlagenFeldTyp>("text");
   const [error, setError] = useState<string | null>(null);
+  const [fehlerFeld, setFehlerFeld] = useState<"typ" | "name" | null>(null);
+  const [panelOffen, setPanelOffen] = useState(false);
 
-  const { data: definitionen } = useQuery({
+  const { data: definitionen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["anlagen-feld-definitionen"],
     queryFn: () => anlagenFeldDefinitionenApi.list(),
   });
@@ -60,6 +70,7 @@ export function AnlagenFelderPage() {
       invalidate();
       setFeldName("");
       setError(null);
+      setPanelOffen(false);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Feld konnte nicht angelegt werden"),
   });
@@ -73,8 +84,15 @@ export function AnlagenFelderPage() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!anlagentyp.trim() || !feldName.trim()) {
-      setError("Bitte Anlagentyp und Feldname angeben");
+    setFehlerFeld(null);
+    if (!anlagentyp.trim()) {
+      setError("Bitte einen Anlagentyp angeben");
+      setFehlerFeld("typ");
+      return;
+    }
+    if (!feldName.trim()) {
+      setError("Bitte einen Feldnamen angeben");
+      setFehlerFeld("name");
       return;
     }
     createMutation.mutate();
@@ -94,56 +112,78 @@ export function AnlagenFelderPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-2 card-ap p-4"
-      >
-        <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Anlagentyp</label>
-          <input id={`${uid}-0`}
-            list="bekannte-anlagentypen"
-            value={anlagentyp}
-            onChange={(e) => setAnlagentyp(e.target.value)}
-            placeholder="z.B. Fahrzeug, Ladestation, Elektroanlage"
-            className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
-          />
-          <datalist id="bekannte-anlagentypen">
-            {bekannteTypen.map((t) => (
-              <option key={t} value={t} />
-            ))}
-          </datalist>
-        </div>
-        <div className="flex gap-2">
-          <input
-            value={feldName}
-            onChange={(e) => setFeldName(e.target.value)}
-            placeholder="Feldname, z.B. Kennzeichen"
-            className="btn-touch flex-1 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
-          />
-          <Select
-            className="w-auto"
-            value={feldTyp}
-            onChange={(e) => setFeldTyp(e.target.value as AnlagenFeldTyp)}
-          >
-            {Object.entries(FELD_TYP_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
-        >
-          Feld hinzufügen
-        </button>
-      </form>
+      <button type="button" onClick={() => setPanelOffen(true)} className={NEU_BUTTON_KLASSE}>
+        + Neues Zusatzfeld
+      </button>
 
-      {gruppen.length === 0 ? (
-        <p className="text-center text-sekundaer text-label2">Noch keine Zusatzfelder definiert.</p>
+      <AnlegenPanel offen={panelOffen} titel="Neues Zusatzfeld" onClose={() => setPanelOffen(false)}>
+        <form onSubmit={handleSubmit} noValidate className="space-y-3 p-4">
+          <Feld label="Anlagentyp" pflicht fehler={fehlerFeld === "typ" ? error : null}>
+            {(p) => (
+              <>
+                <input
+                  {...p}
+                  list="bekannte-anlagentypen"
+                  value={anlagentyp}
+                  onChange={(e) => setAnlagentyp(e.target.value)}
+                  placeholder="z.B. Fahrzeug, Ladestation, Elektroanlage"
+                  className={FELD_KLASSE}
+                />
+                <datalist id="bekannte-anlagentypen">
+                  {bekannteTypen.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+              </>
+            )}
+          </Feld>
+          <Feld label="Feldname" pflicht fehler={fehlerFeld === "name" ? error : null}>
+            {(p) => (
+              <input
+                {...p}
+                value={feldName}
+                onChange={(e) => setFeldName(e.target.value)}
+                placeholder="z.B. Kennzeichen"
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+          <Feld label="Feldtyp">
+            {(p) => (
+              <Select {...p} value={feldTyp} onChange={(e) => setFeldTyp(e.target.value as AnlagenFeldTyp)}>
+                {Object.entries(FELD_TYP_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Feld>
+          {error && !fehlerFeld && (
+            <p role="alert" className="text-fliess text-st-fehlt">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={createMutation.isPending} className={`${NEU_BUTTON_KLASSE} w-full`}>
+            Feld hinzufügen
+          </button>
+        </form>
+      </AnlegenPanel>
+
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : ladeFehler && !definitionen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Zusatzfelder" onErneut={() => void neuLaden()} />
+      ) : gruppen.length === 0 ? (
+        <EmptyState
+          icon={ListPlus}
+          text="Noch keine Zusatzfelder definiert. Lege ein Feld an, damit es bei Anlagen dieses Typs abgefragt wird."
+          action={
+            <button type="button" onClick={() => setPanelOffen(true)} className={NEU_BUTTON_KLASSE}>
+              + Neues Zusatzfeld
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {gruppen.map(([typ, felder]) => (
@@ -163,12 +203,25 @@ export function AnlagenFelderPage() {
                       <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
                         {FELD_TYP_LABEL[f.feld_typ]}
                       </span>
-                      <button
-                        onClick={() => deleteMutation.mutate(f.id)}
-                        className="btn-touch text-sekundaer text-st-fehlt "
-                      >
-                        Entfernen
-                      </button>
+                      <AktionsMenue
+                        label={`Aktionen für ${f.feld_name}`}
+                        eintraege={[
+                          {
+                            label: "Entfernen",
+                            destruktiv: true,
+                            onClick: async () => {
+                              if (
+                                await bestaetigen({
+                                  titel: `Feld „${f.feld_name}“ entfernen?`,
+                                  bestaetigenLabel: "Entfernen",
+                                  destruktiv: true,
+                                })
+                              )
+                                deleteMutation.mutate(f.id);
+                            },
+                          },
+                        ]}
+                      />
                     </div>
                   </div>
                 ))}

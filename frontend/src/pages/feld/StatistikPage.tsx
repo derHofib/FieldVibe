@@ -3,6 +3,7 @@ import { Clock, FileText, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+import { SkeletonList } from "../../components/Skeleton";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
 import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
@@ -66,7 +67,7 @@ export function TeamKennzahlen() {
       {ladeFehler && !kennzahlen ? (
         <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" onErneut={() => void neuLaden()} />
       ) : isLoading || !kennzahlen ? (
-        <p className="py-4 text-center text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={3} />
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2">

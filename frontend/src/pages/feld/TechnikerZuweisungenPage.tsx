@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
@@ -62,7 +64,7 @@ export function TechnikerZuweisungenPage() {
       ) : ladeFehler && !uebersicht ? (
         <FehlerZustand fehler={ladeFehler} was="Die Techniker" onErneut={() => void neuLaden()} />
       ) : !uebersicht || uebersicht.length === 0 ? (
-        <p className="text-sekundaer text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
+        <EmptyState icon={Users} text="Keine Techniker in diesem Mandanten angelegt. Techniker entstehen über die Mitarbeiterverwaltung." />
       ) : (
         <div className="space-y-3">
           {uebersicht.map((row) => (

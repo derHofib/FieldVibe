@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -6,6 +7,8 @@ import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { SkeletonList } from "../../components/Skeleton";
@@ -128,15 +131,16 @@ export function PapierkorbPage() {
       ) : ladeFehler && !eintraege ? (
         <FehlerZustand fehler={ladeFehler} was="Der Papierkorb" onErneut={() => void neuLaden()} />
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-card p-4 text-sekundaer text-label2 shadow-xs ">
-          Der Papierkorb ist leer.
-        </p>
+        <EmptyState
+          icon={Trash2}
+          text={filter ? "Keine gelöschten Einträge dieses Typs." : "Der Papierkorb ist leer. Gelöschte Datensätze erscheinen hier."}
+        />
       ) : (
         <ul className="space-y-2">
           {eintraege.map((eintrag) => (
             <li
               key={`${eintrag.entity_typ}-${eintrag.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg bg-card p-3 shadow-xs"
+              className="flex items-center justify-between gap-3 card-ap p-3"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -153,27 +157,31 @@ export function PapierkorbPage() {
                 </p>
               </div>
               {istOperativ && (
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 items-center gap-1">
                   <button
                     onClick={() => restoreMutation.mutate(eintrag)}
                     disabled={restoreMutation.isPending}
-                    className="btn-touch rounded-md bg-cyan-50 px-3 py-2 text-sekundaer font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 dark:bg-cyan-500/10 dark:text-cyan-300"
+                    className="btn-touch btn-ap px-3 text-sekundaer font-medium disabled:opacity-50"
                   >
                     Wiederherstellen
                   </button>
-                  <button
-                    onClick={async () => {
-                      if (
-                        await bestaetigen({ titel: `„${anzeigeName(eintrag)}“ endgültig löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Endgültig löschen" })
-                      ) {
-                        purgeMutation.mutate(eintrag);
-                      }
-                    }}
-                    disabled={purgeMutation.isPending}
-                    className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-2 text-sekundaer font-semibold text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 "
-                  >
-                    Endgültig löschen
-                  </button>
+                  <AktionsMenue
+                    label={`Aktionen für ${anzeigeName(eintrag)}`}
+                    eintraege={[
+                      {
+                        label: "Endgültig löschen",
+                        destruktiv: true,
+                        disabled: purgeMutation.isPending,
+                        onClick: async () => {
+                          if (
+                            await bestaetigen({ titel: `„${anzeigeName(eintrag)}“ endgültig löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Endgültig löschen" })
+                          ) {
+                            purgeMutation.mutate(eintrag);
+                          }
+                        },
+                      },
+                    ]}
+                  />
                 </div>
               )}
             </li>
