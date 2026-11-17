@@ -30,6 +30,13 @@ describe("aktiverNavKey", () => {
   });
 });
 
+describe("fuerOffice", () => {
+  it("blendet Meldungen im Office aus, die Feld-Navigation behält sie", () => {
+    expect(seite("meldungen")).toBeUndefined();
+    expect(NAV_SEITEN.some((s) => s.key === "meldungen")).toBe(true);
+  });
+});
+
 describe("workspaceFuerRoute", () => {
   it("wählt den Workspace der Seite, auch wenn ein anderer gemerkt ist", () => {
     expect(workspaceFuerRoute(seite("rechnungen"), WORKSPACES, "operativ")?.key).toBe("finanzen");

@@ -25,10 +25,9 @@ import { LeistungsverzeichnisDetailPage } from "../pages/feld/Leistungsverzeichn
 import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage";
 import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
-import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
 import { ProfilePage } from "../pages/feld/ProfilePage";
-import { PruefmittelPage } from "../pages/feld/PruefmittelPage";
+import { OfficePruefmittelPage } from "./pruefmittel/OfficePruefmittelPage";
 import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
 import { RechnungseingangPage } from "../pages/feld/RechnungseingangPage";
 import { SearchPage } from "../pages/feld/SearchPage";
@@ -162,6 +161,9 @@ export function OfficeApp() {
             }
           />
 
+          {/* Profil braucht zwei Spalten, deshalb ausserhalb der schmalen Lesespalte */}
+          <Route path="/profil" element={<ProfilePage layout="office" />} />
+
           {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
           <Route element={<SchmaleSpalte />}>
           <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
@@ -171,8 +173,6 @@ export function OfficeApp() {
           <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
           <Route path="/neu" element={<NewVorgangPage />} />
           <Route path="/suche" element={<SearchPage />} />
-          <Route path="/benachrichtigungen" element={<NotificationsPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
@@ -182,7 +182,8 @@ export function OfficeApp() {
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-          <Route path="/pruefmittel" element={<PruefmittelPage />} />
+          <Route path="/pruefmittel" element={<OfficePruefmittelPage />} />
+          <Route path="/pruefmittel/:id" element={<OfficePruefmittelPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />

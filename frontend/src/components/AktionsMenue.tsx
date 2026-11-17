@@ -11,6 +11,8 @@ export interface AktionsMenueEintrag {
   /** Destruktive Aktionen stehen am Ende und sind rot gekennzeichnet. */
   destruktiv?: boolean;
   disabled?: boolean;
+  /** Radio-Eintrag: true markiert die aktuelle Auswahl (siehe PulldownMenu). */
+  aktiv?: boolean;
 }
 
 /** Zeilen-/Nutzermenü: dünner Rahmen um das bestehende PulldownMenu

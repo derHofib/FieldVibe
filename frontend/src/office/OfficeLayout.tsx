@@ -239,6 +239,17 @@ export function OfficeLayout() {
   // Die früheren Hilfslinks am Fuß der Seitenleiste plus Abmelden -- selten
   // gebraucht, deshalb gebündelt statt dauerhaft sichtbar.
   const nutzerMenue: (AktionsMenueEintrag | "trenner")[] = [
+    ...(workspaces.length > 1
+      ? [
+          ...workspaces.map((w) => ({
+            label: `Workspace: ${w.label}`,
+            icon: w.icon,
+            aktiv: w.key === aktiverWorkspace?.key,
+            onClick: () => workspaceWechseln(w.key),
+          })),
+          "trenner" as const,
+        ]
+      : []),
     { label: "Seitenleiste anpassen", icon: Settings, onClick: () => navigate("/einstellungen/seitenleiste") },
     ...(currentUser?.role === "mandant_admin"
       ? [{ label: "Menü-Kategorien", icon: FolderCog, onClick: () => navigate("/einstellungen/kategorien") }]
@@ -308,33 +319,6 @@ export function OfficeLayout() {
               {eingeklappt ? <PanelLeftOpen size={16} strokeWidth={2} /> : <PanelLeftClose size={16} strokeWidth={2} />}
             </button>
           </div>
-
-          {workspaces.length > 1 && (
-            <div
-              role="tablist"
-              aria-label="Workspace"
-              className={`mb-3 flex gap-1 ${eingeklappt ? "flex-col" : "flex-wrap"}`}
-            >
-              {workspaces.map((w) => {
-                const aktiv = w.key === aktiverWorkspace?.key;
-                return (
-                  <button
-                    key={w.key}
-                    role="tab"
-                    aria-selected={aktiv}
-                    title={eingeklappt ? w.label : undefined}
-                    onClick={() => workspaceWechseln(w.key)}
-                    className={`flex h-[28px] items-center justify-center rounded-[7px] text-sekundaer font-medium ${
-                      eingeklappt ? "px-0" : "gap-1.5 px-2.5"
-                    } ${aktiv ? "bg-fill2 text-label" : "text-label2 hover:bg-fill hover:text-label"}`}
-                  >
-                    <w.icon size={14} strokeWidth={2} className={aktiv ? "text-tint" : ""} />
-                    {!eingeklappt && w.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
           {!eingeklappt && aktiverWorkspace?.key === "operativ" && darfVorgaenge && (
             <div className="mb-4 grid grid-cols-2 gap-2">

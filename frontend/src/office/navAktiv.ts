@@ -5,7 +5,8 @@ import { seiteInWorkspace, type NavSeite, type Workspace } from "../config/navSe
  * Handy-Startseite); im Office leitet /feed nur auf /vorgaenge um, ein Link
  * dorthin wäre daher nie als aktiv erkennbar. */
 export function fuerOffice(seiten: NavSeite[]): NavSeite[] {
-  return seiten.map((seite) =>
+  // "Meldungen" gibt es nur in der Feld-App (Tab-Bar); das Office hat weder Route noch Eintrag.
+  return seiten.filter((seite) => seite.key !== "meldungen").map((seite) =>
     seite.key === "feed" ? { ...seite, label: "Vorgänge", route: "/vorgaenge" } : seite,
   );
 }
