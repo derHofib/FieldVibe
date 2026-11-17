@@ -46,7 +46,7 @@ export function useFilterVorlagen({ entitaet, filter, onApply }: FilterVorlagenP
     if (appliedDefault.current || !vorlagen) return;
     appliedDefault.current = true;
     const standard = vorlagen.find((v) => v.ist_standard);
-    if (standard) onApply(standard.filter_json);
+    if (standard) onApply(standard.filter_json as Record<string, string>);
     // onApply kommt vom Elternteil neu bei jedem Render -- nur beim ersten
     // Laden der Vorlagen soll automatisch angewendet werden.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,7 +95,7 @@ function VorlagenChips({ v: h }: { v: FilterVorlagenState }) {
       {(vorlagen ?? []).length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 py-0.5">
           {vorlagen!.map((v) => {
-            const aktiv = filtersEqual(filter, v.filter_json);
+            const aktiv = filtersEqual(filter, v.filter_json as Record<string, string>);
             return (
               <div
                 key={v.id}
@@ -105,7 +105,7 @@ function VorlagenChips({ v: h }: { v: FilterVorlagenState }) {
               >
                 {/* Gleiche Masse wie FilterChip statt btn-touch: sonst waechst der Chip je
                     nach Zustand unterschiedlich und die Leiste springt. */}
-                <button onClick={() => onApply(v.filter_json)} className="whitespace-nowrap pr-1">
+                <button onClick={() => onApply(v.filter_json as Record<string, string>)} className="whitespace-nowrap pr-1">
                   {v.ist_standard && "★ "}
                   {v.name}
                 </button>
@@ -205,7 +205,7 @@ export function FilterVorlagenMenue({ v: h }: { v: FilterVorlagenState }) {
   const items: PulldownItem[] = [
     ...(vorlagen ?? []).map((vl) => ({
       label: `${vl.ist_standard ? "★ " : ""}${vl.name}`,
-      onSelect: () => onApply(vl.filter_json),
+      onSelect: () => onApply(vl.filter_json as Record<string, string>),
     })),
     ...((vorlagen ?? []).length > 0 ? (["trenner"] as PulldownItem[]) : []),
     { label: "Filter zurücksetzen", disabled: !hatAktivenFilter, onSelect: () => onApply({}) },
