@@ -89,6 +89,8 @@ export function OfficeApp() {
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />
           <Route path="/partner" element={<OfficePartnerPage />} />
           <Route path="/partner/:id" element={<OfficePartnerPage />} />
+          <Route path="/pruefmittel" element={<OfficePruefmittelPage />} />
+          <Route path="/pruefmittel/:id" element={<OfficePruefmittelPage />} />
           <Route path="/material" element={<OfficeMaterialPage />} />
           <Route path="/material/:id" element={<OfficeMaterialPage />} />
           <Route path="/boards" element={<OfficeBoardsPage />} />
@@ -141,7 +143,7 @@ export function OfficeApp() {
           <Route
             path="/statistik"
             element={
-              <div className="max-w-[1400px]">
+              <div className="max-w-[1760px]">
                 <OfficeArbeitszeitPage />
               </div>
             }
@@ -182,8 +184,6 @@ export function OfficeApp() {
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-          <Route path="/pruefmittel" element={<OfficePruefmittelPage />} />
-          <Route path="/pruefmittel/:id" element={<OfficePruefmittelPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
