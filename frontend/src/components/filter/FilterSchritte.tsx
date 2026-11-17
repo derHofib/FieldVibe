@@ -50,7 +50,7 @@ function Eingabe({
     <div className="flex h-8 items-center gap-1.5 rounded-[8px] border-[0.5px] border-sep bg-card px-2.5 focus-within:border-tint">
       <input
         {...rest}
-        className="search-ap-input min-w-0 flex-1 bg-transparent text-sekundaer text-label outline-none placeholder:text-label3"
+        className="search-ap-input min-w-0 flex-1 bg-transparent text-sekundaer text-label outline-none! placeholder:text-label3"
       />
       {suffix && <span className="text-sekundaer text-label2">{suffix}</span>}
     </div>
@@ -170,7 +170,7 @@ export function SpaltenSchritt<T>({
         onChange={(ev) => setText(ev.target.value)}
         onKeyDown={l.onKeyDown}
       />
-      <Liste eintraege={eintraege} aktiv={l.aktiv} onWaehle={onWaehle} variante="office" listId={listId} ariaLabel="Spalten" />
+      <Liste eintraege={eintraege} aktiv={l.aktiv} onAktiv={l.setAktiv} onWaehle={onWaehle} variante="office" listId={listId} ariaLabel="Spalten" />
     </Rahmen>
   );
 }
@@ -298,6 +298,7 @@ function TextWert<T>({ e, feld, variante, knopf }: WertProps<T>) {
         <Liste
           eintraege={eintraege}
           aktiv={variante === "office" ? l.aktiv : -1}
+          onAktiv={l.setAktiv}
           onWaehle={waehle}
           variante={variante}
           listId={listId}
@@ -366,8 +367,10 @@ function OptionenWert<T>({ e, feld, variante, knopf }: WertProps<T>) {
         tabIndex={-1}
         onMouseDown={(ev) => ev.preventDefault()}
         onClick={() => toggle(o.wert)}
-        className={`group flex min-h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-sekundaer ${
-          hervor ? "bg-tint-solid text-white" : "text-label hover:bg-tint-solid hover:text-white"
+        onMouseEnter={() => l.setAktiv(i)}
+        onMouseMove={() => l.aktiv !== i && l.setAktiv(i)}
+        className={`flex min-h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-sekundaer ${
+          hervor ? (o.status ? "bg-fill2 text-label" : "bg-tint-solid text-white") : "text-label"
         }`}
       >
         <span
@@ -434,7 +437,7 @@ function OptionenWert<T>({ e, feld, variante, knopf }: WertProps<T>) {
           id={listId}
           aria-label={feld.label}
           aria-multiselectable={!feld.einzelwert}
-          className="max-h-[260px] overflow-y-auto outline-none"
+          className="max-h-[260px] overflow-y-auto outline-none!"
           {...wurzel}
         >
           {zeilen.length > 0 ? zeilen : <p className="px-2 py-2 text-sekundaer text-label2">Keine Treffer</p>}
@@ -454,6 +457,7 @@ const SCHNELL: { wert: RelativerZeitraum; label: string }[] = [
 ];
 
 function DatumWert<T>({ e, feld, variante, knopf }: WertProps<T>) {
+  const [hoverIdx, setHoverIdx] = useState(-1);
   const op = e.entwurf!.op!;
   const wert = e.entwurf!.wert;
   const erlaubt = operatorenFuer(feld);
@@ -527,7 +531,7 @@ function DatumWert<T>({ e, feld, variante, knopf }: WertProps<T>) {
         </div>
       )}
       {eintraege.length > 0 && (
-        <Liste eintraege={eintraege} aktiv={-1} onWaehle={waehle} variante={variante} listId={listId} ariaLabel="Schnellauswahl" />
+        <Liste eintraege={eintraege} aktiv={hoverIdx} onAktiv={setHoverIdx} onWaehle={waehle} variante={variante} listId={listId} ariaLabel="Schnellauswahl" />
       )}
       <Fuss
         variante={variante}

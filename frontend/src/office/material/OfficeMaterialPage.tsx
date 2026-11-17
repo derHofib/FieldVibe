@@ -162,6 +162,16 @@ export function OfficeMaterialPage() {
             if (id) navigate("/material");
           }}
         />
+        {ansicht === "material" && (
+          <button
+            type="button"
+            onClick={() => setLagerorteZeigen((v) => !v)}
+            aria-expanded={lagerorteZeigen}
+            className="text-sekundaer font-medium text-tint-text hover:underline"
+          >
+            Lagerorte verwalten
+          </button>
+        )}
         {hatRecht("material", "erstellen") && (
           <button
             onClick={() => {
@@ -181,22 +191,13 @@ export function OfficeMaterialPage() {
         <MaterialPage nurBestellwesen />
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-4">
             <FilterLeiste
               felder={felder}
               zustand={zustand}
               variante="office"
               suchPlatzhalter="Material suchen…"
-              className="min-w-0 flex-1"
             />
-            <button
-              type="button"
-              onClick={() => setLagerorteZeigen((v) => !v)}
-              aria-expanded={lagerorteZeigen}
-              className="ml-auto text-sekundaer font-medium text-tint-text hover:underline"
-            >
-              Lagerorte verwalten
-            </button>
           </div>
           {lagerorteZeigen && (
             <div className="mb-4">

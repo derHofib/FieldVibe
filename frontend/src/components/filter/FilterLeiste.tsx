@@ -392,7 +392,7 @@ function FeldLeiste<T>({ felder, zustand, suchPlatzhalter, ansichten, ohneSuche,
       )}
       {live}
 
-      <Sheet offen={offen} onClose={schliessen} titel={titel} links={links}>
+      <Sheet offen={offen} onClose={schliessen} titel={titel} links={links} rechts={<span className="invisible text-zeile" aria-hidden="true">{linksText}</span>}>
         {ansichtenSeite ? (
           <AnsichtenListeFeld a={a} zustand={zustand} onFertig={schliessen} />
         ) : (

@@ -35,7 +35,7 @@ export function zeilenId(listId: string, i: number): string {
   return `${listId}-${i}`;
 }
 
-const ZEILE_OFFICE = "group flex min-h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-sekundaer";
+const ZEILE_OFFICE = "flex min-h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-sekundaer";
 
 /** Reine Darstellung; die Tastatursteuerung kommt vom Eingabefeld (Combobox) oder von `TastaturListe`. */
 export function Liste({
@@ -46,6 +46,7 @@ export function Liste({
   listId,
   ariaLabel,
   navigierbar = false,
+  onAktiv,
   wurzelProps,
 }: {
   eintraege: ListenEintrag[];
@@ -55,6 +56,8 @@ export function Liste({
   listId: string;
   ariaLabel: string;
   navigierbar?: boolean;
+  /** Maus über einer Zeile: macht sie zur einzigen hervorgehobenen (gleicher Zustand wie die Tastatur). */
+  onAktiv?: (i: number) => void;
   wurzelProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 }) {
   if (variante === "office") {
@@ -75,14 +78,16 @@ export function Liste({
                 tabIndex={-1}
                 onMouseDown={(ev) => ev.preventDefault()}
                 onClick={() => onWaehle(e.id)}
+                onMouseEnter={() => onAktiv?.(i)}
+                onMouseMove={() => !hervor && onAktiv?.(i)}
                 className={`${ZEILE_OFFICE} ${
-                  hervor ? "bg-tint-solid text-white" : "text-label hover:bg-tint-solid hover:text-white"
+                  hervor ? "bg-tint-solid text-white" : "text-label"
                 }`}
               >
-                {Icon && <Icon size={15} strokeWidth={2} className={`shrink-0 ${hervor ? "" : "text-label2 group-hover:text-white"}`} aria-hidden="true" />}
+                {Icon && <Icon size={15} strokeWidth={2} className={`shrink-0 ${hervor ? "" : "text-label2"}`} aria-hidden="true" />}
                 <span className="min-w-0 flex-1 truncate">{e.label}</span>
                 {e.rechts && (
-                  <span className={`shrink-0 text-meta ${hervor ? "text-white/85" : "text-label2 group-hover:text-white/85"}`}>
+                  <span className={`shrink-0 text-meta ${hervor ? "text-white/85" : "text-label2"}`}>
                     {e.rechts}
                   </span>
                 )}
@@ -172,6 +177,7 @@ export function TastaturListe({
     <Liste
       eintraege={eintraege}
       aktiv={office ? l.aktiv : -1}
+      onAktiv={l.setAktiv}
       onWaehle={onWaehle}
       variante={variante}
       listId={listId}
@@ -182,7 +188,7 @@ export function TastaturListe({
           ? {
               tabIndex: 0,
               ref: fokussieren,
-              className: "outline-none",
+              className: "outline-none!",
               "aria-activedescendant": l.aktiv >= 0 ? zeilenId(listId, l.aktiv) : undefined,
               onKeyDown: (e) => {
                 if (e.key === "Backspace") onZurueck?.();
