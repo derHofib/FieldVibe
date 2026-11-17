@@ -8,6 +8,7 @@ import { IconBadge } from "../components/IconBadge";
 import { useAuth } from "../context/AuthContext";
 import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten } from "../config/navSeiten";
 import type { OfficeNavPraeferenz } from "../types";
+import { fuerOffice } from "./navAktiv";
 import { SeitenKopf } from "./OfficeUi";
 
 export function OfficeNavSettingsPage() {
@@ -15,8 +16,10 @@ export function OfficeNavSettingsPage() {
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
 
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
-  const gespeicherteAuswahl = currentUser?.office_nav_items?.items;
+  const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht));
+  // Gespeicherte Keys entfernter Office-Seiten (z. B. "meldungen") ausfiltern,
+  // sonst passt der Vergleich "alles ausgewählt" in speichern() nie.
+  const gespeicherteAuswahl = currentUser?.office_nav_items?.items?.filter((k) => sichtbar.some((s) => s.key === k));
   // null (nichts gespeichert) -> alles ausgewaehlt, wie die Sidebar es heute
   // ohne Praeferenz zeigt. Lokaler Zwischenstand, damit die Checkboxen erst
   // beim "Speichern" tatsaechlich uebernommen werden statt bei jedem Klick
