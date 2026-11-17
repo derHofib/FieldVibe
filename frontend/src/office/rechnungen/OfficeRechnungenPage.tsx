@@ -1,23 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileCheck2, Plus, Receipt, Search } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { useAuth } from "../../context/AuthContext";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
+import { angebotFelder, kundenOptionen, rechnungFelder, rechnungServerParameter } from "../../components/rechnung/rechnungenFilter";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { EmptyState } from "../../components/EmptyState";
 import { AngebotDetailPage } from "../../pages/feld/AngebotDetailPage";
 import { RechnungDetailPage } from "../../pages/feld/RechnungDetailPage";
 import { StatusBadge } from "../../components/StatusBadge";
-import type { AngebotStatus, Rechnungsart, RechnungStatus } from "../../types";
+import type { AngebotStatus, RechnungenFilter, RechnungStatus } from "../../types";
 import {
-  RECHNUNGSART_FILTER,
   RECHNUNGSART_LABEL,
   RECHNUNGSART_TONE,
   rechnungsartVon,
@@ -27,6 +28,8 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 
 type Bereich = "rechnungen" | "angebote";
+
+const SEITENGROESSE = 50;
 
 const UMSCHALTER = [
   { wert: "rechnungen" as const, label: "Rechnungen", icon: Receipt },
@@ -122,14 +125,37 @@ export function OfficeRechnungenPage() {
   const [zeigeNeu, setZeigeNeu] = useState(false);
   const { hatRecht } = useAuth();
   const darfAnlegen = hatRecht("abrechnung", "erstellen");
-  const [suche, setSuche] = useState("");
-  const [artFilter, setArtFilter] = useState<Rechnungsart | null>(null);
+  const darfKundenSehen = hatRecht("kunden", "sehen");
 
-  const rechnungen = useQuery({
-    queryKey: ["rechnungen", { rechnungsart: artFilter }],
-    queryFn: () => rechnungenApi.list({ rechnungsart: artFilter ?? undefined }),
+  const { data: kunden } = useQuery({
+    queryKey: ["kunden"],
+    queryFn: () => kundenApi.list(),
+    enabled: darfKundenSehen,
+  });
+  const kundenOpt = useMemo(() => kundenOptionen(kunden), [kunden]);
+  const rFelder = useMemo(() => rechnungFelder(kundenOpt), [kundenOpt]);
+  const aFelder = useMemo(() => angebotFelder(kundenOpt), [kundenOpt]);
+  const rechnungsZustand = useFilterZustand({ felder: rFelder });
+  const angebotsZustand = useFilterZustand({ felder: aFelder, praefix: "a" });
+  const zustand = bereich === "rechnungen" ? rechnungsZustand : angebotsZustand;
+
+  // Suche und Filter laufen serverseitig und seitenweise: die Liste kann länger sein als eine Seite.
+  const rechnungsFilter: RechnungenFilter = {
+    ...rechnungServerParameter(rechnungsZustand.bedingungen),
+    q: rechnungsZustand.sucheVerzoegert.trim() || undefined,
+  };
+  const rechnungen = useInfiniteQuery({
+    queryKey: ["rechnungen", "office-liste", rechnungsFilter],
+    queryFn: ({ pageParam }) => rechnungenApi.list({ ...rechnungsFilter, limit: SEITENGROESSE, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (letzte, seiten) => {
+      const geladen = seiten.reduce((n, s) => n + s.eintraege.length, 0);
+      return geladen < letzte.gesamt_anzahl ? geladen : undefined;
+    },
     enabled: bereich === "rechnungen",
   });
+  const rechnungsSeiten = rechnungen.data?.pages ?? [];
+  const erstSeite = rechnungsSeiten[0];
   const angebote = useQuery({
     queryKey: ["angebote"],
     queryFn: () => angeboteApi.list(),
@@ -140,7 +166,6 @@ export function OfficeRechnungenPage() {
     setBereich(neu);
     setGewaehlt(null);
     setZeigeNeu(false);
-    setSuche("");
   };
 
   const neuAngelegt = (id: string) => {
@@ -149,9 +174,20 @@ export function OfficeRechnungenPage() {
     queryClient.invalidateQueries({ queryKey: [bereich === "rechnungen" ? "rechnungen" : "angebote"] });
   };
 
-  const alleEintraege =
+  const angebotGefiltert = useMemo(
+    () =>
+      sucheAnwenden(
+        filterAnwenden(angebote.data ?? [], angebotsZustand.bedingungen, aFelder),
+        angebotsZustand.sucheVerzoegert,
+        (a) =>
+          `${a.angebotsnummer} ${kunden?.find((k) => k.id === a.kunde_id)?.name ?? ""} ${ANGEBOT_STATUS_LABEL[a.status]} ${a.gesamt_brutto}`,
+      ),
+    [angebote.data, angebotsZustand.bedingungen, angebotsZustand.sucheVerzoegert, aFelder, kunden],
+  );
+
+  const eintraege =
     bereich === "rechnungen"
-      ? (rechnungen.data?.eintraege ?? []).map((r) => ({
+      ? rechnungsSeiten.flatMap((s) => s.eintraege).map((r) => ({
           id: r.id,
           nummer: r.rechnungsnummer,
           betrag: euro(r.betrag_brutto),
@@ -166,7 +202,7 @@ export function OfficeRechnungenPage() {
           badge: RECHNUNG_STATUS_BADGE[r.status],
           label: RECHNUNG_STATUS_LABEL[r.status],
         }))
-      : (angebote.data ?? []).map((a) => ({
+      : angebotGefiltert.map((a) => ({
           id: a.id,
           nummer: a.angebotsnummer,
           betrag: euro(a.gesamt_brutto),
@@ -178,27 +214,15 @@ export function OfficeRechnungenPage() {
           label: ANGEBOT_STATUS_LABEL[a.status],
         }));
 
-  // Beide Listen werden vollständig geladen, daher genügt ein Client-Filter.
-  const eintraege = useMemo(() => {
-    const q = suche.trim().toLowerCase();
-    return q ? alleEintraege.filter((e) => e.nummer.toLowerCase().includes(q)) : alleEintraege;
-  }, [alleEintraege, suche]);
-
   const aktuelleAbfrage = bereich === "rechnungen" ? rechnungen : angebote;
   const laedt = aktuelleAbfrage.isLoading;
+  const filterAktiv = zustand.aktiveAnzahl > 0 || zustand.suche.trim() !== "";
   const aktiv = gewaehlt && eintraege.some((e) => e.id === gewaehlt) ? gewaehlt : eintraege[0]?.id;
 
   return (
     <div>
-      <SeitenKopf titel={bereich === "rechnungen" ? "Rechnungen" : "Angebote"} anzahl={eintraege.length}>
+      <SeitenKopf titel={bereich === "rechnungen" ? "Rechnungen" : "Angebote"} anzahl={bereich === "rechnungen" ? erstSeite?.gesamt_anzahl : eintraege.length}>
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
-        <SearchField
-          value={suche}
-          onChange={setSuche}
-          placeholder="Nummer…"
-          ariaLabel={bereich === "rechnungen" ? "Rechnungen suchen" : "Angebote suchen"}
-          className="w-48"
-        />
         {darfAnlegen && (
           <button onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
             <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
@@ -219,32 +243,40 @@ export function OfficeRechnungenPage() {
         )}
       </AnlegenPanel>
 
-      {bereich === "rechnungen" && (
-        <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
-          <span className="text-sekundaer text-label2">Art</span>
-          {RECHNUNGSART_FILTER.map((a) => (
-            <FilterChip
-              key={a}
-              label={RECHNUNGSART_LABEL[a]}
-              aktiv={artFilter === a}
-              onClick={() => setArtFilter((aktuell) => (aktuell === a ? null : a))}
-            />
-          ))}
-        </div>
+      {bereich === "rechnungen" ? (
+        <FilterLeiste
+          key="rechnungen"
+          variante="office"
+          felder={rFelder}
+          zustand={rechnungsZustand}
+          suchPlatzhalter="Nummer oder Kunde suchen…"
+          ansichten="rechnungen"
+          alteVorlageUmrechnen={() => []}
+          className="mb-4"
+        />
+      ) : (
+        <FilterLeiste
+          key="angebote"
+          variante="office"
+          felder={aFelder}
+          zustand={angebotsZustand}
+          suchPlatzhalter="Nummer oder Kunde suchen…"
+          className="mb-4"
+        />
       )}
 
-      {rechnungen.data && bereich === "rechnungen" && (
+      {erstSeite && bereich === "rechnungen" && (
         <div className="mb-4 flex flex-wrap gap-4 text-sekundaer text-label2">
           <span>
             Summe brutto:{" "}
             <strong className="tabular-nums text-label">
-              {euro(rechnungen.data.summe_brutto)}
+              {euro(erstSeite.summe_brutto)}
             </strong>
           </span>
           <span>
             Davon offen:{" "}
             <strong className="tabular-nums text-label">
-              {euro(rechnungen.data.summe_offen)}
+              {euro(erstSeite.summe_offen)}
             </strong>
           </span>
         </div>
@@ -259,8 +291,16 @@ export function OfficeRechnungenPage() {
           onErneut={() => void aktuelleAbfrage.refetch()}
         />
       ) : eintraege.length === 0 ? (
-        suche.trim() && alleEintraege.length > 0 ? (
-          <EmptyState icon={Search} text="Kein Eintrag entspricht der Suche." />
+        filterAktiv ? (
+          <EmptyState
+            icon={Search}
+            text={zustand.suche.trim() && zustand.aktiveAnzahl === 0 ? `Nichts gefunden für „${zustand.suche.trim()}“.` : "Keine Treffer für diese Filter."}
+            action={
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                Filter zurücksetzen
+              </button>
+            }
+          />
         ) : (
           <EmptyState
             icon={bereich === "rechnungen" ? Receipt : FileCheck2}
@@ -312,6 +352,16 @@ export function OfficeRechnungenPage() {
                 </div>
               </button>
             ))}
+            {bereich === "rechnungen" && rechnungen.hasNextPage && (
+              <button
+                type="button"
+                onClick={() => void rechnungen.fetchNextPage()}
+                disabled={rechnungen.isFetchingNextPage}
+                className="btn-ap m-3 px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
+              >
+                {rechnungen.isFetchingNextPage ? "Lädt…" : "Weitere laden"}
+              </button>
+            )}
           </Karte>
 
           <Karte className="max-h-[calc(100vh-15rem)] overflow-y-auto p-4">
