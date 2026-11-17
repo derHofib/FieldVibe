@@ -77,13 +77,14 @@ SECRET_KEY="$(get_env S3_SECRET_KEY)"
 NEU=0
 if [[ -z "$ACCESS_KEY" || "$ACCESS_KEY" == "$ROOT_USER" || -z "$SECRET_KEY" || "$SECRET_KEY" == *changeme* ]]; then
   # Nur Hex: kein Quoting noetig, nirgends. Neuer Schluessel auch dann, wenn
-  # bisher der Root-Zugang eingetragen war.
-  ACCESS_KEY="fvapp$(openssl rand -hex 8)"
-  SECRET_KEY="$(openssl rand -hex 24)"
+  # bisher der Root-Zugang eingetragen war. Laengen passend zu MinIOs Grenzen
+  # fuer Service-Accounts (Access-Key 3-20, Secret 8-40 Zeichen): 5+14=19, 40.
+  ACCESS_KEY="fvapp$(openssl rand -hex 7)"
+  SECRET_KEY="$(openssl rand -hex 20)"
   NEU=1
 fi
-[[ "$ACCESS_KEY" =~ ^[A-Za-z0-9]{3,64}$ ]] || err "S3_ACCESS_KEY in .env enthaelt unerwartete Zeichen -- Zeile loeschen, dann erzeugt das Skript einen neuen."
-[[ "$SECRET_KEY" =~ ^[A-Za-z0-9]{8,128}$ ]] || err "S3_SECRET_KEY in .env enthaelt unerwartete Zeichen -- Zeile loeschen, dann erzeugt das Skript einen neuen."
+[[ "$ACCESS_KEY" =~ ^[A-Za-z0-9]{3,20}$ ]] || err "S3_ACCESS_KEY in .env hat unerwartete Zeichen oder Laenge (MinIO: 3-20) -- Zeile loeschen, dann erzeugt das Skript einen neuen."
+[[ "$SECRET_KEY" =~ ^[A-Za-z0-9]{8,40}$ ]] || err "S3_SECRET_KEY in .env hat unerwartete Zeichen oder Laenge (MinIO: 8-40) -- Zeile loeschen, dann erzeugt das Skript einen neuen."
 
 if [[ $DRY_RUN -eq 1 ]]; then
   log "Trockenlauf -- es wird nichts veraendert."
