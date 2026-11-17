@@ -1,20 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { HardHat, Plus, Search } from "lucide-react";
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { CircleDot, HardHat, MapPin, Phone, Plus, Search, User, Wrench } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { partnerApi } from "../../api/endpoints";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { PartnerAnlegenFormular } from "../../components/PartnerAnlegenFormular";
 import { SkeletonList } from "../../components/Skeleton";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { useAuth } from "../../context/AuthContext";
 import { PartnerProfilePage } from "../../pages/feld/PartnerProfilePage";
 import type { Partner } from "../../types";
-import { filterePartner, type PartnerStatusFilter } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { SeitenKopf } from "../OfficeUi";
@@ -72,11 +73,30 @@ const SPALTEN: Spalte<Partner>[] = [
   },
 ];
 
-const STATUS_FILTER: { wert: PartnerStatusFilter; label: string }[] = [
-  { wert: "aktiv", label: "Aktiv" },
-  { wert: "inaktiv", label: "Inaktiv" },
-  { wert: "alle", label: "Alle" },
+const KONTAKTE = (p: Partner) => p.ansprechpartner.map((a) => a.name).join(", ");
+
+// Schlüssel = Spalten-Key, damit SortierbareTabelle den Kopf hervorheben kann.
+const FELDER: FilterFeld<Partner>[] = [
+  { key: "name", label: "Name", typ: "text", icon: HardHat, wert: (p) => p.name },
+  { key: "gewerk", label: "Gewerk", typ: "text", icon: Wrench, wert: (p) => p.gewerk },
+  { key: "kontakt", label: "Ansprechpartner", typ: "text", icon: User, wert: KONTAKTE },
+  { key: "telefon", label: "Telefon", typ: "text", icon: Phone, wert: (p) => p.telefon },
+  { key: "ort", label: "Ort", typ: "text", icon: MapPin, wert: ORT },
+  {
+    key: "status",
+    label: "Status",
+    typ: "auswahl",
+    icon: CircleDot,
+    wert: (p) => (p.aktiv ? "aktiv" : "inaktiv"),
+    optionen: [
+      { wert: "aktiv", label: "Aktiv" },
+      { wert: "inaktiv", label: "Inaktiv" },
+    ],
+  },
 ];
+
+const suchtext = (p: Partner) =>
+  [p.name, p.gewerk, p.email, p.telefon, ORT(p), KONTAKTE(p), p.aktiv ? "aktiv" : "inaktiv"].join(" ");
 
 /** Desktop-Fassung der Partnerliste: Tabelle links, das bestehende
  * Partnerprofil als Detailpanel rechts. Die Auswahl steckt in der URL
@@ -85,8 +105,9 @@ export function OfficePartnerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
-  const [suche, setSuche] = useState("");
-  const [status, setStatus] = useState<PartnerStatusFilter>("aktiv");
+  const zustand = useFilterZustand({ felder: FELDER });
+  const [params] = useSearchParams();
+  const startGesetzt = useRef(false);
   const [neu, setNeu] = useState(false);
 
   const kannSehen = istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen");
@@ -98,23 +119,29 @@ export function OfficePartnerPage() {
     enabled: kannSehen,
   });
 
+  // Bisher war "aktiv" voreingestellt: ohne `f` in der URL einmalig als Start-Bedingung setzen.
+  const ohneFilterInUrl = !params.has("f");
+  const { setBedingungen } = zustand;
+  useEffect(() => {
+    if (startGesetzt.current) return;
+    startGesetzt.current = true;
+    if (ohneFilterInUrl) setBedingungen([{ feld: "status", op: "ist", wert: ["aktiv"] }]);
+  }, [ohneFilterInUrl, setBedingungen]);
+
   if (!kannSehen) {
     return <EmptyState icon={HardHat} text="Kein Zugriff auf Partner und Nachunternehmer." />;
   }
 
-  const gefiltert = filterePartner(data ?? [], suche, status);
+  const gefiltert = sucheAnwenden(
+    filterAnwenden(data ?? [], zustand.bedingungen, FELDER),
+    zustand.sucheVerzoegert,
+    suchtext,
+  );
   const panel = id ? <PartnerProfilePage key={id} id={id} eingebettet /> : null;
 
   return (
     <div>
       <SeitenKopf titel="Partner & Nachunternehmer" anzahl={isLoading || isError ? undefined : gefiltert.length}>
-        <SearchField
-          value={suche}
-          onChange={setSuche}
-          placeholder="Name, Gewerk, Ort, Ansprechpartner…"
-          ariaLabel="Partner suchen"
-          className="w-72"
-        />
         {kannAnlegen && (
           <button
             onClick={() => setNeu(true)}
@@ -126,11 +153,7 @@ export function OfficePartnerPage() {
         )}
       </SeitenKopf>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {STATUS_FILTER.map((f) => (
-          <FilterChip key={f.wert} label={f.label} aktiv={status === f.wert} onClick={() => setStatus(f.wert)} />
-        ))}
-      </div>
+      <FilterLeiste felder={FELDER} zustand={zustand} variante="office" suchPlatzhalter="Partner suchen…" className="mb-4" />
 
       <ListeMitPanel
         panelTitel="Partnerprofil"
@@ -154,7 +177,15 @@ export function OfficePartnerPage() {
               }
             />
           ) : gefiltert.length === 0 ? (
-            <EmptyState icon={Search} text="Kein Partner entspricht der Suche oder dem Filter." />
+            <EmptyState
+              icon={Search}
+              text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             <SortierbareTabelle
               zeilen={gefiltert}
@@ -164,6 +195,7 @@ export function OfficePartnerPage() {
               gewaehlt={id}
               onWaehlen={(p) => navigate(`/partner/${p.id}`)}
               startSortierung={{ key: "name" }}
+              hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
             />
           )
         }

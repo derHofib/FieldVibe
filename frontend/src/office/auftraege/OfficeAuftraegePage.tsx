@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layers, Plus, Search } from "lucide-react";
+import { CalendarDays, CircleDot, FolderKanban, Hash, Layers, Plus, Search, Users } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 
 import { auftraegeApi, kundenApi, projekteApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
-import { SearchField } from "../../components/apple/SearchField";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { useAuth } from "../../context/AuthContext";
 import type { Auftrag } from "../../types";
 import { SeitenKopf } from "../OfficeUi";
-import { AuftraegeTabelle } from "./AuftraegeTabelle";
+import { AUFTRAG_STATUS_LABEL, AuftraegeTabelle } from "./AuftraegeTabelle";
 import { AuftragDetailPanel } from "./AuftragDetailPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
@@ -25,7 +28,6 @@ export function OfficeAuftraegePage() {
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
   const darfAnlegen = hatRecht("projekte", "erstellen");
-  const [suche, setSuche] = useState("");
   const [zeigeNeuerAuftrag, setZeigeNeuerAuftrag] = useState(false);
   const [neuerTitel, setNeuerTitel] = useState("");
   const [neuerProjektId, setNeuerProjektId] = useState("");
@@ -40,7 +42,6 @@ export function OfficeAuftraegePage() {
   const { data: projekte } = useQuery({
     queryKey: ["projekte"],
     queryFn: () => projekteApi.list(),
-    enabled: zeigeNeuerAuftrag,
   });
 
   const { data: kunden } = useQuery({
@@ -49,12 +50,53 @@ export function OfficeAuftraegePage() {
     enabled: zeigeNeuerAuftrag,
   });
 
+  // Schlüssel = Spalten-Id der Tabelle (Kopf-Hervorhebung); "projekt" hat keine Spalte.
+  const felder = useMemo<FilterFeld<Auftrag>[]>(() => {
+    // Kunden aus den Aufträgen selbst: braucht kein Recht auf die Kundenliste und listet nur relevante Kunden.
+    const kundenOptionen = new Map<string, string>();
+    for (const a of auftraege ?? []) if (a.kunde_id && a.kunde_name) kundenOptionen.set(a.kunde_id, a.kunde_name);
+    return [
+      { key: "titel", label: "Titel", typ: "text", icon: Layers, wert: (a) => a.titel },
+      {
+        key: "kunde",
+        label: "Kunde",
+        typ: "verknuepfung",
+        icon: Users,
+        wert: (a) => a.kunde_id,
+        optionen: [...kundenOptionen].map(([wert, label]) => ({ wert, label })),
+      },
+      {
+        key: "projekt",
+        label: "Projekt",
+        typ: "verknuepfung",
+        icon: FolderKanban,
+        wert: (a) => a.projekt_id,
+        optionen: (projekte ?? []).map((p) => ({ wert: p.id, label: p.name })),
+      },
+      {
+        key: "status",
+        label: "Status",
+        typ: "auswahl",
+        icon: CircleDot,
+        wert: (a) => a.status,
+        optionen: Object.entries(AUFTRAG_STATUS_LABEL).map(([wert, label]) => ({ wert, label })),
+      },
+      { key: "vorgaenge_gesamt", label: "Vorgänge", typ: "zahl", icon: Hash, wert: (a) => a.vorgaenge_gesamt },
+      { key: "created_at", label: "Erstellt am", typ: "datum", icon: CalendarDays, wert: (a) => a.created_at },
+    ];
+  }, [auftraege, projekte]);
+  const zustand = useFilterZustand({ felder });
+
   // Die Liste wird vollständig geladen, daher genügt ein Client-Filter.
-  const gefiltert = useMemo(() => {
-    const q = suche.trim().toLowerCase();
-    if (!q) return auftraege ?? [];
-    return (auftraege ?? []).filter((a) => `${a.titel} ${a.kunde_name ?? ""}`.toLowerCase().includes(q));
-  }, [auftraege, suche]);
+  const gefiltert = useMemo(
+    () =>
+      sucheAnwenden(
+        filterAnwenden(auftraege ?? [], zustand.bedingungen, felder),
+        zustand.sucheVerzoegert,
+        (a) => [a.titel, a.kunde_name, AUFTRAG_STATUS_LABEL[a.status]].join(" "),
+      ),
+    [auftraege, zustand.bedingungen, zustand.sucheVerzoegert, felder],
+  );
 
   const auftragErstellen = useMutation({
     mutationFn: () =>
@@ -74,14 +116,7 @@ export function OfficeAuftraegePage() {
 
   return (
     <div>
-      <SeitenKopf titel="Aufträge">
-        <SearchField
-          value={suche}
-          onChange={setSuche}
-          placeholder="Titel oder Kunde…"
-          ariaLabel="Aufträge suchen"
-          className="w-64"
-        />
+      <SeitenKopf titel="Aufträge" anzahl={isLoading || !auftraege ? undefined : gefiltert.length}>
         {darfAnlegen && (
           <button onClick={() => setZeigeNeuerAuftrag(true)} className={NEU_BUTTON_KLASSE}>
             <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
@@ -89,6 +124,8 @@ export function OfficeAuftraegePage() {
           </button>
         )}
       </SeitenKopf>
+
+      <FilterLeiste felder={felder} zustand={zustand} variante="office" suchPlatzhalter="Aufträge suchen…" className="mb-4" />
 
       <AnlegenPanel offen={zeigeNeuerAuftrag} titel="Neuer Auftrag" onClose={() => setZeigeNeuerAuftrag(false)}>
         <form
@@ -166,9 +203,21 @@ export function OfficeAuftraegePage() {
           }
         />
       ) : gefiltert.length === 0 ? (
-        <EmptyState icon={Search} text="Kein Auftrag entspricht der Suche." />
+        <EmptyState
+          icon={Search}
+          text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+          action={
+            <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+              Filter zurücksetzen
+            </button>
+          }
+        />
       ) : (
-        <AuftraegeTabelle auftraege={gefiltert} onZeileKlick={setAusgewaehlterAuftrag} />
+        <AuftraegeTabelle
+          auftraege={gefiltert}
+          onZeileKlick={setAusgewaehlterAuftrag}
+          hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
+        />
       )}
 
       {ausgewaehlterAuftrag && (

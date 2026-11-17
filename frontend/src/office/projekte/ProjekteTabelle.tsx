@@ -43,9 +43,12 @@ const SPALTEN = [
 export function ProjekteTabelle({
   projekte,
   onZeileKlick,
+  hervorgehoben,
 }: {
   projekte: Projekt[];
   onZeileKlick: (projekt: Projekt) => void;
+  /** Spalten-Ids, auf die gerade eine Filterbedingung wirkt. */
+  hervorgehoben?: string[];
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -70,7 +73,9 @@ export function ProjekteTabelle({
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
+                    className={`cursor-pointer px-3 py-2 text-left text-meta font-medium tracking-wide uppercase select-none hover:text-label ${
+                      hervorgehoben?.includes(header.column.id) ? "text-tint-text" : "text-label2"
+                    }`}
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}

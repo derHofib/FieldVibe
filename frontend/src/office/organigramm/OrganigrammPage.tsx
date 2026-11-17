@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Eye, FileDown, ListTree, Network } from "lucide-react";
+import { Building2, CircleDot, Download, Eye, FileDown, ListTree, Network, UserSquare } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { accountTypenApi, organigrammApi, rechteApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { useAuth } from "../../context/AuthContext";
 import type { RechteAktion } from "../../types";
 import type { Position, PositionCreate } from "../../types/organigramm";
@@ -16,6 +18,7 @@ import { AnzeigenAlsDialog } from "./AnzeigenAlsDialog";
 import {
   kontextAktionen,
   menueNachOeffnen,
+  besetzungText,
   POSITION_STATUS_LABEL,
   POSITION_STATUS_TOKEN,
   verstaendlicherFehler,
@@ -25,12 +28,9 @@ import {
 import { csvDateiname, csvHerunterladen, positionenCsv } from "./export";
 import { alleMitKindern, standardEingeklappt, type LayoutKnoten } from "./layout";
 import {
-  filterAktiv,
-  filtere,
-  KEIN_FILTER,
   listenZeilen,
   sortiereZeilen,
-  type PositionsFilter,
+  trefferMitVorfahren,
   type SortRichtung,
   type SortSchluessel,
 } from "./liste";
@@ -39,12 +39,15 @@ import { OrganigrammDruck, OrganigrammListe } from "./OrganigrammListe";
 import { PositionAnlegenSheet } from "./PositionAnlegenSheet";
 import { PositionKontextMenue } from "./PositionKontextMenue";
 import { PositionPanel, type PanelTab } from "./PositionPanel";
-import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Ansicht = "diagramm" | "liste";
 
-const STATUS_CHIPS = ["besetzt", "vakant", "geplant"] as const;
+const STATUS_OPTIONEN = (["besetzt", "vakant", "geplant"] as const).map((s) => ({
+  wert: s,
+  label: POSITION_STATUS_LABEL[s],
+  status: POSITION_STATUS_TOKEN[s],
+}));
 
 export function OrganigrammPage() {
   const bestaetigen = useBestaetigung();
@@ -54,7 +57,6 @@ export function OrganigrammPage() {
   const darfPersonen = hatRecht("mitarbeiterverwaltung", "sehen");
 
   const [ansicht, setAnsicht] = useState<Ansicht>("diagramm");
-  const [filter, setFilter] = useState<PositionsFilter>(KEIN_FILTER);
   const [eingeklappt, setEingeklappt] = useState<Set<string> | null>(null);
   const [panel, setPanel] = useState<{ id: string; tab: PanelTab } | null>(null);
   const [menue, setMenue] = useState<{ position: Position; anker: { x: number; y: number } } | null>(null);
@@ -76,8 +78,39 @@ export function OrganigrammPage() {
   });
 
   const alle = useMemo(() => positionen ?? [], [positionen]);
-  const filterErgebnis = useMemo(() => filtere(alle, filter), [alle, filter]);
-  const aktiv = filterAktiv(filter);
+  const felder = useMemo<FilterFeld<Position>[]>(
+    () => [
+      { key: "titel", label: "Position", typ: "text", icon: Network, wert: (p) => p.titel },
+      { key: "status", label: "Status", typ: "auswahl", icon: CircleDot, wert: (p) => p.status, optionen: STATUS_OPTIONEN },
+      {
+        key: "einheit",
+        label: "Einheit",
+        typ: "verknuepfung",
+        icon: Building2,
+        wert: (p) => p.org_einheit?.id,
+        optionen: (orgEinheiten ?? []).map((o) => ({ wert: o.id, label: o.name })),
+      },
+      { key: "person", label: "Besetzung", typ: "text", icon: UserSquare, wert: (p) => besetzungText(p) },
+    ],
+    [orgEinheiten],
+  );
+  const zustand = useFilterZustand({ felder });
+  const aktiv = zustand.aktiveAnzahl > 0 || zustand.sucheVerzoegert.trim() !== "";
+  // Treffer im Baum plus Vorfahren (Pfad bleibt sichtbar); Kontext-Positionen sind nie Treffer.
+  const filterErgebnis = useMemo(() => {
+    if (!aktiv) {
+      const ids = new Set(alle.map((p) => p.id));
+      return { treffer: ids, sichtbar: ids };
+    }
+    const kandidaten = alle.filter((p) => !p.kontext);
+    const gefunden = sucheAnwenden(
+      filterAnwenden(kandidaten, zustand.bedingungen, felder),
+      zustand.sucheVerzoegert,
+      (p) => [p.titel, p.org_einheit?.name, p.account_typ?.name, besetzungText(p), p.status ? POSITION_STATUS_LABEL[p.status] : ""].join(" "),
+    );
+    const treffer = new Set(gefunden.map((p) => p.id));
+    return { treffer, sichtbar: trefferMitVorfahren(alle, treffer) };
+  }, [alle, aktiv, zustand.bedingungen, zustand.sucheVerzoegert, felder]);
 
   const standard = useMemo(() => {
     const knoten: LayoutKnoten[] = alle.map((p) => ({ id: p.id, parentId: p.parent_id, typ: p.typ }));
@@ -218,7 +251,7 @@ export function OrganigrammPage() {
       richtung: alt.schluessel === schluessel && alt.richtung === "auf" ? "ab" : "auf",
     }));
 
-  const anzahl = alle.filter((p) => !p.kontext).length;
+  const anzahl = aktiv ? filterErgebnis.treffer.size : alle.filter((p) => !p.kontext).length;
 
   return (
     <div>
@@ -246,41 +279,13 @@ export function OrganigrammPage() {
       </SeitenKopf>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SearchField
-          value={filter.suche}
-          onChange={(suche) => setFilter((f) => ({ ...f, suche }))}
-          placeholder="Position, Einheit oder Person suchen"
-          ariaLabel="Organigramm durchsuchen"
-          className="w-72"
+        <FilterLeiste
+          felder={felder}
+          zustand={zustand}
+          variante="office"
+          suchPlatzhalter="Position, Einheit oder Person suchen…"
+          className="min-w-0 flex-1"
         />
-        {STATUS_CHIPS.map((s) => (
-          <FilterChip
-            key={s}
-            label={POSITION_STATUS_LABEL[s]}
-            status={POSITION_STATUS_TOKEN[s]}
-            aktiv={filter.status === s}
-            onClick={() => setFilter((f) => ({ ...f, status: f.status === s ? "alle" : s }))}
-          />
-        ))}
-        <label className="flex items-center gap-1.5 text-sekundaer text-label2">
-          Einheit
-          <Select className="w-auto" groesse="kompakt"
-            value={filter.orgEinheitId}
-            onChange={(e) => setFilter((f) => ({ ...f, orgEinheitId: e.target.value }))}
-          >
-            <option value="alle">Alle</option>
-            {(orgEinheiten ?? []).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        {aktiv && (
-          <button type="button" className="text-sekundaer font-medium text-tint-text hover:underline" onClick={() => setFilter(KEIN_FILTER)}>
-            Filter zurücksetzen
-          </button>
-        )}
         {ansicht === "diagramm" && (
           <div className="ml-auto flex gap-2">
             <button type="button" className="btn-ap" onClick={() => setEingeklappt(new Set())} disabled={aktiv}>
@@ -321,7 +326,15 @@ export function OrganigrammPage() {
       ) : ansicht === "diagramm" ? (
         <>
           {aktiv && filterErgebnis.treffer.size === 0 ? (
-            <EmptyState icon={Network} text="Keine Position entspricht dem Filter." />
+            <EmptyState
+              icon={Network}
+              text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             <div className="card-ap h-[calc(100vh-250px)] min-h-[460px] overflow-hidden" data-testid="org-diagramm">
               <OrganigrammDiagramm

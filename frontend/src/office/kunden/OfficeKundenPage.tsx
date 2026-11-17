@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Users } from "lucide-react";
+import { Building2, Hash, MapPin, Plus, Search, User, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -7,14 +7,15 @@ import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { useAuth } from "../../context/AuthContext";
 import { KundeProfilePage } from "../../pages/feld/KundeProfilePage";
 import type { Kunde, KundeTyp } from "../../types";
-import { filtereKunden } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { SeitenKopf } from "../OfficeUi";
 import { Select } from "../../components/apple/Select";
@@ -48,6 +49,27 @@ const SPALTEN: Spalte<Kunde>[] = [
   },
 ];
 
+const ANSPRECHPARTNER = (k: Kunde) => k.ansprechpartner.map((a) => a.name).join(", ");
+
+// Schlüssel = Spalten-Key, damit SortierbareTabelle den Kopf hervorheben kann.
+const FELDER: FilterFeld<Kunde>[] = [
+  { key: "nr", label: "Kundennr.", typ: "text", icon: Hash, wert: (k) => k.kundennummer },
+  { key: "name", label: "Name", typ: "text", icon: Users, wert: (k) => k.name },
+  {
+    key: "typ",
+    label: "Typ",
+    typ: "auswahl",
+    icon: Building2,
+    wert: (k) => k.typ,
+    optionen: (Object.keys(TYP_LABEL) as KundeTyp[]).map((t) => ({ wert: t, label: TYP_LABEL[t] })),
+  },
+  { key: "ort", label: "Ort", typ: "text", icon: MapPin, wert: ORT },
+  { key: "kontakt", label: "Ansprechpartner", typ: "text", icon: User, wert: ANSPRECHPARTNER },
+];
+
+const suchtext = (k: Kunde) =>
+  [k.kundennummer, k.name, k.typ ? TYP_LABEL[k.typ] : "", ORT(k), ANSPRECHPARTNER(k)].join(" ");
+
 /** Desktop-Fassung des Tabs "Kunden" aus GeschaeftPage: Tabelle links, das
  * bestehende Kundenprofil als Detailpanel rechts. Die Auswahl steckt in der
  * URL (/kunden/:id), damit Reload und Deep-Links sie behalten. */
@@ -55,8 +77,7 @@ export function OfficeKundenPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hatRecht } = useAuth();
-  const [suche, setSuche] = useState("");
-  const [typFilter, setTypFilter] = useState<KundeTyp | "alle">("alle");
+  const zustand = useFilterZustand({ felder: FELDER });
   const [neu, setNeu] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -64,9 +85,11 @@ export function OfficeKundenPage() {
     queryFn: () => kundenApi.list(),
   });
 
-  const kunden = (data ?? []).filter((k) => typFilter === "alle" || k.typ === typFilter);
-  const gefiltert = filtereKunden(kunden, suche);
-  const vorhandeneTypen = Array.from(new Set((data ?? []).map((k) => k.typ).filter((t): t is KundeTyp => !!t)));
+  const gefiltert = sucheAnwenden(
+    filterAnwenden(data ?? [], zustand.bedingungen, FELDER),
+    zustand.sucheVerzoegert,
+    suchtext,
+  );
 
   const waehlen = (kunde: Kunde) => {
     navigate(`/kunden/${kunde.id}`);
@@ -80,13 +103,6 @@ export function OfficeKundenPage() {
   return (
     <div>
       <SeitenKopf titel="Kunden" anzahl={isLoading || isError ? undefined : gefiltert.length}>
-        <SearchField
-          value={suche}
-          onChange={setSuche}
-          placeholder="Name oder Kundennummer…"
-          ariaLabel="Kunden suchen"
-          className="w-64"
-        />
         {hatRecht("kunden", "erstellen") && (
           <button
             onClick={() => setNeu(true)}
@@ -98,14 +114,15 @@ export function OfficeKundenPage() {
         )}
       </SeitenKopf>
 
-      {vorhandeneTypen.length > 1 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <FilterChip label="Alle" aktiv={typFilter === "alle"} onClick={() => setTypFilter("alle")} />
-          {vorhandeneTypen.map((typ) => (
-            <FilterChip key={typ} label={TYP_LABEL[typ]} aktiv={typFilter === typ} onClick={() => setTypFilter(typ)} />
-          ))}
-        </div>
-      )}
+      <FilterLeiste
+        felder={FELDER}
+        zustand={zustand}
+        variante="office"
+        suchPlatzhalter="Kunden suchen…"
+        ansichten="kunden"
+        alteVorlageUmrechnen={() => []}
+        className="mb-4"
+      />
 
       <ListeMitPanel
         panelTitel="Kundenprofil"
@@ -129,7 +146,15 @@ export function OfficeKundenPage() {
               }
             />
           ) : gefiltert.length === 0 ? (
-            <EmptyState icon={Search} text="Kein Kunde entspricht der Suche oder dem Filter." />
+            <EmptyState
+              icon={Search}
+              text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             <SortierbareTabelle
               zeilen={gefiltert}
@@ -139,6 +164,7 @@ export function OfficeKundenPage() {
               gewaehlt={id}
               onWaehlen={waehlen}
               startSortierung={{ key: "name" }}
+              hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
             />
           )
         }
