@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import exists, func, select, tuple_
+from sqlalchemy import and_, exists, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
@@ -28,6 +28,8 @@ router = APIRouter(
 )
 
 DEFAULT_PAGE_SIZE = 20
+MAX_SUCHWOERTER = 8
+MAX_SUCHWORT_LAENGE = 100
 
 # Sentinel statt NULLS LAST: eine Kartenpaginierung per Keyset-Cursor
 # vergleicht Tupel ("< letzter Wert"), und NULL verhaelt sich dabei nicht
@@ -49,6 +51,11 @@ _EVENT_TYPE_PREVIEW = {
     "rechnung_status": "Rechnungsstatus aktualisiert",
     "system": "System-Ereignis",
 }
+
+
+def _like_muster(wort: str) -> str:
+    escaped = wort.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 def _encode_cursor(last_activity_at, prioritaet: int, id_: UUID) -> str:
@@ -130,6 +137,10 @@ async def get_feed(
         default=False,
         description="Nur Vorgaenge, die dem angemeldeten User zugewiesen sind (Feed-Tab 'Meine Vorgaenge')",
     ),
+    q: str | None = Query(
+        default=None,
+        description="Freitext, wortweise UND-verknuepft (Nummer, Titel, Beschreibung, Kunde, Anlage, Standort, Tags)",
+    ),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
@@ -196,6 +207,34 @@ async def get_feed(
                 .where(TagAssignment.entity_type == "vorgang", Tag.label == tag)
             )
         )
+    if q:
+        for wort in q.split()[:MAX_SUCHWOERTER]:
+            muster = _like_muster(wort[:MAX_SUCHWORT_LAENGE])
+            # EXISTS/IN-Subqueries statt Joins: Tags sind 1:n, ein Join
+            # wuerde Vorgaenge vervielfachen und die Cursor-Paginierung
+            # (limit + 1) verfaelschen.
+            stmt = stmt.where(
+                or_(
+                    Vorgang.vorgangsnummer.ilike(muster, escape="\\"),
+                    Vorgang.titel.ilike(muster, escape="\\"),
+                    Vorgang.beschreibung.ilike(muster, escape="\\"),
+                    Vorgang.kunde_id.in_(select(Kunde.id).where(Kunde.name.ilike(muster, escape="\\"))),
+                    Vorgang.anlage_id.in_(
+                        select(Anlage.id).where(Anlage.bezeichnung.ilike(muster, escape="\\"))
+                    ),
+                    Vorgang.standort_id.in_(
+                        select(Standort.id).where(Standort.bezeichnung.ilike(muster, escape="\\"))
+                    ),
+                    exists().where(
+                        and_(
+                            TagAssignment.entity_type == "vorgang",
+                            TagAssignment.entity_id == Vorgang.id,
+                            TagAssignment.tag_id == Tag.id,
+                            Tag.label.ilike(muster, escape="\\"),
+                        )
+                    ),
+                )
+            )
     if cursor:
         last_activity_at, prioritaet, id_ = _decode_cursor(cursor)
         if sort == "prioritaet":
