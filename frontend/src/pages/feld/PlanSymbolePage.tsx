@@ -5,12 +5,15 @@
 // Feld einzeln ausgewaehlt (FormBuilderCanvas.tsx-Inspector), hier nur
 // Hochladen/Umbenennen/Loeschen der Bibliothek als Ganzes.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Shapes, Trash2, Upload, X } from "lucide-react";
+import { Pencil, Plus, Shapes, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { planSymboleApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 import { EmptyState } from "../../components/EmptyState";
 import type { PlanSymbol } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
@@ -28,11 +31,33 @@ function SymbolKarte({
   onLoeschen: () => void;
   umbenennenPending: boolean;
 }) {
+  const bestaetigen = useBestaetigung();
   const [bearbeiten, setBearbeiten] = useState(false);
   const [name, setName] = useState(symbol.name);
 
   return (
-    <div className="flex flex-col items-center gap-2 card-ap p-3">
+    <div className="relative flex flex-col items-center gap-2 card-ap p-3">
+      <div className="absolute right-1 top-1">
+        <AktionsMenue
+          label={`Aktionen für ${symbol.name}`}
+          eintraege={[
+            { label: "Umbenennen", onClick: () => setBearbeiten(true) },
+            {
+              label: "Löschen",
+              destruktiv: true,
+              onClick: async () => {
+                if (
+                  await bestaetigen({
+                    titel: `Symbol „${symbol.name}“ löschen?`,
+                    bestaetigenLabel: "Löschen",
+                  })
+                )
+                  onLoeschen();
+              },
+            },
+          ]}
+        />
+      </div>
       <div className="flex h-16 w-16 items-center justify-center border rounded-[var(--radius-ap-md)] border-sepstrong bg-fill">
         <img src={symbol.url} alt={symbol.name} className="max-h-12 max-w-12 object-contain" />
       </div>
@@ -64,12 +89,6 @@ function SymbolKarte({
           {symbol.name}
         </button>
       )}
-      <button
-        onClick={onLoeschen}
-        className="flex items-center gap-1 text-meta text-label2 hover:text-st-fehlt"
-      >
-        <Trash2 size={12} strokeWidth={1.5} /> Löschen
-      </button>
     </div>
   );
 }
@@ -163,7 +182,7 @@ export function PlanSymbolePage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !symbole ? (
         <FehlerZustand fehler={ladeFehler} was="Die Plansymbole" onErneut={() => void neuLaden()} />
       ) : !symbole || symbole.length === 0 ? (

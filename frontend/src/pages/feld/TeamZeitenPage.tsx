@@ -3,6 +3,8 @@ import { Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useId, useState } from "react";
 
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
 import { usersApi, zeiterfassungApi } from "../../api/endpoints";
@@ -21,13 +23,13 @@ export function TeamZeitenPage() {
   const [technikerId, setTechnikerId] = useState<string>("");
   const [wocheMontag, setWocheMontag] = useState(() => montagDerWoche(new Date()));
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darf });
+  const { data: users, error: usersFehler, refetch: usersNeu } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darf });
   const techniker = (users ?? []).filter((u) => u.nur_zugewiesene_kunden);
 
   const wocheEnde = new Date(wocheMontag);
   wocheEnde.setDate(wocheMontag.getDate() + 6);
 
-  const { data: wochenEintraege } = useQuery({
+  const { data: wochenEintraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["zeiterfassung-woche-team", technikerId, toDateInput(wocheMontag)],
     queryFn: () =>
       zeiterfassungApi.listFuerZeitraum({
@@ -48,6 +50,10 @@ export function TeamZeitenPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-titel-mobil font-bold text-label">Team-Zeiten</h1>
+
+      {usersFehler && !users && (
+        <FehlerZustand fehler={usersFehler} was="Die Techniker" onErneut={() => void usersNeu()} />
+      )}
 
       <div>
         <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
@@ -94,7 +100,11 @@ export function TeamZeitenPage() {
             </button>
           </div>
 
-          {(wochenEintraege ?? []).length === 0 ? (
+          {isLoading ? (
+            <SkeletonList count={3} />
+          ) : ladeFehler && !wochenEintraege ? (
+            <FehlerZustand fehler={ladeFehler} was="Die Arbeitszeiten" onErneut={() => void neuLaden()} />
+          ) : (wochenEintraege ?? []).length === 0 ? (
             <EmptyState icon={Clock} text="Keine Arbeitszeiten in dieser Woche." />
           ) : (
             <ZeiterfassungTagesliste

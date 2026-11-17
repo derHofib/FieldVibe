@@ -2,7 +2,8 @@ import type { useBestaetigung } from "../../../components/ConfirmDialog";
 import type { Termin, TerminCreateResult, TerminWarnung, UserAuswahl } from "../../../types";
 import { TERMIN_STATUS_LABEL, WOCHENTAGE, addTage, startOfWoche, tagesSchluessel, toLocalInputValue } from "./konstanten";
 import type { UseMutationResult } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { AktionsMenue } from "../../../components/AktionsMenue";
 import type { Dispatch, SetStateAction } from "react";
 import { Select } from "../../../components/apple/Select";
 
@@ -225,18 +226,22 @@ export function TermineAbschnitt({
                               </div>
                               <div className="truncate">{t.titel}</div>
                               {kannPapierkorbLoeschen && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                                      deleteTerminMutation.mutate(t.id);
-                                    }
-                                  }}
-                                  disabled={deleteTerminMutation.isPending}
-                                  className="mt-0.5 text-meta font-medium text-st-fehlt"
-                                >
-                                  Löschen
-                                </button>
+                                <AktionsMenue
+                                  label="Weitere Aktionen"
+                                  eintraege={[
+                                    {
+                                      label: "Termin löschen",
+                                      icon: Trash2,
+                                      destruktiv: true,
+                                      disabled: deleteTerminMutation.isPending,
+                                      onClick: async () => {
+                                        if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                                          deleteTerminMutation.mutate(t.id);
+                                        }
+                                      },
+                                    },
+                                  ]}
+                                />
                               )}
                             </div>
                           ))}
@@ -278,17 +283,23 @@ export function TermineAbschnitt({
                       {TERMIN_STATUS_LABEL[t.status]}
                     </span>
                     {kannPapierkorbLoeschen && (
-                      <button
-                        onClick={async () => {
-                          if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                            deleteTerminMutation.mutate(t.id);
-                          }
-                        }}
-                        disabled={deleteTerminMutation.isPending}
-                        className="btn-touch text-sekundaer font-medium text-st-fehlt"
-                      >
-                        Löschen
-                      </button>
+                      <AktionsMenue
+                        label="Weitere Aktionen"
+                        touch
+                        eintraege={[
+                          {
+                            label: "Termin löschen",
+                            icon: Trash2,
+                            destruktiv: true,
+                            disabled: deleteTerminMutation.isPending,
+                            onClick: async () => {
+                              if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                                deleteTerminMutation.mutate(t.id);
+                              }
+                            },
+                          },
+                        ]}
+                      />
                     )}
                   </div>
                 </div>

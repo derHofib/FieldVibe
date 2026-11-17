@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { datumZuIso } from "../../utils/format";
-import { KanbanSquare } from "lucide-react";
+import { KanbanSquare, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { auftraegeApi, materialBedarfeApi, projekteApi, termineApi, usersApi, vorgaengeApi, zeiterfassungApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
@@ -432,12 +433,17 @@ export function ProjektDetailPanel({
                       <td className="px-2 py-1.5 text-label2">{b.status}</td>
                       <td className="px-2 py-1.5 text-right">
                         {b.status === "offen" && (
-                          <button
-                            onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                            className="btn-touch text-sekundaer text-st-fehlt"
-                          >
-                            Entfernen
-                          </button>
+                          <AktionsMenue
+                            label={`Aktionen für Materialbedarf ${b.material_bezeichnung}`}
+                            eintraege={[
+                              {
+                                label: "Entfernen",
+                                icon: Trash2,
+                                destruktiv: true,
+                                onClick: () => bedarfEntfernenMutation.mutate(b.id),
+                              },
+                            ]}
+                          />
                         )}
                       </td>
                     </tr>

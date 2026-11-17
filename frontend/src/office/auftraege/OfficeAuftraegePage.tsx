@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layers, Plus } from "lucide-react";
-import { useId, useState } from "react";
+import { Layers, Plus, Search } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 
 import { auftraegeApi, kundenApi, projekteApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
+import { SearchField } from "../../components/apple/SearchField";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { useAuth } from "../../context/AuthContext";
 import type { Auftrag } from "../../types";
-import { Karte, SeitenKopf } from "../OfficeUi";
+import { SeitenKopf } from "../OfficeUi";
 import { AuftraegeTabelle } from "./AuftraegeTabelle";
 import { AuftragDetailPanel } from "./AuftragDetailPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
@@ -19,6 +23,9 @@ import { SkeletonList } from "../../components/Skeleton";
 export function OfficeAuftraegePage() {
   const uid = useId();
   const queryClient = useQueryClient();
+  const { hatRecht } = useAuth();
+  const darfAnlegen = hatRecht("projekte", "erstellen");
+  const [suche, setSuche] = useState("");
   const [zeigeNeuerAuftrag, setZeigeNeuerAuftrag] = useState(false);
   const [neuerTitel, setNeuerTitel] = useState("");
   const [neuerProjektId, setNeuerProjektId] = useState("");
@@ -42,6 +49,13 @@ export function OfficeAuftraegePage() {
     enabled: zeigeNeuerAuftrag,
   });
 
+  // Die Liste wird vollständig geladen, daher genügt ein Client-Filter.
+  const gefiltert = useMemo(() => {
+    const q = suche.trim().toLowerCase();
+    if (!q) return auftraege ?? [];
+    return (auftraege ?? []).filter((a) => `${a.titel} ${a.kunde_name ?? ""}`.toLowerCase().includes(q));
+  }, [auftraege, suche]);
+
   const auftragErstellen = useMutation({
     mutationFn: () =>
       auftraegeApi.create({
@@ -61,66 +75,100 @@ export function OfficeAuftraegePage() {
   return (
     <div>
       <SeitenKopf titel="Aufträge">
-        <button onClick={() => setZeigeNeuerAuftrag(true)} className="btn-ap-primary">
-          <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
-          Neuer Auftrag
-        </button>
+        <SearchField
+          value={suche}
+          onChange={setSuche}
+          placeholder="Titel oder Kunde…"
+          ariaLabel="Aufträge suchen"
+          className="w-64"
+        />
+        {darfAnlegen && (
+          <button onClick={() => setZeigeNeuerAuftrag(true)} className={NEU_BUTTON_KLASSE}>
+            <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
+            Neuer Auftrag
+          </button>
+        )}
       </SeitenKopf>
 
-      {zeigeNeuerAuftrag && (
-        <Karte className="mb-4 p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Titel</label>
-              <input id={`${uid}-0`}
-                autoFocus
-                value={neuerTitel}
-                onChange={(e) => setNeuerTitel(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && neuerTitel.trim() && auftragErstellen.mutate()}
-                placeholder="z. B. Elektro-Gewerk Sanierung Musterstraße"
-                className="field-ap"
-              />
-            </div>
-            <div className="min-w-[200px] flex-1">
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Projekt (optional)</label>
-              <SearchableSelect id={`${uid}-1`}
-                value={neuerProjektId}
-                onChange={setNeuerProjektId}
-                placeholder="Kein Projekt"
-                options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
-              />
-            </div>
-            <div className="min-w-[200px] flex-1">
-              <label htmlFor={`${uid}-2`} className="mb-1 block text-sekundaer font-medium text-label2">Kunde (optional)</label>
-              <SearchableSelect id={`${uid}-2`}
-                value={neuerKundeId}
-                onChange={setNeuerKundeId}
-                placeholder="Kein Kunde"
-                options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
-              />
-            </div>
+      <AnlegenPanel offen={zeigeNeuerAuftrag} titel="Neuer Auftrag" onClose={() => setZeigeNeuerAuftrag(false)}>
+        <form
+          className="flex flex-col gap-3 p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (neuerTitel.trim() && !auftragErstellen.isPending) auftragErstellen.mutate();
+          }}
+        >
+          <div>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
+              Titel<span aria-hidden="true" className="text-st-fehlt"> *</span>
+            </label>
+            <input
+              id={`${uid}-0`}
+              autoFocus
+              value={neuerTitel}
+              onChange={(e) => setNeuerTitel(e.target.value)}
+              placeholder="z. B. Elektro-Gewerk Sanierung Musterstraße"
+              className="field-ap"
+            />
+          </div>
+          <div>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Projekt (optional)</label>
+            <SearchableSelect
+              id={`${uid}-1`}
+              value={neuerProjektId}
+              onChange={setNeuerProjektId}
+              placeholder="Kein Projekt"
+              options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Kunde (optional)</label>
+            <SearchableSelect
+              id={`${uid}-2`}
+              value={neuerKundeId}
+              onChange={setNeuerKundeId}
+              placeholder="Kein Kunde"
+              options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
+            />
+          </div>
+          {auftragErstellen.isError && (
+            <p role="alert" className="text-sekundaer text-st-fehlt">Der Auftrag konnte nicht angelegt werden.</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setZeigeNeuerAuftrag(false)} className="btn-touch btn-ap px-4">
+              Abbrechen
+            </button>
             <button
-              onClick={() => auftragErstellen.mutate()}
+              type="submit"
               disabled={!neuerTitel.trim() || auftragErstellen.isPending}
-              className="btn-ap-primary"
+              className={NEU_BUTTON_KLASSE}
             >
               Anlegen
             </button>
-            <button onClick={() => setZeigeNeuerAuftrag(false)} className="btn-ap">
-              Abbrechen
-            </button>
           </div>
-        </Karte>
-      )}
+        </form>
+      </AnlegenPanel>
 
       {isLoading ? (
         <SkeletonList count={4} />
       ) : ladeFehler && !auftraege ? (
         <FehlerZustand fehler={ladeFehler} was="Die Aufträge" onErneut={() => void neuLaden()} />
       ) : !auftraege || auftraege.length === 0 ? (
-        <EmptyState icon={Layers} text="Noch kein Auftrag angelegt." />
+        <EmptyState
+          icon={Layers}
+          text="Noch kein Auftrag angelegt. Aufträge bündeln Vorgänge eines Gewerks oder Projekts."
+          action={
+            darfAnlegen ? (
+              <button type="button" onClick={() => setZeigeNeuerAuftrag(true)} className="btn-ap px-4 py-2 text-sekundaer">
+                Neuer Auftrag
+              </button>
+            ) : undefined
+          }
+        />
+      ) : gefiltert.length === 0 ? (
+        <EmptyState icon={Search} text="Kein Auftrag entspricht der Suche." />
       ) : (
-        <AuftraegeTabelle auftraege={auftraege} onZeileKlick={setAusgewaehlterAuftrag} />
+        <AuftraegeTabelle auftraege={gefiltert} onZeileKlick={setAusgewaehlterAuftrag} />
       )}
 
       {ausgewaehlterAuftrag && (

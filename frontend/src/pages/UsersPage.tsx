@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, LogOut, Send, ShieldOff, Trash2, UserCheck, UserX } from "lucide-react";
+import { Ban, LogOut, Send, ShieldOff, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AktionsMenue, type AktionsMenueEintrag } from "../components/AktionsMenue";
@@ -8,6 +8,12 @@ import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import { Sheet } from "../components/apple/Sheet";
+import { SearchField } from "../components/apple/SearchField";
+import { AnlegenPanel } from "../components/AnlegenPanel";
+import { EmptyState } from "../components/EmptyState";
+import { FELD_KLASSE, NEU_BUTTON_KLASSE } from "../components/FormularFeld";
+import { SeitenKopf } from "../office/OfficeUi";
+import { istOfficeHost } from "../office/hostname";
 import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
@@ -59,12 +65,21 @@ function LinkKopierenButton({ link }: { link: string }) {
   );
 }
 
+// Unter dem Plattform-Layout liefert dessen Header das h1; Office und Feld-App brauchen ein eigenes.
+function UsersTitel() {
+  if (istOfficeHost()) return <SeitenKopf titel="Accounts" />;
+  return <h1 className="text-titel-mobil font-bold text-label">Accounts</h1>;
+}
+
 export function UsersPage() {
   const uid = useId();
   const bestaetigen = useBestaetigung();
-  const { currentUser } = useAuth();
+  const { currentUser, isImpersonating } = useAuth();
   const queryClient = useQueryClient();
   const isSuperAdmin = currentUser?.role === "super_admin";
+  const istPlattform = isSuperAdmin && !isImpersonating;
+  const [suche, setSuche] = useState("");
+  const [zeigeNeu, setZeigeNeu] = useState(false);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -129,6 +144,7 @@ export function UsersPage() {
       setEmail("");
       setName("");
       setPassword("");
+      setZeigeNeu(false);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
   });
@@ -197,6 +213,12 @@ export function UsersPage() {
   function loeschDialogSchliessen() {
     setLoeschZiel(null);
     setLoeschBestaetigung("");
+  }
+
+  function anlegenOeffnen() {
+    setFormError(null);
+    setLetzteEinladung(null);
+    setZeigeNeu(true);
   }
 
   function handleCreate(e: FormEvent) {
@@ -281,17 +303,36 @@ export function UsersPage() {
   ];
 
   const mandantNameById = new Map((mandanten ?? []).map((m) => [m.id, m.name]));
+  const suchbegriff = suche.trim().toLowerCase();
+  const sichtbareUsers = (users ?? []).filter(
+    (u) =>
+      !suchbegriff ||
+      [u.name, u.email, u.role === "custom" ? u.account_typ_name ?? "" : ROLE_LABEL[u.role]].some((t) =>
+        t.toLowerCase().includes(suchbegriff),
+      ),
+  );
   const accountTypNameById = new Map((accountTypen ?? []).map((t) => [t.id, t.name]));
   const einladungRolleLabel = (e: Einladung) =>
     e.rolle === "custom" ? accountTypNameById.get(e.account_typ_id ?? "") ?? "Account-Typ" : ROLE_LABEL[e.rolle ?? "mandant_admin"];
 
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="mb-4 text-zeile font-bold text-label">
-          {kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
-        </h2>
-        <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {istPlattform ? <span /> : <UsersTitel />}
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchField value={suche} onChange={setSuche} placeholder="Accounts suchen" ariaLabel="Accounts suchen" groesse="mobil" className="w-56" />
+          <button type="button" onClick={anlegenOeffnen} className={NEU_BUTTON_KLASSE}>
+            {kannEingeladenWerden ? "+ Kollegen einladen" : "+ Neuer Account"}
+          </button>
+        </div>
+      </div>
+
+      <AnlegenPanel
+        offen={zeigeNeu}
+        titel={kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
+        onClose={() => setZeigeNeu(false)}
+      >
+        <form onSubmit={handleCreate} className="space-y-3 p-4">
           {!kannEingeladenWerden && (
             <div>
               <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Name</label>
@@ -299,7 +340,7 @@ export function UsersPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+                className={FELD_KLASSE}
               />
             </div>
           )}
@@ -310,7 +351,7 @@ export function UsersPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              className={FELD_KLASSE}
             />
           </div>
           {!kannEingeladenWerden && (
@@ -322,14 +363,14 @@ export function UsersPage() {
                 minLength={MIN_PASSWORT_LAENGE}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+                className={FELD_KLASSE}
               />
               <p className="mt-1 text-sekundaer text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             </div>
           )}
           <div>
             <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Rolle</label>
-            <Select className="w-auto" id={`${uid}-3`}
+            <Select id={`${uid}-3`}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
             >
@@ -342,12 +383,12 @@ export function UsersPage() {
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-fliess font-medium text-label">
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-fliess font-medium text-label">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
                 <Select
-                  className="w-auto"
+                  id={`${uid}-6`}
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
@@ -375,7 +416,7 @@ export function UsersPage() {
           {isSuperAdmin && role !== "super_admin" && (
             <div>
               <label htmlFor={`${uid}-4`} className="mb-1 block text-fliess font-medium text-label">Mandant</label>
-              <Select className="w-auto" id={`${uid}-4`}
+              <Select id={`${uid}-4`}
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
@@ -391,31 +432,32 @@ export function UsersPage() {
               </Select>
             </div>
           )}
+          {formError && <p role="alert" className="text-fliess text-st-fehlt">{formError}</p>}
+          {letzteEinladung && (
+            <div className="flex flex-wrap items-center gap-3 border rounded-[var(--radius-ap-md)] border-st-erledigt px-4 py-3 text-fliess text-st-erledigt">
+              <span>
+                Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
+              </span>
+              {letzteEinladung.registrierungslink && (
+                <LinkKopierenButton link={letzteEinladung.registrierungslink} />
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={createMutation.isPending || einladenMutation.isPending}
-            className="btn-touch btn-ap-primary"
+            className="btn-touch btn-ap-primary w-full"
           >
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
         </form>
-        {formError && <p className="mt-2 text-fliess text-st-fehlt ">{formError}</p>}
-        {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border rounded-[var(--radius-ap-md)] border-st-erledigt px-4 py-3 text-fliess text-st-erledigt ">
-            <span>
-              Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
-            </span>
-            {letzteEinladung.registrierungslink && (
-              <LinkKopierenButton link={letzteEinladung.registrierungslink} />
-            )}
-          </div>
-        )}
-      </section>
+      </AnlegenPanel>
 
       {einladungen && einladungen.length > 0 && (
         <section>
           <h2 className="mb-4 text-zeile font-bold text-label">Offene Einladungen</h2>
-          <table className="w-full card-ap text-left">
+          <div className="card-ap overflow-x-auto">
+          <table className="w-full text-left">
             <thead className="text-sekundaer text-label2">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
@@ -468,6 +510,7 @@ export function UsersPage() {
                 ))}
             </tbody>
           </table>
+          </div>
         </section>
       )}
 
@@ -488,10 +531,26 @@ export function UsersPage() {
           <SkeletonList count={4} />
         ) : ladeFehler && !users ? (
           <FehlerZustand fehler={ladeFehler} was="Die Nutzer" onErneut={() => void neuLaden()} />
+        ) : sichtbareUsers.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            text={
+              suchbegriff
+                ? "Kein Account passt zur Suche."
+                : "Noch keine Accounts angelegt. Lege den ersten Account an, damit sich jemand anmelden kann."
+            }
+            action={
+              suchbegriff ? undefined : (
+                <button type="button" onClick={anlegenOeffnen} className={NEU_BUTTON_KLASSE}>
+                  {kannEingeladenWerden ? "+ Kollegen einladen" : "+ Neuer Account"}
+                </button>
+              )
+            }
+          />
         ) : (
           <>
           <ul className="space-y-2 md:hidden">
-            {users?.map((u) => (
+            {sichtbareUsers.map((u) => (
               <li key={u.id} className="card-ap flex items-start justify-between gap-2 p-3">
                 <div className="min-w-0">
                   <p className="truncate text-fliess font-medium text-label">{u.name}</p>
@@ -513,7 +572,8 @@ export function UsersPage() {
             ))}
           </ul>
           <div className="hidden md:block">
-          <table className="w-full card-ap text-left">
+          <div className="card-ap overflow-hidden">
+          <table className="w-full text-left">
             <thead className="text-sekundaer text-label2">
               <tr>
                 <th className="px-4 py-3">Name</th>
@@ -525,7 +585,7 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-sep text-fliess">
-              {users?.map((u) => (
+              {sichtbareUsers.map((u) => (
                 <tr key={u.id}>
                   <td className="px-4 py-3 font-medium text-label">{u.name}</td>
                   <td className="px-4 py-3 text-label2">{u.email}</td>
@@ -555,6 +615,7 @@ export function UsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
           </div>
           </>
         )}

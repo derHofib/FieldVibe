@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package } from "lucide-react";
+import { Package, SearchX, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +17,9 @@ import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { Select } from "../../components/apple/Select";
+import { SearchField } from "../../components/apple/SearchField";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -482,24 +485,22 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
     <div className="space-y-4">
       {!nurBestellwesen && <h1 className="text-titel-mobil font-bold text-label">Material</h1>}
 
-      <div className={`${nurBestellwesen ? "hidden" : "flex"} gap-2 overflow-x-auto card-ap p-1`}>
-        {(["material", "bestellwesen"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => {
-              setTab(t);
-              setShowForm(false);
-            }}
-            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sekundaer font-medium capitalize ${
-              tab === t
-                ? "btn-ap-primary text-white"
-                : "text-label"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      {!nurBestellwesen && (
+        <SegmentedControl
+          ariaLabel="Bereich"
+          groesse="touch"
+          volleBreite
+          optionen={[
+            { wert: "material", label: "Material" },
+            { wert: "bestellwesen", label: "Bestellwesen" },
+          ]}
+          wert={tab}
+          onChange={(wert) => {
+            setTab(wert);
+            setShowForm(false);
+          }}
+        />
+      )}
 
       {tab === "material" && (
         <button
@@ -610,11 +611,11 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
 
           {(material ?? []).length > 0 && (
             <div className="space-y-2 card-ap p-3">
-              <input
+              <SearchField
+                groesse="mobil"
                 value={matSuche}
-                onChange={(e) => setMatSuche(e.target.value)}
+                onChange={setMatSuche}
                 placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
               />
               <div className="grid grid-cols-2 gap-2">
                 <Select
@@ -661,9 +662,17 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
           ) : ladeFehler && !material ? (
             <FehlerZustand fehler={ladeFehler} was="Das Material" onErneut={() => void neuLaden()} />
           ) : (material ?? []).length === 0 ? (
-            <EmptyState icon={Package} text="Kein Material erfasst." />
+            <EmptyState
+              icon={Package}
+              text="Noch kein Material erfasst. Lege Material an, um Bestände und Mindestmengen zu verfolgen."
+              action={
+                <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4">
+                  + Neues Material
+                </button>
+              }
+            />
           ) : materialGefiltert.length === 0 ? (
-            <p className="text-center text-sekundaer text-label2">Kein Material entspricht dem Filter.</p>
+            <EmptyState icon={SearchX} text="Kein Material entspricht dem Filter." />
           ) : (
             materialGefiltert.map((m) => (
               <MaterialZeile
@@ -726,17 +735,22 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
                       {l.email && <span className="ml-2 text-sekundaer text-label2">{l.email}</span>}
                     </div>
                     {kannLieferantenLoeschen && (
-                      <button
-                        onClick={async () => {
-                          if (await bestaetigen({ titel: `Lieferant "${l.name}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                            deleteLieferantMutation.mutate(l.id);
-                          }
-                        }}
-                        disabled={deleteLieferantMutation.isPending}
-                        className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-                      >
-                        Löschen
-                      </button>
+                      <AktionsMenue
+                        label={`Aktionen für ${l.name}`}
+                        eintraege={[
+                          {
+                            label: "Löschen",
+                            icon: Trash2,
+                            destruktiv: true,
+                            disabled: deleteLieferantMutation.isPending,
+                            onClick: async () => {
+                              if (await bestaetigen({ titel: `Lieferant "${l.name}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                                deleteLieferantMutation.mutate(l.id);
+                              }
+                            },
+                          },
+                        ]}
+                      />
                     )}
                   </div>
                 ))}
@@ -746,27 +760,18 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
 
           <div className="card-ap p-3">
             <h2 className="mb-2 text-fliess font-semibold text-label2">Offene Materialbedarfe</h2>
-            <div className="mb-2 flex gap-2 rounded-md bg-fill p-1">
-              <button
-                onClick={() => setBedarfZweck("bestellung")}
-                className={`btn-touch flex-1 rounded-md py-1.5 text-sekundaer font-medium ${
-                  bedarfZweck === "bestellung"
-                    ? "bg-white text-label shadow-xs dark:bg-stone-700 "
-                    : "text-label2"
-                }`}
-              >
-                Zur Bestellung
-              </button>
-              <button
-                onClick={() => setBedarfZweck("angebot")}
-                className={`btn-touch flex-1 rounded-md py-1.5 text-sekundaer font-medium ${
-                  bedarfZweck === "angebot"
-                    ? "bg-white text-label shadow-xs dark:bg-stone-700 "
-                    : "text-label2"
-                }`}
-              >
-                Für Angebot
-              </button>
+            <div className="mb-2">
+              <SegmentedControl
+                ariaLabel="Zweck der Materialbedarfe"
+                groesse="touch"
+                volleBreite
+                optionen={[
+                  { wert: "bestellung", label: "Zur Bestellung" },
+                  { wert: "angebot", label: "Für Angebot" },
+                ]}
+                wert={bedarfZweck}
+                onChange={setBedarfZweck}
+              />
             </div>
 
             {(offeneBedarfe ?? []).length === 0 ? (

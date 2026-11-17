@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "../../api/client";
 import { abwesenheitenApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import type { AbwesenheitArt, AbwesenheitStatus } from "../../types";
 import {
@@ -101,7 +103,7 @@ function useAntragAktionen() {
 }
 
 function OffeneAntraege() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["abwesenheiten", "offen"],
     queryFn: () => abwesenheitenApi.liste({ alle: true, nur_offene: true }),
   });
@@ -110,7 +112,8 @@ function OffeneAntraege() {
   const [antwort, setAntwort] = useState("");
   const liste = useMemo(() => offeneAntraege(data ?? []), [data]);
 
-  if (isLoading) return <p className="text-sekundaer text-label2">Lädt…</p>;
+  if (isLoading) return <SkeletonList count={3} />;
+  if (error) return <FehlerZustand fehler={error} was="Die Anträge" onErneut={() => void refetch()} />;
   if (liste.length === 0) return <EmptyState icon={ClipboardList} text="Keine offenen Anträge." />;
 
   return (
@@ -177,7 +180,7 @@ function KalenderAnsicht() {
   const { von, bis } = monatsGrenzen(jahr, monat0);
   const heuteTag = toDateInput(heute);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["abwesenheiten", "kalender", von, bis],
     queryFn: () => abwesenheitenApi.kalender(von, bis),
   });
@@ -212,9 +215,9 @@ function KalenderAnsicht() {
         </span>
       </div>
       {isLoading ? (
-        <p className="text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : error ? (
-        <p className="text-fliess text-st-fehlt">{fehlerText(error)}</p>
+        <FehlerZustand fehler={error} was="Der Kalender" onErneut={() => void refetch()} />
       ) : zeilen.length === 0 ? (
         <EmptyState icon={CalendarDays} text="In diesem Monat gibt es keine genehmigten Abwesenheiten." />
       ) : (
@@ -281,7 +284,7 @@ function AlleAntraege() {
   const bestaetigen = useBestaetigung();
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [status, setStatus] = useState<AbwesenheitStatus | "">("");
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["abwesenheiten", "alle", jahr, status],
     queryFn: () =>
       abwesenheitenApi.liste({ alle: true, von: `${jahr}-01-01`, bis: `${jahr}-12-31`, status: status || undefined }),
@@ -318,7 +321,9 @@ function AlleAntraege() {
         </label>
       </div>
       {isLoading ? (
-        <p className="text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={4} />
+      ) : error ? (
+        <FehlerZustand fehler={error} was="Die Anträge" onErneut={() => void refetch()} />
       ) : !data || data.length === 0 ? (
         <EmptyState icon={CalendarCheck} text="Keine Anträge im gewählten Zeitraum." />
       ) : (
@@ -361,7 +366,7 @@ function AnspruchAbschnitt() {
   const [meldung, setMeldung] = useState<{ fehler: boolean; text: string } | null>(null);
 
   const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
-  const { data: konto, isLoading } = useQuery({
+  const { data: konto, isLoading, error: kontoFehler, refetch: kontoNeu } = useQuery({
     queryKey: ["abwesenheiten", "konto", userId, jahr],
     queryFn: () => abwesenheitenApi.konto({ user_id: userId, jahr }),
     enabled: !!userId,
@@ -456,7 +461,13 @@ function AnspruchAbschnitt() {
           </p>
         )}
       </Karte>
-      {isLoading ? <p className="text-sekundaer text-label2">Lädt…</p> : konto && <UrlaubskontoKacheln konto={konto} />}
+      {isLoading ? (
+        <SkeletonList count={2} />
+      ) : kontoFehler ? (
+        <FehlerZustand fehler={kontoFehler} was="Das Urlaubskonto" onErneut={() => void kontoNeu()} />
+      ) : (
+        konto && <UrlaubskontoKacheln konto={konto} />
+      )}
     </div>
   );
 }

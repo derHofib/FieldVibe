@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, FileText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -30,6 +30,7 @@ import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotMwstSatz, AngebotPosition, AngebotPositionstyp } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 const POSITIONSTYP_LABEL: Record<AngebotPositionstyp, string> = {
   material: "Material",
@@ -229,17 +230,23 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           ← Zurück
         </button>
         {kannLoeschen && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Angebot löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Angebot löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Angebot löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Angebot löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 

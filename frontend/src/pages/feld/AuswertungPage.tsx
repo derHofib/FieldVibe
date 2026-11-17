@@ -1,11 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, Receipt } from "lucide-react";
+import { Download, Receipt, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { auswertungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
+import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import { downloadBlob } from "../../utils/download";
@@ -29,13 +31,13 @@ export function AuswertungPage() {
   const [von, setVon] = useState(ersterTagDesMonats());
   const [bis, setBis] = useState(heuteIso());
 
-  const { data: bericht, isFetching, refetch } = useQuery({
+  const { data: bericht, isFetching, error: berichtFehler, refetch } = useQuery({
     queryKey: ["ust-va", von, bis],
     queryFn: () => auswertungApi.ustVa(von, bis),
     enabled: false,
   });
 
-  const { data: offenePosten } = useQuery({
+  const { data: offenePosten, isLoading: offenePostenLaedt, error: offenePostenFehler, refetch: offenePostenNeu } = useQuery({
     queryKey: ["offene-posten"],
     queryFn: auswertungApi.offenePosten,
     enabled: abrechnungAktiv && kannSehen && !eingeschraenkt,
@@ -71,6 +73,16 @@ export function AuswertungPage() {
         <h1 className="text-titel-mobil font-bold text-label">Auswertung</h1>
       </div>
 
+      {offenePostenLaedt && <SkeletonList count={2} />}
+      {offenePostenFehler && !offenePosten && (
+        <FehlerZustand fehler={offenePostenFehler} was="Die offenen Posten" onErneut={() => void offenePostenNeu()} />
+      )}
+      {offenePosten && offenePosten.debitoren.length === 0 && offenePosten.kreditoren.length === 0 && (
+        <div className="card-ap p-4">
+          <h2 className="text-fliess font-semibold text-label2">Offene Posten</h2>
+          <EmptyState icon={Wallet} text="Keine offenen Posten. Alle Rechnungen sind beglichen." className="py-3" />
+        </div>
+      )}
       {offenePosten && (offenePosten.debitoren.length > 0 || offenePosten.kreditoren.length > 0) && (
         <div className="card-ap p-4">
           <h2 className="mb-2 text-fliess font-semibold text-label2">Offene Posten</h2>
@@ -182,13 +194,18 @@ export function AuswertungPage() {
         </button>
       </div>
 
+      {berichtFehler && !bericht && !isFetching && (
+        <FehlerZustand fehler={berichtFehler} was="Der USt-VA-Bericht" onErneut={() => void refetch()} />
+      )}
+      {isFetching && !bericht && <SkeletonList count={2} />}
+
       {bericht && (
         <div className="card-ap p-4">
           <h2 className="mb-2 text-fliess font-semibold text-label2">
             Umsatzsteuer (Ausgangsrechnungen)
           </h2>
           {bericht.umsatzsteuer_saetze.length === 0 ? (
-            <p className="text-sekundaer text-label2">Keine Umsätze im Zeitraum.</p>
+            <EmptyState icon={Receipt} text="Keine Umsätze im Zeitraum." className="py-3" />
           ) : (
             <div className="space-y-1">
               {bericht.umsatzsteuer_saetze.map((z) => (
@@ -221,7 +238,7 @@ export function AuswertungPage() {
             Vorsteuer (Eingangsrechnungen)
           </h2>
           {bericht.vorsteuer_saetze.length === 0 ? (
-            <p className="text-sekundaer text-label2">Keine Vorsteuer im Zeitraum.</p>
+            <EmptyState icon={Receipt} text="Keine Vorsteuer im Zeitraum." className="py-3" />
           ) : (
             <div className="space-y-1">
               {bericht.vorsteuer_saetze.map((z) => (

@@ -9,6 +9,7 @@ export function SearchField({
   groesse = "desktop",
   onMikrofon,
   ariaLabel = "Suchen",
+  autoFocus = false,
   className = "",
 }: {
   value: string;
@@ -17,6 +18,7 @@ export function SearchField({
   groesse?: "desktop" | "mobil";
   onMikrofon?: () => void;
   ariaLabel?: string;
+  autoFocus?: boolean;
   className?: string;
 }) {
   const mobil = groesse === "mobil";
@@ -32,6 +34,7 @@ export function SearchField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        autoFocus={autoFocus}
         className={`search-ap-input ${mobil ? "text-zeile" : "text-sekundaer"}`}
       />
       {mobil && onMikrofon && (

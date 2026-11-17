@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, LayoutTemplate, UserCog } from "lucide-react";
+import { ChevronDown, ChevronUp, LayoutTemplate, Trash2, UserCog } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { accountTypenApi, organigrammApi, rechteApi } from "../api/endpoints";
@@ -11,10 +11,13 @@ import { aktionsSpalten, bereichKennt } from "../office/organigramm/rechteMatrix
 import type { AccountTyp } from "../types";
 import type { RechteRegistry } from "../types/organigramm";
 import { AccountTypVorlageSheet } from "./AccountTypVorlageSheet";
+import { AktionsMenue } from "../components/AktionsMenue";
 import { AnlegenPanel } from "../components/AnlegenPanel";
+import { EmptyState } from "../components/EmptyState";
 import { useBestaetigung } from "../components/ConfirmDialog";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
+import { NEU_BUTTON_KLASSE } from "../components/FormularFeld";
 
 // Hinweise zu Aktionen, die nicht selbsterklaerend sind (Spaltenkopf-Tooltip).
 const AKTION_HINWEIS: Record<string, string> = {
@@ -233,7 +236,7 @@ export function AccountTypenPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-touch btn-ap-primary px-4" onClick={() => setZeigeNeu(true)}>
+          <button type="button" className={NEU_BUTTON_KLASSE} onClick={() => setZeigeNeu(true)}>
             + Neuer Account-Typ
           </button>
           <button type="button" className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium" onClick={() => setZeigeVorlage(true)}>
@@ -333,20 +336,23 @@ export function AccountTypenPage() {
                     </span>
                     {offen ? <ChevronUp size={16} className="shrink-0 text-label2" aria-hidden="true" /> : <ChevronDown size={16} className="shrink-0 text-label2" aria-hidden="true" />}
                   </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (await bestaetigen({ titel: `Account-Typ "${typ.name}" löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })) {
-                        setDeleteError(null);
-                        deleteMutation.mutate(typ.id);
-                      }
-                    }}
-                    disabled={typ.anzahl_nutzer > 0}
-                    title={typ.anzahl_nutzer > 0 ? "Diesem Account-Typ sind noch Nutzer zugeordnet" : undefined}
-                    className="btn-ap shrink-0 !border-st-fehlt text-st-fehlt disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Löschen
-                  </button>
+                  <AktionsMenue
+                    label={`Aktionen für ${typ.name}`}
+                    eintraege={[
+                      {
+                        label: typ.anzahl_nutzer > 0 ? "Löschen (noch Nutzer zugeordnet)" : "Löschen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        disabled: typ.anzahl_nutzer > 0,
+                        onClick: async () => {
+                          if (await bestaetigen({ titel: `Account-Typ "${typ.name}" löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })) {
+                            setDeleteError(null);
+                            deleteMutation.mutate(typ.id);
+                          }
+                        },
+                      },
+                    ]}
+                  />
                 </div>
                 {offen && (
                   <div id={`typ-${typ.id}`}>
@@ -378,7 +384,15 @@ export function AccountTypenPage() {
             );
           })
         ) : (
-          <p className="text-sekundaer text-label2">Noch keine Account-Typen angelegt.</p>
+          <EmptyState
+            icon={UserCog}
+            text="Noch keine Account-Typen angelegt. Ein Account-Typ bündelt Rechte, die du Positionen und Nutzern zuweist."
+            action={
+              <button type="button" className={NEU_BUTTON_KLASSE} onClick={() => setZeigeNeu(true)}>
+                + Neuer Account-Typ
+              </button>
+            }
+          />
         )}
       </section>
 

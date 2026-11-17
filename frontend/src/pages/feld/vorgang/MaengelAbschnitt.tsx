@@ -2,7 +2,8 @@ import type { Angebot, Mangel, MangelSchweregrad, MangelStatus } from "../../../
 import { MANGEL_STATUS_LABEL, SCHWEREGRAD_BADGE, SCHWEREGRAD_LABEL, SCHWEREGRAD_OPTIONEN } from "./konstanten";
 import type { useBestaetigung } from "../../../components/ConfirmDialog";
 import type { UseMutationResult } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
+import { AktionsMenue } from "../../../components/AktionsMenue";
 import type { Dispatch, SetStateAction } from "react";
 import { Select } from "../../../components/apple/Select";
 
@@ -142,17 +143,23 @@ export function MaengelAbschnitt({
                     </>
                   )}
                   {kannPapierkorbLoeschen && (
-                    <button
-                      onClick={async () => {
-                        if (await bestaetigen({ titel: "Mangel löschen?", bestaetigenLabel: "Löschen" })) {
-                          deleteMangelMutation.mutate(m.id);
-                        }
-                      }}
-                      disabled={deleteMangelMutation.isPending}
-                      className="btn-touch text-sekundaer font-medium text-st-fehlt"
-                    >
-                      Löschen
-                    </button>
+                    <AktionsMenue
+                      label="Weitere Aktionen"
+                      touch
+                      eintraege={[
+                        {
+                          label: "Mangel löschen",
+                          icon: Trash2,
+                          destruktiv: true,
+                          disabled: deleteMangelMutation.isPending,
+                          onClick: async () => {
+                            if (await bestaetigen({ titel: "Mangel löschen?", bestaetigenLabel: "Löschen" })) {
+                              deleteMangelMutation.mutate(m.id);
+                            }
+                          },
+                        },
+                      ]}
+                    />
                   )}
                 </div>
               </div>

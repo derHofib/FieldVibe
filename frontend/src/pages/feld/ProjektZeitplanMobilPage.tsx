@@ -11,6 +11,7 @@ import { StatusPille } from "../../components/apple/StatusPille";
 import { VORGANG_STATUS_LABEL, vorgangStatusZuToken } from "../../components/apple/status";
 import { useAuth } from "../../context/AuthContext";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import {
   anzeigeZeitraeume,
@@ -44,7 +45,7 @@ export function ProjektZeitplanMobilPage() {
   const queryClient = useQueryClient();
   const darfBeantragen = hatRecht("projekte", "zeitplan_beantragen");
   const [antragFuer, setAntragFuer] = useState<ZeitplanElement | null>(null);
-  const { data: zeitplan, isLoading, error } = useQuery({
+  const { data: zeitplan, isLoading, error, refetch: neuLaden } = useQuery({
     queryKey: ["projekt-zeitplan", id],
     queryFn: () => zeitplanApi.get(id!),
     enabled: !!id,
@@ -156,11 +157,7 @@ export function ProjektZeitplanMobilPage() {
         {isLoading ? (
           <SkeletonList count={4} />
         ) : error ? (
-          <p role="alert" className="text-fliess text-st-fehlt">
-            {error instanceof ApiError && error.status === 404
-              ? "Kein Zugriff auf diesen Zeitplan"
-              : "Zeitplan konnte nicht geladen werden."}
-          </p>
+          <FehlerZustand fehler={error} was="Der Zeitplan" onErneut={() => void neuLaden()} />
         ) : gruppen.length === 0 ? (
           <EmptyState icon={CalendarRange} text="Für dieses Projekt gibt es noch keinen Zeitplan." />
         ) : (

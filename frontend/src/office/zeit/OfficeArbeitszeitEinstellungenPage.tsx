@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { CalendarOff, ClockAlert, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { arbeitszeitApi, usersApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { SOLL_WOCHENTAG_FELDER, type ArbeitszeitSoll, type Bundesland, type SollWochentagFeld } from "../../types";
@@ -57,7 +60,7 @@ const BUNDESLAND_KEY = ["arbeitszeit-bundesland"];
 
 function BundeslandAbschnitt() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: BUNDESLAND_KEY, queryFn: arbeitszeitApi.bundesland });
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: BUNDESLAND_KEY, queryFn: arbeitszeitApi.bundesland });
   const [hinweis, setHinweis] = useState(false);
 
   const mutation = useMutation({
@@ -75,6 +78,9 @@ function BundeslandAbschnitt() {
         Bestimmt, welche gesetzlichen Feiertage beim Generieren entstehen. Ohne Bundesland entstehen nur die
         bundesweiten Feiertage.
       </p>
+      {error ? (
+        <FehlerZustand fehler={error} was="Das Bundesland" onErneut={() => void refetch()} />
+      ) : (
       <Select
         className="w-full max-w-xs"
         aria-label="Bundesland"
@@ -89,6 +95,7 @@ function BundeslandAbschnitt() {
           </option>
         ))}
       </Select>
+      )}
       {mutation.isError && <p className="text-fliess text-st-fehlt">{fehlerText(mutation.error)}</p>}
       {hinweis && !mutation.isError && (
         <p className="text-sekundaer text-label2">
@@ -110,7 +117,7 @@ function FeiertageAbschnitt() {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const { data: bundesland } = useQuery({ queryKey: BUNDESLAND_KEY, queryFn: arbeitszeitApi.bundesland });
-  const { data: feiertage, isLoading } = useQuery({
+  const { data: feiertage, isLoading, error: feiertageFehler, refetch: feiertageNeu } = useQuery({
     queryKey: ["arbeitszeit-feiertage", jahr],
     queryFn: () => arbeitszeitApi.feiertage(jahr),
   });
@@ -206,7 +213,9 @@ function FeiertageAbschnitt() {
       </div>
 
       {isLoading ? (
-        <p className="text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={3} />
+      ) : feiertageFehler ? (
+        <FehlerZustand fehler={feiertageFehler} was="Die Feiertage" onErneut={() => void feiertageNeu()} />
       ) : feiertage && feiertage.length > 0 ? (
         <ul className="divide-y divide-sep">
           {feiertage.map((f) => (
@@ -226,7 +235,11 @@ function FeiertageAbschnitt() {
           ))}
         </ul>
       ) : (
-        <p className="text-sekundaer text-label2">Für {jahr} sind keine Feiertage hinterlegt.</p>
+        <EmptyState
+          icon={CalendarOff}
+          className="py-4"
+          text={`Für ${jahr} sind keine Feiertage hinterlegt. Mit "Feiertage ${jahr} generieren" oder dem Formular unten legst du welche an.`}
+        />
       )}
 
       <form onSubmit={handleAnlegen} className="flex flex-wrap items-end gap-2 border-t border-sep pt-3">
@@ -271,7 +284,7 @@ function SollAbschnitt() {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
-  const { data: historie, isLoading } = useQuery({
+  const { data: historie, isLoading, error: historieFehler, refetch: historieNeu } = useQuery({
     queryKey: ["arbeitszeit-soll", userId],
     queryFn: () => arbeitszeitApi.soll(userId),
     enabled: !!userId,
@@ -326,6 +339,13 @@ function SollAbschnitt() {
 
       {userId && (
         <>
+          {isLoading ? (
+            <SkeletonList count={2} />
+          ) : historieFehler ? (
+            <FehlerZustand fehler={historieFehler} was="Die Soll-Zeiten" onErneut={() => void historieNeu()} />
+          ) : !historie || historie.length === 0 ? (
+            <EmptyState icon={ClockAlert} className="py-4" text="Noch kein Soll hinterlegt. Lege unten die erste Zeile an." />
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-fliess">
               <thead>
@@ -340,14 +360,7 @@ function SollAbschnitt() {
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={9} className="py-2 text-label2">
-                      Lädt…
-                    </td>
-                  </tr>
-                ) : historie && historie.length > 0 ? (
-                  historie.map((z) => (
+                {historie?.map((z) => (
                     <tr key={z.id} className="border-t border-sep">
                       <td className="py-1.5 pr-3 tabular-nums text-label">{formatDatum(z.gueltig_ab)}</td>
                       {SOLL_WOCHENTAG_FELDER.map((f) => (
@@ -359,17 +372,11 @@ function SollAbschnitt() {
                         {formatStundenAlsHHMM(sollWochensumme(z))}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="py-2 text-label2">
-                      Noch kein Soll hinterlegt.
-                    </td>
-                  </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3 border-t border-sep pt-3">
             <h3 className="text-fliess font-semibold text-label">Neue Zeile</h3>

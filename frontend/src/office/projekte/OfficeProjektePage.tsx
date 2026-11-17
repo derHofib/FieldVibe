@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Table2, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Search, Table2, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { useAuth } from "../../context/AuthContext";
+import { SearchField } from "../../components/apple/SearchField";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import type { Projekt, ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
-import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
+import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { ProjektAufgabeDetailPanel } from "./ProjektAufgabeDetailPanel";
 import { ProjektDetailPanel } from "./ProjektDetailPanel";
 import { ProjekteTabelle } from "./ProjekteTabelle";
@@ -46,6 +51,9 @@ export function OfficeProjektePage() {
   const queryClient = useQueryClient();
   // "Tabelle" (alle Projekte) ist der neue Standard-Einstieg -- Uebersicht/
   // Kanban bleiben fuer die Detailarbeit an einem einzelnen Projekt.
+  const { hatRecht } = useAuth();
+  const darfAnlegen = hatRecht("projekte", "erstellen");
+  const [suche, setSuche] = useState("");
   const [ansicht, setAnsicht] = useState<"tabelle" | "uebersicht" | "kanban">("tabelle");
   const [projektId, setProjektId] = useState<string | null>(null);
   const [projektPanel, setProjektPanel] = useState<Projekt | null>(null);
@@ -55,7 +63,7 @@ export function OfficeProjektePage() {
   const [panel, setPanel] = useState<{ aufgabe: ProjektAufgabe | null; spalteId?: string } | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: projekte, isLoading: projekteLaden } = useQuery({
+  const { data: projekte, isLoading: projekteLaden, error: projekteFehler, refetch: projekteNeuLaden } = useQuery({
     queryKey: ["projekte"],
     queryFn: () => projekteApi.list(),
   });
@@ -134,6 +142,26 @@ export function OfficeProjektePage() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben", aktivesProjekt] }),
   });
 
+  // Die Projektliste wird vollständig geladen, daher genügt ein Client-Filter.
+  const gefilterteProjekte = useMemo(() => {
+    const q = suche.trim().toLowerCase();
+    return q ? (projekte ?? []).filter((p) => p.name.toLowerCase().includes(q)) : (projekte ?? []);
+  }, [projekte, suche]);
+
+  const leerProjekte = (
+    <EmptyState
+      icon={KanbanSquare}
+      text="Noch kein Projekt angelegt. Projekte gliedern Aufgaben und Vorgänge eines Vorhabens."
+      action={
+        darfAnlegen ? (
+          <button type="button" onClick={() => setZeigeNeuesProjekt(true)} className="btn-ap px-4 py-2 text-sekundaer">
+            Neues Projekt
+          </button>
+        ) : undefined
+      }
+    />
+  );
+
   const nachSpalte = useMemo(() => {
     const gruppen = new Map<string, ProjektAufgabe[]>();
     // spalte_id ist im Typ nullable (private Aufgaben/Unteraufgaben), aber
@@ -157,6 +185,14 @@ export function OfficeProjektePage() {
   if (projekteLaden) {
     return <SkeletonList count={4} />;
   }
+  if (projekteFehler && !projekte) {
+    return (
+      <div>
+        <SeitenKopf titel="Projekte" />
+        <FehlerZustand fehler={projekteFehler} was="Die Projekte" onErneut={() => void projekteNeuLaden()} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -176,39 +212,61 @@ export function OfficeProjektePage() {
             ))}
           </Select>
         )}
-        <button onClick={() => setZeigeNeuesProjekt(true)} className="btn-ap-primary">
-          <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
-          Neues Projekt
-        </button>
+        {ansicht === "tabelle" && (
+          <SearchField
+            value={suche}
+            onChange={setSuche}
+            placeholder="Projektname…"
+            ariaLabel="Projekte suchen"
+            className="w-56"
+          />
+        )}
+        {darfAnlegen && (
+          <button onClick={() => setZeigeNeuesProjekt(true)} className={NEU_BUTTON_KLASSE}>
+            <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
+            Neues Projekt
+          </button>
+        )}
       </SeitenKopf>
 
-      {zeigeNeuesProjekt && (
-        <Karte className="mb-4 p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Name</label>
-              <input id={`${uid}-0`}
-                autoFocus
-                value={neuerProjektName}
-                onChange={(e) => setNeuerProjektName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && projektAnlegen()}
-                placeholder="z. B. Neubau Lagerhalle"
-                className="field-ap"
-              />
-            </div>
+      <AnlegenPanel offen={zeigeNeuesProjekt} titel="Neues Projekt" onClose={() => setZeigeNeuesProjekt(false)}>
+        <form
+          className="flex flex-col gap-3 p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            projektAnlegen();
+          }}
+        >
+          <div>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
+              Name<span aria-hidden="true" className="text-st-fehlt"> *</span>
+            </label>
+            <input
+              id={`${uid}-0`}
+              autoFocus
+              value={neuerProjektName}
+              onChange={(e) => setNeuerProjektName(e.target.value)}
+              placeholder="z. B. Neubau Lagerhalle"
+              className="field-ap"
+            />
+          </div>
+          {projektErstellen.isError && (
+            <p role="alert" className="text-sekundaer text-st-fehlt">Das Projekt konnte nicht angelegt werden.</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setZeigeNeuesProjekt(false)} className="btn-touch btn-ap px-4">
+              Abbrechen
+            </button>
             <button
-              onClick={projektAnlegen}
+              type="submit"
               disabled={!neuerProjektName.trim() || projektErstellen.isPending}
-              className="btn-ap-primary"
+              className={NEU_BUTTON_KLASSE}
             >
               Anlegen
             </button>
-            <button onClick={() => setZeigeNeuesProjekt(false)} className="btn-ap">
-              Abbrechen
-            </button>
           </div>
-        </Karte>
-      )}
+        </form>
+      </AnlegenPanel>
 
       {fehler && (
         <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
@@ -223,12 +281,14 @@ export function OfficeProjektePage() {
 
       {ansicht === "tabelle" ? (
         !projekte || projekte.length === 0 ? (
-          <EmptyState icon={KanbanSquare} text="Noch kein Projekt angelegt." />
+          leerProjekte
+        ) : gefilterteProjekte.length === 0 ? (
+          <EmptyState icon={Search} text="Kein Projekt entspricht der Suche." />
         ) : (
-          <ProjekteTabelle projekte={projekte} onZeileKlick={setProjektPanel} />
+          <ProjekteTabelle projekte={gefilterteProjekte} onZeileKlick={setProjektPanel} />
         )
       ) : !aktivesProjekt ? (
-        <EmptyState icon={KanbanSquare} text="Noch kein Projekt angelegt." />
+        leerProjekte
       ) : ansicht === "uebersicht" ? (
         <ProjektUebersicht projektId={aktivesProjekt} />
       ) : (

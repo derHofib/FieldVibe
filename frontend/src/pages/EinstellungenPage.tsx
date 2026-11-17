@@ -3,9 +3,13 @@ import { useId, useState, type ChangeEvent } from "react";
 
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
+import { Trash2 } from "lucide-react";
+
+import { AktionsMenue } from "../components/AktionsMenue";
 import { AnlegenPanel } from "../components/AnlegenPanel";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { useBestaetigung } from "../components/ConfirmDialog";
+import { NEU_BUTTON_KLASSE } from "../components/FormularFeld";
 import { DetailSkeleton } from "../components/Skeleton";
 
 interface SmtpWerte {
@@ -167,15 +171,20 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
-        <button
-          onClick={async () => {
-            if (await bestaetigen({ titel: "Globale SMTP-Konfiguration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
-          }}
-          disabled={deleteMutation.isPending}
-          className="btn-touch border rounded-[var(--radius-ap-md)] border-st-fehlt px-3 py-1.5 text-sekundaer font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
-        >
-          Löschen
-        </button>
+        <AktionsMenue
+          label="Weitere Aktionen für die SMTP-Konfiguration"
+          eintraege={[
+            {
+              label: "Löschen",
+              icon: Trash2,
+              destruktiv: true,
+              disabled: deleteMutation.isPending,
+              onClick: async () => {
+                if (await bestaetigen({ titel: "Globale SMTP-Konfiguration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
+              },
+            },
+          ]}
+        />
       </div>
     </div>
   );
@@ -214,8 +223,6 @@ export function EinstellungenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-heading text-titel-desktop font-semibold text-label">Plattform-Einstellungen</h1>
-
       <div className="space-y-2">
         <p className="text-sekundaer text-label2">
           Greift, sobald ein Mandant selbst keine eigene SMTP-Integration eingerichtet hat (Seite
@@ -232,7 +239,7 @@ export function EinstellungenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : (
-        <button onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium">
+        <button onClick={() => setShowForm(true)} className={NEU_BUTTON_KLASSE}>
           + Globales SMTP einrichten
         </button>
       )}

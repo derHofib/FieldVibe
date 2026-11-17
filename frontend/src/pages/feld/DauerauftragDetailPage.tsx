@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { statusLabel } from "../../config/vorgangDarstellung";
+import { VorgangStatusPille } from "../../components/VorgangStatusPille";
+import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -9,16 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
-
-const STATUS_BADGE: Record<string, string> = {
-  neu: "border rounded-[var(--radius-ap-pill)] border-tint text-tint ",
-  geplant: "border rounded-[var(--radius-ap-pill)] border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
-  wartet_kunde: "border rounded-[var(--radius-ap-pill)] border-st-wartet text-st-wartet",
-  abgeschlossen: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border rounded-[var(--radius-ap-pill)] border-sep text-label ",
-  storniert: "border rounded-[var(--radius-ap-pill)] border-sep text-label2",
-};
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 export function DauerauftragDetailPage() {
   const uid = useId();
@@ -308,17 +300,25 @@ export function DauerauftragDetailPage() {
             >
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
-            <button
-              onClick={async () => {
-                if (await bestaetigen({ titel: "Dauer-Auftrag löschen?", text: "Bereits erzeugte Vorgänge bleiben erhalten.", bestaetigenLabel: "Löschen" })) {
-                  deleteMutation.mutate();
-                }
-              }}
-              disabled={deleteMutation.isPending}
-              className="btn-touch w-full rounded-md border border-st-fehlt py-2 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-            >
-              Dauer-Auftrag löschen
-            </button>
+            <div className="flex justify-end">
+              <AktionsMenue
+                label="Weitere Aktionen"
+                touch
+                eintraege={[
+                  {
+                    label: "Dauer-Auftrag löschen",
+                    icon: Trash2,
+                    destruktiv: true,
+                    disabled: deleteMutation.isPending,
+                    onClick: async () => {
+                      if (await bestaetigen({ titel: "Dauer-Auftrag löschen?", text: "Bereits erzeugte Vorgänge bleiben erhalten.", bestaetigenLabel: "Löschen" })) {
+                        deleteMutation.mutate();
+                      }
+                    },
+                  },
+                ]}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -343,9 +343,7 @@ export function DauerauftragDetailPage() {
                   <div className="text-meta text-label2">{v.vorgangsnummer}</div>
                   <div className="text-fliess font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`px-2 py-1 text-sekundaer font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {statusLabel(v.status)}
-                </span>
+                <VorgangStatusPille status={v.status} />
               </button>
             ))}
           </div>

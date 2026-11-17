@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { Repeat } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { SkeletonList } from "../../components/Skeleton";
 
 export function DauerauftraegePage() {
@@ -27,7 +30,15 @@ export function DauerauftraegePage() {
       ) : ladeFehler && !dauerauftraege ? (
         <FehlerZustand fehler={ladeFehler} was="Die Daueraufträge" onErneut={() => void neuLaden()} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
-        <p className="text-sekundaer text-label2">Noch keine Dauer-Aufträge angelegt.</p>
+        <EmptyState
+          icon={Repeat}
+          text="Noch keine Dauer-Aufträge angelegt. Ein Dauer-Auftrag erzeugt wiederkehrende Vorgänge automatisch."
+          action={
+            <button type="button" onClick={() => navigate("/dauerauftraege/neu")} className={NEU_BUTTON_KLASSE}>
+              + Neuer Dauer-Auftrag
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {dauerauftraege.map((d) => (
@@ -62,7 +73,7 @@ export function DauerauftraegePage() {
 
       <button
         onClick={() => navigate("/dauerauftraege/neu")}
-        className="btn-touch btn-ap-primary w-full px-4"
+        className={`${NEU_BUTTON_KLASSE} w-full`}
       >
         + Neuer Dauer-Auftrag
       </button>

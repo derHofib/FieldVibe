@@ -13,6 +13,7 @@ import type { LeistungsverzeichnisPosition, LvKalkulationsmodus, LvMaterialPoste
 import { KundenZuweisung } from "./LeistungsverzeichnisPage";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 function euro(wert: string | number): string {
   return `${Number(wert).toFixed(2)} €`;
@@ -512,15 +513,21 @@ function LvPositionFelder({
         {istNeu ? (
           <span />
         ) : (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: `"${position!.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
-            }}
-            disabled={loeschen.isPending}
-            className="btn-touch text-sekundaer font-medium text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
-          >
-            Löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Position löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: loeschen.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: `"${position!.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
+                },
+              },
+            ]}
+          />
         )}
         <div className="flex gap-2">
           <button onClick={onFertig} className="btn-touch btn-ap px-4 py-2 text-sekundaer font-semibold">
@@ -602,7 +609,7 @@ function LvHauptpunktZeile({
           <p className="truncate text-fliess font-semibold text-label">
             {position.bezeichnung}
             {position.ist_stundensatz && (
-              <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-meta font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+              <span className="ml-2 rounded-full bg-fill px-2 py-0.5 text-meta font-normal text-label2">
                 SVS
               </span>
             )}
@@ -714,15 +721,21 @@ export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?
             >
               <Copy size={13} strokeWidth={1.5} /> Duplizieren
             </button>
-            <button
-              onClick={async () => {
-                if (await bestaetigen({ titel: `"${lv.name}" samt aller Positionen löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
-              }}
-              disabled={loeschen.isPending}
-              className="btn-touch btn-ap-toolbar text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
-            >
-              <Trash2 size={15} strokeWidth={1.5} />
-            </button>
+            <AktionsMenue
+              label="Weitere Aktionen"
+              touch
+              eintraege={[
+                {
+                  label: "Leistungsverzeichnis löschen",
+                  icon: Trash2,
+                  destruktiv: true,
+                  disabled: loeschen.isPending,
+                  onClick: async () => {
+                    if (await bestaetigen({ titel: `"${lv.name}" samt aller Positionen löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
+                  },
+                },
+              ]}
+            />
           </>
         )}
       </div>

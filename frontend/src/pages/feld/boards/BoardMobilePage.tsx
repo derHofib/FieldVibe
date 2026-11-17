@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Link2, Plus, StickyNote, Trash2 } from "lucide-react";
+import { ChevronLeft, Link2, StickyNote, Trash2 } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -15,7 +15,12 @@ import type {
 } from "../../../office/boards/types";
 import { leeresInhalt } from "../../../office/boards/types";
 import { NeueNotizSheet, NotizAktionSheet } from "./NotizSheet";
+import { AktionsMenue } from "../../../components/AktionsMenue";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
+import { EmptyState } from "../../../components/EmptyState";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { DetailSkeleton, Skeleton } from "../../../components/Skeleton";
+import { SegmentedControl } from "../../../components/apple/SegmentedControl";
 
 // @xyflow/react ist eine schwere Desktop-Bibliothek -- wird nur geladen,
 // wenn tatsaechlich zur Canvas-Ansicht gewechselt wird (Liste ist der
@@ -58,7 +63,7 @@ function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: 
             <span className="block text-meta text-label2">{vorgang.vorgangsnummer}</span>
           </>
         ) : (
-          <span className="text-sekundaer text-label2">Lädt…</span>
+          <Skeleton className="h-5 w-40" />
         )}
       </span>
       {vorgang && (
@@ -90,7 +95,7 @@ export function BoardMobilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: board } = useQuery({
+  const { data: board, isLoading: boardLaedt, error: boardFehler, refetch: boardNeu } = useQuery({
     queryKey: ["board", id],
     queryFn: () => boardsApi.get(id!),
     enabled: !!id,
@@ -186,9 +191,11 @@ export function BoardMobilePage() {
   const notizen = nodes.filter((n) => notizDaten(n) !== null || n.type === "vorgang_karte");
   const offenerNode = offeneNotizId ? nodes.find((n) => n.id === offeneNotizId) : null;
 
-  if (!board) {
-    return <p className="py-8 text-center text-sekundaer text-label2">Lädt…</p>;
+  if (boardLaedt) return <DetailSkeleton />;
+  if (boardFehler && !board) {
+    return <FehlerZustand fehler={boardFehler} was="Das Board" zurueck onErneut={() => void boardNeu()} />;
   }
+  if (!board) return <DetailSkeleton />;
 
   return (
     <div className="space-y-3">
@@ -200,16 +207,20 @@ export function BoardMobilePage() {
           >
             <ChevronLeft size={16} strokeWidth={2.25} /> Boards
           </button>
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) boardLoeschen.mutate();
-            }}
-            disabled={boardLoeschen.isPending}
-            aria-label="Board löschen"
-            className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
-          >
-            <Trash2 size={17} strokeWidth={2} />
-          </button>
+          <AktionsMenue
+            label="Board-Aktionen"
+            eintraege={[
+              {
+                label: "Board löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: boardLoeschen.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) boardLoeschen.mutate();
+                },
+              },
+            ]}
+          />
         </div>
         <div className="mt-0.5 flex items-baseline gap-2">
           <h1 className="truncate text-titel-mobil font-bold text-label">{board.name}</h1>
@@ -219,30 +230,23 @@ export function BoardMobilePage() {
         </div>
       </div>
 
-      <div className="inline-flex border border-sep">
-        <button
-          onClick={() => setAnsicht("liste")}
-          className={`btn-touch px-4 py-1.5 text-sekundaer font-semibold ${
-            ansicht === "liste" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
-          }`}
-        >
-          Liste
-        </button>
-        <button
-          onClick={() => setAnsicht("canvas")}
-          className={`btn-touch border-l border-sep px-4 py-1.5 text-sekundaer font-semibold ${
-            ansicht === "canvas" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
-          }`}
-        >
-          Canvas
-        </button>
-      </div>
+      <SegmentedControl
+        ariaLabel="Ansicht"
+        optionen={[
+          { wert: "liste", label: "Liste" },
+          { wert: "canvas", label: "Canvas" },
+        ]}
+        wert={ansicht}
+        onChange={setAnsicht}
+        groesse="mobil"
+      />
 
       {ansicht === "liste" ? (
         notizen.length === 0 ? (
-          <p className="py-8 text-center text-sekundaer text-label2">
-            Noch keine Notizen auf diesem Board.
-          </p>
+          <EmptyState
+            icon={StickyNote}
+            text="Noch keine Notizen auf diesem Board. Mit „+ Notiz“ legst du die erste an."
+          />
         ) : (
           <div className="space-y-2">
             {notizen.map((n) => {
@@ -270,7 +274,7 @@ export function BoardMobilePage() {
       ) : (
         <div className="relative h-[calc(100dvh-280px)] min-h-[320px] overflow-hidden rounded-xl border border-sep">
           <Suspense
-            fallback={<div className="flex h-full items-center justify-center text-sekundaer text-label2">Lädt…</div>}
+            fallback={<div className="p-3"><DetailSkeleton /></div>}
           >
             <BoardCanvasAnsicht nodes={nodes} edges={edges} onNodeTap={nodeTippen} />
           </Suspense>
@@ -279,15 +283,10 @@ export function BoardMobilePage() {
 
       <button
         onClick={() => setZeigeNeueNotiz(true)}
-        className="fixed right-4 bottom-24 z-30 flex items-center gap-2 border border-sep bg-card py-2 pr-4 pl-2.5 shadow-lg"
+        className="btn-ap-capsule btn-ap-capsule-primary fixed right-4 bottom-24 z-30 shadow-[0_4px_16px_rgba(0,0,0,.3)]"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
-        <span className="flex h-9 w-9 items-center justify-center bg-tint-solid text-white">
-          <Plus size={18} strokeWidth={1.5} />
-        </span>
-        <span className="flex items-center gap-1.5 text-fliess font-bold text-label">
-          <StickyNote size={14} strokeWidth={2} /> Notiz
-        </span>
+        + Notiz
       </button>
 
       {zeigeNeueNotiz && <NeueNotizSheet onAbbrechen={() => setZeigeNeueNotiz(false)} onErstellen={notizErstellen} />}

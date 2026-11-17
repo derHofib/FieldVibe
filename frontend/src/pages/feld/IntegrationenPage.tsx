@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Mail, Plug } from "lucide-react";
+import { Building2, Mail, Plug, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { DatevSection } from "../../components/DatevSection";
 import { ErloeskontenSection } from "../../components/ErloeskontenSection";
 import { MfaPflichtSection } from "../../components/MfaPflichtSection";
@@ -597,15 +598,21 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
-        <button
-          onClick={async () => {
-            if (await bestaetigen({ titel: "SMTP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
-          }}
-          disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-        >
-          Löschen
-        </button>
+        <AktionsMenue
+          label="Weitere Aktionen"
+          touch
+          eintraege={[
+            {
+              label: "SMTP-Integration löschen",
+              icon: Trash2,
+              destruktiv: true,
+              disabled: deleteMutation.isPending,
+              onClick: async () => {
+                if (await bestaetigen({ titel: "SMTP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
+              },
+            },
+          ]}
+        />
       </div>
     </div>
   );
@@ -704,15 +711,21 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
-        <button
-          onClick={async () => {
-            if (await bestaetigen({ titel: "IMAP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
-          }}
-          disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-        >
-          Löschen
-        </button>
+        <AktionsMenue
+          label="Weitere Aktionen"
+          touch
+          eintraege={[
+            {
+              label: "IMAP-Integration löschen",
+              icon: Trash2,
+              destruktiv: true,
+              disabled: deleteMutation.isPending,
+              onClick: async () => {
+                if (await bestaetigen({ titel: "IMAP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
+              },
+            },
+          ]}
+        />
       </div>
     </div>
   );

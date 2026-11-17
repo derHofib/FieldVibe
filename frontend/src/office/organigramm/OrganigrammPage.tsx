@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 
 import { accountTypenApi, organigrammApi, rechteApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { SearchField } from "../../components/apple/SearchField";
 import { useAuth } from "../../context/AuthContext";
@@ -64,7 +66,7 @@ export function OrganigrammPage() {
   const [drucken, setDrucken] = useState(false);
 
   const { data: registry } = useQuery({ queryKey: ["rechte-registry"], queryFn: rechteApi.registry, staleTime: 5 * 60 * 1000 });
-  const { data: positionen, isLoading, error } = useQuery({ queryKey: ["org-positionen"], queryFn: () => organigrammApi.positionen() });
+  const { data: positionen, isLoading, error, refetch } = useQuery({ queryKey: ["org-positionen"], queryFn: () => organigrammApi.positionen() });
   const { data: orgEinheiten } = useQuery({ queryKey: ["org-einheiten"], queryFn: organigrammApi.orgEinheiten });
   // Die Account-Typen-API ist Verwaltern vorbehalten; ohne dieses Recht reichen die Namen aus den Positionen.
   const { data: accountTypen } = useQuery({
@@ -217,7 +219,6 @@ export function OrganigrammPage() {
     }));
 
   const anzahl = alle.filter((p) => !p.kontext).length;
-  const fehlerText = error ? verstaendlicherFehler(error, "Organigramm konnte nicht geladen werden") : null;
 
   return (
     <div>
@@ -311,12 +312,10 @@ export function OrganigrammPage() {
         </div>
       )}
 
-      {fehlerText ? (
-        <p role="alert" className="text-fliess text-st-fehlt">
-          {fehlerText}
-        </p>
+      {error ? (
+        <FehlerZustand fehler={error} was="Das Organigramm" onErneut={() => void refetch()} />
       ) : isLoading ? (
-        <p className="text-sekundaer text-label2">Lädt…</p>
+        <SkeletonList count={5} />
       ) : alle.length === 0 ? (
         <EmptyState icon={Network} text="Noch keine Positionen im Organigramm – oder Sie haben keinen Zugriff auf einen Bereich." />
       ) : ansicht === "diagramm" ? (

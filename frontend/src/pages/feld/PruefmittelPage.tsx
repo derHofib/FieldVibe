@@ -1,12 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
 import { useId, useState } from "react";
+import { Gauge } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { SkeletonList } from "../../components/Skeleton";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Select } from "../../components/apple/Select";
 
@@ -48,7 +54,7 @@ export function PruefmittelPage() {
     intervallMonate: "12",
   });
 
-  const { data: pruefmittel } = useQuery({
+  const { data: pruefmittel, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["pruefmittel"],
     queryFn: () => pruefmittelApi.list(),
   });
@@ -103,10 +109,7 @@ export function PruefmittelPage() {
         <span />
       </div>
 
-      <button
-        onClick={() => setShowForm(true)}
-        className="btn-touch btn-ap-primary px-4"
-      >
+      <button onClick={() => setShowForm(true)} className={NEU_BUTTON_KLASSE}>
         + Neues Prüfmittel
       </button>
 
@@ -179,8 +182,20 @@ export function PruefmittelPage() {
       </AnlegenPanel>
 
       <div className="space-y-2">
-        {sortiert.length === 0 ? (
-          <p className="text-center text-sekundaer text-label2">Keine Prüfmittel erfasst.</p>
+        {isLoading ? (
+          <SkeletonList count={3} />
+        ) : ladeFehler && !pruefmittel ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Prüfmittel" onErneut={() => void neuLaden()} />
+        ) : sortiert.length === 0 ? (
+          <EmptyState
+            icon={Gauge}
+            text="Keine Prüfmittel erfasst. Erfasse Messgeräte, um ihre Kalibrierfristen im Blick zu behalten."
+            action={
+              <button onClick={() => setShowForm(true)} className={NEU_BUTTON_KLASSE}>
+                + Neues Prüfmittel
+              </button>
+            }
+          />
         ) : (
           sortiert.map((mittel) => (
             <div
@@ -199,9 +214,28 @@ export function PruefmittelPage() {
                     Zugewiesen: {nameFuer(mittel.zugewiesen_an)}
                   </div>
                 </div>
-                <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
-                  {STATUS_LABEL[mittel.status]}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
+                    {STATUS_LABEL[mittel.status]}
+                  </span>
+                  {kannLoeschen && (
+                    <AktionsMenue
+                      label={`Aktionen für ${mittel.bezeichnung}`}
+                      eintraege={[
+                        {
+                          label: "Löschen",
+                          destruktiv: true,
+                          disabled: deleteMutation.isPending,
+                          onClick: async () => {
+                            if (await bestaetigen({ titel: `Prüfmittel "${mittel.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                              deleteMutation.mutate(mittel.id);
+                            }
+                          },
+                        },
+                      ]}
+                    />
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className={`text-fliess font-medium ${faelligkeitsFarbe(mittel.naechste_kalibrierung_am)}`}>
@@ -215,19 +249,6 @@ export function PruefmittelPage() {
                   Kalibrierung erfolgt (heute)
                 </button>
               </div>
-              {kannLoeschen && (
-                <button
-                  onClick={async () => {
-                    if (await bestaetigen({ titel: `Prüfmittel "${mittel.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                      deleteMutation.mutate(mittel.id);
-                    }
-                  }}
-                  disabled={deleteMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-                >
-                  Löschen
-                </button>
-              )}
             </div>
           ))
         )}

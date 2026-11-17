@@ -17,7 +17,9 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, termineApi, usersApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
@@ -146,6 +148,8 @@ export function OfficeDispoPage() {
     fetchNextPage,
     hasNextPage,
     isLoading: backlogLaedt,
+    error: backlogFehler,
+    refetch: backlogNeuLaden,
   } = useVorgangsListe(backlogFilter);
   useAlleSeitenLaden(true, hasNextPage, fetchNextPage);
   const backlog: FeedCard[] = backlogData?.pages.flatMap((p) => p.items) ?? [];
@@ -299,6 +303,8 @@ export function OfficeDispoPage() {
           </div>
           {backlogLaedt ? (
             <SkeletonList count={4} />
+          ) : backlogFehler && !backlogData ? (
+            <FehlerZustand fehler={backlogFehler} was="Die offenen Vorgänge" onErneut={() => void backlogNeuLaden()} />
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (
@@ -735,14 +741,20 @@ function TerminBearbeitenPanel({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-2">
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Termin löschen?", bestaetigenLabel: "Löschen" })) onDelete();
-            }}
-            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sekundaer text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
-          >
-            <Trash2 size={14} /> Löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Termin-Aktionen"
+            richtung="oben"
+            eintraege={[
+              {
+                label: "Löschen",
+                icon: Trash2,
+                destruktiv: true,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Termin löschen?", bestaetigenLabel: "Löschen" })) onDelete();
+                },
+              },
+            ]}
+          />
           <button
             onClick={speichern}
             disabled={!titel.trim()}

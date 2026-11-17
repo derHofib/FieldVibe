@@ -1,10 +1,12 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Inbox, Paperclip, Plus } from "lucide-react";
+import { Inbox, Paperclip } from "lucide-react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { mailApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { SkeletonList } from "../../components/Skeleton";
 import { MailKontoFormular } from "../../office/postfach/MailKontoFormular";
 
@@ -26,13 +28,13 @@ function relativesDatum(iso: string | null): string {
  * kein zweites Formular fuer dieselben zehn Felder. */
 export function PostfachPage() {
   const navigate = useNavigate();
-  const { data: accounts, isLoading: kontenLaden } = useQuery({
+  const { data: accounts, isLoading: kontenLaden, error: kontenFehler, refetch: kontenNeu } = useQuery({
     queryKey: ["mail-accounts"],
     queryFn: () => mailApi.accounts.list(),
   });
   const aktivesKonto = accounts?.[0];
 
-  const { data: ordner } = useQuery({
+  const { data: ordner, isLoading: ordnerLaden, error: ordnerFehler, refetch: ordnerNeu } = useQuery({
     queryKey: ["mail-folders", aktivesKonto?.id],
     queryFn: () => mailApi.folders(aktivesKonto!.id),
     enabled: !!aktivesKonto,
@@ -45,6 +47,8 @@ export function PostfachPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: nachrichtenLaden,
+    error: nachrichtenFehler,
+    refetch: nachrichtenNeu,
   } = useInfiniteQuery({
     queryKey: ["mail-messages", posteingang?.id],
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
@@ -79,6 +83,10 @@ export function PostfachPage() {
     return <SkeletonList count={4} />;
   }
 
+  if (kontenFehler && !accounts) {
+    return <FehlerZustand fehler={kontenFehler} was="Das Postfach" onErneut={() => void kontenNeu()} />;
+  }
+
   if (!accounts || accounts.length === 0) {
     return (
       <div className="space-y-4">
@@ -91,32 +99,36 @@ export function PostfachPage() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-titel-mobil font-bold text-label">
+        <h1 className="min-w-0 truncate text-titel-mobil font-bold text-label">
           {posteingang?.anzeigename ?? "Postfach"}
         </h1>
         <button
           onClick={() => navigate("/postfach/neu")}
-          className="btn-touch btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-sekundaer"
+          className={`${NEU_BUTTON_KLASSE} shrink-0`}
         >
-          <Plus size={14} strokeWidth={2.5} /> Neu
+          + Neue Nachricht
         </button>
       </div>
 
-      {nachrichtenLaden ? (
+      {ordnerLaden || nachrichtenLaden ? (
         <SkeletonList count={5} />
+      ) : ordnerFehler && !ordner ? (
+        <FehlerZustand fehler={ordnerFehler} was="Die Ordner" onErneut={() => void ordnerNeu()} />
+      ) : nachrichtenFehler && !seiten ? (
+        <FehlerZustand fehler={nachrichtenFehler} was="Die Nachrichten" onErneut={() => void nachrichtenNeu()} />
       ) : nachrichten.length === 0 ? (
-        <EmptyState icon={Inbox} text="Keine Nachrichten im Posteingang." />
+        <EmptyState icon={Inbox} text="Keine Nachrichten im Posteingang. Neue E-Mails erscheinen hier automatisch." />
       ) : (
         <div className="space-y-1.5">
           {nachrichten.map((n) => (
             <button
               key={n.id}
               onClick={() => navigate(`/postfach/${n.id}`)}
-              className="card-interactive block w-full rounded-xl bg-card p-3 text-left shadow-sm"
+              className="card-interactive card-ap block w-full p-3 text-left"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p
-                  className={`truncate text-fliess ${n.gelesen ? "font-medium text-label" : "font-bold text-label dark:text-white"}`}
+                  className={`truncate text-fliess ${n.gelesen ? "font-medium text-label" : "font-bold text-label"}`}
                 >
                   {n.von_name || n.von_adresse || "Unbekannt"}
                 </p>

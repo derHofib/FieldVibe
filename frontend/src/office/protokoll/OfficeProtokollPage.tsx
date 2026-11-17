@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Download, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ScrollText, ShieldCheck } from "lucide-react";
 
 import { ApiError } from "../../api/client";
 import { protokollApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
+import { SkeletonList } from "../../components/Skeleton";
 import { downloadBlob } from "../../utils/download";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import { Select } from "../../components/apple/Select";
@@ -188,12 +191,22 @@ export function OfficeProtokollPage() {
         </form>
       </Karte>
 
-      {liste.isError && (
-        <Hinweiskasten ton="fehler">
-          <p>{fehlerText(liste.error)}</p>
-        </Hinweiskasten>
-      )}
-
+      {liste.isError ? (
+        <FehlerZustand fehler={liste.error} was="Das Protokoll" onErneut={() => void liste.refetch()} />
+      ) : !daten ? (
+        <SkeletonList count={6} />
+      ) : daten.eintraege.length === 0 ? (
+        <Karte className="p-4">
+          <EmptyState
+            icon={ScrollText}
+            text={
+              Object.values(filter).some((v) => v)
+                ? "Keine Einträge für diese Auswahl. Passe den Filter an oder setze ihn zurück."
+                : "Noch keine Einträge. GoBD-relevante Vorgänge erscheinen hier, sobald sie stattfinden."
+            }
+          />
+        </Karte>
+      ) : (
       <TabellenRahmen>
         <table className="w-full text-left text-fliess">
           <caption className="sr-only">Protokolleinträge, neueste zuerst</caption>
@@ -207,7 +220,7 @@ export function OfficeProtokollPage() {
             </tr>
           </thead>
           <tbody>
-            {daten?.eintraege.map((e) => (
+            {daten.eintraege.map((e) => (
               <tr key={e.id} className="border-t border-sep align-top">
                 <td className="whitespace-nowrap px-3 py-2 tabular-nums text-label">{zeitText(e.zeit)}</td>
                 <td className="px-3 py-2 text-label">
@@ -226,16 +239,10 @@ export function OfficeProtokollPage() {
                 </td>
               </tr>
             ))}
-            {daten && daten.eintraege.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-label2">
-                  Keine Einträge für diese Auswahl.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </TabellenRahmen>
+      )}
 
       {daten && (
         <div className="flex items-center justify-between text-sekundaer text-label2">

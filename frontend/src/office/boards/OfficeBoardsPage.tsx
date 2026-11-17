@@ -4,7 +4,10 @@ import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { boardsApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import type { BoardTyp } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { FehlerZustand } from "../../components/FehlerZustand";
@@ -65,103 +68,112 @@ export function OfficeBoardsPage() {
   return (
     <div>
       <SeitenKopf titel="Boards" anzahl={boards?.length}>
-        <button
-          onClick={() => setZeigeNeu(true)}
-          className="btn-ap-primary flex items-center gap-1.5 px-3 py-2 text-sekundaer"
-        >
-          <Plus size={14} strokeWidth={2.5} />
+        <button onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
+          <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
           Neues Board
         </button>
       </SeitenKopf>
 
-      {zeigeNeu && (
-        <Karte className="mb-4 p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1">
-              <label htmlFor={`${uid}-0`} className="mb-1 block text-sekundaer font-medium text-label2">Name</label>
-              <input id={`${uid}-0`}
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="z. B. Projektplanung Rheinblick"
-                className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
-              />
-            </div>
-            <div>
-              <label htmlFor={`${uid}-1`} className="mb-1 block text-sekundaer font-medium text-label2">Art</label>
-              <Select className="w-auto" id={`${uid}-1`}
-                value={typ}
-                onChange={(e) => setTyp(e.target.value as BoardTyp)}
-              >
-                {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
-                  <option key={t} value={t}>
-                    {TYP_LABEL[t]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <button
-              onClick={() => erstellen.mutate()}
-              disabled={!name.trim() || erstellen.isPending}
-              className="btn-ap-primary px-4 py-2 text-sekundaer"
-            >
-              Anlegen
-            </button>
-            <button
-              onClick={() => setZeigeNeu(false)}
-              className="rounded-lg px-3 py-2 text-sekundaer font-medium text-label2"
-            >
+      <AnlegenPanel offen={zeigeNeu} titel="Neues Board" onClose={() => setZeigeNeu(false)}>
+        <form
+          className="flex flex-col gap-3 p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name.trim() && !erstellen.isPending) erstellen.mutate();
+          }}
+        >
+          <div>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">
+              Name<span aria-hidden="true" className="text-st-fehlt"> *</span>
+            </label>
+            <input
+              id={`${uid}-0`}
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z. B. Projektplanung Rheinblick"
+              className="field-ap"
+            />
+          </div>
+          <div>
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Art</label>
+            <Select id={`${uid}-1`} value={typ} onChange={(e) => setTyp(e.target.value as BoardTyp)}>
+              {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYP_LABEL[t]}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {erstellen.isError && (
+            <p role="alert" className="text-sekundaer text-st-fehlt">Das Board konnte nicht angelegt werden.</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setZeigeNeu(false)} className="btn-touch btn-ap px-4">
               Abbrechen
             </button>
+            <button type="submit" disabled={!name.trim() || erstellen.isPending} className={NEU_BUTTON_KLASSE}>
+              Anlegen
+            </button>
           </div>
-        </Karte>
-      )}
+        </form>
+      </AnlegenPanel>
 
       {isLoading ? (
         <SkeletonList count={4} />
       ) : ladeFehler && !boards ? (
         <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : !boards || boards.length === 0 ? (
-        <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
+        <EmptyState
+          icon={StickyNote}
+          text="Noch keine Boards angelegt. Boards sind freie Flächen für Planung, Skizzen und Abläufe."
+          action={
+            <button type="button" onClick={() => setZeigeNeu(true)} className="btn-ap px-4 py-2 text-sekundaer">
+              Neues Board
+            </button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boards.map((b) => {
             const Icon = TYP_ICON[b.board_typ];
             return (
-              <button key={b.id} onClick={() => navigate(`/boards/${b.id}`)} className="text-left">
-                <Karte className="overflow-hidden transition-shadow hover:shadow-md">
-                  <div
-                    className="relative flex h-24 items-center justify-center bg-fill"
-                    style={{ backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)", backgroundSize: "16px 16px" }}
-                  >
-                    <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
-                      <Icon size={20} strokeWidth={2} />
-                    </span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
-                      }}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
+              <div key={b.id} className="relative">
+                <button onClick={() => navigate(`/boards/${b.id}`)} className="block w-full text-left">
+                  <Karte className="overflow-hidden transition-colors hover:bg-fill">
+                    <div
+                      className="flex h-24 items-center justify-center bg-fill"
+                      style={{ backgroundImage: "radial-gradient(var(--sepstrong) 1px, transparent 1px)", backgroundSize: "16px 16px" }}
                     >
-                      <Trash2 size={14} strokeWidth={2} />
-                    </span>
-                  </div>
-                  <div className="p-3.5">
-                    <p className="truncate text-fliess font-bold text-label">{b.name}</p>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-meta font-medium text-label2">
-                        {TYP_LABEL[b.board_typ]}
-                      </span>
-                      <span className="text-meta text-label2">
-                        {relativeZeit(b.updated_at)}
+                      <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
+                        <Icon size={20} strokeWidth={2} aria-hidden="true" />
                       </span>
                     </div>
-                  </div>
-                </Karte>
-              </button>
+                    <div className="p-3.5">
+                      <p className="truncate text-fliess font-bold text-label">{b.name}</p>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span className="text-meta font-medium text-label2">{TYP_LABEL[b.board_typ]}</span>
+                        <span className="text-meta text-label2">{relativeZeit(b.updated_at)}</span>
+                      </div>
+                    </div>
+                  </Karte>
+                </button>
+                <div className="absolute top-2 right-2">
+                  <AktionsMenue
+                    label={`Aktionen für Board ${b.name}`}
+                    eintraege={[
+                      {
+                        label: "Löschen",
+                        icon: Trash2,
+                        destruktiv: true,
+                        onClick: async () => {
+                          if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
+                        },
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>

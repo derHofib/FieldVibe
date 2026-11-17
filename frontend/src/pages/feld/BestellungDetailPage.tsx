@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -12,6 +12,7 @@ import type { BestellungStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
+import { AktionsMenue } from "../../components/AktionsMenue";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -108,17 +109,23 @@ export function BestellungDetailPage() {
           ← Zurück
         </button>
         {kannLoeschen && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Bestellung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Bestellung löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Bestellung löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Bestellung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 

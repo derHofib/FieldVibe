@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -147,8 +150,10 @@ export function RechnungenPage() {
   const [faelligBis7Tage, setFaelligBis7Tage] = useState(false);
   const [seiten, setSeiten] = useState(1);
 
+  // Server-Suche: nicht bei jedem Tastendruck eine Abfrage.
+  const qVerzoegert = useDebouncedValue(q, 300);
   const filter: RechnungenFilter = {
-    q: q.trim() || undefined,
+    q: qVerzoegert.trim() || undefined,
     status: statusAktiv.size > 0 ? Array.from(statusAktiv) : undefined,
     rechnungsart: artAktiv ?? undefined,
     nur_ueberfaellig: nurUeberfaellig || undefined,
@@ -197,27 +202,20 @@ export function RechnungenPage() {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto card-ap p-1">
-        {([
-          { wert: "rechnungen" as const, label: "Rechnungen" },
-          { wert: "angebote" as const, label: "Angebote" },
-        ]).map((o) => (
-          <button
-            key={o.wert}
-            onClick={() => {
-              setBereich(o.wert);
-              setZeigeNeu(false);
-            }}
-            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sekundaer font-medium ${
-              bereich === o.wert
-                ? "btn-ap-primary text-white"
-                : "text-label"
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Bereich"
+        groesse="touch"
+        volleBreite
+        optionen={[
+          { wert: "rechnungen", label: "Rechnungen" },
+          { wert: "angebote", label: "Angebote" },
+        ]}
+        wert={bereich}
+        onChange={(wert) => {
+          setBereich(wert);
+          setZeigeNeu(false);
+        }}
+      />
 
       {bereich === "angebote" ? (
         <AngeboteListe />
@@ -237,56 +235,43 @@ export function RechnungenPage() {
             />
           </AnlegenPanel>
 
-          <input
+          <SearchField
+            groesse="mobil"
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
+            onChange={(wert) => {
+              setQ(wert);
               setSeiten(1);
             }}
             placeholder="Rechnungsnummer oder Kunde suchen…"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-zeile text-label"
           />
 
-          <div className="flex flex-wrap gap-2 text-sekundaer">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Status der Rechnung">
             {STATUS_OPTIONEN.map((s) => (
-              <button
+              <FilterChip
                 key={s}
+                label={RECHNUNG_STATUS_LABEL[s]}
+                aktiv={statusAktiv.has(s)}
                 onClick={() => toggleStatus(s)}
-                className={`btn-touch rounded-full px-3 py-1 font-medium ${
-                  statusAktiv.has(s)
-                    ? "bg-cyan-600 text-white"
-                    : "bg-fill text-label "
-                }`}
-              >
-                {RECHNUNG_STATUS_LABEL[s]}
-              </button>
+              />
             ))}
-            <button
+            <FilterChip
+              label="Überfällig"
+              status="fehlt"
+              aktiv={nurUeberfaellig}
               onClick={() => {
                 setSeiten(1);
                 setNurUeberfaellig((v) => !v);
               }}
-              className={`btn-touch rounded-full px-3 py-1 font-medium ${
-                nurUeberfaellig
-                  ? "bg-st-fehlt-dot text-white"
-                  : "bg-st-fehlt-bg text-st-fehlt  "
-              }`}
-            >
-              Überfällig
-            </button>
-            <button
+            />
+            <FilterChip
+              label="Diese Woche fällig"
+              status="arbeit"
+              aktiv={faelligBis7Tage}
               onClick={() => {
                 setSeiten(1);
                 setFaelligBis7Tage((v) => !v);
               }}
-              className={`btn-touch rounded-full px-3 py-1 font-medium ${
-                faelligBis7Tage
-                  ? "bg-st-arbeit-dot text-white"
-                  : "bg-st-arbeit-bg text-st-arbeit  "
-              }`}
-            >
-              Diese Woche fällig
-            </button>
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">

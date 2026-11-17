@@ -6,7 +6,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { searchApi, tagsApi } from "../../api/endpoints";
+import { SearchField } from "../../components/apple/SearchField";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { SearchHit } from "../../types";
@@ -49,7 +51,7 @@ export function SearchPage() {
   const navigate = useNavigate();
 
   const { data: tags } = useQuery({ queryKey: ["tags"], queryFn: tagsApi.list });
-  const { data: results, isFetching } = useQuery({
+  const { data: results, isFetching, error: suchFehler, refetch: neuSuchen } = useQuery({
     queryKey: ["search", q],
     queryFn: () => searchApi.search(q),
     enabled: q.trim().length > 0,
@@ -57,12 +59,12 @@ export function SearchPage() {
 
   return (
     <div className="space-y-4">
-      <input
+      <SearchField
         autoFocus
+        groesse="mobil"
         value={eingabe}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={setQ}
         placeholder="Kunde, Anlage, Vorgangsnummer, #Tag…"
-        className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
       />
 
       {!q && tags && tags.length > 0 && (
@@ -73,7 +75,7 @@ export function SearchPage() {
               <button
                 key={tag.id}
                 onClick={() => setQ(`#${tag.label}`)}
-                className="btn-touch rounded-full bg-card px-3 py-1.5 text-sekundaer text-label shadow-xs dark:shadow-none dark:ring-1 "
+                className="btn-touch card-ap rounded-full px-3 py-1.5 text-sekundaer text-label"
               >
                 #{tag.label}
               </button>
@@ -86,6 +88,8 @@ export function SearchPage() {
         <div className="space-y-2">
           {isFetching ? (
             <SkeletonList count={3} />
+          ) : suchFehler && !results ? (
+            <FehlerZustand fehler={suchFehler} was="Die Suche" onErneut={() => void neuSuchen()} />
           ) : results && results.treffer.length > 0 ? (
             results.treffer.map((hit) => (
               <button

@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { UserX } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { kundenApi, kundenportalZugaengeApi } from "../../../api/endpoints";
 import { ApiError } from "../../../api/client";
 import { AnlegenPanel } from "../../../components/AnlegenPanel";
+import { EmptyState } from "../../../components/EmptyState";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { SkeletonList } from "../../../components/Skeleton";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
 import { useAuth } from "../../../context/AuthContext";
 import type { Kunde, KundenportalZugang } from "../../../types";
@@ -210,7 +214,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
 }
 
 export function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
-  const { data: zugaenge } = useQuery({
+  const { data: zugaenge, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-zugaenge", kundeId],
     queryFn: () => kundenportalZugaengeApi.list(kundeId),
   });
@@ -218,8 +222,12 @@ export function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
   return (
     <div>
       <h2 className="mb-2 text-fliess font-semibold text-label2">Kundenportal-Zugänge</h2>
-      {!zugaenge || zugaenge.length === 0 ? (
-        <p className="text-sekundaer text-label2">Noch kein Zugang angelegt.</p>
+      {isLoading ? (
+        <SkeletonList count={2} />
+      ) : ladeFehler && !zugaenge ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Zugänge" onErneut={() => void neuLaden()} className="py-4" />
+      ) : !zugaenge || zugaenge.length === 0 ? (
+        <EmptyState icon={UserX} text="Noch kein Zugang angelegt." className="py-4" />
       ) : (
         <div className="space-y-2">
           {zugaenge.map((z) => (

@@ -8,6 +8,8 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { Trash2 } from "lucide-react";
 
 /** `id`/`eingebettet` nur für das Detailpanel der Office-Materialliste
  * (office/material): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
@@ -128,17 +130,23 @@ export function MaterialDetailPage({
           </button>
         )}
         {kannLoeschen && (
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: "Material löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                deleteMutation.mutate();
-              }
-            }}
-            disabled={deleteMutation.isPending}
-            className="btn-touch text-sekundaer font-medium text-st-fehlt disabled:opacity-50 "
-          >
-            Material löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            touch
+            eintraege={[
+              {
+                label: "Material löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteMutation.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: "Material löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+                    deleteMutation.mutate();
+                  }
+                },
+              },
+            ]}
+          />
         )}
       </div>
 

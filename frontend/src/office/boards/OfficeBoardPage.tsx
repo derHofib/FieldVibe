@@ -47,7 +47,10 @@ import type {
   KlebezettelFarbe,
 } from "./types";
 import { leeresInhalt } from "./types";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { FehlerZustand } from "../../components/FehlerZustand";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];
 
@@ -122,7 +125,10 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   const grundrissInputRef = useRef<HTMLInputElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
-  const { data: board } = useQuery({ queryKey: ["board", boardId], queryFn: () => boardsApi.get(boardId) });
+  const { data: board, error: boardFehler, refetch: boardNeuLaden } = useQuery({
+    queryKey: ["board", boardId],
+    queryFn: () => boardsApi.get(boardId),
+  });
   const { data: hintergrund } = useQuery({
     queryKey: ["board-hintergrund", boardId],
     queryFn: () => boardsApi.hintergrundUrl(boardId),
@@ -310,7 +316,10 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   };
 
   if (!board) {
-    return <p className="p-8 text-center text-sekundaer text-label2">Lädt…</p>;
+    if (boardFehler) {
+      return <FehlerZustand fehler={boardFehler} was="Das Board" zurueck onErneut={() => void boardNeuLaden()} />;
+    }
+    return <DetailSkeleton />;
   }
 
   return (
@@ -361,15 +370,20 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
           >
             <Save size={13} strokeWidth={2} /> Speichern
           </button>
-          <button
-            onClick={async () => {
-              if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
-            }}
-            disabled={loeschen.isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-sekundaer font-semibold text-st-fehlt disabled:opacity-50 "
-          >
-            <Trash2 size={13} strokeWidth={2} /> Löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Board-Aktionen"
+            eintraege={[
+              {
+                label: "Löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: loeschen.isPending,
+                onClick: async () => {
+                  if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
+                },
+              },
+            ]}
+          />
         </div>
       </div>
 

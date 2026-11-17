@@ -31,6 +31,7 @@ import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormVi
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
@@ -407,7 +408,7 @@ export function FormSchemaEditorPage() {
   });
 
   if (ladeFehler && !schema) return <FehlerZustand fehler={ladeFehler} was="Das Formular" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading) return <p className="text-center text-sekundaer text-label2">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 
   return (

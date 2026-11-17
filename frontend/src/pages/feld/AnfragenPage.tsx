@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Inbox } from "lucide-react";
 import { useId, useState } from "react";
 
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
+import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { SkeletonList } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -192,28 +195,31 @@ export function AnfragenPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-titel-mobil font-bold text-label">Vorgangsanfragen</h1>
-      <div className="flex gap-2 card-ap p-1">
-        {(["offen", "alle"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={`btn-touch flex-1 rounded-md py-2 text-sekundaer font-medium capitalize ${
-              statusFilter === f
-                ? "btn-ap-primary text-white"
-                : "text-label"
-            }`}
-          >
-            {f === "offen" ? "Offen" : "Alle"}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Anfragen filtern"
+        groesse="touch"
+        volleBreite
+        optionen={[
+          { wert: "offen", label: "Offen" },
+          { wert: "alle", label: "Alle" },
+        ]}
+        wert={statusFilter}
+        onChange={setStatusFilter}
+      />
 
       {isLoading ? (
         <SkeletonList count={4} />
       ) : ladeFehler && !anfragen ? (
         <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
-        <p className="text-center text-sekundaer text-label2">Keine Anfragen vorhanden.</p>
+        <EmptyState
+          icon={Inbox}
+          text={
+            statusFilter === "offen"
+              ? "Keine offenen Anfragen. Neue Anfragen aus dem Kundenportal erscheinen hier."
+              : "Noch keine Anfragen vorhanden. Anfragen aus dem Kundenportal erscheinen hier."
+          }
+        />
       ) : (
         <div className="space-y-2">
           {anfragen.map((a) => (

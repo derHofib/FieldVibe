@@ -11,6 +11,10 @@ import { AnlegenPanel } from "../components/AnlegenPanel";
 import { EmptyState } from "../components/EmptyState";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
+import { SearchField } from "../components/apple/SearchField";
+import { StatusPille } from "../components/apple/StatusPille";
+import type { StatusKey } from "../components/apple/status";
+import { FELD_KLASSE, NEU_BUTTON_KLASSE } from "../components/FormularFeld";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -18,10 +22,10 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
   gekuendigt: "Gekündigt",
 };
 
-const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "border rounded-[var(--radius-ap-pill)] border-st-erledigt text-st-erledigt ",
-  pausiert: "border rounded-[var(--radius-ap-pill)] border-st-arbeit text-st-arbeit ",
-  gekuendigt: "border rounded-[var(--radius-ap-pill)] border-st-fehlt text-st-fehlt ",
+const STATUS_KEY: Record<MandantStatus, StatusKey> = {
+  aktiv: "erledigt",
+  pausiert: "arbeit",
+  gekuendigt: "fehlt",
 };
 
 // Entspricht dem Backend-Muster für Mandanten-Slugs (Subdomain).
@@ -37,6 +41,7 @@ export function MandantenPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [branche, setBranche] = useState("elektro");
+  const [suche, setSuche] = useState("");
 
   const { data: mandanten, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["mandanten"],
@@ -74,11 +79,16 @@ export function MandantenPage() {
     createMutation.mutate({ name, slug, branche });
   }
 
+  const suchbegriff = suche.trim().toLowerCase();
+  const sichtbar = (mandanten ?? []).filter(
+    (m) => !suchbegriff || [m.name, m.slug, m.branche ?? ""].some((t) => t.toLowerCase().includes(suchbegriff)),
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-zeile font-bold text-label">Mandanten</h2>
-        <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap-primary px-4">
+        <SearchField value={suche} onChange={setSuche} placeholder="Mandanten suchen" ariaLabel="Mandanten suchen" groesse="mobil" className="w-56" />
+        <button type="button" onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
           + Neuer Mandant
         </button>
       </div>
@@ -96,7 +106,7 @@ export function MandantenPage() {
               onChange={(e) => setName(e.target.value)}
               aria-invalid={!!feldFehler.name}
               aria-describedby={feldFehler.name ? `${uid}-name-fehler` : undefined}
-              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              className={FELD_KLASSE}
             />
             {feldFehler.name && (
               <p id={`${uid}-name-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
@@ -114,7 +124,7 @@ export function MandantenPage() {
               onChange={(e) => setSlug(e.target.value)}
               aria-invalid={!!feldFehler.slug}
               aria-describedby={feldFehler.slug ? `${uid}-slug-fehler` : undefined}
-              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              className={FELD_KLASSE}
             />
             {feldFehler.slug && (
               <p id={`${uid}-slug-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
@@ -130,7 +140,7 @@ export function MandantenPage() {
               id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              className={FELD_KLASSE}
             />
           </div>
           {formError && (
@@ -150,41 +160,68 @@ export function MandantenPage() {
         ) : ladeFehler && !mandanten ? (
           <FehlerZustand fehler={ladeFehler} was="Die Mandanten" onErneut={() => void neuLaden()} />
         ) : !mandanten || mandanten.length === 0 ? (
-          <EmptyState icon={Building2} text="Noch keine Mandanten angelegt." />
+          <EmptyState
+            icon={Building2}
+            text="Noch keine Mandanten angelegt. Jeder Mandant ist ein Handwerksbetrieb mit eigenen, getrennten Daten."
+            action={
+              <button type="button" onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
+                + Neuer Mandant
+              </button>
+            }
+          />
+        ) : sichtbar.length === 0 ? (
+          <EmptyState icon={Building2} text="Kein Mandant passt zur Suche." />
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
-            <thead className="bg-fill text-fliess text-label ">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Slug</th>
-                <th className="px-4 py-3">Branche</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Aktion</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sep text-fliess ">
-              {mandanten?.map((m) => (
-                <tr key={m.id}>
-                  <td className="px-4 py-3 font-medium text-label">{m.name}</td>
-                  <td className="px-4 py-3 text-label2">{m.slug}</td>
-                  <td className="px-4 py-3 text-label2">{m.branche ?? "–"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-3 py-1 text-sekundaer font-semibold ${STATUS_BADGE[m.status]}`}>
-                      {STATUS_LABEL[m.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/mandanten/${m.id}`}
-                      className="btn-touch rounded-md bg-fill px-3 py-2 text-sekundaer font-semibold text-label hover:bg-fill2"
-                    >
-                      Bearbeiten →
-                    </Link>
-                  </td>
-                </tr>
+          <>
+            <ul className="space-y-2 md:hidden">
+              {sichtbar.map((m) => (
+                <li key={m.id} className="card-ap p-3">
+                  <Link to={`/mandanten/${m.id}`} className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-fliess font-medium text-label">{m.name}</p>
+                      <p className="truncate text-sekundaer text-label2">
+                        {m.slug} · {m.branche ?? "–"}
+                      </p>
+                    </div>
+                    <StatusPille status={STATUS_KEY[m.status]} label={STATUS_LABEL[m.status]} />
+                  </Link>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+            <div className="card-ap hidden overflow-hidden md:block">
+              <table className="w-full text-left">
+                <thead className="bg-fill text-fliess text-label">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Slug</th>
+                    <th className="px-4 py-3">Branche</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Aktion</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sep text-fliess">
+                  {sichtbar.map((m) => (
+                    <tr key={m.id}>
+                      <td className="px-4 py-3 font-medium text-label">{m.name}</td>
+                      <td className="px-4 py-3 text-label2">{m.slug}</td>
+                      <td className="px-4 py-3 text-label2">{m.branche ?? "–"}</td>
+                      <td className="px-4 py-3">
+                        <StatusPille status={STATUS_KEY[m.status]} label={STATUS_LABEL[m.status]} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/mandanten/${m.id}`}
+                          className="btn-touch rounded-md bg-fill px-3 py-2 text-sekundaer font-semibold text-label hover:bg-fill2"
+                        >
+                          Bearbeiten →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     </div>

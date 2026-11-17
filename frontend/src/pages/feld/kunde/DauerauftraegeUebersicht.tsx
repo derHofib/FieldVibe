@@ -5,10 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { dauerauftraegeApi } from "../../../api/endpoints";
 import { NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
 import { EmptyState } from "../../../components/EmptyState";
+import { FehlerZustand } from "../../../components/FehlerZustand";
+import { SkeletonList } from "../../../components/Skeleton";
 
 export function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
   const navigate = useNavigate();
-  const { data: dauerauftraege } = useQuery({
+  const { data: dauerauftraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftraege", kundeId],
     queryFn: () => dauerauftraegeApi.list(kundeId),
   });
@@ -16,7 +18,11 @@ export function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
   return (
     <div>
       <h2 className="mb-2 text-fliess font-semibold text-label2">Dauer-Aufträge</h2>
-      {!dauerauftraege || dauerauftraege.length === 0 ? (
+      {isLoading ? (
+        <SkeletonList count={2} />
+      ) : ladeFehler && !dauerauftraege ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Dauer-Aufträge" onErneut={() => void neuLaden()} className="py-4" />
+      ) : !dauerauftraege || dauerauftraege.length === 0 ? (
         <EmptyState icon={Repeat} text="Keine Dauer-Aufträge." className="py-4" />
       ) : (
         <div className="space-y-2">

@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, ClipboardList, Copy, Plus, Settings2, X } from "lucide-react";
+import { ChevronRight, ClipboardList, Copy, Plus, SearchX, Settings2, X } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { kundenApi, leistungsverzeichnisseApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
+import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
+import { SearchField } from "../../components/apple/SearchField";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { SeitenKopf, TabellenRahmen } from "../../office/OfficeUi";
@@ -77,61 +80,42 @@ function LvFormular({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-sep bg-card"
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4 ">
-          <h2 className="text-zeile font-bold text-label">Neues Leistungsverzeichnis</h2>
-          <button
-            onClick={onClose}
-            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill"
-          >
-            <X size={16} strokeWidth={2} />
-          </button>
+    <AnlegenPanel offen titel="Neues Leistungsverzeichnis" onClose={onClose}>
+      <div className="space-y-4 p-4">
+        <div>
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label2">
+            Name
+          </label>
+          <input id={`${uid}-0`}
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="z. B. Wartungsvertraege, Standardleistungen"
+            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
+          />
         </div>
-        <div className="space-y-4 px-5 py-4">
-          <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label2">
-              Name
-            </label>
-            <input id={`${uid}-0`}
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z. B. Wartungsvertraege, Standardleistungen"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-          </div>
-          <div>
-            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label2">
-              Beschreibung
-            </label>
-            <textarea id={`${uid}-1`}
-              value={beschreibung}
-              onChange={(e) => setBeschreibung(e.target.value)}
-              rows={2}
-              className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-          </div>
-          <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
-          {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
+        <div>
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label2">
+            Beschreibung
+          </label>
+          <textarea id={`${uid}-1`}
+            value={beschreibung}
+            onChange={(e) => setBeschreibung(e.target.value)}
+            rows={2}
+            className="w-full resize-none border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
+          />
         </div>
-        <div className="flex justify-end gap-2 border-t border-sep px-5 py-4 ">
-          <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sekundaer font-semibold">
-            Abbrechen
-          </button>
-          <button
-            onClick={() => erstellen.mutate()}
-            disabled={!name.trim() || erstellen.isPending}
-            className="btn-touch btn-ap-primary px-4 py-2 text-sekundaer"
-          >
-            Anlegen
-          </button>
-        </div>
+        <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
+        {error && <p className="text-fliess text-st-fehlt ">{error}</p>}
+        <button
+          onClick={() => erstellen.mutate()}
+          disabled={!name.trim() || erstellen.isPending}
+          className="btn-touch btn-ap-primary w-full px-4 py-2 text-sekundaer disabled:opacity-50"
+        >
+          Anlegen
+        </button>
       </div>
-    </div>
+    </AnlegenPanel>
   );
 }
 
@@ -170,7 +154,7 @@ function LvTabellenZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kann
       <td className="max-w-md truncate px-3 py-2 text-label2">{lv.beschreibung ?? "–"}</td>
       <td
         className={`px-3 py-2 ${
-          lv.kunden_ids.length === 0 ? "text-label2" : "font-medium text-violet-700 dark:text-violet-300"
+          lv.kunden_ids.length === 0 ? "text-label2" : "font-medium text-tint-text"
         }`}
       >
         {kundenBadge}
@@ -221,7 +205,7 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
             className={
               lv.kunden_ids.length === 0
                 ? "text-label2"
-                : "font-medium text-violet-700 dark:text-violet-300"
+                : "font-medium text-tint-text"
             }
           >
             {kundenBadge}
@@ -348,6 +332,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
   const { hatRecht } = useAuth();
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const [neuesLv, setNeuesLv] = useState(false);
+  const [suche, setSuche] = useState("");
 
   const { data: lvs, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["leistungsverzeichnisse"],
@@ -355,14 +340,16 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
   });
 
   const neuKnopf = kannVerwalten && (
-    <button
-      onClick={() => setNeuesLv(true)}
-      className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-sekundaer font-semibold"
-    >
+    <button onClick={() => setNeuesLv(true)} className={`${NEU_BUTTON_KLASSE} flex items-center gap-1.5`}>
       <Plus size={14} strokeWidth={2.5} />
       Neues Leistungsverzeichnis
     </button>
   );
+
+  const sichtbar = (lvs ?? []).filter((lv) => {
+    const q = suche.trim().toLowerCase();
+    return !q || `${lv.name} ${lv.beschreibung ?? ""}`.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-4">
@@ -379,12 +366,34 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
 
       {kannVerwalten && <StandardKalkulation layout={layout} />}
 
+      {(lvs ?? []).length > 0 && (
+        <SearchField
+          groesse={layout === "dicht" ? "desktop" : "mobil"}
+          value={suche}
+          onChange={setSuche}
+          placeholder="Leistungsverzeichnis suchen…"
+          className={layout === "dicht" ? "max-w-sm" : ""}
+        />
+      )}
+
       {isLoading ? (
         <SkeletonList count={4} />
       ) : ladeFehler && !lvs ? (
         <FehlerZustand fehler={ladeFehler} was="Das Leistungsverzeichnis" onErneut={() => void neuLaden()} />
       ) : !lvs || lvs.length === 0 ? (
-        <EmptyState icon={ClipboardList} text="Noch keine Leistungsverzeichnisse angelegt." />
+        <EmptyState
+          icon={ClipboardList}
+          text="Noch keine Leistungsverzeichnisse angelegt. Ein Leistungsverzeichnis bündelt Positionen und Kunden-Zuweisung."
+          action={
+            kannVerwalten ? (
+              <button type="button" onClick={() => setNeuesLv(true)} className="btn-touch btn-ap px-4">
+                + Neues Leistungsverzeichnis
+              </button>
+            ) : undefined
+          }
+        />
+      ) : sichtbar.length === 0 ? (
+        <EmptyState icon={SearchX} text="Kein Leistungsverzeichnis entspricht der Suche." />
       ) : layout === "dicht" ? (
         <TabellenRahmen>
           <table className="w-full border-collapse text-fliess">
@@ -401,7 +410,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
               </tr>
             </thead>
             <tbody>
-              {lvs.map((lv) => (
+              {sichtbar.map((lv) => (
                 <LvTabellenZeile key={lv.id} lv={lv} kannVerwalten={kannVerwalten} />
               ))}
             </tbody>
@@ -409,7 +418,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
         </TabellenRahmen>
       ) : (
         <div className="space-y-2">
-          {lvs.map((lv) => (
+          {sichtbar.map((lv) => (
             <LvZeile key={lv.id} lv={lv} kannVerwalten={kannVerwalten} />
           ))}
         </div>
