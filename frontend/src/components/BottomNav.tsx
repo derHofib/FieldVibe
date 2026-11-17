@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { heuteIso } from "../utils/format";
 import { CalendarDays, ClipboardCheck, Folder, MoreHorizontal, type LucideIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
+import { vorgaengeLink } from "../config/vorgaengeFilter";
 import { useAuth } from "../context/AuthContext";
+import type { FilterBedingung } from "./filter/typen";
+import { bedingungenAusUrl } from "./filter/url";
 
 interface Tab {
   key: string;
@@ -18,8 +20,10 @@ interface Tab {
 // Design, nicht HIG -- "+" gehoert stattdessen in die Werkzeugleiste der
 // jeweiligen Liste). Alles, was vorher ueber die frei waehlbare Rotunde
 // erreichbar war, liegt jetzt vollstaendig unter "Mehr" (siehe MehrPage.tsx).
+const HEUTE_BEDINGUNG: FilterBedingung = { feld: "faellig", op: "relativ", wert: { relativ: "heute" } };
+
 const TABS: Tab[] = [
-  { key: "heute", label: "Heute", icon: CalendarDays, route: `/feed?faellig_von=${heuteIso()}&faellig_bis=${heuteIso()}` },
+  { key: "heute", label: "Heute", icon: CalendarDays, route: vorgaengeLink("/feed", [HEUTE_BEDINGUNG]) },
   { key: "auftraege", label: "Vorgänge", icon: ClipboardCheck, route: "/feed" },
   { key: "projekte", label: "Projekte", icon: Folder, route: "/projekte" },
   { key: "mehr", label: "Mehr", icon: MoreHorizontal, route: "/mehr" },
@@ -30,9 +34,11 @@ const TABS: Tab[] = [
 // vergleicht nur den Pfad, nicht die Suche, deshalb hier von Hand ermittelt,
 // welcher der beiden gerade aktiv ist.
 function istHeuteFilter(search: string): boolean {
-  const params = new URLSearchParams(search);
-  const heute = heuteIso();
-  return params.get("faellig_von") === heute && params.get("faellig_bis") === heute && !params.get("projekt_id");
+  const bedingungen = bedingungenAusUrl(new URLSearchParams(search).get("f"));
+  return (
+    bedingungen.some((b) => b.feld === "faellig" && b.op === "relativ" && JSON.stringify(b.wert) === JSON.stringify(HEUTE_BEDINGUNG.wert)) &&
+    !bedingungen.some((b) => b.feld === "projekt")
+  );
 }
 
 export function BottomNav() {
