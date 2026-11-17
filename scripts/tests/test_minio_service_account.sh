@@ -29,7 +29,18 @@ echo "mc $*" >>"$FV_STUB_LOG"
 case "$1 $2 $3 $4" in
   "admin policy create "*) cp "${@: -1}" "$FV_T/policy.json" ;;
   "admin user svcacct info") [[ -f "$FV_T/svcacct" ]] || exit 1 ;;
-  "admin user svcacct add") : >"$FV_T/svcacct" ;;
+  "admin user svcacct add")
+    # Wie echtes MinIO (CreateNewCredentialsWithMetadata): Access-Key 3-20,
+    # Secret 8-40 Zeichen, sonst Abbruch.
+    ak=""; sk=""; prev=""
+    for a in "$@"; do
+      [[ "$prev" == "--access-key" ]] && ak="$a"
+      [[ "$prev" == "--secret-key" ]] && sk="$a"
+      prev="$a"
+    done
+    if (( ${#ak} < 3 || ${#ak} > 20 )); then echo "access key length should be between 3 and 20" >&2; exit 1; fi
+    if (( ${#sk} < 8 || ${#sk} > 40 )); then echo "secret key length should be between 8 and 40" >&2; exit 1; fi
+    : >"$FV_T/svcacct" ;;
 esac
 if [[ "$1" == "mb" && "$*" == *"fvapp/"* && "${STUB_MB_APP_ERLAUBT:-0}" != "1" ]]; then exit 1; fi
 exit 0
@@ -42,8 +53,8 @@ umgebung
 lauf "$REPO/scripts/minio-service-account.sh" --compose "docker compose"
 assert_rc 0 "Erstlauf"
 assert_enthaelt "$OUT" "GEAENDERT" "meldet geaenderte Zugangsdaten"
-assert_regex "$REPO/.env" '^S3_ACCESS_KEY=fvapp[0-9a-f]{16}$' "Access-Key erzeugt (nicht der Root-User)"
-assert_regex "$REPO/.env" '^S3_SECRET_KEY=[0-9a-f]{48}$' "Secret erzeugt"
+assert_regex "$REPO/.env" '^S3_ACCESS_KEY=fvapp[0-9a-f]{14}$' "Access-Key erzeugt (nicht der Root-User)"
+assert_regex "$REPO/.env" '^S3_SECRET_KEY=[0-9a-f]{40}$' "Secret erzeugt"
 assert_enthaelt "$REPO/.env" "MINIO_ROOT_USER=rootuser" "Root-Zugang unveraendert"
 assert_enthaelt "$T/stub.log" "mc mb --ignore-existing fvroot/fieldvibe-fotos" "Bucket wird angelegt"
 assert_enthaelt "$T/stub.log" "svcacct add" "Service-Account angelegt"
@@ -55,6 +66,30 @@ assert_enthaelt_nicht "$T/policy.json" "admin:" "keine Admin-Rechte"
 assert_enthaelt_nicht "$OUT" "$(grep '^S3_SECRET_KEY=' "$REPO/.env" | cut -d= -f2)" "Secret nicht in der Ausgabe"
 grep '^docker ' "$T/stub.log" >"$T/docker-aufrufe.log"
 assert_enthaelt_nicht "$T/docker-aufrufe.log" "$(grep '^S3_SECRET_KEY=' "$REPO/.env" | cut -d= -f2)" "Secret nicht in docker-Argumenten (Host-Prozessliste)"
+testumgebung_loeschen
+
+szenario "Erzeugte Schluessel halten MinIOs Laengengrenzen ein (Access-Key 3-20, Secret 8-40)"
+for i in 1 2 3; do
+  umgebung
+  lauf "$REPO/scripts/minio-service-account.sh" --compose "docker compose"
+  assert_rc 0 "Lauf $i"
+  ak="$(grep '^S3_ACCESS_KEY=' "$REPO/.env" | cut -d= -f2)"
+  sk="$(grep '^S3_SECRET_KEY=' "$REPO/.env" | cut -d= -f2)"
+  if (( ${#ak} >= 3 && ${#ak} <= 20 )); then ak_ok=ja; else ak_ok="nein (${#ak})"; fi
+  if (( ${#sk} >= 8 && ${#sk} <= 40 )); then sk_ok=ja; else sk_ok="nein (${#sk})"; fi
+  assert_eq "ja" "$ak_ok" "Access-Key-Laenge 3-20 (Lauf $i)"
+  assert_eq "ja" "$sk_ok" "Secret-Laenge 8-40 (Lauf $i)"
+  testumgebung_loeschen
+done
+
+szenario "Zu langer S3_ACCESS_KEY in .env: klarer Abbruch vor MinIO, .env unveraendert"
+umgebung
+env_schreiben "S3_ACCESS_KEY=fvapp0123456789abcdef" "S3_SECRET_KEY=0123456789abcdef0123"
+lauf "$REPO/scripts/minio-service-account.sh" --compose "docker compose"
+assert_rc_nicht0 "21 Zeichen abgelehnt"
+assert_enthaelt "$OUT" "3-20" "Meldung nennt die Grenze"
+assert_enthaelt_nicht "$T/stub.log" "svcacct" "MinIO nicht angefasst"
+assert_eq "S3_ACCESS_KEY=fvapp0123456789abcdef" "$(grep '^S3_ACCESS_KEY=' "$REPO/.env")" ".env unveraendert"
 testumgebung_loeschen
 
 szenario "Idempotenz: zweiter Lauf behaelt Schluessel, aktualisiert statt neu anzulegen"
@@ -76,7 +111,7 @@ umgebung
 env_schreiben "MINIO_ROOT_USER=rootuser" "MINIO_ROOT_PASSWORD=rootpw" "S3_ACCESS_KEY=rootuser" "S3_SECRET_KEY=rootpw"
 lauf "$REPO/scripts/minio-service-account.sh" --compose "docker compose"
 assert_rc 0 "Lauf"
-assert_regex "$REPO/.env" '^S3_ACCESS_KEY=fvapp[0-9a-f]{16}$' "neuer Schluessel"
+assert_regex "$REPO/.env" '^S3_ACCESS_KEY=fvapp[0-9a-f]{14}$' "neuer Schluessel"
 testumgebung_loeschen
 
 szenario "Policy greift nicht (fremder Bucket anlegbar): Exit != 0, .env unveraendert"
