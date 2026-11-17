@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bug, Copy, Image as BildIcon, Lightbulb } from "lucide-react";
-import { useState } from "react";
+import { Building2, Bug, CalendarDays, Copy, Gauge, Image as BildIcon, Lightbulb } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { fehlerberichteApi, mandantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
-import type { FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtZaehler } from "../../types";
+import type { FehlerberichtListItem, FehlerberichtZaehler } from "../../types";
 import { EmptyState } from "../EmptyState";
 import { FehlerZustand } from "../FehlerZustand";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { SearchField } from "../apple/SearchField";
+import { datumZuVonBis } from "../../utils/datumFilterParameter";
+import { FilterLeiste } from "../filter/FilterLeiste";
+import type { FilterFeld } from "../filter/typen";
+import { useFilterZustand } from "../filter/useFilterZustand";
 import { SegmentedControl } from "../apple/SegmentedControl";
 import { STATUS_KREIS_KLASSE } from "../apple/status";
 import { FehlerStatusPille, SchweregradBadge } from "./Badges";
@@ -23,9 +25,8 @@ import {
   relativeZeit,
   statusLabel,
 } from "./darstellung";
-import { STANDARD_FILTER, ladeBerichte, type ArtReiter, type ListenFilter, type StatusFilter, type Zeitraum } from "./liste";
+import { ladeBerichte, type ArtReiter, type ListenFilter, type StatusFilter } from "./liste";
 import { SkeletonList } from "../Skeleton";
-import { Select } from "../apple/Select";
 
 function offenAnzahl(z: FehlerberichtZaehler): number {
   return OFFENE_STATUS.reduce((summe, s) => summe + z[s], 0);
@@ -145,9 +146,7 @@ export function FehlerberichtListe({
   // Der Reiter steckt in der URL (?art=), damit Zurück aus dem Detail ihn behält.
   const [suchParameter, setSuchParameter] = useSearchParams();
   const art = leseReiter(suchParameter.get("art"));
-  const [lokal, setFilter] = useState<Omit<ListenFilter, "art">>(STANDARD_FILTER);
-  const filter: ListenFilter = { ...lokal, art };
-  const setze = (teil: Partial<Omit<ListenFilter, "art">>) => setFilter((f) => ({ ...f, ...teil }));
+  const [status, setStatus] = useState<StatusFilter>("offen");
   const reiterWaehlen = (neu: ArtReiter) => {
     setSuchParameter(
       (alt) => {
@@ -158,7 +157,7 @@ export function FehlerberichtListe({
       },
       { replace: true },
     );
-    setFilter((f) => ({ ...f, status: "offen" }));
+    setStatus("offen");
   };
   const artFilter = art === "alle" ? undefined : art;
   const textArt = art === "idee" ? "idee" : "fehler";
@@ -168,21 +167,65 @@ export function FehlerberichtListe({
     queryFn: mandantenApi.list,
     enabled: mitMandantFilter && !isImpersonating,
   });
-  const mandantId = mitMandantFilter ? filter.mandantId : "";
+
+  const felder = useMemo<FilterFeld<unknown>[]>(
+    () => [
+      {
+        key: "schweregrad",
+        label: art === "idee" ? "Priorität" : "Schweregrad",
+        typ: "auswahl",
+        icon: Gauge,
+        operatoren: ["ist"],
+        einzelwert: true,
+        optionen: SCHWEREGRADE.map((s) => ({ wert: s, label: SCHWEREGRAD_LABEL[s] })),
+      },
+      ...(mitMandantFilter
+        ? [
+            {
+              key: "mandant",
+              label: "Mandant",
+              typ: "verknuepfung" as const,
+              icon: Building2,
+              operatoren: ["ist" as const],
+              einzelwert: true,
+              optionen: (mandanten ?? []).map((m) => ({ wert: m.id, label: m.name })),
+            },
+          ]
+        : []),
+      // Das Backend kennt nur eine Untergrenze (`seit`), daher kein "vor"/"zwischen".
+      { key: "gemeldet", label: "Gemeldet", typ: "datum", icon: CalendarDays, operatoren: ["nach", "relativ"] },
+    ],
+    [art, mitMandantFilter, mandanten],
+  );
+  const zustand = useFilterZustand({ felder });
+  const erster = (key: string) => {
+    const w = zustand.bedingungen.find((b) => b.feld === key)?.wert;
+    return Array.isArray(w) ? w[0] : "";
+  };
+  const gemeldet = zustand.bedingungen.find((b) => b.feld === "gemeldet");
+  const von = gemeldet ? datumZuVonBis(gemeldet).von : undefined;
+  const filter: ListenFilter = {
+    art,
+    status,
+    schweregrad: erster("schweregrad") as ListenFilter["schweregrad"],
+    mandantId: mitMandantFilter ? erster("mandant") : "",
+    q: zustand.sucheVerzoegert,
+    seit: von ? new Date(`${von}T00:00:00`).toISOString() : "",
+  };
+  const mandantId = filter.mandantId;
   const { data: zaehler } = useQuery({
     queryKey: ["fehlerberichte", "zaehler", mandantId, art],
     queryFn: () => fehlerberichteApi.zaehler(mandantId || undefined, artFilter),
   });
-  const qVerzoegert = useDebouncedValue(filter.q);
-  const abfrageFilter = { ...filter, q: qVerzoegert, mandantId };
+  const abfrageFilter = filter;
   const { data: berichte, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["fehlerberichte", "liste", abfrageFilter],
     queryFn: () => ladeBerichte(abfrageFilter),
   });
 
   // Erneuter Klick auf die aktive Kachel kehrt zum Standard "offen" zurueck.
-  const kachelKlick = (status: StatusFilter) => setze({ status: filter.status === status ? "offen" : status });
-  const abweichend = lokal.status !== "offen" || lokal.schweregrad || lokal.mandantId || lokal.q || lokal.zeitraum;
+  const kachelKlick = (neu: StatusFilter) => setStatus(status === neu ? "offen" : neu);
+  const filterAktiv = zustand.bedingungen.length > 0 || zustand.sucheVerzoegert !== "";
 
   return (
     <div className="space-y-4">
@@ -191,7 +234,7 @@ export function FehlerberichtListe({
         <Kachel
           label="Offen"
           anzahl={zaehler && offenAnzahl(zaehler)}
-          aktiv={filter.status === "offen"}
+          aktiv={status === "offen"}
           onClick={() => kachelKlick("offen")}
         />
         {FEHLER_STATUS.map((s) => (
@@ -200,68 +243,24 @@ export function FehlerberichtListe({
             label={statusLabel(s, textArt)}
             anzahl={zaehler?.[s]}
             punktKlasse={STATUS_KREIS_KLASSE[FEHLER_STATUS_TOKEN[s]]}
-            aktiv={filter.status === s}
+            aktiv={status === s}
             onClick={() => kachelKlick(s)}
           />
         ))}
         <Kachel
           label="Alle"
           anzahl={zaehler?.gesamt}
-          aktiv={filter.status === "alle"}
+          aktiv={status === "alle"}
           onClick={() => kachelKlick("alle")}
         />
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <SearchField
-          value={filter.q}
-          onChange={(q) => setze({ q })}
-          placeholder="Titel oder Beschreibung"
-          ariaLabel={art === "idee" ? "Ideen durchsuchen" : art === "alle" ? "Fehler und Ideen durchsuchen" : "Fehlerberichte durchsuchen"}
-          className="sm:col-span-2 lg:col-span-1"
-        />
-        <Select
-          aria-label="Schweregrad"
-          value={filter.schweregrad}
-          onChange={(e) => setze({ schweregrad: e.target.value as FehlerberichtSchweregrad | "" })}
-        >
-          <option value="">{art === "idee" ? "Alle Prioritäten" : "Alle Schweregrade"}</option>
-          {SCHWEREGRADE.map((s) => (
-            <option key={s} value={s}>
-              {SCHWEREGRAD_LABEL[s]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          aria-label="Zeitraum"
-          value={filter.zeitraum}
-          onChange={(e) => setze({ zeitraum: e.target.value as Zeitraum })}
-        >
-          <option value="">Gesamter Zeitraum</option>
-          <option value="24h">Letzte 24 Stunden</option>
-          <option value="7d">Letzte 7 Tage</option>
-          <option value="30d">Letzte 30 Tage</option>
-        </Select>
-        {mitMandantFilter && (
-          <Select
-            aria-label="Mandant"
-            value={filter.mandantId}
-            onChange={(e) => setze({ mandantId: e.target.value })}
-          >
-            <option value="">Alle Mandanten</option>
-            {mandanten?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
-      {abweichend && (
-        <button type="button" onClick={() => setFilter(STANDARD_FILTER)} className="text-sekundaer font-medium text-tint-text">
-          Filter zurücksetzen
-        </button>
-      )}
+      <FilterLeiste
+        felder={felder}
+        zustand={zustand}
+        variante="office"
+        suchPlatzhalter="Titel oder Beschreibung"
+      />
 
       {isLoading ? (
         <SkeletonList count={4} />
@@ -276,7 +275,24 @@ export function FehlerberichtListe({
       ) : (
         <EmptyState
           icon={art === "idee" ? Lightbulb : Bug}
-          text={art === "idee" ? "Keine Ideen für diese Auswahl." : art === "alle" ? "Keine Meldungen für diese Auswahl." : "Keine Fehlerberichte für diese Auswahl."}
+          text={
+            filterAktiv
+              ? zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+                ? "Keine Treffer für diese Filter"
+                : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
+              : art === "idee"
+                ? "Keine Ideen für diese Auswahl."
+                : art === "alle"
+                  ? "Keine Meldungen für diese Auswahl."
+                  : "Keine Fehlerberichte für diese Auswahl."
+          }
+          action={
+            filterAktiv ? (
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-3 py-1.5 text-sekundaer">
+                Filter zurücksetzen
+              </button>
+            ) : undefined
+          }
         />
       )}
     </div>

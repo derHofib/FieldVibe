@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kundeTypLabel } from "../../config/kundeDarstellung";
-import { Users } from "lucide-react";
+import { Building2, Hash, MapPin, Tag, User, Users } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,12 +12,40 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
-import { filtereKunden } from "../../utils/geschaeft";
 import { istModulAktiv } from "../../utils/module";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
-import { SearchField } from "../../components/apple/SearchField";
+import { sucheAnwenden, filterAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
+import type { Kunde } from "../../types";
 import { Select } from "../../components/apple/Select";
+
+const KUNDEN_FELDER: FilterFeld<Kunde>[] = [
+  {
+    key: "typ",
+    label: "Typ",
+    typ: "auswahl",
+    icon: Tag,
+    wert: (k) => k.typ,
+    optionen: (["gewerbe", "privat", "oeffentlich", "hausverwaltung"] as const).map((t) => ({ wert: t, label: kundeTypLabel(t) })),
+  },
+  { key: "kundennummer", label: "Kundennr.", typ: "text", icon: Hash, wert: (k) => k.kundennummer },
+  { key: "name", label: "Name", typ: "text", icon: Building2, wert: (k) => k.name },
+  { key: "ort", label: "Ort", typ: "text", icon: MapPin, wert: (k) => k.adresse?.ort },
+  {
+    key: "ansprechpartner",
+    label: "Ansprechpartner",
+    typ: "text",
+    icon: User,
+    wert: (k) => k.ansprechpartner.map((a) => a.name).join(" "),
+  },
+];
+
+function kundeSuchtext(k: Kunde): string {
+  return [k.name, k.kundennummer, k.adresse?.ort, k.ansprechpartner.map((a) => a.name).join(" ")].filter(Boolean).join(" ");
+}
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
  * inzwischen aufgeteilten GeschaeftPage (siehe Git-Historie). Rechnungen/
@@ -34,7 +62,7 @@ export function KundenPage() {
   const [showForm, setShowForm] = useState(false);
   const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [kundeFehler, setKundeFehler] = useState<string | null>(null);
-  const [kundenSuche, setKundenSuche] = useState("");
+  const zustand = useFilterZustand({ felder: KUNDEN_FELDER });
   const [neuerKunde, setNeuerKunde] = useState({
     name: "",
     kundennummer: "",
@@ -54,7 +82,11 @@ export function KundenPage() {
     queryFn: () => kundenApi.list(),
     enabled: kannSehen,
   });
-  const kundenGefiltert = filtereKunden(kunden ?? [], kundenSuche);
+  const kundenGefiltert = sucheAnwenden(
+    filterAnwenden(kunden ?? [], zustand.bedingungen, KUNDEN_FELDER),
+    zustand.sucheVerzoegert,
+    kundeSuchtext,
+  );
 
   const createKundeMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -249,12 +281,12 @@ export function KundenPage() {
 
       <div className="space-y-2">
         {(kunden ?? []).length > 0 && (
-          <SearchField
-            value={kundenSuche}
-            onChange={setKundenSuche}
-            placeholder="Name oder Kundennummer…"
-            ariaLabel="Kunden suchen"
-            groesse="mobil"
+          <FilterLeiste
+            felder={KUNDEN_FELDER}
+            zustand={zustand}
+            suchPlatzhalter="Name oder Kundennummer…"
+            ansichten="kunden"
+            alteVorlageUmrechnen={() => []}
           />
         )}
         {kundenLoading ? (
@@ -274,9 +306,19 @@ export function KundenPage() {
             }
           />
         ) : kundenGefiltert.length === 0 ? (
-          <p className="text-center text-sekundaer text-label2">
-            Keine Kunden gefunden für „{kundenSuche}".
-          </p>
+          <EmptyState
+            icon={Users}
+            text={
+              zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+                ? "Keine Treffer für diese Filter"
+                : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
+            }
+            action={
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                Filter zurücksetzen
+              </button>
+            }
+          />
         ) : (
           kundenGefiltert.map((k) => (
             <button

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { heuteIso } from "../utils/format";
+import { vorgaengeLink } from "../config/vorgaengeFilter";
 import {
   Bug,
   CalendarDays,
@@ -327,14 +328,14 @@ export function OfficeLayout() {
                 label="Heute"
                 anzahl={heute.anzahl}
                 gekappt={heute.gekappt}
-                onClick={() => navigate(`/vorgaenge?faellig_von=${heuteIso()}&faellig_bis=${heuteIso()}`)}
+                onClick={() => navigate(vorgaengeLink("/vorgaenge", [{ feld: "faellig", op: "relativ", wert: { relativ: "heute" } }]))}
               />
               <SchnellfilterKachel
                 icon={Clock}
                 label="Diese Woche"
                 anzahl={woche.anzahl}
                 gekappt={woche.gekappt}
-                onClick={() => navigate(`/vorgaenge?faellig_von=${heuteIso()}&faellig_bis=${heuteIso(7)}`)}
+                onClick={() => navigate(vorgaengeLink("/vorgaenge", [{ feld: "faellig", op: "zwischen", wert: { von: heuteIso(), bis: heuteIso(7) } }]))}
               />
               <SchnellfilterKachel
                 icon={Flag}
@@ -342,7 +343,7 @@ export function OfficeLayout() {
                 anzahl={dringend.anzahl}
                 gekappt={dringend.gekappt}
                 warnung
-                onClick={() => navigate(`/vorgaenge?faellig_bis=${heuteIso()}`)}
+                onClick={() => navigate(vorgaengeLink("/vorgaenge", [{ feld: "faellig", op: "vor", wert: heuteIso(1) }]))}
               />
               <SchnellfilterKachel
                 icon={Inbox}
@@ -415,7 +416,7 @@ export function OfficeLayout() {
                 {aktiveProjekte.map((p) => (
                   <NavLink
                     key={p.id}
-                    to={`/vorgaenge?projekt_id=${p.id}`}
+                    to={vorgaengeLink("/vorgaenge", [{ feld: "projekt", op: "ist", wert: [p.id] }])}
                     className="mb-0.5 flex h-[30px] items-center gap-2.5 rounded-[7px] px-2.5 text-sekundaer text-label2 hover:bg-fill hover:text-label"
                   >
                     <Folder size={15} strokeWidth={2} className="shrink-0 text-label2" aria-hidden="true" />

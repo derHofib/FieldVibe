@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Gauge, Plus, Search } from "lucide-react";
+import { CalendarCheck, CalendarClock, CircleDot, Gauge, Hash, Plus, Search, TriangleAlert, User } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -7,10 +7,12 @@ import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import { StatusBadge } from "../../components/StatusBadge";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel } from "../../types";
 import { heuteIso } from "../../utils/format";
@@ -20,8 +22,6 @@ import {
   FAELLIGKEIT_TONE,
   PRUEFMITTEL_STATUS_LABEL,
   faelligkeitsStufe,
-  filterePruefmittel,
-  type PruefmittelFaelligFilter,
 } from "../../utils/pruefmittel";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { SeitenKopf } from "../OfficeUi";
@@ -29,21 +29,12 @@ import { SortierbareTabelle, type Spalte } from "../SortierbareTabelle";
 import { PruefmittelAnlegenFormular } from "./PruefmittelAnlegenFormular";
 import { PruefmittelDetail } from "./PruefmittelDetail";
 
-const FAELLIG_FILTER: { wert: PruefmittelFaelligFilter; label: string }[] = [
-  { wert: "alle", label: "Alle" },
-  { wert: "ueberfaellig", label: "Überfällig" },
-  { wert: "bald", label: `Fällig in ${BALD_FAELLIG_TAGE} Tagen` },
-  { wert: "ok", label: "In Ordnung" },
-];
-
 /** Desktop-Fassung der Prüfmittelverwaltung: Tabelle links, Detailpanel rechts.
  * Auswahl steckt in der URL (/pruefmittel/:id). Die Feld-App behält ihre Kartenliste. */
 export function OfficePruefmittelPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
-  const [suche, setSuche] = useState("");
-  const [faellig, setFaellig] = useState<PruefmittelFaelligFilter>("alle");
   const [neu, setNeu] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -60,7 +51,53 @@ export function OfficePruefmittelPage() {
 
   const heute = heuteIso();
   const bald = heuteIso(BALD_FAELLIG_TAGE);
-  const gefiltert = filterePruefmittel(data ?? [], suche, faellig, heute, bald, nameFuer);
+
+  // Defekte/ausgemusterte Geräte werden nicht kalibriert: sie haben keine Fälligkeit statt "überfällig".
+  const stufeWert = (p: Pruefmittel) =>
+    p.status === "aktiv" ? faelligkeitsStufe(p.naechste_kalibrierung_am, heute, bald) : null;
+  const felder = useMemo<FilterFeld<Pruefmittel>[]>(
+    () => [
+      { key: "bezeichnung", label: "Bezeichnung", typ: "text", icon: Gauge, wert: (p) => p.bezeichnung },
+      { key: "sn", label: "Seriennummer", typ: "text", icon: Hash, wert: (p) => p.seriennummer },
+      {
+        key: "nutzer",
+        label: "Zugewiesen an",
+        typ: "person",
+        icon: User,
+        wert: (p) => p.zugewiesen_an,
+        optionen: nutzer.map((u) => ({ wert: u.id, label: u.name })),
+      },
+      { key: "letzte", label: "Letzte Kalibrierung", typ: "datum", icon: CalendarCheck, wert: (p) => p.letzte_kalibrierung_am },
+      { key: "faellig", label: "Nächste Kalibrierung", typ: "datum", icon: CalendarClock, wert: (p) => p.naechste_kalibrierung_am },
+      {
+        key: "faelligkeit",
+        label: "Fälligkeit",
+        typ: "auswahl",
+        icon: TriangleAlert,
+        wert: stufeWert,
+        optionen: [
+          { wert: "ueberfaellig", label: FAELLIGKEIT_LABEL.ueberfaellig },
+          { wert: "bald", label: `Bald fällig (${BALD_FAELLIG_TAGE} Tage)` },
+          { wert: "ok", label: FAELLIGKEIT_LABEL.ok },
+        ],
+      },
+      {
+        key: "status",
+        label: "Status",
+        typ: "auswahl",
+        icon: CircleDot,
+        wert: (p) => p.status,
+        optionen: Object.entries(PRUEFMITTEL_STATUS_LABEL).map(([wert, label]) => ({ wert, label })),
+      },
+    ],
+    [nutzer, heute, bald],
+  );
+  const zustand = useFilterZustand({ felder });
+  const gefiltert = sucheAnwenden(
+    filterAnwenden(data ?? [], zustand.bedingungen, felder),
+    zustand.sucheVerzoegert,
+    (p) => [p.bezeichnung, p.seriennummer, nameFuer(p.zugewiesen_an), PRUEFMITTEL_STATUS_LABEL[p.status]].join(" "),
+  );
   const gewaehlt = id ? (data ?? []).find((p) => p.id === id) : undefined;
 
   const spalten: Spalte<Pruefmittel>[] = [
@@ -100,24 +137,13 @@ export function OfficePruefmittelPage() {
   return (
     <div>
       <SeitenKopf titel="Prüfmittel" anzahl={isLoading || isError ? undefined : gefiltert.length}>
-        <SearchField
-          value={suche}
-          onChange={setSuche}
-          placeholder="Bezeichnung, Seriennummer, Nutzer…"
-          ariaLabel="Prüfmittel suchen"
-          className="w-72"
-        />
         <button onClick={() => setNeu(true)} className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-sekundaer font-semibold">
           <Plus size={14} strokeWidth={2.5} />
           Neues Prüfmittel
         </button>
       </SeitenKopf>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FAELLIG_FILTER.map((f) => (
-          <FilterChip key={f.wert} label={f.label} aktiv={faellig === f.wert} onClick={() => setFaellig(f.wert)} />
-        ))}
-      </div>
+      <FilterLeiste felder={felder} zustand={zustand} variante="office" suchPlatzhalter="Prüfmittel suchen…" className="mb-4" />
 
       <ListeMitPanel
         panelTitel="Prüfmittel"
@@ -153,7 +179,15 @@ export function OfficePruefmittelPage() {
               }
             />
           ) : gefiltert.length === 0 ? (
-            <EmptyState icon={Search} text="Kein Prüfmittel entspricht der Suche oder dem Filter." />
+            <EmptyState
+              icon={Search}
+              text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             <SortierbareTabelle
               zeilen={gefiltert}
@@ -162,6 +196,7 @@ export function OfficePruefmittelPage() {
               gewaehlt={id}
               onWaehlen={(p) => navigate(`/pruefmittel/${p.id}`)}
               startSortierung={{ key: "faellig" }}
+              hervorgehoben={zustand.bedingungen.map((b) => (b.feld === "faelligkeit" ? "faellig" : b.feld))}
             />
           )
         }

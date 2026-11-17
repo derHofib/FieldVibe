@@ -799,7 +799,8 @@ export interface GespeicherterFilter {
   id: string;
   entitaet: GespeicherterFilterEntitaet;
   name: string;
-  filter_json: Record<string, string>;
+  /** Altformat: flaches Record<string,string>; neu: `{ v: 2, bedingungen: FilterBedingung[] }` (components/filter). */
+  filter_json: Record<string, unknown>;
   ist_standard: boolean;
   created_at: string;
   updated_at: string;

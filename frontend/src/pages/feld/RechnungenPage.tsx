@@ -1,13 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { FileCheck2, Receipt } from "lucide-react";
-import { useId, useState } from "react";
+import { FileCheck2, Receipt, Search } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
+import { angebotFelder, kundenOptionen, rechnungFelder, rechnungServerParameter } from "../../components/rechnung/rechnungenFilter";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -16,30 +17,22 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL, RECHNUNG_STATUS_TONE } from "../../utils/buchhaltung";
 import { downloadBlob } from "../../utils/download";
-import { formatDatum, formatEuro, heuteIso } from "../../utils/format";
+import { formatDatum, formatEuro } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import {
-  RECHNUNGSART_FILTER,
   RECHNUNGSART_LABEL,
   RECHNUNGSART_TONE,
   rechnungsartVon,
 } from "../../utils/rechnungsart";
-import type { AngebotStatus, RechnungStatus, Rechnungsart, RechnungenFilter } from "../../types";
+import type { RechnungenFilter } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 type Bereich = "rechnungen" | "angebote";
 
-const STATUS_OPTIONEN: RechnungStatus[] = ["entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert"];
 const SEITENGROESSE = 50;
 
-const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-  widerrufen: "Widerrufen",
-};
+import { ANGEBOT_STATUS_LABEL } from "../../components/rechnung/rechnungenFilter";
 
 function AngeboteListe() {
   const uid = useId();
@@ -50,6 +43,18 @@ function AngeboteListe() {
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: angebote, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
+  const { hatRecht } = useAuth();
+  const kundenOpt = useMemo(() => (hatRecht("kunden", "sehen") ? kundenOptionen(kunden) : undefined), [kunden, hatRecht]);
+  const felder = useMemo(() => angebotFelder(kundenOpt), [kundenOpt]);
+  const zustand = useFilterZustand({ felder, praefix: "a" });
+  const sichtbar = useMemo(
+    () =>
+      sucheAnwenden(filterAnwenden(angebote ?? [], zustand.bedingungen, felder), zustand.sucheVerzoegert, (a) =>
+        `${a.angebotsnummer} ${kunden?.find((k) => k.id === a.kunde_id)?.name ?? ""} ${ANGEBOT_STATUS_LABEL[a.status]} ${a.gesamt_brutto}`,
+      ),
+    [angebote, zustand.bedingungen, zustand.sucheVerzoegert, felder, kunden],
+  );
+  const filterAktiv = zustand.aktiveAnzahl > 0 || zustand.suche.trim() !== "";
 
   const erstellen = useMutation({
     mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
@@ -104,15 +109,33 @@ function AngeboteListe() {
         </div>
       </AnlegenPanel>
 
+      <FilterLeiste
+        felder={felder}
+        zustand={zustand}
+        suchPlatzhalter="Nummer oder Kunde suchen…"
+      />
+
       <div className="space-y-2">
         {isLoading ? (
           <SkeletonList count={3} />
         ) : ladeFehler && !angebote ? (
           <FehlerZustand fehler={ladeFehler} was="Die Angebote" onErneut={() => void neuLaden()} />
-        ) : (angebote ?? []).length === 0 ? (
-          <EmptyState icon={FileCheck2} text="Keine Angebote vorhanden." />
+        ) : sichtbar.length === 0 ? (
+          filterAktiv ? (
+            <EmptyState
+              icon={Search}
+              text={zustand.suche.trim() && zustand.aktiveAnzahl === 0 ? `Nichts gefunden für „${zustand.suche.trim()}“.` : "Keine Treffer für diese Filter."}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
+          ) : (
+            <EmptyState icon={FileCheck2} text="Keine Angebote vorhanden." />
+          )
         ) : (
-          angebote!.map((a) => (
+          sichtbar.map((a) => (
             <button
               key={a.id}
               onClick={() => navigate(`/angebote/${a.id}`)}
@@ -143,24 +166,30 @@ export function RechnungenPage() {
 
   const [bereich, setBereich] = useState<Bereich>("rechnungen");
   const [zeigeNeu, setZeigeNeu] = useState(false);
-  const [q, setQ] = useState("");
-  const [statusAktiv, setStatusAktiv] = useState<Set<RechnungStatus>>(new Set());
-  const [artAktiv, setArtAktiv] = useState<Rechnungsart | null>(null);
-  const [nurUeberfaellig, setNurUeberfaellig] = useState(false);
-  const [faelligBis7Tage, setFaelligBis7Tage] = useState(false);
   const [seiten, setSeiten] = useState(1);
 
-  // Server-Suche: nicht bei jedem Tastendruck eine Abfrage.
-  const qVerzoegert = useDebouncedValue(q, 300);
-  const filter: RechnungenFilter = {
-    q: qVerzoegert.trim() || undefined,
-    status: statusAktiv.size > 0 ? Array.from(statusAktiv) : undefined,
-    rechnungsart: artAktiv ?? undefined,
-    nur_ueberfaellig: nurUeberfaellig || undefined,
-    faellig_bis: faelligBis7Tage ? heuteIso(7) : undefined,
+  const { data: kunden } = useQuery({
+    queryKey: ["kunden"],
+    queryFn: () => kundenApi.list(),
+    enabled: abrechnungAktiv && kannSehen && hatRecht("kunden", "sehen"),
+  });
+  const kundenOpt = useMemo(() => kundenOptionen(kunden), [kunden]);
+  const felder = useMemo(() => rechnungFelder(kundenOpt), [kundenOpt]);
+  const zustand = useFilterZustand({ felder });
+
+  // Bedingungen und Suche gehören in den Query-Key; bei Änderung beginnt die Liste wieder auf Seite 1.
+  const filterBasis: RechnungenFilter = {
+    ...rechnungServerParameter(zustand.bedingungen),
+    q: zustand.sucheVerzoegert.trim() || undefined,
     sort: "-faellig",
-    limit: SEITENGROESSE * seiten,
   };
+  const filterSchluessel = JSON.stringify(filterBasis);
+  const [zuletztSchluessel, setZuletztSchluessel] = useState(filterSchluessel);
+  if (zuletztSchluessel !== filterSchluessel) {
+    setZuletztSchluessel(filterSchluessel);
+    setSeiten(1);
+  }
+  const filter: RechnungenFilter = { ...filterBasis, limit: SEITENGROESSE * seiten };
 
   const { data, isLoading, error: rechnungenFehler, refetch: rechnungenNeu } = useQuery({
     queryKey: ["rechnungen-uebersicht", filter],
@@ -168,21 +197,12 @@ export function RechnungenPage() {
     enabled: abrechnungAktiv && kannSehen && bereich === "rechnungen",
   });
 
-  const toggleStatus = (s: RechnungStatus) => {
-    setSeiten(1);
-    setStatusAktiv((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
-  };
-
   const exportieren = async () => {
-    const blob = await rechnungenApi.exportCsv(filter);
+    const blob = await rechnungenApi.exportCsv(filterBasis);
     downloadBlob(blob, "Rechnungen.csv");
   };
 
+  const filterAktiv = zustand.aktiveAnzahl > 0 || zustand.suche.trim() !== "";
   const eintraege = data?.eintraege ?? [];
   const gibtMehr = data ? data.gesamt_anzahl > eintraege.length : false;
 
@@ -235,59 +255,13 @@ export function RechnungenPage() {
             />
           </AnlegenPanel>
 
-          <SearchField
-            groesse="mobil"
-            value={q}
-            onChange={(wert) => {
-              setQ(wert);
-              setSeiten(1);
-            }}
-            placeholder="Rechnungsnummer oder Kunde suchen…"
+          <FilterLeiste
+            felder={felder}
+            zustand={zustand}
+            suchPlatzhalter="Rechnungsnummer oder Kunde suchen…"
+            ansichten="rechnungen"
+            alteVorlageUmrechnen={() => []}
           />
-
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Status der Rechnung">
-            {STATUS_OPTIONEN.map((s) => (
-              <FilterChip
-                key={s}
-                label={RECHNUNG_STATUS_LABEL[s]}
-                aktiv={statusAktiv.has(s)}
-                onClick={() => toggleStatus(s)}
-              />
-            ))}
-            <FilterChip
-              label="Überfällig"
-              status="fehlt"
-              aktiv={nurUeberfaellig}
-              onClick={() => {
-                setSeiten(1);
-                setNurUeberfaellig((v) => !v);
-              }}
-            />
-            <FilterChip
-              label="Diese Woche fällig"
-              status="arbeit"
-              aktiv={faelligBis7Tage}
-              onClick={() => {
-                setSeiten(1);
-                setFaelligBis7Tage((v) => !v);
-              }}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
-            <span className="text-sekundaer text-label2">Art</span>
-            {RECHNUNGSART_FILTER.map((a) => (
-              <FilterChip
-                key={a}
-                label={RECHNUNGSART_LABEL[a]}
-                aktiv={artAktiv === a}
-                onClick={() => {
-                  setSeiten(1);
-                  setArtAktiv((aktuell) => (aktuell === a ? null : a));
-                }}
-              />
-            ))}
-          </div>
 
           {data && (
             <div className="grid grid-cols-3 gap-2 card-ap p-3 text-center">
@@ -320,9 +294,19 @@ export function RechnungenPage() {
             ) : eintraege.length === 0 ? (
               <EmptyState
                 icon={Receipt}
-                text="Keine Rechnungen für diesen Filter."
+                text={
+                  filterAktiv
+                    ? zustand.suche.trim() && zustand.aktiveAnzahl === 0
+                      ? `Nichts gefunden für „${zustand.suche.trim()}“.`
+                      : "Keine Treffer für diese Filter."
+                    : "Keine Rechnungen vorhanden."
+                }
                 action={
-                  hatRecht("abrechnung", "erstellen") ? (
+                  filterAktiv ? (
+                    <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                      Filter zurücksetzen
+                    </button>
+                  ) : hatRecht("abrechnung", "erstellen") ? (
                     <button type="button" onClick={() => setZeigeNeu(true)} className="btn-touch btn-ap px-4">
                       + Neue Rechnung
                     </button>

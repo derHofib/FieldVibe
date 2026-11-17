@@ -1,26 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso, statusMetaZeile } from "../../utils/format";
-import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
-import { Suspense, lazy, useCallback, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Bell, CheckCircle2, Clock, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users } from "lucide-react";
+import { Suspense, lazy, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
-import { FilterChip } from "../../components/apple/FilterChip";
 import { LaeuftPille } from "../../components/apple/LaeuftPille";
-import { Select } from "../../components/apple/Select";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
-import { FilterVorlagenMenue, FilterVorlagenVerwaltung, useFilterVorlagen } from "../../components/FilterVorlagenLeiste";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
 import { QrScanner } from "../../components/QrScanner";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
-import { GRUPPEN_LABEL, STATUS_LABEL, filterChipLabel, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
+import { VorgaengeSortierMenue } from "../../components/VorgaengeSortierMenue";
+import { GRUPPEN_LABEL, STATUS_LABEL, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
+import { ALLE_STATUS, OFFENE_STATUS_FILTER, alteVorlageUmrechnen } from "../../config/vorgaengeFilter";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
+import { useVorgaengeFilter } from "../../hooks/useVorgaengeFilter";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
@@ -264,65 +265,30 @@ function FeedCardView({ card }: { card: FeedCard }) {
   );
 }
 
-const LEER_FILTER: Record<string, string> = {};
-
-// Erledigte Vorgänge (abgeschlossen/abgerechnet/storniert) verdrängen sonst
-// die offenen aus dem oberen Feed-Bereich; sie bleiben per Chip oder
-// explizitem Status-Filter erreichbar.
-const OFFENE_STATUS_FILTER = "neu,geplant,in_arbeit,wartet_kunde";
-
 export function FeedPage() {
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
-  // Einstiegsfilter aus der URL (z. B. von der mobilen Projekte-Uebersicht
-  // per Tippen auf ein Projekt, oder vom "Heute"-Tab der Tab-Bar) -- nur
-  // beim ersten Rendern gelesen, danach lebt der Filter ausschliesslich im
-  // lokalen State wie zuvor.
-  const [searchParams] = useSearchParams();
-  const [filter, setFilter] = useState<Record<string, string>>(() => {
-    const uebernommen: Record<string, string> = {};
-    for (const key of ["projekt_id", "faellig_von", "faellig_bis"]) {
-      const wert = searchParams.get(key);
-      if (wert) uebernommen[key] = wert;
-    }
-    return Object.keys(uebernommen).length > 0 ? uebernommen : LEER_FILTER;
-  });
-  const [zeigeFilter, setZeigeFilter] = useState(false);
+  const { felder, zustand, parameter, hatStatusBedingung, sortierung, setSortierung } = useVorgaengeFilter();
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
-  const [erledigteZeigen, setErledigteZeigen] = useState(false);
   const [zeigeScanner, setZeigeScanner] = useState(false);
   const [scanFehler, setScanFehler] = useState<string | null>(null);
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
 
-  function setField(key: string, value: string) {
-    setFilter((f) => {
-      const next = { ...f };
-      if (value) next[key] = value;
-      else delete next[key];
-      return next;
-    });
-  }
-
-  const aktiveStatus = (filter.status ?? "").split(",").filter(Boolean);
-  function toggleStatus(status: string) {
-    const set = new Set(aktiveStatus);
-    if (set.has(status)) set.delete(status);
-    else set.add(status);
-    setField("status", Array.from(set).join(","));
-  }
-
-  const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
-  const vorlagenState = useFilterVorlagen({ entitaet: "vorgaenge", filter, onApply: anwendenFilter });
-
+  // Erledigte Vorgänge (abgeschlossen/abgerechnet/storniert) verdrängen sonst die offenen aus dem oberen
+  // Feed-Bereich; ohne Status-Bedingung zeigt der Feed deshalb nur offene.
   const wirksamerFilter = useMemo(
-    () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS_FILTER }),
-    [filter, erledigteZeigen],
+    () => (hatStatusBedingung ? parameter : { ...parameter, status: OFFENE_STATUS_FILTER }),
+    [parameter, hatStatusBedingung],
   );
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error: ladeFehler, refetch: neuLaden } =
     useVorgangsListe(wirksamerFilter);
+
+  const alleStatusZeigen = () => zustand.hinzufuegen({ feld: "status", op: "ist", wert: [...ALLE_STATUS] });
+  const suchtext = zustand.sucheVerzoegert.trim();
+  const nurOffene = !hatStatusBedingung;
 
   async function handleScan(code: string) {
     setZeigeScanner(false);
@@ -345,17 +311,6 @@ export function FeedPage() {
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
-  // "nur_meine" hat mit den Tabs oben eine eigene, immer sichtbare Steuerung
-  // -- soll den Filter-Zaehler des Filter-Panels darunter nicht mitzaehlen.
-  const aktiveFilterAnzahl = Object.keys(filter).filter((k) => k !== "nur_meine").length;
-  const nurMeine = filter.nur_meine === "true";
-  // Kompakte Chip-Zusammenfassung der aktiven Filter -- ersetzt das immer
-  // sichtbare volle Formular durch eine schmale Leiste, die nur erscheint,
-  // wenn tatsaechlich etwas aktiv ist (siehe Design-Vorschlag "Filterleiste
-  // Varianten", Richtung B).
-  const filterChips = Object.entries(filter)
-    .filter(([key, value]) => key !== "nur_meine" && value)
-    .map(([key, value]) => ({ key, label: filterChipLabel(key, value, kunden) }));
   const punkte: FeedMapPunkt[] = cards
     .filter((c) => c.geo_lat != null && c.geo_lng != null)
     .map((c) => ({
@@ -423,54 +378,16 @@ export function FeedPage() {
         </div>
       )}
 
-      {/* Filterleiste "Richtung B": Filter ist im Ruhezustand nur ein
-          Icon-Button neben Liste/Karte, keine eigene Karte mehr -- die wird
-          erst sichtbar, sobald tatsaechlich etwas aktiv ist oder das
-          Formular explizit geoeffnet wird (siehe Design-Vorschlag
-          "Filterleiste Varianten"). */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Einzeilig scrollbar statt Umbruch; die Maske blendet den rechten Rand weich aus. */}
-        <div
-          className="scrollbar-none flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-1 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-16px),transparent)]"
-        >
-          <FilterChip
-            label="Meine"
-            aktiv={nurMeine}
-            onClick={() => setField("nur_meine", nurMeine ? "" : "true")}
-          />
-          <FilterChip
-            label="Überfällig"
-            aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
-            onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso() ? "" : heuteIso())}
-          />
-          <FilterChip
-            label="Diese Woche fällig"
-            aktiv={filter.faellig_bis === heuteIso(7)}
-            onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso(7) ? "" : heuteIso(7))}
-          />
-          {!filter.status && (
-            <FilterChip
-              label="Erledigte anzeigen"
-              aktiv={erledigteZeigen}
-              onClick={() => setErledigteZeigen((v) => !v)}
-            />
-          )}
-        </div>
+      <FilterLeiste
+        felder={felder}
+        zustand={zustand}
+        suchPlatzhalter="Vorgang, Kunde, Anlage…"
+        ansichten="vorgaenge"
+        alteVorlageUmrechnen={alteVorlageUmrechnen}
+      />
+      <div className="flex items-center justify-end gap-1">
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            onClick={() => setZeigeFilter((v) => !v)}
-            title="Filter"
-            aria-label="Filter"
-            className={`btn-ap-toolbar relative ${zeigeFilter || aktiveFilterAnzahl > 0 ? "text-tint" : ""}`}
-          >
-            <Filter size={14} strokeWidth={2} aria-hidden="true" />
-            {aktiveFilterAnzahl > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-nav font-bold text-white">
-                {aktiveFilterAnzahl}
-              </span>
-            )}
-          </button>
-          <FilterVorlagenMenue v={vorlagenState} />
+          <VorgaengeSortierMenue wert={sortierung} onWechsel={setSortierung} />
           <SegmentedControl
             ariaLabel="Ansicht"
             groesse="mobil"
@@ -484,109 +401,14 @@ export function FeedPage() {
         </div>
       </div>
 
-      {filterChips.length > 0 && !zeigeFilter && (
-        <div className="card-ap flex flex-wrap items-center gap-1.5 p-2.5">
-          {filterChips.map((c) => (
-            <span
-              key={c.key}
-              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-sekundaer font-medium text-label"
-            >
-              {c.label}
-              <button
-                onClick={() => setField(c.key, "")}
-                aria-label={`${c.label} entfernen`}
-                className="flex h-4 w-4 items-center justify-center rounded-full bg-fill2 text-label2"
-              >
-                <X size={9} strokeWidth={2.5} aria-hidden="true" />
-              </button>
-            </span>
-          ))}
-          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-sekundaer font-semibold text-tint">
-            Bearbeiten
+      {nurOffene && (
+        <p className="text-sekundaer text-label2">
+          Nur offene Vorgänge ·{" "}
+          <button type="button" onClick={alleStatusZeigen} className="font-medium text-tint-text">
+            Alle zeigen
           </button>
-        </div>
+        </p>
       )}
-
-      {zeigeFilter && (
-        <div className="card-ap space-y-2 p-3">
-          <div>
-            <div className="mb-1 text-sekundaer font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
-            <div className="flex flex-wrap gap-1.5">
-              {(Object.keys(STATUS_LABEL) as VorgangStatus[]).map((value) => {
-                const aktiv = aktiveStatus.includes(value);
-                return (
-                  <FilterChip
-                    key={value}
-                    label={STATUS_LABEL[value]}
-                    status={vorgangStatusZuToken(value)}
-                    aktiv={aktiv}
-                    onClick={() => toggleStatus(value)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Select
-              groesse="kompakt"
-              value={filter.kunde_id ?? ""}
-              onChange={(e) => setField("kunde_id", e.target.value)}
-            >
-              <option value="">Alle Kunden</option>
-              {(kunden ?? []).map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              groesse="kompakt"
-              value={filter.leistungstyp ?? ""}
-              onChange={(e) => setField("leistungstyp", e.target.value)}
-            >
-              <option value="">Alle Leistungstypen</option>
-              {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-              <input
-                type="date"
-                value={filter.faellig_von ?? ""}
-                onChange={(e) => setField("faellig_von", e.target.value)}
-                title="Fällig ab"
-                className="field-ap"
-              />
-              <span className="text-sekundaer text-label2">bis</span>
-              <input
-                type="date"
-                value={filter.faellig_bis ?? ""}
-                onChange={(e) => setField("faellig_bis", e.target.value)}
-                title="Fällig bis"
-                className="field-ap"
-              />
-            </div>
-            <input
-              value={filter.tag ?? ""}
-              onChange={(e) => setField("tag", e.target.value)}
-              placeholder="#Tag"
-              className="field-ap"
-            />
-            <Select
-              groesse="kompakt"
-              value={filter.sort ?? "last_activity_at"}
-              onChange={(e) => setField("sort", e.target.value)}
-            >
-              <option value="last_activity_at">Sortiert nach Aktivität</option>
-              <option value="prioritaet">Sortiert nach Priorität</option>
-            </Select>
-          </div>
-        </div>
-      )}
-
-      <FilterVorlagenVerwaltung v={vorlagenState} chipsZeigen={zeigeFilter} />
 
       {ansicht === "karte" ? (
         isLoading ? (
@@ -627,25 +449,24 @@ export function FeedPage() {
             <EmptyState
               icon={Inbox}
               text={
-                aktiveFilterAnzahl > 0
-                  ? "Keine Vorgänge für die aktuellen Filter."
-                  : !erledigteZeigen
-                    ? "Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet."
-                    : "Noch keine Vorgänge angelegt."
+                suchtext
+                  ? `Nichts gefunden für ‚${suchtext}‘`
+                  : zustand.aktiveAnzahl > 0
+                    ? "Keine Treffer für diese Filter"
+                    : nurOffene
+                      ? "Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet."
+                      : "Noch keine Vorgänge angelegt."
               }
               action={
-                aktiveFilterAnzahl === 0 && !erledigteZeigen ? (
-                  <button onClick={() => setErledigteZeigen(true)} className="btn-touch btn-ap mt-1">
-                    Erledigte anzeigen
-                  </button>
-                ) : (
-                  aktiveFilterAnzahl > 0 && (
-                  <button
-                    onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
-                    className="btn-ap mt-1 text-sekundaer"
-                  >
+                suchtext || zustand.aktiveAnzahl > 0 ? (
+                  <button onClick={zustand.zuruecksetzen} className="btn-ap mt-1 text-sekundaer">
                     Filter zurücksetzen
                   </button>
+                ) : (
+                  nurOffene && (
+                    <button onClick={alleStatusZeigen} className="btn-touch btn-ap mt-1">
+                      Alle zeigen
+                    </button>
                   )
                 )
               }

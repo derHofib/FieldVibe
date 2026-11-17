@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, SearchX, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { Boxes, Hash, Package, SearchX, Tag as TagIcon, Trash2, TriangleAlert, Truck } from "lucide-react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -10,14 +10,17 @@ import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
-import { filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
+import { istUnterbestand } from "../../utils/geschaeft";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { Select } from "../../components/apple/Select";
-import { SearchField } from "../../components/apple/SearchField";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { AktionsMenue } from "../../components/AktionsMenue";
 
@@ -344,10 +347,6 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
     einzelpreis: "",
     lieferantId: "",
   });
-  const [matFilterLieferantId, setMatFilterLieferantId] = useState("");
-  const [matFilterTagId, setMatFilterTagId] = useState("");
-  const [matFilterUnterbestand, setMatFilterUnterbestand] = useState(false);
-  const [matSuche, setMatSuche] = useState("");
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [ausgewaehlteBedarfe, setAusgewaehlteBedarfe] = useState<Set<string>>(new Set());
   const [bestellLieferantId, setBestellLieferantId] = useState("");
@@ -375,12 +374,6 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
     queryFn: tagsApi.list,
     enabled: materialAktiv,
   });
-  const materialGefiltert = filtereMaterial(material ?? [], {
-    lieferantId: matFilterLieferantId,
-    tagId: matFilterTagId,
-    nurUnterbestand: matFilterUnterbestand,
-    suche: matSuche,
-  });
 
   const { data: offeneBedarfe } = useQuery({
     queryKey: ["material-bedarfe", "offen", bedarfZweck],
@@ -397,6 +390,38 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
     queryFn: () => lieferantenApi.list(),
     enabled: bestellwesenAktiv || (tab === "material" && materialAktiv),
   });
+
+  const materialFelder = useMemo<FilterFeld<Material>[]>(
+    () => [
+      { key: "bezeichnung", label: "Bezeichnung", typ: "text", icon: Package, wert: (m) => m.bezeichnung },
+      { key: "artikelnummer", label: "Art.-Nr.", typ: "text", icon: Hash, wert: (m) => m.artikelnummer },
+      {
+        key: "lieferant",
+        label: "Lieferant",
+        typ: "verknuepfung",
+        icon: Truck,
+        wert: (m) => m.lieferant_id,
+        optionen: (lieferanten ?? []).map((l) => ({ wert: l.id, label: l.name })),
+      },
+      {
+        key: "tag",
+        label: "Tag",
+        typ: "liste",
+        icon: TagIcon,
+        wert: (m) => m.tag_ids,
+        optionen: (materialTags ?? []).map((t) => ({ wert: t.id, label: `#${t.label}` })),
+      },
+      { key: "bestand", label: "Bestand", typ: "zahl", icon: Boxes, wert: (m) => Number(m.bestand_gesamt) },
+      { key: "unterbestand", label: "Unterbestand", typ: "janein", icon: TriangleAlert, wert: (m) => istUnterbestand(m) },
+    ],
+    [lieferanten, materialTags],
+  );
+  const filterZustand = useFilterZustand({ felder: materialFelder });
+  const materialGefiltert = sucheAnwenden(
+    filterAnwenden(material ?? [], filterZustand.bedingungen, materialFelder),
+    filterZustand.sucheVerzoegert,
+    (m) => `${m.bezeichnung} ${m.artikelnummer ?? ""}`,
+  );
 
   useEffect(() => {
     setAusgewaehlteBedarfe(new Set());
@@ -610,51 +635,11 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
 
           {(material ?? []).length > 0 && (
-            <div className="space-y-2 card-ap p-3">
-              <SearchField
-                groesse="mobil"
-                value={matSuche}
-                onChange={setMatSuche}
-                placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <Select
-                  className="w-auto"
-                  value={matFilterLieferantId}
-                  onChange={(e) => setMatFilterLieferantId(e.target.value)}
-                  groesse="kompakt"
-                >
-                  <option value="">Alle Lieferanten</option>
-                  {(lieferanten ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  className="w-auto"
-                  value={matFilterTagId}
-                  onChange={(e) => setMatFilterTagId(e.target.value)}
-                  groesse="kompakt"
-                >
-                  <option value="">Alle Tags</option>
-                  {(materialTags ?? []).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      #{t.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <label className="flex items-center gap-1.5 text-sekundaer text-label">
-                <input
-                  type="checkbox"
-                  checked={matFilterUnterbestand}
-                  onChange={(e) => setMatFilterUnterbestand(e.target.checked)}
-                  className="h-3.5 w-3.5"
-                />
-                Nur Unterbestand
-              </label>
-            </div>
+            <FilterLeiste
+              felder={materialFelder}
+              zustand={filterZustand}
+              suchPlatzhalter="Suche nach Bezeichnung oder Artikelnummer…"
+            />
           )}
 
           {materialLoading ? (
@@ -672,7 +657,19 @@ export function MaterialPage({ nurBestellwesen = false }: { nurBestellwesen?: bo
               }
             />
           ) : materialGefiltert.length === 0 ? (
-            <EmptyState icon={SearchX} text="Kein Material entspricht dem Filter." />
+            <EmptyState
+              icon={SearchX}
+              text={
+                filterZustand.bedingungen.length > 0 || !filterZustand.sucheVerzoegert
+                  ? "Keine Treffer für diese Filter"
+                  : `Nichts gefunden für „${filterZustand.sucheVerzoegert}"`
+              }
+              action={
+                <button type="button" onClick={filterZustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             materialGefiltert.map((m) => (
               <MaterialZeile

@@ -561,3 +561,70 @@ async def test_feed_unbisponiert_zeigt_nur_offene_vorgaenge_ohne_aktiven_termin(
     assert titel == {"Ohne Termin", "Nur abgesagter Termin"}
     assert mit_termin.titel not in titel
     assert abgeschlossen_ohne_termin.titel not in titel
+
+
+@pytest.mark.asyncio
+async def test_feed_freitextsuche(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    mandant_b = await make_mandant(name="Mandant B")
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde_mueller = await make_kunde(mandant=mandant, name="Müller Bau GmbH")
+    kunde_schmidt = await make_kunde(mandant=mandant, name="Schmidt")
+    kunde_b = await make_kunde(mandant=mandant_b, name="Müller Bau GmbH")
+    anlage = await make_anlage(mandant=mandant, kunde=kunde_schmidt, bezeichnung="Wärmepumpe Keller")
+    await make_vorgang(mandant=mandant, kunde=kunde_schmidt, titel="Heizung defekt", status="neu")
+    await make_vorgang(mandant=mandant, kunde=kunde_mueller, titel="Rohrbruch", status="neu")
+    await make_vorgang(mandant=mandant, kunde=kunde_mueller, titel="Rohrbruch Nachtrag", status="abgeschlossen")
+    await make_vorgang(mandant=mandant, kunde=kunde_schmidt, titel="Prüfung 50% Last", anlage_id=anlage.id)
+    await make_vorgang(mandant=mandant, kunde=kunde_schmidt, titel="Prüfung 50x Last")
+    await make_vorgang(mandant=mandant_b, kunde=kunde_b, titel="Rohrbruch B")
+    token = await login(client, admin.email, "pw-123456")
+
+    async def suche(**params):
+        resp = await client.get("/api/feed", headers=auth_headers(token), params=params)
+        assert resp.status_code == 200
+        return sorted(i["titel"] for i in resp.json()["items"])
+
+    assert await suche(q="heizung") == ["Heizung defekt"]  # Titel, Groß/Klein egal
+    assert await suche(q="müller") == ["Rohrbruch", "Rohrbruch Nachtrag"]  # Kundenname, kein Fremdmandant
+    assert await suche(q="rohrbruch bau") == ["Rohrbruch", "Rohrbruch Nachtrag"]  # Mehrwort-UND
+    assert await suche(q="rohrbruch schmidt") == []
+    assert await suche(q="wärmepumpe") == ["Prüfung 50% Last"]  # Anlagenbezeichnung
+    assert await suche(q="50%") == ["Prüfung 50% Last"]  # % ist kein Wildcard
+    assert await suche(q="rohrbruch", status="neu") == ["Rohrbruch"]  # mit status-Filter
+    assert await suche(q="   ") == await suche()  # nur Leerzeichen = kein Filter
+
+
+@pytest.mark.asyncio
+async def test_feed_freitextsuche_ueber_tag_ohne_duplikate_in_paginierung(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgaenge = [await make_vorgang(mandant=mandant, kunde=kunde, titel=f"V{i}") for i in range(3)]
+    token = await login(client, admin.email, "pw-123456")
+    for label in ("dringend", "dringend-intern"):
+        tag_id = (
+            await client.post("/api/tags", headers=auth_headers(token), json={"label": label})
+        ).json()["id"]
+        for v in vorgaenge:
+            await client.post(
+                f"/api/tags/{tag_id}/assignments",
+                headers=auth_headers(token),
+                json={"entity_type": "vorgang", "entity_id": str(v.id)},
+            )
+
+    seen, cursor = [], None
+    for _ in range(10):
+        params = {"q": "dring", "limit": 2}
+        if cursor:
+            params["cursor"] = cursor
+        body = (await client.get("/api/feed", headers=auth_headers(token), params=params)).json()
+        seen += [i["id"] for i in body["items"]]
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+    assert len(seen) == 3 and len(set(seen)) == 3

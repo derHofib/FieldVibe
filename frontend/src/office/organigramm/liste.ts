@@ -123,3 +123,17 @@ export function filtere(positionen: Position[], f: PositionsFilter): { treffer: 
   }
   return { treffer, sichtbar };
 }
+
+/** Wie `filtere`, aber für bereits ermittelte Treffer (Filterzeile): ergänzt die Vorfahren, damit der Pfad im Baum bleibt. */
+export function trefferMitVorfahren(positionen: Position[], trefferIds: Set<string>): Set<string> {
+  const nachId = new Map(positionen.map((p) => [p.id, p]));
+  const sichtbar = new Set<string>();
+  for (const id of trefferIds) {
+    let aktuell: Position | undefined = nachId.get(id);
+    while (aktuell && !sichtbar.has(aktuell.id)) {
+      sichtbar.add(aktuell.id);
+      aktuell = aktuell.parent_id ? nachId.get(aktuell.parent_id) : undefined;
+    }
+  }
+  return sichtbar;
+}

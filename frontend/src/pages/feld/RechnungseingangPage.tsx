@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
-import { FileUp, ReceiptText } from "lucide-react";
-import { useRef, useState } from "react";
+import { FileUp, ReceiptText, Search } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -10,31 +10,19 @@ import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
 import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
-import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
+import {
+  EINGANG_KATEGORIE_LABEL as KATEGORIE_LABEL,
+  EINGANG_STATUS_LABEL as STATUS_LABEL,
+  eingangsrechnungFelder,
+} from "../../components/rechnung/rechnungenFilter";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { Select } from "../../components/apple/Select";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-
-const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
-  entwurf: "Entwurf",
-  offen: "Offen",
-  bezahlt: "Bezahlt",
-  storniert: "Storniert",
-};
-
-const KATEGORIE_LABEL: Record<EingangsrechnungKategorie, string> = {
-  wareneinkauf: "Wareneinkauf",
-  betriebskosten: "Betriebskosten",
-  miete: "Miete",
-  personal: "Personal",
-  fahrzeug: "Fahrzeug",
-  versicherung: "Versicherung",
-  sonstiges: "Sonstiges",
-};
 
 export function RechnungseingangPage() {
   const { currentUser, hatRecht } = useAuth();
@@ -46,8 +34,6 @@ export function RechnungseingangPage() {
   const kannErstellen = hatRecht("abrechnung", "erstellen");
 
   const [showForm, setShowForm] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [suche, setSuche] = useState("");
   const [form, setForm] = useState({
     lieferantId: "",
     lieferantName: "",
@@ -64,8 +50,8 @@ export function RechnungseingangPage() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const { data: eingangsrechnungen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
-    queryKey: ["eingangsrechnungen", statusFilter],
-    queryFn: () => eingangsrechnungenApi.list(statusFilter ? { status: statusFilter } : {}),
+    queryKey: ["eingangsrechnungen"],
+    queryFn: () => eingangsrechnungenApi.list(),
     enabled: abrechnungAktiv && kannSehen,
   });
   const { data: lieferanten } = useQuery({
@@ -74,11 +60,28 @@ export function RechnungseingangPage() {
     enabled: abrechnungAktiv && kannSehen,
   });
 
-  // Die Liste kommt ungepaged vom Server, daher reicht eine lokale Suche.
-  const sichtbar = (eingangsrechnungen ?? []).filter((e) => {
-    const q = suche.trim().toLowerCase();
-    return !q || `${e.lieferant_name} ${e.rechnungsnummer_lieferant}`.toLowerCase().includes(q);
-  });
+  // Die Liste kommt ungepaged vom Server, daher läuft alles clientseitig.
+  const felder = useMemo(() => eingangsrechnungFelder(), []);
+  const zustand = useFilterZustand({ felder });
+  const sichtbar = useMemo(
+    () =>
+      sucheAnwenden(
+        filterAnwenden(eingangsrechnungen ?? [], zustand.bedingungen, felder),
+        zustand.sucheVerzoegert,
+        (e) =>
+          [
+            e.lieferant_name,
+            e.rechnungsnummer_lieferant,
+            STATUS_LABEL[e.status],
+            e.kategorie ? KATEGORIE_LABEL[e.kategorie] : "",
+            e.rechnungsdatum,
+            new Date(e.rechnungsdatum).toLocaleDateString("de-DE"),
+            e.betrag_brutto,
+          ].join(" "),
+      ),
+    [eingangsrechnungen, zustand.bedingungen, zustand.sucheVerzoegert, felder],
+  );
+  const filterAktiv = zustand.aktiveAnzahl > 0 || zustand.suche.trim() !== "";
 
   const createMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -278,23 +281,11 @@ export function RechnungseingangPage() {
         </div>
       </AnlegenPanel>
 
-      <SearchField
-        groesse="mobil"
-        value={suche}
-        onChange={setSuche}
-        placeholder="Aussteller oder Rechnungsnummer suchen…"
+      <FilterLeiste
+        felder={felder}
+        zustand={zustand}
+        suchPlatzhalter="Aussteller oder Rechnungsnummer suchen…"
       />
-
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Status der Eingangsrechnung">
-        {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (
-          <FilterChip
-            key={s}
-            label={s === "" ? "Alle" : STATUS_LABEL[s]}
-            aktiv={statusFilter === s}
-            onClick={() => setStatusFilter(s)}
-          />
-        ))}
-      </div>
 
       <div className="space-y-2">
         {isLoading ? (
@@ -303,14 +294,20 @@ export function RechnungseingangPage() {
           <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnungen" onErneut={() => void neuLaden()} />
         ) : sichtbar.length === 0 ? (
           <EmptyState
-            icon={ReceiptText}
+            icon={filterAktiv ? Search : ReceiptText}
             text={
-              suche.trim() || statusFilter
-                ? "Keine Eingangsrechnungen für diese Auswahl."
+              filterAktiv
+                ? zustand.suche.trim() && zustand.aktiveAnzahl === 0
+                  ? `Nichts gefunden für „${zustand.suche.trim()}“.`
+                  : "Keine Treffer für diese Filter."
                 : "Noch keine Eingangsrechnungen. Hier erscheinen Rechnungen deiner Lieferanten."
             }
             action={
-              kannErstellen && !suche.trim() && !statusFilter ? (
+              filterAktiv ? (
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                  Filter zurücksetzen
+                </button>
+              ) : kannErstellen ? (
                 <button type="button" onClick={() => setShowForm(true)} className="btn-touch btn-ap px-4">
                   + Neue Eingangsrechnung
                 </button>

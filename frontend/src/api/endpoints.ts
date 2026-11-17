@@ -799,14 +799,14 @@ export const gespeicherteFilterApi = {
   create: (body: {
     entitaet: GespeicherterFilterEntitaet;
     name: string;
-    filter_json: Record<string, string>;
+    filter_json: Record<string, unknown>;
     ist_standard?: boolean;
   }) =>
     apiFetch<GespeicherterFilter>("/api/gespeicherte-filter", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: Partial<{ name: string; filter_json: Record<string, string>; ist_standard: boolean }>) =>
+  update: (id: string, body: Partial<{ name: string; filter_json: Record<string, unknown>; ist_standard: boolean }>) =>
     apiFetch<GespeicherterFilter>(`/api/gespeicherte-filter/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),

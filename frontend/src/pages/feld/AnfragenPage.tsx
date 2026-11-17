@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox } from "lucide-react";
-import { useId, useState } from "react";
+import { Building2, CalendarDays, CircleDot, Inbox, SearchX, Type, Wrench } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
@@ -10,7 +11,10 @@ import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { SkeletonList } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
-import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -184,45 +188,104 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   );
 }
 
-export function AnfragenPage() {
-  const [statusFilter, setStatusFilter] = useState<"offen" | "alle">("offen");
+const STATUS_LABEL = { offen: "Offen", angenommen: "Angenommen", abgelehnt: "Abgelehnt" } as const;
 
+export function AnfragenPage() {
+  const { hatRecht } = useAuth();
+  const [params] = useSearchParams();
   const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
-    queryKey: ["vorgang-anfragen", statusFilter],
-    queryFn: () => vorgangAnfragenApi.list(statusFilter === "offen" ? "offen" : undefined),
+    queryKey: ["vorgang-anfragen"],
+    queryFn: () => vorgangAnfragenApi.list(),
   });
+  const { data: kunden } = useQuery({
+    queryKey: ["kunden"],
+    queryFn: () => kundenApi.list(),
+    enabled: hatRecht("kunden", "sehen"),
+  });
+
+  const felder = useMemo<FilterFeld<VorgangAnfrage>[]>(
+    () => [
+      { key: "titel", label: "Titel", typ: "text", icon: Type, wert: (a) => a.titel },
+      {
+        key: "status",
+        label: "Status",
+        typ: "auswahl",
+        icon: CircleDot,
+        wert: (a) => a.status,
+        optionen: Object.entries(STATUS_LABEL).map(([wert, label]) => ({ wert, label })),
+      },
+      {
+        key: "leistungstyp",
+        label: "Leistungstyp",
+        typ: "auswahl",
+        icon: Wrench,
+        wert: (a) => a.leistungstyp,
+        optionen: Object.entries(LEISTUNGSTYP_LABEL).map(([wert, label]) => ({ wert, label })),
+      },
+      ...(kunden
+        ? [
+            {
+              key: "kunde",
+              label: "Kunde",
+              typ: "verknuepfung" as const,
+              icon: Building2,
+              wert: (a: VorgangAnfrage) => a.kunde_id,
+              optionen: kunden.map((k) => ({ wert: k.id, label: k.name })),
+            },
+          ]
+        : []),
+      { key: "eingegangen", label: "Eingegangen", typ: "datum", icon: CalendarDays, wert: (a) => a.created_at.slice(0, 10) },
+    ],
+    [kunden],
+  );
+  const zustand = useFilterZustand({ felder });
+
+  // Bisher zeigte die Seite standardmäßig nur offene Anfragen; ohne gespeicherten Filterstand bleibt das so.
+  const startFilterGesetzt = useRef(false);
+  useEffect(() => {
+    if (startFilterGesetzt.current) return;
+    startFilterGesetzt.current = true;
+    if (!params.has("f")) zustand.setBedingungen([{ feld: "status", op: "ist", wert: ["offen"] }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const kundenName = (id: string) => kunden?.find((k) => k.id === id)?.name ?? "";
+  const sichtbar = sucheAnwenden(
+    filterAnwenden(anfragen ?? [], zustand.bedingungen, felder),
+    zustand.sucheVerzoegert,
+    (a) => `${a.titel} ${a.beschreibung ?? ""} ${kundenName(a.kunde_id)}`,
+  );
 
   return (
     <div className="space-y-4">
       <h1 className="text-titel-mobil font-bold text-label">Vorgangsanfragen</h1>
-      <SegmentedControl
-        ariaLabel="Anfragen filtern"
-        groesse="touch"
-        volleBreite
-        optionen={[
-          { wert: "offen", label: "Offen" },
-          { wert: "alle", label: "Alle" },
-        ]}
-        wert={statusFilter}
-        onChange={setStatusFilter}
-      />
+      {anfragen && anfragen.length > 0 && (
+        <FilterLeiste felder={felder} zustand={zustand} suchPlatzhalter="Anfragen durchsuchen…" />
+      )}
 
       {isLoading ? (
         <SkeletonList count={4} />
       ) : ladeFehler && !anfragen ? (
         <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
+        <EmptyState icon={Inbox} text="Noch keine Anfragen vorhanden. Anfragen aus dem Kundenportal erscheinen hier." />
+      ) : sichtbar.length === 0 ? (
         <EmptyState
-          icon={Inbox}
+          icon={SearchX}
           text={
-            statusFilter === "offen"
-              ? "Keine offenen Anfragen. Neue Anfragen aus dem Kundenportal erscheinen hier."
-              : "Noch keine Anfragen vorhanden. Anfragen aus dem Kundenportal erscheinen hier."
+            zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+              ? "Keine Treffer für diese Filter"
+              : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
+          }
+          action={
+            <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+              Filter zurücksetzen
+            </button>
           }
         />
       ) : (
         <div className="space-y-2">
-          {anfragen.map((a) => (
+          {sichtbar.map((a) => (
             <AnfrageKarte key={a.id} anfrage={a} />
           ))}
         </div>

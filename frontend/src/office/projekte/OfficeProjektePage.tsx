@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Search, Table2, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckSquare, CircleDot, FolderKanban, KanbanSquare, Link2, LayoutList, ListTree, Plus, Search, Table2, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -7,9 +7,12 @@ import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { useAuth } from "../../context/AuthContext";
-import { SearchField } from "../../components/apple/SearchField";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
@@ -21,6 +24,23 @@ import { ProjekteTabelle } from "./ProjekteTabelle";
 import { ProjektUebersicht } from "./ProjektUebersicht";
 import { Select } from "../../components/apple/Select";
 import { SkeletonList } from "../../components/Skeleton";
+
+// Schlüssel = Spalten-Id der ProjekteTabelle (Kopf-Hervorhebung); "status" gehört zur Spalte "archiviert".
+const FELDER: FilterFeld<Projekt>[] = [
+  { key: "name", label: "Name", typ: "text", icon: FolderKanban, wert: (p) => p.name },
+  {
+    key: "archiviert",
+    label: "Status",
+    typ: "auswahl",
+    icon: CircleDot,
+    wert: (p) => (p.archiviert ? "archiviert" : "aktiv"),
+    optionen: [
+      { wert: "aktiv", label: "Aktiv" },
+      { wert: "archiviert", label: "Archiviert" },
+    ],
+  },
+  { key: "created_at", label: "Erstellt am", typ: "datum", icon: CalendarDays, wert: (p) => p.created_at },
+];
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-fill text-label2",
@@ -53,7 +73,7 @@ export function OfficeProjektePage() {
   // Kanban bleiben fuer die Detailarbeit an einem einzelnen Projekt.
   const { hatRecht } = useAuth();
   const darfAnlegen = hatRecht("projekte", "erstellen");
-  const [suche, setSuche] = useState("");
+  const zustand = useFilterZustand({ felder: FELDER });
   const [ansicht, setAnsicht] = useState<"tabelle" | "uebersicht" | "kanban">("tabelle");
   const [projektId, setProjektId] = useState<string | null>(null);
   const [projektPanel, setProjektPanel] = useState<Projekt | null>(null);
@@ -80,7 +100,16 @@ export function OfficeProjektePage() {
       setStartTab(suchParams.get("tab") === "zeitplan" ? "zeitplan" : undefined);
       setProjektPanel(treffer);
     }
-    setSuchParams({}, { replace: true });
+    // Nur die Deep-Link-Parameter entfernen: Filter (`f`/`q`) stehen in derselben URL.
+    setSuchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.delete("projekt");
+        n.delete("tab");
+        return n;
+      },
+      { replace: true },
+    );
   }, [suchParams, projekte, setSuchParams]);
 
   const aktivesProjekt = projektId ?? projekte?.[0]?.id ?? null;
@@ -143,10 +172,15 @@ export function OfficeProjektePage() {
   });
 
   // Die Projektliste wird vollständig geladen, daher genügt ein Client-Filter.
-  const gefilterteProjekte = useMemo(() => {
-    const q = suche.trim().toLowerCase();
-    return q ? (projekte ?? []).filter((p) => p.name.toLowerCase().includes(q)) : (projekte ?? []);
-  }, [projekte, suche]);
+  const gefilterteProjekte = useMemo(
+    () =>
+      sucheAnwenden(
+        filterAnwenden(projekte ?? [], zustand.bedingungen, FELDER),
+        zustand.sucheVerzoegert,
+        (p) => [p.name, p.archiviert ? "archiviert" : "aktiv"].join(" "),
+      ),
+    [projekte, zustand.bedingungen, zustand.sucheVerzoegert],
+  );
 
   const leerProjekte = (
     <EmptyState
@@ -196,7 +230,7 @@ export function OfficeProjektePage() {
 
   return (
     <div>
-      <SeitenKopf titel="Projekte">
+      <SeitenKopf titel="Projekte" anzahl={ansicht === "tabelle" ? gefilterteProjekte.length : undefined}>
         {(ansicht === "tabelle" || aktivesProjekt) && (
           <AnsichtUmschalter wert={ansicht} optionen={ANSICHT_UMSCHALTER} onWechsel={setAnsicht} />
         )}
@@ -212,15 +246,6 @@ export function OfficeProjektePage() {
             ))}
           </Select>
         )}
-        {ansicht === "tabelle" && (
-          <SearchField
-            value={suche}
-            onChange={setSuche}
-            placeholder="Projektname…"
-            ariaLabel="Projekte suchen"
-            className="w-56"
-          />
-        )}
         {darfAnlegen && (
           <button onClick={() => setZeigeNeuesProjekt(true)} className={NEU_BUTTON_KLASSE}>
             <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
@@ -228,6 +253,10 @@ export function OfficeProjektePage() {
           </button>
         )}
       </SeitenKopf>
+
+      {ansicht === "tabelle" && (
+        <FilterLeiste felder={FELDER} zustand={zustand} variante="office" suchPlatzhalter="Projekte suchen…" className="mb-4" />
+      )}
 
       <AnlegenPanel offen={zeigeNeuesProjekt} titel="Neues Projekt" onClose={() => setZeigeNeuesProjekt(false)}>
         <form
@@ -283,9 +312,21 @@ export function OfficeProjektePage() {
         !projekte || projekte.length === 0 ? (
           leerProjekte
         ) : gefilterteProjekte.length === 0 ? (
-          <EmptyState icon={Search} text="Kein Projekt entspricht der Suche." />
+          <EmptyState
+            icon={Search}
+            text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+            action={
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                Filter zurücksetzen
+              </button>
+            }
+          />
         ) : (
-          <ProjekteTabelle projekte={gefilterteProjekte} onZeileKlick={setProjektPanel} />
+          <ProjekteTabelle
+            projekte={gefilterteProjekte}
+            onZeileKlick={setProjektPanel}
+            hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
+          />
         )
       ) : !aktivesProjekt ? (
         leerProjekte

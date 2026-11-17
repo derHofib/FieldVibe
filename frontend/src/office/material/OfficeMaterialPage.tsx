@@ -1,21 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, Package, Plus, Search, Truck } from "lucide-react";
-import { useState } from "react";
+import { Boxes, Euro, Gauge, Hash, Package, Plus, Search, Tag as TagIcon, TriangleAlert, Truck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { anlagenApi, lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
-import { FilterChip } from "../../components/apple/FilterChip";
-import { SearchField } from "../../components/apple/SearchField";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { MaterialDetailPage } from "../../pages/feld/MaterialDetailPage";
 import { LagerorteVerwaltung, MaterialPage, MaterialZeile } from "../../pages/feld/MaterialPage";
 import type { Material } from "../../types";
-import { filtereMaterial, istUnterbestand } from "../../utils/geschaeft";
+import { istUnterbestand } from "../../utils/geschaeft";
 import { ListeMitPanel } from "../ListeMitPanel";
 import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { Select } from "../../components/apple/Select";
@@ -30,10 +32,6 @@ export function OfficeMaterialPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hatRecht } = useAuth();
-  const [suche, setSuche] = useState("");
-  const [lieferantId, setLieferantId] = useState("");
-  const [tagId, setTagId] = useState("");
-  const [nurUnterbestand, setNurUnterbestand] = useState(false);
   const [neu, setNeu] = useState(false);
   const [ansicht, setAnsicht] = useState<"material" | "bestellwesen">("material");
   const [lagerorteZeigen, setLagerorteZeigen] = useState(false);
@@ -48,7 +46,47 @@ export function OfficeMaterialPage() {
   const lagerorte = (alleAnlagen ?? []).filter((a) => a.objekttyp !== "kundenanlage");
 
   const lieferantName = (m: Material) => lieferanten?.find((l) => l.id === m.lieferant_id)?.name;
-  const gefiltert = filtereMaterial(data ?? [], { suche, lieferantId, tagId, nurUnterbestand });
+
+  // Schlüssel = Spalten-Key (SortierbareTabelle hebt den Kopf hervor); "tag" und "unterbestand" haben keine Spalte.
+  const felder = useMemo<FilterFeld<Material>[]>(
+    () => [
+      { key: "bezeichnung", label: "Bezeichnung", typ: "text", icon: Package, wert: (m) => m.bezeichnung },
+      { key: "artikelnummer", label: "Art.-Nr.", typ: "text", icon: Hash, wert: (m) => m.artikelnummer },
+      {
+        key: "lieferant",
+        label: "Lieferant",
+        typ: "verknuepfung",
+        icon: Truck,
+        wert: (m) => m.lieferant_id,
+        optionen: (lieferanten ?? []).map((l) => ({ wert: l.id, label: l.name })),
+      },
+      {
+        key: "tag",
+        label: "Tag",
+        typ: "liste",
+        icon: TagIcon,
+        wert: (m) => m.tag_ids,
+        optionen: (tags ?? []).map((t) => ({ wert: t.id, label: `#${t.label}` })),
+      },
+      { key: "bestand", label: "Bestand", typ: "zahl", icon: Boxes, wert: (m) => Number(m.bestand_gesamt) },
+      { key: "mindestbestand", label: "Mindestbestand", typ: "zahl", icon: Gauge, wert: (m) => Number(m.mindestbestand) },
+      {
+        key: "preis",
+        label: "Einzelpreis",
+        typ: "betrag",
+        icon: Euro,
+        wert: (m) => (m.einzelpreis ? Number(m.einzelpreis) : null),
+      },
+      { key: "unterbestand", label: "Unterbestand", typ: "janein", icon: TriangleAlert, wert: (m) => istUnterbestand(m) },
+    ],
+    [lieferanten, tags],
+  );
+  const zustand = useFilterZustand({ felder });
+  const gefiltert = sucheAnwenden(
+    filterAnwenden(data ?? [], zustand.bedingungen, felder),
+    zustand.sucheVerzoegert,
+    (m) => [m.bezeichnung, m.artikelnummer, lieferantName(m), m.einheit].join(" "),
+  );
   const gewaehltesMaterial = id ? (data ?? []).find((m) => m.id === id) : undefined;
 
   const spalten: Spalte<Material>[] = [
@@ -125,13 +163,14 @@ export function OfficeMaterialPage() {
           }}
         />
         {ansicht === "material" && (
-          <SearchField
-            value={suche}
-            onChange={setSuche}
-            placeholder="Bezeichnung oder Art.-Nr.…"
-            ariaLabel="Material suchen"
-            className="w-64"
-          />
+          <button
+            type="button"
+            onClick={() => setLagerorteZeigen((v) => !v)}
+            aria-expanded={lagerorteZeigen}
+            className="text-sekundaer font-medium text-tint-text hover:underline"
+          >
+            Lagerorte verwalten
+          </button>
         )}
         {hatRecht("material", "erstellen") && (
           <button
@@ -152,53 +191,14 @@ export function OfficeMaterialPage() {
         <MaterialPage nurBestellwesen />
       ) : (
         <>
-          {(data ?? []).length > 0 && (
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <FilterChip
-                label="Nur Unterbestand"
-                aktiv={nurUnterbestand}
-                onClick={() => setNurUnterbestand((v) => !v)}
-              />
-              <label className="sr-only" htmlFor="material-lieferant">
-                Lieferant filtern
-              </label>
-              <Select className="w-auto" groesse="kompakt"
-                id="material-lieferant"
-                value={lieferantId}
-                onChange={(e) => setLieferantId(e.target.value)}
-              >
-                <option value="">Alle Lieferanten</option>
-                {(lieferanten ?? []).map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </Select>
-              <label className="sr-only" htmlFor="material-tag">
-                Tag filtern
-              </label>
-              <Select className="w-auto" groesse="kompakt"
-                id="material-tag"
-                value={tagId}
-                onChange={(e) => setTagId(e.target.value)}
-              >
-                <option value="">Alle Tags</option>
-                {(tags ?? []).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    #{t.label}
-                  </option>
-                ))}
-              </Select>
-              <button
-                type="button"
-                onClick={() => setLagerorteZeigen((v) => !v)}
-                aria-expanded={lagerorteZeigen}
-                className="ml-auto text-sekundaer font-medium text-tint-text hover:underline"
-              >
-                Lagerorte verwalten
-              </button>
-            </div>
-          )}
+          <div className="mb-4">
+            <FilterLeiste
+              felder={felder}
+              zustand={zustand}
+              variante="office"
+              suchPlatzhalter="Material suchen…"
+            />
+          </div>
           {lagerorteZeigen && (
             <div className="mb-4">
               <LagerorteVerwaltung
@@ -222,7 +222,15 @@ export function OfficeMaterialPage() {
               text="Noch kein Material erfasst. Mit „Neues Material“ legst du den ersten Artikel an."
             />
           ) : gefiltert.length === 0 ? (
-            <EmptyState icon={Search} text="Kein Material entspricht Suche oder Filter." />
+            <EmptyState
+              icon={Search}
+              text={zustand.sucheVerzoegert && zustand.bedingungen.length === 0 ? `Nichts gefunden für „${zustand.sucheVerzoegert}“` : "Keine Treffer für diese Filter"}
+              action={
+                <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-4 py-2 text-sekundaer">
+                  Filter zurücksetzen
+                </button>
+              }
+            />
           ) : (
             <SortierbareTabelle
               zeilen={gefiltert}
@@ -231,6 +239,7 @@ export function OfficeMaterialPage() {
               gewaehlt={id}
               onWaehlen={(m) => navigate(`/material/${m.id}`)}
               startSortierung={{ key: "bezeichnung" }}
+              hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
             />
           )
         }

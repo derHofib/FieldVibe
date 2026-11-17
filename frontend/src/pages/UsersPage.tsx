@@ -1,6 +1,6 @@
-import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, LogOut, Send, ShieldOff, Trash2, UserCheck, UserX, Users } from "lucide-react";
+import { Ban, Building2, CircleDot, LogOut, Mail, Send, Shield, ShieldOff, Trash2, User as UserIcon, UserCheck, UserX, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AktionsMenue, type AktionsMenueEintrag } from "../components/AktionsMenue";
@@ -8,7 +8,10 @@ import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import { Sheet } from "../components/apple/Sheet";
-import { SearchField } from "../components/apple/SearchField";
+import { filterAnwenden, sucheAnwenden } from "../components/filter/auswerten";
+import { FilterLeiste } from "../components/filter/FilterLeiste";
+import type { FilterFeld } from "../components/filter/typen";
+import { useFilterZustand } from "../components/filter/useFilterZustand";
 import { AnlegenPanel } from "../components/AnlegenPanel";
 import { EmptyState } from "../components/EmptyState";
 import { FELD_KLASSE, NEU_BUTTON_KLASSE } from "../components/FormularFeld";
@@ -71,6 +74,10 @@ function UsersTitel() {
   return <h1 className="text-titel-mobil font-bold text-label">Accounts</h1>;
 }
 
+function rolleText(u: User): string {
+  return u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role];
+}
+
 export function UsersPage() {
   const uid = useId();
   const bestaetigen = useBestaetigung();
@@ -78,7 +85,6 @@ export function UsersPage() {
   const queryClient = useQueryClient();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const istPlattform = isSuperAdmin && !isImpersonating;
-  const [suche, setSuche] = useState("");
   const [zeigeNeu, setZeigeNeu] = useState(false);
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -135,6 +141,46 @@ export function UsersPage() {
     queryKey: ["users", "einladungen"],
     queryFn: usersApi.listEinladungen,
   });
+
+  const felder = useMemo<FilterFeld<User>[]>(
+    () => [
+      { key: "name", label: "Name", typ: "text", icon: UserIcon, wert: (u) => u.name },
+      { key: "email", label: "E-Mail", typ: "text", icon: Mail, wert: (u) => u.email },
+      {
+        key: "rolle",
+        label: "Rolle",
+        typ: "auswahl",
+        icon: Shield,
+        wert: rolleText,
+        optionen: [...new Set((users ?? []).map(rolleText))].sort().map((r) => ({ wert: r, label: r })),
+      },
+      ...(isSuperAdmin
+        ? [
+            {
+              key: "mandant",
+              label: "Mandant",
+              typ: "verknuepfung" as const,
+              icon: Building2,
+              wert: (u: User) => u.mandant_id,
+              optionen: (mandanten ?? []).map((m) => ({ wert: m.id, label: m.name })),
+            },
+          ]
+        : []),
+      {
+        key: "status",
+        label: "Status",
+        typ: "auswahl",
+        icon: CircleDot,
+        wert: (u) => (u.aktiv ? "aktiv" : "deaktiviert"),
+        optionen: [
+          { wert: "aktiv", label: "Aktiv", status: "erledigt" },
+          { wert: "deaktiviert", label: "Deaktiviert" },
+        ],
+      },
+    ],
+    [users, mandanten, isSuperAdmin],
+  );
+  const zustand = useFilterZustand({ felder });
 
   const createMutation = useMutation({
     meta: { erfolg: "Angelegt" },
@@ -303,14 +349,13 @@ export function UsersPage() {
   ];
 
   const mandantNameById = new Map((mandanten ?? []).map((m) => [m.id, m.name]));
-  const suchbegriff = suche.trim().toLowerCase();
-  const sichtbareUsers = (users ?? []).filter(
-    (u) =>
-      !suchbegriff ||
-      [u.name, u.email, u.role === "custom" ? u.account_typ_name ?? "" : ROLE_LABEL[u.role]].some((t) =>
-        t.toLowerCase().includes(suchbegriff),
-      ),
+  const wirkt = (key: string) => zustand.bedingungen.some((b) => b.feld === key);
+  const sichtbareUsers = sucheAnwenden(
+    filterAnwenden(users ?? [], zustand.bedingungen, felder),
+    zustand.sucheVerzoegert,
+    (u) => `${u.name} ${u.email} ${rolleText(u)}`,
   );
+  const filterAktiv = zustand.bedingungen.length > 0 || zustand.sucheVerzoegert !== "";
   const accountTypNameById = new Map((accountTypen ?? []).map((t) => [t.id, t.name]));
   const einladungRolleLabel = (e: Einladung) =>
     e.rolle === "custom" ? accountTypNameById.get(e.account_typ_id ?? "") ?? "Account-Typ" : ROLE_LABEL[e.rolle ?? "mandant_admin"];
@@ -320,7 +365,6 @@ export function UsersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         {istPlattform ? <span /> : <UsersTitel />}
         <div className="flex flex-wrap items-center gap-2">
-          <SearchField value={suche} onChange={setSuche} placeholder="Accounts suchen" ariaLabel="Accounts suchen" groesse="mobil" className="w-56" />
           <button type="button" onClick={anlegenOeffnen} className={NEU_BUTTON_KLASSE}>
             {kannEingeladenWerden ? "+ Kollegen einladen" : "+ Neuer Account"}
           </button>
@@ -518,6 +562,13 @@ export function UsersPage() {
         <h2 className="mb-4 text-zeile font-bold text-label" onClick={aufUeberschriftKlick}>
           Accounts
         </h2>
+        <FilterLeiste
+          felder={felder}
+          zustand={zustand}
+          suchPlatzhalter="Accounts suchen"
+          variante={istPlattform ? "office" : undefined}
+          className="mb-3"
+        />
         {versteckteAnzeigen && (
           <p className="mb-2 flex items-center gap-2 text-sekundaer text-label2">
             Versteckte Accounts werden angezeigt
@@ -535,12 +586,18 @@ export function UsersPage() {
           <EmptyState
             icon={Users}
             text={
-              suchbegriff
-                ? "Kein Account passt zur Suche."
+              filterAktiv
+                ? zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+                  ? "Keine Treffer für diese Filter"
+                  : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
                 : "Noch keine Accounts angelegt. Lege den ersten Account an, damit sich jemand anmelden kann."
             }
             action={
-              suchbegriff ? undefined : (
+              filterAktiv ? (
+                <button type="button" onClick={zustand.zuruecksetzen} className={NEU_BUTTON_KLASSE}>
+                  Filter zurücksetzen
+                </button>
+              ) : (
                 <button type="button" onClick={anlegenOeffnen} className={NEU_BUTTON_KLASSE}>
                   {kannEingeladenWerden ? "+ Kollegen einladen" : "+ Neuer Account"}
                 </button>
@@ -576,11 +633,11 @@ export function UsersPage() {
           <table className="w-full text-left">
             <thead className="text-sekundaer text-label2">
               <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">E-Mail</th>
-                <th className="px-4 py-3">Rolle</th>
-                {isSuperAdmin && <th className="px-4 py-3">Mandant</th>}
-                <th className="px-4 py-3">Status</th>
+                <th className={`px-4 py-3 ${wirkt("name") ? "text-tint-text" : ""}`}>Name</th>
+                <th className={`px-4 py-3 ${wirkt("email") ? "text-tint-text" : ""}`}>E-Mail</th>
+                <th className={`px-4 py-3 ${wirkt("rolle") ? "text-tint-text" : ""}`}>Rolle</th>
+                {isSuperAdmin && <th className={`px-4 py-3 ${wirkt("mandant") ? "text-tint-text" : ""}`}>Mandant</th>}
+                <th className={`px-4 py-3 ${wirkt("status") ? "text-tint-text" : ""}`}>Status</th>
                 <th className="px-4 py-3 text-right">Aktion</th>
               </tr>
             </thead>
