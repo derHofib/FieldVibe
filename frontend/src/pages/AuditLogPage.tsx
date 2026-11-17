@@ -1,23 +1,24 @@
-import { useId, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollText } from "lucide-react";
+import { Activity, CalendarDays, Building2, ScrollText } from "lucide-react";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { aktivitaetLabel } from "../utils/anzeigeNamen";
 import { auditLabel } from "../utils/auditLabel";
+import { datumServerParameter } from "../utils/datumFilterParameter";
 import { EmptyState } from "../components/EmptyState";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
-import { Select } from "../components/apple/Select";
+import { zuServerParametern } from "../components/filter/auswerten";
+import { FilterLeiste } from "../components/filter/FilterLeiste";
+import type { FilterFeld } from "../components/filter/typen";
+import { useFilterZustand } from "../components/filter/useFilterZustand";
+
+type AuditZeile = Awaited<ReturnType<typeof auditLogApi.list>>[number];
 
 export function AuditLogPage() {
-  const uid = useId();
   const { isImpersonating } = useAuth();
-  const [mandantId, setMandantId] = useState("");
-  const [aktion, setAktion] = useState("");
-  const [von, setVon] = useState("");
-  const [bis, setBis] = useState("");
 
   // Beide Endpoints sind super_admin-only: ein Impersonation-Token ist als
   // mandant_admin gescoped und wuerde hier 403en -- diese Seite unmountet
@@ -28,78 +29,45 @@ export function AuditLogPage() {
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
+
+  const felder = useMemo<FilterFeld<AuditZeile>[]>(
+    () => [
+      {
+        key: "mandant",
+        label: "Mandant",
+        typ: "verknuepfung",
+        icon: Building2,
+        operatoren: ["ist"],
+        einzelwert: true,
+        optionen: (mandanten ?? []).map((m) => ({ wert: m.id, label: m.name })),
+      },
+      { key: "aktion", label: "Aktion", typ: "text", icon: Activity, operatoren: ["enthaelt"], vorschlaege: ["login_als_mandant"] },
+      { key: "zeit", label: "Zeitpunkt", typ: "datum", icon: CalendarDays, operatoren: ["am", "vor", "nach", "zwischen", "relativ"] },
+    ],
+    [mandanten],
+  );
+  const zustand = useFilterZustand({ felder });
+  const serverParameter = zuServerParametern(zustand.bedingungen, {
+    mandant: (b): Record<string, string> => {
+      const id = Array.isArray(b.wert) ? b.wert[0] : undefined;
+      return id ? { mandant_id: id } : {};
+    },
+    aktion: (b): Record<string, string> => (typeof b.wert === "string" && b.wert.trim() ? { aktion: b.wert.trim() } : {}),
+    zeit: datumServerParameter,
+  });
   const { data: entries, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
-    queryKey: ["audit-log", { mandantId, aktion, von, bis }],
-    queryFn: () =>
-      auditLogApi.list({
-        mandant_id: mandantId || undefined,
-        aktion: aktion || undefined,
-        von: von || undefined,
-        bis: bis || undefined,
-      }),
+    queryKey: ["audit-log", serverParameter],
+    queryFn: () => auditLogApi.list(serverParameter),
     enabled: !isImpersonating,
   });
 
   const mandantNameById = new Map((mandanten ?? []).map((m) => [m.id, m.name]));
+  const filterAktiv = zustand.bedingungen.length > 0;
+  const wirkt = (key: string) => zustand.bedingungen.some((b) => b.feld === key);
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-fliess font-medium text-label">Mandant</label>
-          <Select className="w-auto" id={`${uid}-0`}
-            value={mandantId}
-            onChange={(e) => setMandantId(e.target.value)}
-          >
-            <option value="">Alle</option>
-            {mandanten?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <label htmlFor={`${uid}-1`} className="mb-1 block text-fliess font-medium text-label">Aktion</label>
-          <input id={`${uid}-1`}
-            value={aktion}
-            onChange={(e) => setAktion(e.target.value)}
-            placeholder="z.B. login_als_mandant"
-            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
-          />
-        </div>
-        <div>
-          <label htmlFor={`${uid}-2`} className="mb-1 block text-fliess font-medium text-label">Von</label>
-          <input id={`${uid}-2`}
-            type="date"
-            value={von}
-            onChange={(e) => setVon(e.target.value)}
-            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
-          />
-        </div>
-        <div>
-          <label htmlFor={`${uid}-3`} className="mb-1 block text-fliess font-medium text-label">Bis</label>
-          <input id={`${uid}-3`}
-            type="date"
-            value={bis}
-            onChange={(e) => setBis(e.target.value)}
-            className="btn-touch border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
-          />
-        </div>
-        {(mandantId || aktion || von || bis) && (
-          <button
-            onClick={() => {
-              setMandantId("");
-              setAktion("");
-              setVon("");
-              setBis("");
-            }}
-            className="btn-touch rounded-md px-3 py-2 text-sekundaer font-medium text-label2 hover:bg-fill"
-          >
-            Filter zurücksetzen
-          </button>
-        )}
-      </div>
+      <FilterLeiste felder={felder} zustand={zustand} variante="office" ohneSuche className="mb-4" />
 
       {isLoading ? (
         <SkeletonList count={4} />
@@ -109,9 +77,16 @@ export function AuditLogPage() {
         <EmptyState
           icon={ScrollText}
           text={
-            mandantId || aktion || von || bis
-              ? "Keine Einträge zu diesen Filtern."
+            filterAktiv
+              ? "Keine Treffer für diese Filter"
               : "Noch keine Einträge im Audit-Log. Hier erscheinen Anmeldungen als Mandant und andere Plattform-Aktionen."
+          }
+          action={
+            filterAktiv ? (
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+                Filter zurücksetzen
+              </button>
+            ) : undefined
           }
         />
       ) : (
@@ -139,9 +114,9 @@ export function AuditLogPage() {
             <table className="w-full text-left">
               <thead className="bg-fill text-fliess text-label">
                 <tr>
-                  <th className="px-4 py-3">Zeitpunkt</th>
-                  <th className="px-4 py-3">Mandant</th>
-                  <th className="px-4 py-3">Aktion</th>
+                  <th className={`px-4 py-3 ${wirkt("zeit") ? "text-tint-text" : ""}`}>Zeitpunkt</th>
+                  <th className={`px-4 py-3 ${wirkt("mandant") ? "text-tint-text" : ""}`}>Mandant</th>
+                  <th className={`px-4 py-3 ${wirkt("aktion") ? "text-tint-text" : ""}`}>Aktion</th>
                   <th className="px-4 py-3">Entität</th>
                   <th className="px-4 py-3">Details</th>
                 </tr>

@@ -3,7 +3,6 @@ import type { FehlerberichtArt, FehlerberichtListItem, FehlerberichtSchweregrad,
 import { OFFENE_STATUS } from "./darstellung";
 
 export type StatusFilter = FehlerberichtStatus | "offen" | "alle";
-export type Zeitraum = "" | "24h" | "7d" | "30d";
 
 /** Reiter der Liste; "alle" lädt ohne art-Filter. */
 export type ArtReiter = FehlerberichtArt | "alle";
@@ -14,18 +13,13 @@ export interface ListenFilter {
   schweregrad: FehlerberichtSchweregrad | "";
   mandantId: string;
   q: string;
-  zeitraum: Zeitraum;
+  /** Untergrenze der Meldezeit als ISO-Zeitstempel; leer = kein Zeitfilter. */
+  seit: string;
 }
 
-export const STANDARD_FILTER: ListenFilter = { art: "fehler", status: "offen", schweregrad: "", mandantId: "", q: "", zeitraum: "" };
+export const STANDARD_FILTER: ListenFilter = { art: "fehler", status: "offen", schweregrad: "", mandantId: "", q: "", seit: "" };
 
-const ZEITRAUM_STUNDEN: Record<Exclude<Zeitraum, "">, number> = { "24h": 24, "7d": 24 * 7, "30d": 24 * 30 };
 const SEITENGROESSE = 100;
-
-function seitIso(zeitraum: Zeitraum): string | undefined {
-  if (!zeitraum) return undefined;
-  return new Date(Date.now() - ZEITRAUM_STUNDEN[zeitraum] * 3_600_000).toISOString();
-}
 
 /** Das Backend kennt nur EINEN Status je Abfrage -- "offen" (neu/gesichtet/
  * in_arbeit) wird deshalb als parallele Mehrfachabfrage geladen und
@@ -36,7 +30,7 @@ export async function ladeBerichte(filter: ListenFilter): Promise<FehlerberichtL
     schweregrad: filter.schweregrad || undefined,
     mandant_id: filter.mandantId || undefined,
     q: filter.q.trim() || undefined,
-    seit: seitIso(filter.zeitraum),
+    seit: filter.seit || undefined,
     limit: SEITENGROESSE,
   };
   if (filter.status === "offen") {

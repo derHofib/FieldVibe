@@ -1,17 +1,20 @@
 import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2 } from "lucide-react";
+import { Briefcase, Building2, CircleDot, Link2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import type { MandantStatus } from "../types";
+import type { Mandant, MandantStatus } from "../types";
 import { AnlegenPanel } from "../components/AnlegenPanel";
 import { EmptyState } from "../components/EmptyState";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { SkeletonList } from "../components/Skeleton";
-import { SearchField } from "../components/apple/SearchField";
+import { filterAnwenden, sucheAnwenden } from "../components/filter/auswerten";
+import { FilterLeiste } from "../components/filter/FilterLeiste";
+import type { FilterFeld } from "../components/filter/typen";
+import { useFilterZustand } from "../components/filter/useFilterZustand";
 import { StatusPille } from "../components/apple/StatusPille";
 import type { StatusKey } from "../components/apple/status";
 import { FELD_KLASSE, NEU_BUTTON_KLASSE } from "../components/FormularFeld";
@@ -31,6 +34,20 @@ const STATUS_KEY: Record<MandantStatus, StatusKey> = {
 // Entspricht dem Backend-Muster für Mandanten-Slugs (Subdomain).
 const SLUG_MUSTER = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 
+const FELDER: FilterFeld<Mandant>[] = [
+  { key: "name", label: "Name", typ: "text", icon: Building2, wert: (m) => m.name },
+  { key: "slug", label: "Slug", typ: "text", icon: Link2, wert: (m) => m.slug },
+  { key: "branche", label: "Branche", typ: "text", icon: Briefcase, wert: (m) => m.branche },
+  {
+    key: "status",
+    label: "Status",
+    typ: "auswahl",
+    icon: CircleDot,
+    wert: (m) => m.status,
+    optionen: (Object.keys(STATUS_LABEL) as MandantStatus[]).map((w) => ({ wert: w, label: STATUS_LABEL[w], status: STATUS_KEY[w] })),
+  },
+];
+
 export function MandantenPage() {
   const uid = useId();
   const queryClient = useQueryClient();
@@ -41,7 +58,7 @@ export function MandantenPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [branche, setBranche] = useState("elektro");
-  const [suche, setSuche] = useState("");
+  const zustand = useFilterZustand({ felder: FELDER });
 
   const { data: mandanten, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["mandanten"],
@@ -79,15 +96,17 @@ export function MandantenPage() {
     createMutation.mutate({ name, slug, branche });
   }
 
-  const suchbegriff = suche.trim().toLowerCase();
-  const sichtbar = (mandanten ?? []).filter(
-    (m) => !suchbegriff || [m.name, m.slug, m.branche ?? ""].some((t) => t.toLowerCase().includes(suchbegriff)),
+  const sichtbar = sucheAnwenden(
+    filterAnwenden(mandanten ?? [], zustand.bedingungen, FELDER),
+    zustand.sucheVerzoegert,
+    (m) => `${m.name} ${m.slug} ${m.branche ?? ""}`,
   );
+  const wirkt = (key: string) => zustand.bedingungen.some((b) => b.feld === key);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <SearchField value={suche} onChange={setSuche} placeholder="Mandanten suchen" ariaLabel="Mandanten suchen" groesse="mobil" className="w-56" />
+        <FilterLeiste felder={FELDER} zustand={zustand} suchPlatzhalter="Mandanten suchen" variante="office" className="min-w-0 flex-1" />
         <button type="button" onClick={() => setZeigeNeu(true)} className={NEU_BUTTON_KLASSE}>
           + Neuer Mandant
         </button>
@@ -170,7 +189,19 @@ export function MandantenPage() {
             }
           />
         ) : sichtbar.length === 0 ? (
-          <EmptyState icon={Building2} text="Kein Mandant passt zur Suche." />
+          <EmptyState
+            icon={Building2}
+            text={
+              zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+                ? "Keine Treffer für diese Filter"
+                : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
+            }
+            action={
+              <button type="button" onClick={zustand.zuruecksetzen} className={NEU_BUTTON_KLASSE}>
+                Filter zurücksetzen
+              </button>
+            }
+          />
         ) : (
           <>
             <ul className="space-y-2 md:hidden">
@@ -192,10 +223,10 @@ export function MandantenPage() {
               <table className="w-full text-left">
                 <thead className="bg-fill text-fliess text-label">
                   <tr>
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Slug</th>
-                    <th className="px-4 py-3">Branche</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className={`px-4 py-3 ${wirkt("name") ? "text-tint-text" : ""}`}>Name</th>
+                    <th className={`px-4 py-3 ${wirkt("slug") ? "text-tint-text" : ""}`}>Slug</th>
+                    <th className={`px-4 py-3 ${wirkt("branche") ? "text-tint-text" : ""}`}>Branche</th>
+                    <th className={`px-4 py-3 ${wirkt("status") ? "text-tint-text" : ""}`}>Status</th>
                     <th className="px-4 py-3">Aktion</th>
                   </tr>
                 </thead>

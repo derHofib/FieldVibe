@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, CalendarDays, ClipboardList, Plus, Settings2 } from "lucide-react";
+import { CalendarCheck, CalendarDays, CircleDot, ClipboardList, Plus, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { ApiError } from "../../api/client";
@@ -21,6 +21,9 @@ import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
 import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
 import { Select } from "../../components/apple/Select";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Tab = "offen" | "kalender" | "alle" | "anspruch";
@@ -280,10 +283,28 @@ function KalenderAnsicht() {
   );
 }
 
+// Das Backend nimmt nur einen Status je Abfrage, daher nur "ist" mit Einzelwert; eine Textsuche gibt es dort nicht.
+const ALLE_FELDER: FilterFeld<unknown>[] = [
+  {
+    key: "status",
+    label: "Status",
+    typ: "auswahl",
+    icon: CircleDot,
+    operatoren: ["ist"],
+    einzelwert: true,
+    optionen: (Object.keys(ABWESENHEIT_STATUS_LABEL) as AbwesenheitStatus[]).map((w) => ({
+      wert: w,
+      label: ABWESENHEIT_STATUS_LABEL[w],
+    })),
+  },
+];
+
 function AlleAntraege() {
   const bestaetigen = useBestaetigung();
   const [jahr, setJahr] = useState(new Date().getFullYear());
-  const [status, setStatus] = useState<AbwesenheitStatus | "">("");
+  const zustand = useFilterZustand({ felder: ALLE_FELDER });
+  const statusWert = zustand.bedingungen.find((b) => b.feld === "status")?.wert;
+  const status = (Array.isArray(statusWert) ? statusWert[0] : "") as AbwesenheitStatus | "";
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["abwesenheiten", "alle", jahr, status],
     queryFn: () =>
@@ -305,27 +326,24 @@ function AlleAntraege() {
             onChange={(e) => setJahr(Number(e.target.value) || jahr)}
           />
         </label>
-        <label className="text-sekundaer font-medium text-label2">
-          Status
-          <Select className="mt-1 w-auto" groesse="kompakt"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as AbwesenheitStatus | "")}
-          >
-            <option value="">Alle</option>
-            {(Object.keys(ABWESENHEIT_STATUS_LABEL) as AbwesenheitStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {ABWESENHEIT_STATUS_LABEL[s]}
-              </option>
-            ))}
-          </Select>
-        </label>
+        <FilterLeiste felder={ALLE_FELDER} zustand={zustand} variante="office" ohneSuche className="min-w-0 flex-1" />
       </div>
       {isLoading ? (
         <SkeletonList count={4} />
       ) : error ? (
         <FehlerZustand fehler={error} was="Die Anträge" onErneut={() => void refetch()} />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={CalendarCheck} text="Keine Anträge im gewählten Zeitraum." />
+        <EmptyState
+          icon={CalendarCheck}
+          text={status ? "Keine Treffer für diese Filter" : "Keine Anträge im gewählten Zeitraum."}
+          action={
+            status ? (
+              <button type="button" onClick={zustand.zuruecksetzen} className="btn-ap px-3 py-1.5 text-sekundaer">
+                Filter zurücksetzen
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
         <Karte className="p-1">
           <ul className="divide-y divide-sep">

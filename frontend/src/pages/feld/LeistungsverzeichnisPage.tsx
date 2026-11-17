@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, ClipboardList, Copy, Plus, SearchX, Settings2, X } from "lucide-react";
-import { useId, useState } from "react";
+import { AlignLeft, ChevronRight, ClipboardList, Copy, FileText, Plus, SearchX, Settings2, Users, X } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { kundenApi, leistungsverzeichnisseApi, mandantEinstellungenApi } from "../../api/endpoints";
@@ -8,7 +8,10 @@ import { ApiError } from "../../api/client";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
-import { SearchField } from "../../components/apple/SearchField";
+import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import type { FilterFeld } from "../../components/filter/typen";
+import { useFilterZustand } from "../../components/filter/useFilterZustand";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { SeitenKopf, TabellenRahmen } from "../../office/OfficeUi";
@@ -332,7 +335,32 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
   const { hatRecht } = useAuth();
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const [neuesLv, setNeuesLv] = useState(false);
-  const [suche, setSuche] = useState("");
+
+  const { data: kunden } = useQuery({
+    queryKey: ["kunden-alle"],
+    queryFn: () => kundenApi.list(),
+    enabled: hatRecht("kunden", "sehen"),
+  });
+  const felder = useMemo<FilterFeld<Leistungsverzeichnis>[]>(
+    () => [
+      { key: "name", label: "Name", typ: "text", icon: FileText, wert: (lv) => lv.name },
+      { key: "beschreibung", label: "Beschreibung", typ: "text", icon: AlignLeft, wert: (lv) => lv.beschreibung },
+      ...(kunden
+        ? [
+            {
+              key: "kunde",
+              label: "Kunden-Zuweisung",
+              typ: "verknuepfung" as const,
+              icon: Users,
+              wert: (lv: Leistungsverzeichnis) => lv.kunden_ids,
+              optionen: kunden.map((k) => ({ wert: k.id, label: k.name })),
+            },
+          ]
+        : []),
+    ],
+    [kunden],
+  );
+  const zustand = useFilterZustand({ felder });
 
   const { data: lvs, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["leistungsverzeichnisse"],
@@ -346,15 +374,17 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
     </button>
   );
 
-  const sichtbar = (lvs ?? []).filter((lv) => {
-    const q = suche.trim().toLowerCase();
-    return !q || `${lv.name} ${lv.beschreibung ?? ""}`.toLowerCase().includes(q);
-  });
+  const sichtbar = sucheAnwenden(
+    filterAnwenden(lvs ?? [], zustand.bedingungen, felder),
+    zustand.sucheVerzoegert,
+    (lv) => `${lv.name} ${lv.beschreibung ?? ""}`,
+  );
+  const wirkt = (key: string) => zustand.bedingungen.some((b) => b.feld === key);
 
   return (
     <div className="space-y-4">
       {layout === "dicht" ? (
-        <SeitenKopf titel="Leistungsverzeichnisse" anzahl={lvs?.length}>
+        <SeitenKopf titel="Leistungsverzeichnisse" anzahl={lvs ? sichtbar.length : undefined}>
           {neuKnopf}
         </SeitenKopf>
       ) : (
@@ -367,12 +397,11 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
       {kannVerwalten && <StandardKalkulation layout={layout} />}
 
       {(lvs ?? []).length > 0 && (
-        <SearchField
-          groesse={layout === "dicht" ? "desktop" : "mobil"}
-          value={suche}
-          onChange={setSuche}
-          placeholder="Leistungsverzeichnis suchen…"
-          className={layout === "dicht" ? "max-w-sm" : ""}
+        <FilterLeiste
+          felder={felder}
+          zustand={zustand}
+          suchPlatzhalter="Leistungsverzeichnis suchen…"
+          variante={layout === "dicht" ? "office" : undefined}
         />
       )}
 
@@ -393,14 +422,35 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
           }
         />
       ) : sichtbar.length === 0 ? (
-        <EmptyState icon={SearchX} text="Kein Leistungsverzeichnis entspricht der Suche." />
+        <EmptyState
+          icon={SearchX}
+          text={
+            zustand.bedingungen.length > 0 || !zustand.sucheVerzoegert
+              ? "Keine Treffer für diese Filter"
+              : `Nichts gefunden für „${zustand.sucheVerzoegert}"`
+          }
+          action={
+            <button type="button" onClick={zustand.zuruecksetzen} className="btn-touch btn-ap px-4">
+              Filter zurücksetzen
+            </button>
+          }
+        />
       ) : layout === "dicht" ? (
         <TabellenRahmen>
           <table className="w-full border-collapse text-fliess">
             <thead>
               <tr className="border-b border-sepstrong">
-                {["Name", "Beschreibung", "Kunden-Zuweisung"].map((k) => (
-                  <th key={k} className="px-3 py-2 text-left text-meta font-medium tracking-wide text-label2 uppercase">
+                {(
+                  [
+                    ["name", "Name"],
+                    ["beschreibung", "Beschreibung"],
+                    ["kunde", "Kunden-Zuweisung"],
+                  ] as const
+                ).map(([key, k]) => (
+                  <th
+                    key={k}
+                    className={`px-3 py-2 text-left text-meta font-medium tracking-wide uppercase ${wirkt(key) ? "text-tint-text" : "text-label2"}`}
+                  >
                     {k}
                   </th>
                 ))}

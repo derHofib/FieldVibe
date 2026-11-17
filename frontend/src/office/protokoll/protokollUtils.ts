@@ -23,6 +23,7 @@ export interface ProtokollFilter {
   aktion?: string;
   entity_type?: string;
   akteur_typ?: string;
+  actor_user_id?: string;
 }
 
 export interface KettenFehler {

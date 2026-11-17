@@ -98,16 +98,36 @@ describe("FehlerberichtListe", () => {
     await waitFor(() => expect(fehlerberichteApi.liste).toHaveBeenCalled());
     expect(vi.mocked(fehlerberichteApi.liste).mock.calls[0][0]?.status).toBeUndefined();
 
+  });
+
+  it("Filterleiste filtert: Schweregrad-Bedingung geht als Parameter an den Server", async () => {
+    rendere();
+    await waitFor(() => expect(screen.getByText("Titel a")).toBeTruthy());
     vi.mocked(fehlerberichteApi.liste).mockClear();
-    fireEvent.change(screen.getByLabelText("Schweregrad"), { target: { value: "hoch" } });
+    fireEvent.click(screen.getByRole("button", { name: "Filter hinzufügen" }));
+    fireEvent.click(screen.getByRole("option", { name: /^Schweregrad/ }));
+    fireEvent.click(screen.getByRole("option", { name: "ist" }));
+    fireEvent.click(screen.getByRole("option", { name: "Hoch" }));
+    fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
     await waitFor(() => expect(fehlerberichteApi.liste).toHaveBeenCalled());
-    expect(vi.mocked(fehlerberichteApi.liste).mock.calls[0][0]?.schweregrad).toBe("hoch");
+    expect(vi.mocked(fehlerberichteApi.liste).mock.calls.every(([f]) => f?.schweregrad === "hoch")).toBe(true);
+  });
+
+  it("Suche geht als q an den Server", async () => {
+    rendere();
+    await waitFor(() => expect(screen.getByText("Titel a")).toBeTruthy());
+    vi.mocked(fehlerberichteApi.liste).mockClear();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Zähler" } });
+    await waitFor(() =>
+      expect(vi.mocked(fehlerberichteApi.liste).mock.calls.some(([f]) => f?.q === "Zähler")).toBe(true),
+    );
   });
 
   it("blendet den Mandanten-Filter in der Office-Variante aus", async () => {
     rendere(false);
     await waitFor(() => expect(screen.getByText("Titel a")).toBeTruthy());
-    expect(screen.queryByLabelText("Mandant")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Filter hinzufügen" }));
+    expect(screen.queryByRole("option", { name: /^Mandant/ })).toBeNull();
     expect(mandantenApi.list).not.toHaveBeenCalled();
     expect(screen.queryByText("Elektro Muster")).toBeNull();
   });
