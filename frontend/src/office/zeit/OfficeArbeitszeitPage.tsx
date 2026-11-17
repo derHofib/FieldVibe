@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, ChevronDown, ChevronRight, Clock, Lock, Plus } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarCheck,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Lock,
+  Plus,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -7,6 +17,7 @@ import { ApiError } from "../../api/client";
 import { abwesenheitenApi, arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { LaeuftPille } from "../../components/apple/LaeuftPille";
+import { AktionsMenue, type AktionsMenueEintrag } from "../../components/AktionsMenue";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
@@ -15,7 +26,17 @@ import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { TeamKennzahlen } from "../../pages/feld/StatistikPage";
 import type { Zeiterfassung } from "../../types";
-import { ABWESENHEIT_ART_LABEL } from "../../utils/abwesenheit";
+import { ABWESENHEIT_ART_LABEL, formatTage, kontoHinweis, resturlaubHinweis } from "../../utils/abwesenheit";
+import {
+  ARBEITSZEIT_KACHELN,
+  type ArbeitszeitKachelId,
+  kachelAuswahlAusSpeicher,
+  kachelAuswahlFuerSpeicher,
+  kachelSpeicherKey,
+  kachelUmschalten,
+  sichtbareKacheln,
+  standardKacheln,
+} from "../../utils/arbeitszeitKacheln";
 import {
   SALDO_TON_KLASSE,
   formatSaldo,
@@ -39,9 +60,10 @@ import {
   tageDesMonats,
   toDateInput,
 } from "../../utils/zeiterfassung";
-import { KennzahlKarte, Karte, SeitenKopf } from "../OfficeUi";
+import { Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
-import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
+import { AbwesenheitZeile } from "./AbwesenheitUi";
+import { KpiKachel, type KpiKachelProps } from "./KpiKachel";
 
 const WOCHENTAG_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -159,18 +181,91 @@ export function OfficeArbeitszeitPage() {
     void statistikNeuLaden();
   }
 
+  const [auswahl, setAuswahl] = useState<Set<ArbeitszeitKachelId>>(() => {
+    try {
+      return kachelAuswahlAusSpeicher(localStorage.getItem(kachelSpeicherKey(currentUser?.id)));
+    } catch {
+      return standardKacheln();
+    }
+  });
+  function kachelSchalten(id: ArbeitszeitKachelId) {
+    const neu = kachelUmschalten(auswahl, id);
+    setAuswahl(neu);
+    try {
+      localStorage.setItem(kachelSpeicherKey(currentUser?.id), kachelAuswahlFuerSpeicher(neu));
+    } catch {
+      // Speicher gesperrt (privater Modus): Auswahl gilt nur für diese Sitzung.
+    }
+  }
+  const kachelMenue: AktionsMenueEintrag[] = ARBEITSZEIT_KACHELN.map((k) => ({
+    label: `${k.gruppe}: ${k.label}`,
+    aktiv: auswahl.has(k.id),
+    onClick: () => kachelSchalten(k.id),
+  }));
+
+  const statistikSichtbar = kannAuswerten && !!statistik;
+  const std = (v: number) => `${formatStundenAlsHHMM(v)} Std.`;
+  const saldoWert = (s: typeof monatsSaldo) => (s ? formatSaldo(s.saldo_stunden) : "—");
+  const saldoKlasse = (s: typeof monatsSaldo) => (s ? SALDO_TON_KLASSE[saldoTon(s.saldo_stunden)] : "text-label");
+  const urlaubInfo = konto ? kontoHinweis(konto) : null;
+  const kacheln: Partial<Record<ArbeitszeitKachelId, KpiKachelProps>> = {};
+  if (kannErfassen) {
+    kacheln.ist_monat = { label: "Ist (Monat)", wert: std(monatssumme), icon: Clock };
+    if (hatSoll) {
+      kacheln.soll_monat = {
+        label: "Soll (Monat)",
+        wert: monatsSaldo ? std(parseStunden(monatsSaldo.soll_stunden)) : "—",
+      };
+      kacheln.saldo_monat = {
+        label: "Saldo (Monat)",
+        wert: saldoWert(monatsSaldo),
+        wertKlasse: saldoKlasse(monatsSaldo),
+        zusatz: saldoBisTag && saldoBisTag < bis ? "bis heute" : undefined,
+      };
+      kacheln.saldo_jahr = {
+        label: "Saldo Jahr",
+        wert: saldoWert(jahresSaldo),
+        wertKlasse: saldoKlasse(jahresSaldo),
+        zusatz: "bis heute",
+      };
+    }
+    if (konto) {
+      kacheln.urlaub_verbleibend = {
+        label: "Urlaub verbleibend",
+        wert: formatTage(konto.verbleibend),
+        zusatz: urlaubInfo?.ueberzogen ? "überzogen" : "Tage",
+        wertKlasse: urlaubInfo?.ueberzogen ? "text-st-fehlt" : "text-label",
+      };
+      kacheln.urlaub_beantragt = { label: "Urlaub beantragt", wert: formatTage(konto.beantragt), zusatz: "Tage, offen" };
+      kacheln.urlaub_resturlaub = { label: "Resturlaub", wert: formatTage(konto.resturlaub), zusatz: resturlaubHinweis(konto) ?? "Tage" };
+      kacheln.urlaub_genommen = { label: "Urlaub genommen", wert: formatTage(konto.genommen), zusatz: "Tage, genehmigt" };
+      kacheln.urlaub_anspruch = { label: "Urlaubsanspruch", wert: formatTage(konto.anspruch), zusatz: "Tage" };
+    }
+  }
+  if (statistikSichtbar) {
+    kacheln.woche = { label: "Diese Woche", wert: std(Number(statistik!.wochenstunden)) };
+    kacheln.monat_laufend = { label: "Laufender Monat", wert: std(Number(statistik!.monatsstunden)) };
+    kacheln.jahr = { label: "Dieses Jahr", wert: std(Number(statistik!.jahresstunden)) };
+  }
+  const sichtbar = sichtbareKacheln(auswahl, new Set(Object.keys(kacheln) as ArbeitszeitKachelId[]));
+  const urlaubHinweis = konto && sichtbar.some((id) => id.startsWith("urlaub_")) ? urlaubInfo?.text : null;
+  const teamSichtbar = kannAuswerten && hatRecht("statistik", "sehen") && auswahl.has("team");
+  const abwesenheitenSichtbar = kannErfassen && !!meineAbwesenheiten && meineAbwesenheiten.length > 0;
+
   const monatsName = new Date(jahr, monat0, 1).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
   return (
-    <div className="space-y-4">
+    <div>
       <SeitenKopf titel="Arbeitszeit">
-        <button type="button" onClick={() => monatWechseln(-1)} className="btn-ap px-3 py-1.5">
-          ← Monat
-        </button>
-        <span className="min-w-36 text-center text-fliess font-semibold text-label">{monatsName}</span>
-        <button type="button" onClick={() => monatWechseln(1)} className="btn-ap px-3 py-1.5">
-          Monat →
-        </button>
+        <div className="flex items-center gap-1 rounded-[var(--radius-ap-sm)] bg-fill p-0.5">
+          <button type="button" onClick={() => monatWechseln(-1)} aria-label="Vorheriger Monat" className="btn-ap-toolbar">
+            <ChevronLeft size={16} strokeWidth={2} />
+          </button>
+          <span className="min-w-32 text-center text-sekundaer font-semibold text-label">{monatsName}</span>
+          <button type="button" onClick={() => monatWechseln(1)} aria-label="Nächster Monat" className="btn-ap-toolbar">
+            <ChevronRight size={16} strokeWidth={2} />
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -181,58 +276,44 @@ export function OfficeArbeitszeitPage() {
         >
           Heute
         </button>
-        {kannErfassen && (
-          <button type="button" onClick={() => setAbwesenheitAm(heuteTag)} className="btn-ap btn-ap-primary px-3 py-1.5">
-            Abwesenheit beantragen
-          </button>
-        )}
         {kannErfassen && darfVerwalten && (
           <Link to="/abwesenheiten" className="btn-ap inline-flex items-center gap-1 px-3 py-1.5">
             <CalendarCheck size={14} strokeWidth={2} aria-hidden="true" /> Abwesenheiten
           </Link>
         )}
+        <AktionsMenue
+          label="Kacheln anpassen"
+          richtung="unten"
+          ausloeser={() => (
+            <span className="btn-ap inline-flex items-center gap-1 px-3 py-1.5">
+              <SlidersHorizontal size={14} strokeWidth={2} aria-hidden="true" /> Kacheln
+            </span>
+          )}
+          eintraege={kachelMenue}
+        />
+        {kannErfassen && (
+          <button type="button" onClick={() => setAbwesenheitAm(heuteTag)} className="btn-ap btn-ap-primary px-3 py-1.5">
+            Abwesenheit beantragen
+          </button>
+        )}
       </SeitenKopf>
 
-      {kannAuswerten && hatRecht("statistik", "sehen") && <TeamKennzahlen />}
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KennzahlKarte label="Arbeitszeit im Monat" wert={`${formatStundenAlsHHMM(monatssumme)} Std.`} icon={Clock} />
-        {kannAuswerten && statistik && (
-          <>
-            <KennzahlKarte label="Diese Woche" wert={`${formatStundenAlsHHMM(Number(statistik.wochenstunden))} Std.`} />
-            <KennzahlKarte label="Aktueller Monat" wert={`${formatStundenAlsHHMM(Number(statistik.monatsstunden))} Std.`} />
-            <KennzahlKarte label="Dieses Jahr" wert={`${formatStundenAlsHHMM(Number(statistik.jahresstunden))} Std.`} />
-          </>
-        )}
-      </div>
-
-      {kannErfassen && hatSoll && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <KennzahlKarte
-            label="Überstunden-Saldo (Monat)"
-            wert={monatsSaldo ? formatSaldo(monatsSaldo.saldo_stunden) : "—"}
-            wertKlasse={monatsSaldo ? SALDO_TON_KLASSE[saldoTon(monatsSaldo.saldo_stunden)] : "text-label"}
-            zusatz={saldoBisTag && saldoBisTag < bis ? "bis heute" : undefined}
-          />
-          <KennzahlKarte
-            label="Soll / Ist (Monat)"
-            wert={
-              monatsSaldo
-                ? `${formatStundenAlsHHMM(parseStunden(monatsSaldo.soll_stunden))} / ${formatStundenAlsHHMM(parseStunden(monatsSaldo.ist_stunden))}`
-                : "—"
-            }
-            zusatz="in Std."
-          />
-          <KennzahlKarte
-            label="Saldo seit Jahresbeginn"
-            wert={jahresSaldo ? formatSaldo(jahresSaldo.saldo_stunden) : "—"}
-            wertKlasse={jahresSaldo ? SALDO_TON_KLASSE[saldoTon(jahresSaldo.saldo_stunden)] : "text-label"}
-            zusatz="bis heute"
-          />
+      {sichtbar.length > 0 && (
+        <div className="mb-4 grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
+          {sichtbar.map((id) => {
+            const k = kacheln[id];
+            return k ? <KpiKachel key={id} {...k} /> : null;
+          })}
         </div>
       )}
+      {kannErfassen && urlaubHinweis && (
+        <p role="alert" className="mb-4 flex items-center gap-1.5 text-fliess font-medium text-st-fehlt">
+          <AlertTriangle size={15} strokeWidth={2} aria-hidden="true" />
+          {urlaubHinweis}
+        </p>
+      )}
       {kannErfassen && keinSoll && (
-        <p className="text-sekundaer text-label2">
+        <p className="mb-4 text-sekundaer text-label2">
           Keine Soll-Zeit hinterlegt.
           {currentUser?.darf_abwesenheiten_verwalten && (
             <>
@@ -245,41 +326,8 @@ export function OfficeArbeitszeitPage() {
         </p>
       )}
 
-      {kannErfassen && konto && (
-        <section aria-label={`Urlaubskonto ${jahr}`} className="space-y-2">
-          <h2 className="text-fliess font-semibold text-label">Urlaubskonto {jahr}</h2>
-          <UrlaubskontoKacheln konto={konto} />
-        </section>
-      )}
-
-      {kannErfassen && meineAbwesenheiten && meineAbwesenheiten.length > 0 && (
-        <section aria-label="Meine Abwesenheiten" className="space-y-2">
-          <h2 className="text-fliess font-semibold text-label">Meine Abwesenheiten</h2>
-          <Karte className="p-1">
-            <ul className="divide-y divide-sep">
-              {meineAbwesenheiten.map((a) => (
-                <AbwesenheitZeile key={a.id} a={a}>
-                  {a.status === "offen" && (
-                    <button
-                      type="button"
-                      className="text-sekundaer font-medium text-tint-text disabled:opacity-50"
-                      disabled={zurueckziehen.isPending}
-                      onClick={() => zurueckziehen.mutate(a.id)}
-                    >
-                      Zurückziehen
-                    </button>
-                  )}
-                  {a.status === "genehmigt" && !darfVerwalten && (
-                    <span className="text-sekundaer text-label2">Stornierung über das Büro</span>
-                  )}
-                </AbwesenheitZeile>
-              ))}
-            </ul>
-          </Karte>
-          {abwesenheitFehler && <p className="text-fliess text-st-fehlt">{abwesenheitFehler}</p>}
-        </section>
-      )}
-
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-4">
       {kannErfassen && monatLaedt && <SkeletonList count={5} />}
       {kannErfassen && monatFehler && (
         <FehlerZustand fehler={monatFehler} was="Die Zeiteinträge" onErneut={() => void monatNeuLaden()} />
@@ -434,6 +482,40 @@ export function OfficeArbeitszeitPage() {
           })}
         </Karte>
       )}
+        </div>
+        {(teamSichtbar || abwesenheitenSichtbar) && (
+          <aside className="min-w-0 space-y-4">
+            {teamSichtbar && <TeamKennzahlen />}
+            {abwesenheitenSichtbar && (
+              <section aria-label="Meine Abwesenheiten" className="space-y-2">
+                <h2 className="text-fliess font-semibold text-label">Meine Abwesenheiten</h2>
+                <Karte className="p-1">
+                  <ul className="divide-y divide-sep">
+                    {meineAbwesenheiten!.map((a) => (
+                      <AbwesenheitZeile key={a.id} a={a}>
+                        {a.status === "offen" && (
+                          <button
+                            type="button"
+                            className="text-sekundaer font-medium text-tint-text disabled:opacity-50"
+                            disabled={zurueckziehen.isPending}
+                            onClick={() => zurueckziehen.mutate(a.id)}
+                          >
+                            Zurückziehen
+                          </button>
+                        )}
+                        {a.status === "genehmigt" && !darfVerwalten && (
+                          <span className="text-sekundaer text-label2">Stornierung über das Büro</span>
+                        )}
+                      </AbwesenheitZeile>
+                    ))}
+                  </ul>
+                </Karte>
+                {abwesenheitFehler && <p className="text-fliess text-st-fehlt">{abwesenheitFehler}</p>}
+              </section>
+            )}
+          </aside>
+        )}
+      </div>
 
       {neuAm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">

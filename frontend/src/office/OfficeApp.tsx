@@ -143,7 +143,7 @@ export function OfficeApp() {
           <Route
             path="/statistik"
             element={
-              <div className="max-w-[1400px]">
+              <div className="max-w-[1760px]">
                 <OfficeArbeitszeitPage />
               </div>
             }
