@@ -161,6 +161,9 @@ export function OfficeApp() {
             }
           />
 
+          {/* Profil braucht zwei Spalten, deshalb ausserhalb der schmalen Lesespalte */}
+          <Route path="/profil" element={<ProfilePage layout="office" />} />
+
           {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
           <Route element={<SchmaleSpalte />}>
           <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
@@ -170,7 +173,6 @@ export function OfficeApp() {
           <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
           <Route path="/neu" element={<NewVorgangPage />} />
           <Route path="/suche" element={<SearchPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
