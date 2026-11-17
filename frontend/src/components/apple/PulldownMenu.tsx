@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -9,6 +10,8 @@ export interface PulldownEintrag {
   /** Destruktive Aktion: rot statt Tint-Hover, steht üblicherweise am Ende. */
   destruktiv?: boolean;
   disabled?: boolean;
+  /** Auswahlmenü: gesetzt = Eintrag ist ein Radio-Eintrag, true markiert die aktuelle Wahl. */
+  aktiv?: boolean;
   onSelect: () => void;
 }
 export type PulldownItem = PulldownEintrag | "trenner";
@@ -117,7 +120,8 @@ export function PulldownMenu({
                   ref={(el) => {
                     itemRefs.current[idx] = el;
                   }}
-                  role="menuitem"
+                  role={item.aktiv === undefined ? "menuitem" : "menuitemradio"}
+                  aria-checked={item.aktiv}
                   type="button"
                   disabled={item.disabled}
                   onClick={() => {
@@ -133,6 +137,7 @@ export function PulldownMenu({
                 >
                   {Icon && <Icon size={15} strokeWidth={2} className="shrink-0" />}
                   <span className="flex-1 text-sekundaer">{item.label}</span>
+                  {item.aktiv && <Check size={14} strokeWidth={2.5} className="shrink-0" aria-hidden="true" />}
                   {item.kuerzel && (
                     <span className="text-label2 group-hover:text-white/80">{item.kuerzel}</span>
                   )}
