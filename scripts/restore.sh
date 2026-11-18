@@ -225,7 +225,7 @@ case "$MODUS" in
       # Worker bleiben gestoppt, statt gegen ein nicht verifiziertes Schema zu starten.
       DIENSTE_GESTOPPT=0
       if (( rc == 2 )); then
-        fehler "Die Datenbank-Rollen (App/System/Owner) existieren auf diesem Server nicht vollstaendig -- Eigentum und Rechte konnten nicht gesetzt werden. Zuerst scripts/app_rolle_einrichten.sh --nur-rolle (bzw. scripts/deploy.sh) ausfuehren, danach scripts/app_rolle_einrichten.sh --nur-besitz. Backend und Worker bleiben gestoppt."
+        fehler "Die Datenbank-Rollen (App/System/Owner) existieren auf diesem Server nicht vollstaendig -- Eigentum und Rechte konnten nicht gesetzt werden. Zuerst scripts/app_rolle_einrichten.sh --nur-rolle (bzw. scripts/deploy.sh) ausfuehren, danach scripts/app_rolle_einrichten.sh --nur-besitz und 'docker compose start backend worker' (mit denselben -f-Dateien wie beim Start). Backend und Worker bleiben gestoppt."
       else
         fehler "Eigentum/Rechte nach dem Restore nicht in Ordnung (siehe oben). Backend und Worker bleiben gestoppt. Nachholen: scripts/app_rolle_einrichten.sh --nur-besitz, danach 'docker compose start backend worker'."
       fi
