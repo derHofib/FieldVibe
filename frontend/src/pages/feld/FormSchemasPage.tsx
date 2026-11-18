@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
+import { ClaudeMarke } from "../../components/formModul/ClaudeMarke";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
@@ -117,7 +118,10 @@ export function FormSchemasPage() {
           {schemas.map((s) => (
             <button key={s.id} onClick={() => navigate(`/form-schemas/${s.id}`)} className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left">
               <div>
-                <div className="text-fliess font-medium text-label">{s.name}</div>
+                <div className="flex items-center gap-2 text-fliess font-medium text-label">
+                  {s.name}
+                  {s.erstellt_via === "ki" && <ClaudeMarke klein />}
+                </div>
                 <div className="text-sekundaer text-label2">Version {s.version}</div>
               </div>
               <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label">{STATUS_LABEL[s.status]}</span>

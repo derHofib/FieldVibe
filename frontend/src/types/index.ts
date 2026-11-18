@@ -2194,6 +2194,9 @@ export type FormPraesentationsTyp =
   | "computed_text";
 export type FormLogicEffekt = "show" | "hide" | "require" | "readonly" | "set_value";
 export type FormSubmissionStatus = "offen" | "abgeschlossen";
+// Herkunft: "ki" = ueber den MCP (Claude) angelegt, serverseitig aus dem
+// signierten Token gesetzt -- nie per Request aenderbar.
+export type FormErstelltVia = "app" | "ki";
 
 export interface FormGroup {
   id: string;
@@ -2271,6 +2274,11 @@ export interface FormSchema {
   status: FormSchemaStatus;
   vorgaenger_id: string | null;
   erstellt_von: string | null;
+  erstellt_via: FormErstelltVia;
+  erstellt_von_name: string | null;
+  felder_anzahl: number;
+  leistungstypen: { leistungstyp: Leistungstyp; pflicht_vor_abschluss: boolean }[];
+  ausgefuellt_anzahl: number;
   created_at: string;
   updated_at: string;
 }
@@ -2354,9 +2362,37 @@ export interface FormSubmission {
   status: FormSubmissionStatus;
   ausgefuellt_von: string | null;
   kundensichtbar: boolean;
+  erstellt_via: FormErstelltVia;
   abgeschlossen_am: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface FormSubmissionUebersicht {
+  id: string;
+  schema_id: string;
+  schema_name: string;
+  schema_version: number;
+  vorgang_id: string;
+  vorgangsnummer: string;
+  vorgang_titel: string;
+  kunde_name: string | null;
+  status: FormSubmissionStatus;
+  erstellt_via: FormErstelltVia;
+  ausgefuellt_von_name: string | null;
+  kundensichtbar: boolean;
+  created_at: string;
+  abgeschlossen_am: string | null;
+}
+
+export interface FormSubmissionUebersichtParams {
+  seite?: number;
+  status?: FormSubmissionStatus;
+  schema_id?: string;
+  von?: string;
+  bis?: string;
+  suche?: string;
+  techniker_id?: string;
 }
 
 // --- Boards (Miro-artiges Whiteboard, Office) -----------------------------
