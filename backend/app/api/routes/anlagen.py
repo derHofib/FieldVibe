@@ -23,6 +23,7 @@ from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
+from app.services import vorgang_verknuepfung_service
 from app.services import papierkorb_service
 from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.zuweisung_service import erlaubte_kunde_ids
@@ -249,7 +250,9 @@ async def get_anlage_profil(
     return AnlageProfil(
         **AnlageRead.model_validate(anlage).model_dump(),
         kunde=KundeRead.model_validate(kunde) if kunde is not None else None,
-        vorgaenge=list(vorgaenge_result.scalars().all()),
+        vorgaenge=await vorgang_verknuepfung_service.als_read(
+            session, auth, list(vorgaenge_result.scalars().all())
+        ),
         tags=list(tags_result.scalars().all()),
         vorgaenge_nach_status=vorgaenge_nach_status,
         zeiterfassung_stunden_gesamt=stunden_gesamt,

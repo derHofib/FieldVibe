@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
+from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
+from app.models.projekt import Projekt
 from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.termin import Termin
@@ -19,6 +21,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
+from app.services import vorgang_verknuepfung_service
 from app.services.zuweisung_service import vorgang_scope_filter
 
 router = APIRouter(
@@ -124,6 +127,7 @@ async def get_feed(
     anlage_id: UUID | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
     projekt_id: UUID | None = Query(default=None),
+    auftrag_id: UUID | None = Query(default=None),
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
@@ -181,8 +185,15 @@ async def get_feed(
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if standort_id:
         stmt = stmt.where(Vorgang.standort_id == standort_id)
+    if projekt_id or auftrag_id:
+        # Ohne Recht duerfen eigenstaendige Vorgaenge ueber den Filter nicht auffindbar sein.
+        eigenstaendig_klausel = await vorgang_verknuepfung_service.projekt_filter_sichtbarkeit(session, auth)
+        if eigenstaendig_klausel is not None:
+            stmt = stmt.where(eigenstaendig_klausel)
     if projekt_id:
         stmt = stmt.where(Vorgang.projekt_id == projekt_id)
+    if auftrag_id:
+        stmt = stmt.where(Vorgang.auftrag_id == auftrag_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -313,16 +324,35 @@ async def get_feed(
         )
         portal_ersteller_by_id = {z.id: z for z in portal_ersteller_result.scalars().all()}
 
+    # Ohne das Recht bleiben Ereignisse, die Projekt-/Auftragsnamen oder die
+    # Eigenstaendigkeit verraten, aus der Vorschau heraus.
+    darf_verknuepfung = await vorgang_verknuepfung_service.hat_eigenstaendig_recht(session, auth)
+
+    projekt_namen: dict[UUID, str] = {}
+    projekt_ids = {v.projekt_id for v in page if v.projekt_id}
+    if projekt_ids:
+        zeilen = await session.execute(select(Projekt.id, Projekt.name).where(Projekt.id.in_(projekt_ids)))
+        projekt_namen = {z[0]: z[1] for z in zeilen}
+    auftrag_titel: dict[UUID, str] = {}
+    auftrag_ids = {v.auftrag_id for v in page if v.auftrag_id}
+    if auftrag_ids:
+        zeilen = await session.execute(select(Auftrag.id, Auftrag.titel).where(Auftrag.id.in_(auftrag_ids)))
+        auftrag_titel = {z[0]: z[1] for z in zeilen}
+
     last_events_by_vorgang: dict[UUID, VorgangEvent] = {}
     if vorgang_ids:
         # DISTINCT ON (Postgres) statt einer eigenen Query pro Vorgang: eine
         # Row pro vorgang_id, die mit der groessten id (= neuestes Event)
         # dank passender order_by-Reihenfolge.
+        last_event_stmt = select(VorgangEvent).where(VorgangEvent.vorgang_id.in_(vorgang_ids))
+        if not darf_verknuepfung:
+            last_event_stmt = last_event_stmt.where(
+                VorgangEvent.event_type.not_in(vorgang_verknuepfung_service.VERKNUEPFUNG_EVENT_TYPEN)
+            )
         last_event_result = await session.execute(
-            select(VorgangEvent)
-            .where(VorgangEvent.vorgang_id.in_(vorgang_ids))
-            .order_by(VorgangEvent.vorgang_id, VorgangEvent.id.desc())
-            .distinct(VorgangEvent.vorgang_id)
+            last_event_stmt.order_by(VorgangEvent.vorgang_id, VorgangEvent.id.desc()).distinct(
+                VorgangEvent.vorgang_id
+            )
         )
         last_events_by_vorgang = {e.vorgang_id: e for e in last_event_result.scalars().all()}
 
@@ -383,6 +413,7 @@ async def get_feed(
             zugewiesener = ersteller_by_id.get(vorgang.zugewiesener_user_id)
             zugewiesener_name = zugewiesener.name if zugewiesener else None
 
+        zuordnung_sichtbar = darf_verknuepfung or not vorgang.verknuepfung_eigenstaendig
         items.append(
             FeedCard(
                 id=vorgang.id,
@@ -406,6 +437,8 @@ async def get_feed(
                 timer_laeuft=vorgang.id in vorgaenge_mit_laufendem_timer,
                 dauerauftrag_id=vorgang.dauerauftrag_id,
                 zugewiesener_name=zugewiesener_name,
+                projekt_name=projekt_namen.get(vorgang.projekt_id) if zuordnung_sichtbar and vorgang.projekt_id else None,
+                auftrag_titel=auftrag_titel.get(vorgang.auftrag_id) if zuordnung_sichtbar and vorgang.auftrag_id else None,
             )
         )
 

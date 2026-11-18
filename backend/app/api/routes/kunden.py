@@ -44,6 +44,7 @@ from app.schemas.user import MIN_PASSWORT_LAENGE, UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
+from app.services import vorgang_verknuepfung_service
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services import angebot_service, datev_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
@@ -269,7 +270,9 @@ async def get_kunde_profil(
     return KundeProfil(
         **KundeRead.model_validate(kunde).model_dump(),
         anlagen=list(anlagen_result.scalars().all()),
-        vorgaenge=list(vorgaenge_result.scalars().all()),
+        vorgaenge=await vorgang_verknuepfung_service.als_read(
+            session, auth, list(vorgaenge_result.scalars().all())
+        ),
         tags=list(tags_result.scalars().all()),
         techniker=list(techniker_result.scalars().all()),
     )

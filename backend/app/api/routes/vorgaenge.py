@@ -39,6 +39,7 @@ from app.schemas.vorgang import (
     VorgangRead,
     VorgangUpdate,
 )
+from app.schemas.vorgang_verknuepfung import EigenstaendigBody, VorgangVerknuepfung
 from app.schemas.vorgang_abhaengigkeit import (
     VorgangAbhaengigkeitCreate,
     VorgangAbhaengigkeitenListe,
@@ -60,6 +61,7 @@ from app.services.vorgang_completion_service import (
     close_vorgang,
     create_folge_vorgang,
 )
+from app.services import vorgang_verknuepfung_service as verknuepfung
 from app.services.zuweisung_service import (
     require_kunde_zugewiesen,
     require_vorgang_zugriff,
@@ -100,7 +102,7 @@ async def list_vorgaenge(
     limit: int = Query(default=50, ge=1, le=200),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[Vorgang]:
+) -> list[VorgangRead]:
     stmt = (
         select(Vorgang)
         .where(Vorgang.geloescht_am.is_(None))
@@ -117,6 +119,10 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.standort_id == standort_id)
     if parent_vorgang_id:
         stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
+    if projekt_id or auftrag_id:
+        eigenstaendig_klausel = await verknuepfung.projekt_filter_sichtbarkeit(session, auth)
+        if eigenstaendig_klausel is not None:
+            stmt = stmt.where(eigenstaendig_klausel)
     if projekt_id:
         stmt = stmt.where(Vorgang.projekt_id == projekt_id)
     if auftrag_id:
@@ -140,7 +146,7 @@ async def list_vorgaenge(
     if scope_klausel is not None:
         stmt = stmt.where(scope_klausel)
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await verknuepfung.als_read(session, auth, list(result.scalars().all()))
 
 
 async def _validate_anlage_fuer_kunde(
@@ -238,7 +244,7 @@ async def create_vorgang(
     response: Response,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Vorgang:
+) -> VorgangRead:
     if body.client_uuid is not None:
         # Checked up front statt als IntegrityError abgefangen: ein
         # Sync-Retry aus der Offline-Outbox (App wurde waehrend des Syncs
@@ -252,9 +258,18 @@ async def create_vorgang(
         existing_vorgang = existing.scalar_one_or_none()
         if existing_vorgang is not None:
             response.status_code = status.HTTP_200_OK
-            return existing_vorgang
+            return await verknuepfung.als_read_einzeln(session, auth, existing_vorgang)
 
     await _validate_references(session, auth, body)
+    projekt_id, auftrag_id = await verknuepfung.kette_aufloesen(
+        session,
+        aktuell_projekt_id=None,
+        aktuell_auftrag_id=None,
+        aendert_auftrag=True,
+        neu_auftrag_id=body.auftrag_id,
+        aendert_projekt=body.projekt_id is not None,
+        neu_projekt_id=body.projekt_id,
+    )
 
     vorgangsnummer = body.vorgangsnummer or await next_vorgangsnummer(session, auth.mandant_id)
     vorgang = Vorgang(
@@ -265,8 +280,8 @@ async def create_vorgang(
         standort_id=body.standort_id,
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
-        projekt_id=body.projekt_id,
-        auftrag_id=body.auftrag_id,
+        projekt_id=projekt_id,
+        auftrag_id=auftrag_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         abrechnungsart=body.abrechnungsart,
@@ -311,7 +326,7 @@ async def create_vorgang(
     await event_bus.publish(
         auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "erstellt"}
     )
-    return vorgang
+    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
 
 
 async def _require_vorgang_zugriff(
@@ -398,12 +413,64 @@ async def get_vorgang(
     vorgang_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Vorgang:
+) -> VorgangRead:
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
-    return await _mit_zugewiesenem_namen(session, vorgang)
+    await _mit_zugewiesenem_namen(session, vorgang)
+    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
+
+
+@router.get(
+    "/{vorgang_id}/verknuepfung",
+    response_model=VorgangVerknuepfung,
+    dependencies=[Depends(require_recht("vorgaenge", "sehen"))],
+)
+async def get_vorgang_verknuepfung(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangVerknuepfung:
+    """Herkunft, Rueckmeldung an den Auftrag und Geschwister fuer den Tab
+    "Projekt". 404, wenn der Vorgang weder Projekt noch Auftrag hat oder die
+    Zuordnung fuer den Nutzer ausgeblendet ist (eigenstaendig, ohne Recht)."""
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+    return await verknuepfung.verknuepfung_lesen(session, auth, vorgang)
+
+
+@router.post(
+    "/{vorgang_id}/eigenstaendig",
+    response_model=VorgangRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "eigenstaendig_setzen")),
+    ],
+)
+async def vorgang_eigenstaendig_setzen(
+    vorgang_id: UUID,
+    body: EigenstaendigBody,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangRead:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang, "eigenstaendig_setzen")
+    geaendert = await verknuepfung.eigenstaendig_setzen(
+        session, vorgang, body.eigenstaendig, user_id=auth.user_id
+    )
+    await session.flush()
+    if geaendert:
+        await session.refresh(vorgang)
+        await event_bus.publish(
+            auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
+        )
+    await _mit_zugewiesenem_namen(session, vorgang)
+    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
 
 
 @router.get("/{vorgang_id}/anlagen", response_model=list[AnlageRead])
@@ -555,7 +622,7 @@ async def update_vorgang(
     body: VorgangUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Vorgang:
+) -> VorgangRead:
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
@@ -578,6 +645,28 @@ async def update_vorgang(
         )
     alter_status = vorgang.status
     alter_kunde_id = vorgang.kunde_id
+    alte_zuordnung = (vorgang.projekt_id, vorgang.auftrag_id)
+
+    if "projekt_id" in changes or "auftrag_id" in changes:
+        # Regel "eine Kette": der Auftrag bestimmt das Projekt. Unveraenderte
+        # Werte (PATCH mit vollem Formular) sind kein Zuordnungswechsel.
+        neue_zuordnung = await verknuepfung.kette_aufloesen(
+            session,
+            aktuell_projekt_id=vorgang.projekt_id,
+            aktuell_auftrag_id=vorgang.auftrag_id,
+            aendert_auftrag="auftrag_id" in changes,
+            neu_auftrag_id=changes.get("auftrag_id"),
+            aendert_projekt="projekt_id" in changes,
+            neu_projekt_id=changes.get("projekt_id"),
+        )
+        changes.pop("projekt_id", None)
+        changes.pop("auftrag_id", None)
+        if neue_zuordnung != alte_zuordnung:
+            if vorgang.verknuepfung_eigenstaendig:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT, detail="Vorgang wird eigenständig geführt"
+                )
+            changes["projekt_id"], changes["auftrag_id"] = neue_zuordnung
 
     if "kunde_id" in changes:
         neuer_kunde_id = changes["kunde_id"]
@@ -680,6 +769,14 @@ async def update_vorgang(
     for field, value in changes.items():
         setattr(vorgang, field, value)
 
+    await verknuepfung.zuordnung_ereignis(
+        session,
+        vorgang,
+        alt=alte_zuordnung,
+        neu=(vorgang.projekt_id, vorgang.auftrag_id),
+        author_user_id=auth.user_id,
+    )
+
     if (
         "zugewiesener_user_id" in changes
         and changes["zugewiesener_user_id"] != alter_zugewiesener_user_id
@@ -770,7 +867,8 @@ async def update_vorgang(
         await event_bus.publish(
             auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
         )
-    return await _mit_zugewiesenem_namen(session, vorgang)
+    await _mit_zugewiesenem_namen(session, vorgang)
+    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
 
 
 @router.post(
@@ -787,7 +885,7 @@ async def folge_auftrag_erstellen(
     body: VorgangFolgeAuftragErstellen,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Vorgang:
+) -> VorgangRead:
     """Legt aus diesem Vorgang einen Folge-Auftrag an -- unabhaengig vom
     aktuellen Status der Quelle (siehe create_folge_vorgang) und mit
     beliebigem Leistungstyp. Ersetzt den frueheren Automatismus, der nur
@@ -804,7 +902,7 @@ async def folge_auftrag_erstellen(
     await event_bus.publish(
         auth.mandant_id, "feed_update", {"vorgang_id": str(folge_vorgang.id), "reason": "erstellt"}
     )
-    return folge_vorgang
+    return await verknuepfung.als_read_einzeln(session, auth, folge_vorgang)
 
 
 @router.post(
@@ -816,7 +914,7 @@ async def uebernehmen(
     vorgang_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Vorgang:
+) -> VorgangRead:
     """Ticket übernehmen: jeder Mitarbeiter mit "vorgaenge"."sehen" (also
     praktisch jeder) darf einen Vorgang selbst uebernehmen, sofern sein
     Account-Typ das erlaubt (siehe app/services/rechte_service.py:
@@ -874,7 +972,8 @@ async def uebernehmen(
     await event_bus.publish(
         auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
     )
-    return await _mit_zugewiesenem_namen(session, vorgang)
+    await _mit_zugewiesenem_namen(session, vorgang)
+    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
 
 
 @router.patch(

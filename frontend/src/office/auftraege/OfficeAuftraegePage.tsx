@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, CircleDot, FolderKanban, Hash, Layers, Plus, Search, Users } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { auftraegeApi, kundenApi, projekteApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -39,6 +40,35 @@ export function OfficeAuftraegePage() {
     queryFn: () => auftraegeApi.list(),
   });
 
+  // Deep-Links: ?auftrag=<id> oeffnet das Panel (Links aus Pfad/Herkunft/Projekt-Ansicht),
+  // ?neu=1&projekt_id=<id> das Anlegen mit vorbelegtem Projekt. Einmal verbrauchen, damit Schliessen
+  // wirkt; Filter (`f`/`q`) stehen in derselben URL und bleiben.
+  const [suchParams, setSuchParams] = useSearchParams();
+  useEffect(() => {
+    const auftragId = suchParams.get("auftrag");
+    const neu = suchParams.get("neu") === "1";
+    if (!auftragId && !neu) return;
+    if (auftragId) {
+      if (!auftraege) return;
+      const treffer = auftraege.find((a) => a.id === auftragId);
+      if (treffer) setAusgewaehlterAuftrag(treffer);
+    }
+    if (neu) {
+      setNeuerProjektId(suchParams.get("projekt_id") ?? "");
+      setZeigeNeuerAuftrag(true);
+    }
+    setSuchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.delete("auftrag");
+        n.delete("neu");
+        n.delete("projekt_id");
+        return n;
+      },
+      { replace: true },
+    );
+  }, [suchParams, auftraege, setSuchParams]);
+
   const { data: projekte } = useQuery({
     queryKey: ["projekte"],
     queryFn: () => projekteApi.list(),
@@ -50,7 +80,7 @@ export function OfficeAuftraegePage() {
     enabled: zeigeNeuerAuftrag,
   });
 
-  // Schlüssel = Spalten-Id der Tabelle (Kopf-Hervorhebung); "projekt" hat keine Spalte.
+  // Schlüssel = Spalten-Id der Tabelle (Kopf-Hervorhebung).
   const felder = useMemo<FilterFeld<Auftrag>[]>(() => {
     // Kunden aus den Aufträgen selbst: braucht kein Recht auf die Kundenliste und listet nur relevante Kunden.
     const kundenOptionen = new Map<string, string>();
@@ -86,6 +116,7 @@ export function OfficeAuftraegePage() {
     ];
   }, [auftraege, projekte]);
   const zustand = useFilterZustand({ felder });
+  const projektNamen = useMemo(() => new Map((projekte ?? []).map((p) => [p.id, p.name])), [projekte]);
 
   // Die Liste wird vollständig geladen, daher genügt ein Client-Filter.
   const gefiltert = useMemo(
@@ -93,7 +124,7 @@ export function OfficeAuftraegePage() {
       sucheAnwenden(
         filterAnwenden(auftraege ?? [], zustand.bedingungen, felder),
         zustand.sucheVerzoegert,
-        (a) => [a.titel, a.kunde_name, AUFTRAG_STATUS_LABEL[a.status]].join(" "),
+        (a) => [a.titel, a.kunde_name, a.projekt_name, AUFTRAG_STATUS_LABEL[a.status]].join(" "),
       ),
     [auftraege, zustand.bedingungen, zustand.sucheVerzoegert, felder],
   );
@@ -217,6 +248,7 @@ export function OfficeAuftraegePage() {
           auftraege={gefiltert}
           onZeileKlick={setAusgewaehlterAuftrag}
           hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
+          projektNamen={projektNamen}
         />
       )}
 

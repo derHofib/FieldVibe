@@ -1,52 +1,69 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { CheckCheck, ChevronDown, ClipboardList, Clock, Folder, Pencil, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { auftraegeApi, kundenApi, projekteApi, vorgaengeApi } from "../../api/endpoints";
-import { SearchableSelect } from "../../components/SearchableSelect";
-import { EmptyState } from "../../components/EmptyState";
-import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
-import { SeitenPanel } from "../../components/apple/SeitenPanel";
-import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
-import type { Auftrag, AuftragStatus } from "../../types";
-import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
-import { Layers, Trash2 } from "lucide-react";
+import { ApiError } from "../../api/client";
+import { auftraegeApi, kundenApi, projekteApi, vorgaengeApi, zeiterfassungApi } from "../../api/endpoints";
 import { AktionsMenue } from "../../components/AktionsMenue";
-import { Select } from "../../components/apple/Select";
+import { EmptyState } from "../../components/EmptyState";
+import { PulldownMenu } from "../../components/apple/PulldownMenu";
+import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { StatusPille } from "../../components/apple/StatusPille";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SearchableSelect } from "../../components/SearchableSelect";
+import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
+import { VorgangStatusPille } from "../../components/VorgangStatusPille";
+import { ABSCHNITT_AKTION, Abschnitt } from "../../pages/feld/vorgang/Abschnitt";
+import { CHIP_BUTTON, CHIP_NEUTRAL, ChipPopover } from "../../pages/feld/vorgang/VorgangKopf";
+import type { Auftrag, AuftragStatus } from "../../types";
+import { formatDatum } from "../../utils/format";
+import { auftragStatusZuToken, istVorgangErledigt, projektLink } from "../../utils/verknuepfung";
+import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
 
-/** Detailinhalt fuer das rechte SeitenPanel -- Stammdaten + Status
- * editierbar, Projekt/Kunde-Zuordnung per SearchableSelect aenderbar
- * (rein referenziell, siehe app/models/auftrag.py), darunter die
- * verknuepften Vorgaenge (auftrag_id-Filter). */
+/** Detailinhalt für das rechte SeitenPanel: Kopf nach Muster des Vorgangs (Pfad, Typ, Titel, Kunde, Chips,
+ * Aktionen), darunter Vorgänge, Beschreibung und Details. Projekt wechselt der Chip, der Server zieht die
+ * Vorgänge des Auftrags mit. */
 export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onClose: () => void }) {
-  const uid = useId();
   const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [titelBearbeiten, setTitelBearbeiten] = useState(false);
   const [titel, setTitel] = useState(auftrag.titel);
+  const [beschreibungBearbeiten, setBeschreibungBearbeiten] = useState(false);
+  const [beschreibung, setBeschreibung] = useState(auftrag.beschreibung ?? "");
+  const [kundeBearbeiten, setKundeBearbeiten] = useState(false);
 
-  const { data: aktuell } = useQuery({
+  const { data: geladen } = useQuery({
     queryKey: ["auftraege", auftrag.id],
     queryFn: () => auftraegeApi.get(auftrag.id),
     initialData: auftrag,
   });
+  const aktuell = geladen ?? auftrag;
 
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: kundeBearbeiten });
   const { data: vorgaenge } = useQuery({
     queryKey: ["vorgaenge", "auftrag", auftrag.id],
-    queryFn: () => vorgaengeApi.list({ auftrag_id: auftrag.id }),
+    queryFn: () => vorgaengeApi.list({ auftrag_id: auftrag.id, limit: "200" }),
+  });
+  // Gleicher Schlüssel wie im ZeitSummenBlock unten, der Request wird geteilt.
+  const { data: zeitSummen } = useQuery({
+    queryKey: ["zeiterfassung-summen", { auftrag_id: auftrag.id }],
+    queryFn: () => zeiterfassungApi.summen({ auftrag_id: auftrag.id }),
   });
 
   const aktualisieren = useMutation({
     mutationFn: (body: Parameters<typeof auftraegeApi.update>[1]) => auftraegeApi.update(auftrag.id, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auftraege"] });
-      queryClient.invalidateQueries({ queryKey: ["auftraege", auftrag.id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgaenge"] });
+      queryClient.invalidateQueries({ queryKey: ["projekte"] });
+      setTitelBearbeiten(false);
+      setBeschreibungBearbeiten(false);
+      setKundeBearbeiten(false);
     },
   });
 
@@ -58,114 +75,280 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
     },
   });
 
-  const projektName = projekte?.find((p) => p.id === aktuell?.projekt_id)?.name;
-  const kundeName = aktuell?.kunde_name ?? kunden?.find((k) => k.id === aktuell?.kunde_id)?.name;
+  const projektName = aktuell.projekt_name ?? projekte?.find((p) => p.id === aktuell.projekt_id)?.name ?? null;
+  const gesamt = aktuell.vorgaenge_gesamt ?? vorgaenge?.length ?? 0;
+  const erledigt = aktuell.vorgaenge_erledigt ?? vorgaenge?.filter((v) => istVorgangErledigt(v.status)).length ?? 0;
+  const zeitStunden = zeitSummen
+    ? Object.values(zeitSummen).reduce((summe, s) => summe + Number(s.arbeitszeit_stunden || 0), 0)
+    : null;
+  const fehler = aktualisieren.error instanceof ApiError ? aktualisieren.error.message : aktualisieren.isError ? "Speichern fehlgeschlagen." : null;
+
+  const projektChipInhalt = (
+    <>
+      <Folder size={13} strokeWidth={1.5} aria-hidden="true" />
+      <span className="text-label2">Projekt</span>
+      <span className={projektName ? "" : "text-label2"}>{projektName ?? "Kein Projekt"}</span>
+    </>
+  );
 
   return (
-    <SeitenPanel offen titel={aktuell?.titel ?? auftrag.titel} onClose={onClose}>
-      <div className="space-y-5 p-4">
-        <div>
-          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Titel</label>
-          <input id={`${uid}-0`}
-            value={titel}
-            onChange={(e) => setTitel(e.target.value)}
-            onBlur={() => titel.trim() && titel !== aktuell?.titel && aktualisieren.mutate({ titel: titel.trim() })}
-            className="field-ap"
-          />
-        </div>
-
-        <div>
-          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label3">Status</label>
-          <Select id={`${uid}-1`}
-            value={aktuell?.status ?? auftrag.status}
-            onChange={(e) => aktualisieren.mutate({ status: e.target.value as AuftragStatus })}
-          >
-            {AUFTRAG_STATUS_OPTIONEN.map((s) => (
-              <option key={s} value={s}>
-                {AUFTRAG_STATUS_LABEL[s]}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div>
-          <label htmlFor={`${uid}-2`} className="mb-1.5 block text-meta font-bold text-label3">Projekt</label>
-          <SearchableSelect id={`${uid}-2`}
-            value={aktuell?.projekt_id ?? ""}
-            onChange={(v) => aktualisieren.mutate({ projekt_id: v || null })}
-            placeholder="Kein Projekt"
-            options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
-          />
-          {projektName && <p className="mt-1 text-sekundaer text-label2">{projektName}</p>}
-        </div>
-
-        <div>
-          <label htmlFor={`${uid}-3`} className="mb-1.5 block text-meta font-bold text-label3">Kunde</label>
-          <SearchableSelect id={`${uid}-3`}
-            value={aktuell?.kunde_id ?? ""}
-            onChange={(v) => aktualisieren.mutate({ kunde_id: v || null })}
-            placeholder="Kein Kunde"
-            options={(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))}
-          />
-          {kundeName && <p className="mt-1 text-sekundaer text-label2">{kundeName}</p>}
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className="block text-meta font-bold text-label3">
-              Vorgänge ({vorgaenge?.length ?? 0})
-            </label>
+    <SeitenPanel
+      offen
+      titel={aktuell.titel}
+      onClose={onClose}
+      aktionen={
+        <AktionsMenue
+          label="Weitere Aktionen"
+          eintraege={[
+            { label: "Titel bearbeiten", icon: Pencil, onClick: () => { setTitel(aktuell.titel); setTitelBearbeiten(true); } },
+            "trenner",
+            {
+              label: "Auftrag löschen",
+              icon: Trash2,
+              destruktiv: true,
+              disabled: loeschen.isPending,
+              onClick: async () => {
+                if (await bestaetigen({ titel: `Auftrag "${aktuell.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
+                  loeschen.mutate();
+                }
+              },
+            },
+          ]}
+        />
+      }
+    >
+      <div className="space-y-4 p-4">
+        <div className="space-y-2">
+          {projektName && aktuell.projekt_id && (
             <button
-              onClick={() => navigate(`/neu?auftrag_id=${auftrag.id}`)}
-              className="text-sekundaer font-medium text-tint hover:underline"
+              type="button"
+              onClick={() => navigate(projektLink(aktuell.projekt_id!))}
+              className="inline-flex items-center gap-1.5 text-sekundaer text-tint-text underline-offset-2 hover:underline"
             >
-              + Neuer Vorgang
+              <Folder size={13} strokeWidth={1.5} aria-hidden="true" />
+              Projekt {projektName}
             </button>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-meta font-semibold tracking-wide text-label2 uppercase">Auftrag</span>
+            <StatusPille status={auftragStatusZuToken(aktuell.status)} label={AUFTRAG_STATUS_LABEL[aktuell.status]} />
           </div>
-          {!vorgaenge || vorgaenge.length === 0 ? (
-            <EmptyState icon={Layers} text="Noch kein Vorgang zugeordnet." />
-          ) : (
-            <div className="space-y-1.5">
-              {vorgaenge.map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
-                  className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sekundaer hover:bg-fill"
-                >
-                  <span className="min-w-0 flex-1 truncate text-label">
-                    {v.vorgangsnummer} · {v.titel}
-                  </span>
-                  <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${STATUS_BADGE[v.status]}`}>
-                    {STATUS_LABEL[v.status]}
-                  </span>
-                </button>
-              ))}
+          {titelBearbeiten ? (
+            <div className="flex gap-2">
+              <input
+                aria-label="Titel"
+                autoFocus
+                value={titel}
+                onChange={(e) => setTitel(e.target.value)}
+                className="field-ap flex-1"
+              />
+              <button type="button" onClick={() => setTitelBearbeiten(false)} className="btn-touch btn-ap px-3 text-sekundaer">
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={!titel.trim() || aktualisieren.isPending}
+                onClick={() => aktualisieren.mutate({ titel: titel.trim() })}
+                className="btn-touch btn-ap-primary px-3 text-sekundaer"
+              >
+                Speichern
+              </button>
             </div>
+          ) : (
+            <h1 className="font-heading text-titel-mobil font-bold text-label">{aktuell.titel}</h1>
+          )}
+          {aktuell.kunde_id && aktuell.kunde_name && (
+            <button
+              type="button"
+              onClick={() => navigate(`/kunden/${aktuell.kunde_id}`)}
+              className="block text-fliess text-tint-text underline-offset-2 hover:underline"
+            >
+              {aktuell.kunde_name}
+            </button>
           )}
         </div>
 
-        <ZeitSummenBlock filter={{ auftrag_id: auftrag.id }} />
-
-        <div className="border-t border-sep pt-4">
-          <div className="flex justify-end">
-            <AktionsMenue
-              label="Weitere Aktionen"
-              eintraege={[
-                {
-                  label: "Auftrag löschen",
-                  icon: Trash2,
-                  destruktiv: true,
-                  disabled: loeschen.isPending,
-                  onClick: async () => {
-                    if (await bestaetigen({ titel: `Auftrag "${aktuell?.titel ?? auftrag.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
-                      loeschen.mutate();
-                    }
-                  },
-                },
-              ]}
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ChipPopover
+            label="Projekt ändern"
+            chip={({ offen, toggeln }) => (
+              <button type="button" onClick={toggeln} aria-haspopup="dialog" aria-expanded={offen} className={CHIP_BUTTON}>
+                {projektChipInhalt}
+                <ChevronDown size={13} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
+          >
+            {(schliessen) => (
+              <SearchableSelect
+                value={aktuell.projekt_id ?? ""}
+                onChange={(v) => {
+                  aktualisieren.mutate({ projekt_id: v || null });
+                  schliessen();
+                }}
+                placeholder="Projekt wählen…"
+                options={[{ value: "", label: "Kein Projekt" }, ...(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))]}
+              />
+            )}
+          </ChipPopover>
+          <span className={CHIP_NEUTRAL}>
+            <CheckCheck size={13} strokeWidth={1.5} aria-hidden="true" />
+            {erledigt} / {gesamt} Vorgänge erledigt
+          </span>
+          {zeitStunden != null && zeitStunden > 0 && (
+            <span className={CHIP_NEUTRAL}>
+              <Clock size={13} strokeWidth={1.5} aria-hidden="true" />
+              <span className="text-label2">Zeit</span>
+              {(Math.round(zeitStunden * 10) / 10).toLocaleString("de-DE")} h
+            </span>
+          )}
         </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => navigate(`/neu?auftrag_id=${auftrag.id}`)}
+            className="btn-touch btn-ap-primary inline-flex items-center gap-1.5 px-3 text-sekundaer"
+          >
+            <Plus size={14} strokeWidth={2.5} aria-hidden="true" /> Vorgang
+          </button>
+          <PulldownMenu
+            ariaLabel="Status ändern"
+            items={AUFTRAG_STATUS_OPTIONEN.map((s) => ({
+              label: AUFTRAG_STATUS_LABEL[s],
+              aktiv: s === aktuell.status,
+              onSelect: () => aktualisieren.mutate({ status: s }),
+            }))}
+            trigger={({ offen, toggeln, triggerRef }) => (
+              <button
+                ref={triggerRef}
+                type="button"
+                onClick={toggeln}
+                aria-haspopup="menu"
+                aria-expanded={offen}
+                className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 text-sekundaer"
+              >
+                Status ändern <ChevronDown size={13} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
+          />
+        </div>
+
+        {fehler && (
+          <p role="alert" className="text-sekundaer text-st-fehlt">
+            {fehler}
+          </p>
+        )}
+
+        <Abschnitt
+          titel="Vorgänge"
+          aktion={
+            <button type="button" onClick={() => navigate(`/neu?auftrag_id=${auftrag.id}`)} className={ABSCHNITT_AKTION}>
+              + Vorgang
+            </button>
+          }
+        >
+          {!vorgaenge || vorgaenge.length === 0 ? (
+            <EmptyState icon={ClipboardList} text="Noch kein Vorgang zugeordnet." />
+          ) : (
+            <ul className="divide-y-[0.5px] divide-sep">
+              {vorgaenge.map((v) => (
+                <li key={v.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
+                    className="flex w-full items-center gap-3 py-2 text-left text-fliess hover:bg-fill"
+                  >
+                    <span className="shrink-0 text-label2">{v.vorgangsnummer}</span>
+                    <span className="min-w-0 flex-1 truncate text-label">{v.titel}</span>
+                    <span className="hidden shrink-0 text-sekundaer text-label2 sm:inline">{v.zugewiesener_name ?? "—"}</span>
+                    <VorgangStatusPille status={v.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Abschnitt>
+
+        <Abschnitt
+          titel="Beschreibung"
+          aktion={
+            !beschreibungBearbeiten ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setBeschreibung(aktuell.beschreibung ?? "");
+                  setBeschreibungBearbeiten(true);
+                }}
+                className={ABSCHNITT_AKTION}
+              >
+                Bearbeiten
+              </button>
+            ) : undefined
+          }
+        >
+          {beschreibungBearbeiten ? (
+            <div className="space-y-2">
+              <textarea aria-label="Beschreibung" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={4} className="field-ap" />
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setBeschreibungBearbeiten(false)} className="btn-touch btn-ap px-3 text-sekundaer">
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  disabled={aktualisieren.isPending}
+                  onClick={() => aktualisieren.mutate({ beschreibung: beschreibung.trim() })}
+                  className="btn-touch btn-ap-primary px-3 text-sekundaer"
+                >
+                  Speichern
+                </button>
+              </div>
+            </div>
+          ) : aktuell.beschreibung ? (
+            <p className="whitespace-pre-line text-fliess text-label">{aktuell.beschreibung}</p>
+          ) : (
+            <p className="text-fliess text-label2">Keine Beschreibung.</p>
+          )}
+        </Abschnitt>
+
+        <Abschnitt
+          titel="Details"
+          aktion={
+            !kundeBearbeiten ? (
+              <button type="button" onClick={() => setKundeBearbeiten(true)} className={ABSCHNITT_AKTION}>
+                Kunde ändern
+              </button>
+            ) : undefined
+          }
+        >
+          {kundeBearbeiten ? (
+            <div className="space-y-2">
+              <SearchableSelect
+                value={aktuell.kunde_id ?? ""}
+                onChange={(v) => aktualisieren.mutate({ kunde_id: v || null })}
+                placeholder="Kein Kunde"
+                options={[{ value: "", label: "Kein Kunde" }, ...(kunden ?? []).map((k) => ({ value: k.id, label: k.name }))]}
+              />
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setKundeBearbeiten(false)} className="btn-touch btn-ap px-3 text-sekundaer">
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          ) : (
+            <dl className="space-y-1.5 text-fliess">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-label2">Kunde</dt>
+                <dd className="text-right font-medium text-label">{aktuell.kunde_name ?? "—"}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-label2">Erstellt am</dt>
+                <dd className="text-right font-medium text-label">{formatDatum(aktuell.created_at)}</dd>
+              </div>
+            </dl>
+          )}
+        </Abschnitt>
+
+        <ZeitSummenBlock filter={{ auftrag_id: auftrag.id }} />
       </div>
     </SeitenPanel>
   );

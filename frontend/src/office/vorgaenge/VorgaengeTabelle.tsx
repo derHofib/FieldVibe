@@ -19,12 +19,20 @@ import { Karte } from "../OfficeUi";
 const spalten = createColumnHelper<FeedCard>();
 
 const SPALTEN = [
-  spalten.accessor("vorgangsnummer", { header: "Nr." }),
+  spalten.accessor("vorgangsnummer", {
+    header: "Nr.",
+    cell: (info) => <span className="whitespace-nowrap">{info.getValue()}</span>,
+  }),
   spalten.accessor("titel", { header: "Titel" }),
   spalten.accessor("kunde_name", { header: "Kunde" }),
   spalten.accessor((v) => v.anlage_bezeichnung ?? v.standort_bezeichnung ?? "—", {
     id: "anlage",
     header: "Anlage",
+  }),
+  spalten.accessor((v) => [v.projekt_name, v.auftrag_titel].filter(Boolean).join(" › "), {
+    id: "projekt_auftrag",
+    header: "Projekt / Auftrag",
+    cell: (info) => info.getValue() || <span className="text-label2">—</span>,
   }),
   spalten.accessor("status", {
     header: "Status",

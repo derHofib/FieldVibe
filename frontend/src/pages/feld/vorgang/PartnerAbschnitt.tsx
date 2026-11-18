@@ -7,8 +7,6 @@ import type { Dispatch, SetStateAction } from "react";
 
 export function PartnerAbschnitt({
   kannPartnerVerwalten,
-  istAktiverTab,
-  tabPanelProps,
   vorgang,
   setShowPartnerForm,
   showPartnerForm,
@@ -24,8 +22,6 @@ export function PartnerAbschnitt({
   partnerZuweisenMutation,
 }: {
   kannPartnerVerwalten: boolean;
-  istAktiverTab: (ziel: string) => boolean;
-  tabPanelProps: (ziel: string) => { role: "tabpanel"; "aria-labelledby": string; } | { role?: undefined; "aria-labelledby"?: undefined; };
   vorgang: Vorgang;
   setShowPartnerForm: Dispatch<SetStateAction<boolean>>;
   showPartnerForm: boolean;
@@ -43,16 +39,13 @@ export function PartnerAbschnitt({
   return (
     <>
       {kannPartnerVerwalten && (
-        <div
-          className={`card-ap p-3 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
-          {...tabPanelProps("abschnitt-uebersicht")}
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-heading text-fliess font-semibold text-label">Nachunternehmer</h2>
+        <div className="card-ap p-4">
+          <div className="mb-2 flex min-h-6 items-center justify-between">
+            <h2 className="text-sekundaer font-semibold tracking-wide text-label2 uppercase">Nachunternehmer</h2>
             {!vorgang.partner_id && (
               <button
                 onClick={() => setShowPartnerForm((v) => !v)}
-                className="btn-touch text-sekundaer font-medium text-tint-text"
+                className="inline-flex min-h-11 items-center text-sekundaer font-medium text-tint-text md:min-h-6"
               >
                 {showPartnerForm ? "Abbrechen" : "+ Zuweisen"}
               </button>

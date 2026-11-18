@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarDays, CheckSquare, CircleDot, FolderKanban, KanbanSquare, Link2, LayoutList, ListTree, Plus, Search, Table2, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckSquare, CircleDot, FolderKanban, KanbanSquare, Link2, LayoutList, List, ListTree, Plus, Search, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -61,7 +61,7 @@ const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
  * innerhalb einer Spalte ist bewusst nicht manuell sortierbar -- neue Karten
  * haengen sich unten an, wie im bestehenden VorgaengeKanban auch. */
 const ANSICHT_UMSCHALTER = [
-  { wert: "tabelle" as const, label: "Tabelle", icon: Table2 },
+  { wert: "tabelle" as const, label: "Liste", icon: List },
   { wert: "uebersicht" as const, label: "Übersicht", icon: LayoutList },
   { wert: "kanban" as const, label: "Kanban", icon: KanbanSquare },
 ];

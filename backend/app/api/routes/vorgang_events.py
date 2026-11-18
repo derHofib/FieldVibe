@@ -10,6 +10,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang_event import VorgangEventCreate, VorgangEventRead
 from app.services import storage_service
+from app.services import vorgang_verknuepfung_service
 from app.services.audit_service import ki_schreibzugriff_protokollieren
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
@@ -57,12 +58,17 @@ async def list_events(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[VorgangEventRead]:
-    await _require_own_vorgang(session, auth, vorgang_id)
-    result = await session.execute(
-        select(VorgangEvent)
-        .where(VorgangEvent.vorgang_id == vorgang_id)
-        .order_by(VorgangEvent.id.desc())
-    )
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    stmt = select(VorgangEvent).where(VorgangEvent.vorgang_id == vorgang_id)
+    if not await vorgang_verknuepfung_service.hat_eigenstaendig_recht(session, auth):
+        # "Eigenstaendig" gesetzt/aufgehoben ist immer Sache der Berechtigten;
+        # Zuordnungswechsel nur, solange der Vorgang nicht eigenstaendig ist
+        # (sonst verraten sie Projekt-/Auftragsnamen).
+        versteckt = ["eigenstaendig_gesetzt", "eigenstaendig_aufgehoben"]
+        if vorgang.verknuepfung_eigenstaendig:
+            versteckt.append("zuordnung_geaendert")
+        stmt = stmt.where(VorgangEvent.event_type.not_in(versteckt))
+    result = await session.execute(stmt.order_by(VorgangEvent.id.desc()))
     return [_to_read_model(e) for e in result.scalars().all()]
 
 
