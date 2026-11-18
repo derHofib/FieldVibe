@@ -39,6 +39,7 @@ const MODUL_LABEL: Record<MandantModul, string> = {
   fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
   highlights: "Highlights (Story-Feature)",
   karten: "Kartenansicht (Mapbox)",
+  ki_zugriff: "KI-Assistent (Claude)",
   nachunternehmer: "Partner-/Nachunternehmer-Verwaltung",
   postfach: "Postfach (persönlicher E-Mail-Client)",
 };
@@ -229,7 +230,14 @@ export function MandantDetailPage() {
                 disabled={moduleMutation.isPending}
                 onChange={() => toggleModul(modul)}
               />
-              {MODUL_LABEL[modul]}
+              <span>
+                {MODUL_LABEL[modul]}
+                {modul === "ki_zugriff" && (
+                  <span className="block text-meta text-label2">
+                    Nur einschalten, wenn der Betrieb dem Datenschutzhinweis zugestimmt hat.
+                  </span>
+                )}
+              </span>
             </label>
           ))}
         </div>
