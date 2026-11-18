@@ -65,13 +65,30 @@ _request_id: ContextVar[str | None] = ContextVar("audit_request_id", default=Non
 _client_ip: ContextVar[str | None] = ContextVar("audit_client_ip", default=None)
 
 
+# Veraenderlicher Halter statt direktem Wert: get_current_user setzt die KI-Quelle erst
+# nach der Middleware. Ein ContextVar-Set im Endpunkt-Kontext wuerde bei In-Process-Aufrufen
+# (MCP-Adapter, gleicher Task) in den Aufrufer lecken; der Halter lebt je Request und wird
+# von der Middleware am Ende verworfen.
+_ki_quelle: ContextVar[dict | None] = ContextVar("audit_ki_quelle", default=None)
+
+
 def kontext_setzen(request_id: str | None, ip: str | None):
-    return _request_id.set(request_id), _client_ip.set(ip)
+    return _request_id.set(request_id), _client_ip.set(ip), _ki_quelle.set({})
 
 
 def kontext_zuruecksetzen(tokens) -> None:
     _request_id.reset(tokens[0])
     _client_ip.reset(tokens[1])
+    _ki_quelle.reset(tokens[2])
+
+
+def ki_quelle_setzen(ki_verbindung_id: UUID | None) -> None:
+    """Markiert alle Audit-Eintraege des laufenden Requests als per KI ausgeloest."""
+    halter = _ki_quelle.get()
+    if halter is not None:
+        halter["quelle"] = "ki"
+        if ki_verbindung_id is not None:
+            halter["ki_verbindung_id"] = str(ki_verbindung_id)
 
 
 def ip_kuerzen(ip: str | None) -> str | None:
@@ -115,6 +132,10 @@ async def log_action(
         akteur_typ = "user" if actor_user_id is not None else "system"
     if akteur_typ not in AKTEUR_TYPEN:
         raise ValueError(f"Unbekannter Akteurtyp: {akteur_typ}")
+    nutzlast = bereinigen(jsonable_encoder(payload or {}))
+    ki = _ki_quelle.get()
+    if ki:
+        nutzlast = {**nutzlast, **ki}
     entry = AuditLog(
         aktion=aktion,
         mandant_id=mandant_id,
@@ -122,7 +143,7 @@ async def log_action(
         akteur_typ=akteur_typ,
         entity_type=entity_type,
         entity_id=entity_id,
-        payload=bereinigen(jsonable_encoder(payload or {})),
+        payload=nutzlast,
         request_id=_request_id.get(),
         ip=ip_kuerzen(_client_ip.get()) if aktion in AKTIONEN_MIT_IP else None,
     )

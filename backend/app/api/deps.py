@@ -13,7 +13,7 @@ from app.core.security import decode_token
 from app.core.rollen import ist_plattform_admin
 from app.db.session import system_session, tenant_session
 from app.models.mandant import Mandant
-from app.services import berechtigung_service, system_lookups
+from app.services import audit_service, berechtigung_service, system_lookups
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -28,6 +28,9 @@ class AuthContext:
     token_version: int = 0
     # Nur ueber get_current_user_mfa_einrichtung erreichbar (siehe dort).
     mfa_einrichtung: bool = False
+    # Aufruf ueber den MCP-Adapter (KI-Zugriff): "mcp" + ID der ki_verbindung.
+    via: str | None = None
+    ki_verbindung_id: UUID | None = None
 
     @property
     def konto_mandant_id(self) -> UUID | None:
@@ -128,6 +131,10 @@ async def _auth_context_aus_token(
         tv_pflicht=impersonation,
     )
     kontext_ergaenzen(user_id=user_id, mandant_id=mandant_id)
+    via = payload.get("via") if payload.get("via") == "mcp" else None
+    ki_verbindung_id = UUID(payload["kv"]) if via and payload.get("kv") else None
+    if via:
+        audit_service.ki_quelle_setzen(ki_verbindung_id)
     return AuthContext(
         user_id=user_id,
         token_version=token_version,
@@ -136,6 +143,8 @@ async def _auth_context_aus_token(
         impersonated_by=impersonated_by,
         account_typ_id=account_typ_id,
         mfa_einrichtung=mfa_einrichtung,
+        via=via,
+        ki_verbindung_id=ki_verbindung_id,
     )
 
 
