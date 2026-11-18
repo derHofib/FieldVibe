@@ -1,14 +1,15 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Eye, EyeOff, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { formSubmissionsApi } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SummaryRenderer } from "../../components/formModul/SummaryRenderer";
 import { DetailSkeleton } from "../../components/Skeleton";
-import type { FormSubmissionUebersicht } from "../../types";
+import type { FormSubmission, FormSubmissionUebersicht } from "../../types";
 import { downloadBlob } from "../../utils/download";
 import { AusgefuelltVon, VorgangLink } from "./AusgefuelltTabelle";
 import { langesDatum, relativDatum } from "./formulareUtil";
@@ -22,6 +23,9 @@ export function AusgefuelltPanel({ eintrag }: { eintrag: FormSubmissionUebersich
   const sub = useQuery({ queryKey: ["form-submission", eintrag.id], queryFn: () => formSubmissionsApi.get(eintrag.id) });
   const { schema, rules, summaryId, summary } = useSchemaDaten(eintrag.schema_id);
   const s = schema.data;
+  const queryClient = useQueryClient();
+  // Nach dem Umschalten liefert die Ausfüllung den aktuellen Stand, die Listenzeile erst nach dem Refetch.
+  const kundensichtbar = sub.data?.kundensichtbar ?? eintrag.kundensichtbar;
   const werte = useMemo(() => sub.data?.values ?? {}, [sub.data]);
 
   const pdf = useMutation({
@@ -31,6 +35,15 @@ export function AusgefuelltPanel({ eintrag }: { eintrag: FormSubmissionUebersich
       downloadBlob(blob, `${eintrag.schema_name} ${eintrag.vorgangsnummer}.pdf`);
     },
     onError: (err) => setPdfFehler(err instanceof ApiError ? err.message : "Das PDF konnte nicht erzeugt werden."),
+  });
+
+  const sichtbarkeit = useMutation({
+    mutationFn: (wert: boolean) => formSubmissionsApi.setKundensichtbar(eintrag.id, wert),
+    meta: { erfolg: "Sichtbarkeit für Kunden geändert" },
+    onSuccess: (neu: FormSubmission) => {
+      queryClient.setQueryData(["form-submission", eintrag.id], neu);
+      void queryClient.invalidateQueries({ queryKey: ["form-submissions-uebersicht"] });
+    },
   });
 
   const zeitpunkt = eintrag.abgeschlossen_am ?? eintrag.created_at;
@@ -53,6 +66,14 @@ export function AusgefuelltPanel({ eintrag }: { eintrag: FormSubmissionUebersich
           >
             <Download size={14} aria-hidden="true" /> {pdf.isPending ? "Erzeuge …" : "PDF"}
           </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            eintraege={[
+              kundensichtbar
+                ? { label: "Für Kunden ausblenden", icon: EyeOff, onClick: () => sichtbarkeit.mutate(false), disabled: sichtbarkeit.isPending }
+                : { label: "Für Kunden sichtbar machen", icon: Eye, onClick: () => sichtbarkeit.mutate(true), disabled: sichtbarkeit.isPending },
+            ]}
+          />
         </div>
       </div>
       {pdfFehler && (
@@ -69,6 +90,7 @@ export function AusgefuelltPanel({ eintrag }: { eintrag: FormSubmissionUebersich
           <AusgefuelltVon e={eintrag} />
         </span>
         <span>· Version {eintrag.schema_version}</span>
+        {kundensichtbar && <span>· Für Kunden sichtbar</span>}
       </div>
       <div>
         <p className="text-fliess font-semibold text-label">{eintrag.vorgang_titel}</p>

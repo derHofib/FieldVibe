@@ -1196,6 +1196,11 @@ export const formSubmissionsApi = {
       method: "PATCH",
       body: JSON.stringify({ values }),
     }),
+  setKundensichtbar: (id: string, kundensichtbar: boolean) =>
+    apiFetch<FormSubmission>(`/api/form-submissions/${id}/kundensichtbar`, {
+      method: "PATCH",
+      body: JSON.stringify({ kundensichtbar }),
+    }),
   abschliessen: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}/abschliessen`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/form-submissions/${id}`, { method: "DELETE" }),
   pdf: (id: string, viewId?: string) =>

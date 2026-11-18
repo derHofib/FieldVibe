@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   uebersicht: vi.fn(),
   subGet: vi.fn(),
   pdf: vi.fn(),
+  setKundensichtbar: vi.fn(),
 }));
 
 vi.mock("../../api/endpoints", () => ({
@@ -31,7 +32,7 @@ vi.mock("../../api/endpoints", () => ({
     createSchema: vi.fn(),
     vorschauPdf: vi.fn(),
   },
-  formSubmissionsApi: { uebersicht: api.uebersicht, get: api.subGet, pdf: api.pdf },
+  formSubmissionsApi: { uebersicht: api.uebersicht, get: api.subGet, pdf: api.pdf, setKundensichtbar: api.setKundensichtbar },
   usersApi: { auswahl: () => Promise.resolve([{ id: "u1", name: "T. Becker" }]) },
   gespeicherteFilterApi: { list: () => Promise.resolve([]) },
 }));
@@ -160,6 +161,21 @@ describe("OfficeFormularePage", () => {
     expect(await within(panel).findByText("über 50")).toBeInTheDocument();
     expect(within(panel).getByRole("link", { name: /Zum Vorgang/ })).toHaveAttribute("href", "/vorgaenge/v1");
     expect(within(panel).getByRole("button", { name: /PDF/ })).toBeInTheDocument();
+  });
+
+  it("schaltet die Kundensichtbarkeit über das Aktionsmenü um und lädt die Übersicht neu", async () => {
+    api.setKundensichtbar.mockResolvedValue({ id: "p1", values: { co: 72 }, kundensichtbar: true });
+    rendere("/form-schemas?ansicht=ausgefuellt");
+    fireEvent.click(await screen.findByText("V-00040"));
+    const panel = await screen.findByRole("region", { name: "Protokoll" });
+    const aufrufeVorher = api.uebersicht.mock.calls.length;
+    fireEvent.click(within(panel).getByRole("button", { name: "Weitere Aktionen" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Für Kunden sichtbar machen/ }));
+    await waitFor(() => expect(api.setKundensichtbar).toHaveBeenCalledWith("p1", true));
+    await waitFor(() => expect(api.uebersicht.mock.calls.length).toBeGreaterThan(aufrufeVorher));
+    expect(await within(panel).findByText(/Für Kunden sichtbar/)).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole("button", { name: "Weitere Aktionen" }));
+    expect(await screen.findByRole("menuitem", { name: /Für Kunden ausblenden/ })).toBeInTheDocument();
   });
 
   it("zeigt Fehlerzustand und Leerzustand mit Anlegen-Aktion", async () => {
