@@ -6,7 +6,9 @@ import type { Auftrag, AuftragStatus, Vorgang, VorgangStatus } from "../types";
 export const projektLink = (id: string) => `/projekte?projekt=${id}`;
 export const auftragLink = (id: string) => `/auftraege?auftrag=${id}`;
 
-const ERLEDIGT: VorgangStatus[] = ["abgeschlossen", "abgerechnet"];
+// Storniert zaehlt als erledigt: der Server rechnet vorgaenge_erledigt so (wie vorgaenge_gesamt), sonst
+// wuerden Tabelle und Fortschrittsbalken verschiedene Zahlen zeigen und ein Auftrag nie "x / x" erreichen.
+const ERLEDIGT: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
 const OFFEN_AUSGENOMMEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
 
 export const istVorgangErledigt = (status: VorgangStatus) => ERLEDIGT.includes(status);

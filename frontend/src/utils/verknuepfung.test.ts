@@ -38,4 +38,9 @@ describe("gruppiereNachAuftrag", () => {
     ]);
     expect(ohneAuftrag.map((v) => v.id)).toEqual(["v3", "v4"]);
   });
+
+  it("zählt stornierte Vorgänge als erledigt (wie der Server)", () => {
+    const { gruppen } = gruppiereNachAuftrag([auftrag("a1", "p1")], [vorgang("v1", "a1", "storniert"), vorgang("v2", "a1")]);
+    expect(gruppen[0].erledigt).toBe(1);
+  });
 });

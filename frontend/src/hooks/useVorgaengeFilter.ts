@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Box, Building2, CalendarClock, CircleDot, Folder, Receipt, Tag as TagIcon, UserRound, Wrench } from "lucide-react";
+import { Box, Building2, CalendarClock, CircleDot, ClipboardList, Folder, Receipt, Tag as TagIcon, UserRound, Wrench } from "lucide-react";
 import { useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { anlagenApi, kundenApi, projekteApi, tagsApi } from "../api/endpoints";
+import { anlagenApi, auftraegeApi, kundenApi, projekteApi, tagsApi } from "../api/endpoints";
 import { useFilterZustand, type FilterZustand } from "../components/filter/useFilterZustand";
 import type { FilterBedingung, FilterFeld } from "../components/filter/typen";
 import { bedingungenAusUrl, bedingungenZuJson } from "../components/filter/url";
@@ -47,6 +47,7 @@ export function useVorgaengeFilter(): {
   const darfProjekte = hatRecht("projekte", "sehen");
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: darfKunden });
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfProjekte });
+  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfProjekte });
   // Wie bisher erst ab gewähltem Kunden laden: eine Anlagenliste über den ganzen Mandanten wäre für einen Filter zu groß.
   const { data: anlagen } = useQuery({
     queryKey: ["anlagen", kundeId],
@@ -96,6 +97,15 @@ export function useVorgaengeFilter(): {
         operatoren: ["ist"],
         einzelwert: true,
       });
+      liste.push({
+        key: "auftrag",
+        label: "Auftrag",
+        typ: "verknuepfung",
+        icon: ClipboardList,
+        optionen: (auftraege ?? []).map((a) => ({ wert: a.id, label: a.titel })),
+        operatoren: ["ist"],
+        einzelwert: true,
+      });
     }
     liste.push(
       { key: "leistungstyp", label: "Leistungstyp", typ: "auswahl", icon: Wrench, optionen: LEISTUNGSTYP_OPTIONEN, operatoren: ["ist"], einzelwert: true },
@@ -127,7 +137,7 @@ export function useVorgaengeFilter(): {
       },
     );
     return liste;
-  }, [darfKunden, darfProjekte, kunden, projekte, anlagen, tags, kundeId]);
+  }, [darfKunden, darfProjekte, kunden, projekte, auftraege, anlagen, tags, kundeId]);
 
   const zustand = useFilterZustand({ felder });
 
