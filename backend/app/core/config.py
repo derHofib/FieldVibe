@@ -221,6 +221,12 @@ class Settings(BaseSettings):
     # Basis-URL des Frontends fuer den Reset-Link in der Mail; produktiv
     # https://<DOMAIN_APP> (siehe docs/DEPLOYMENT.md).
     frontend_base_url: str = "http://localhost:5173"
+    # Oeffentliche Basis-URL der API (https://<DOMAIN_API>). Daraus ergeben sich
+    # Issuer des OAuth-Servers und Resource-URL des MCP-Servers (docs/MCP.md);
+    # beide muessen exakt der Adresse entsprechen, unter der Claude sie erreicht.
+    api_public_url: str = Field(
+        default="http://localhost:8000", validation_alias="FIELDVIBE_API_PUBLIC_URL"
+    )
     kundenportal_reset_token_expire_minutes: int = 30
     user_reset_token_expire_minutes: int = 30
     # Gueltigkeit des Zwischen-Tokens zwischen Passwort und zweitem Faktor.

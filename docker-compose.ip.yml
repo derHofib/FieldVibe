@@ -16,6 +16,9 @@ services:
       # unverschluesselten Testbetriebs.
       FIELDVIBE_REFRESH_COOKIE_SECURE: "0"
       BACKUP_STATUS_DATEI: /backups/letzter-lauf.json
+      # Ohne TLS bleibt der MCP-Server aus (OAuth-Issuer muss HTTPS sein, docs/MCP.md);
+      # die URL ist nur der Vollstaendigkeit halber gesetzt.
+      FIELDVIBE_API_PUBLIC_URL: ${FIELDVIBE_API_PUBLIC_URL:-http://${DEPLOY_IP:-localhost}:8000}
     volumes:
       - ${BACKUP_DIR:-/opt/fieldvibe-backups}:/backups:ro
     ports:

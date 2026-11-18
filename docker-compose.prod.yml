@@ -16,6 +16,8 @@ services:
       # (Standard-Subnetze, bei eigenem Netz anpassen). Im .ip.yml-Modus bewusst
       # NICHT setzen -- dort haengt kein Proxy davor, der Header waere faelschbar.
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
+      # Issuer/Resource-URL des MCP-Servers (docs/MCP.md): die API-Domain, ueber die Claude ihn erreicht.
+      FIELDVIBE_API_PUBLIC_URL: ${FIELDVIBE_API_PUBLIC_URL:-https://${DOMAIN_API}}
       # Backup-Alter in /health/heartbeats (letzter-lauf.json, schreibgeschuetzt eingehaengt).
       BACKUP_STATUS_DATEI: /backups/letzter-lauf.json
     volumes:
