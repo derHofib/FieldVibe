@@ -64,12 +64,12 @@ export function VorgangStatusAktionen({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {darfAendern && schritt && (
-        <button onClick={() => onWaehle(schritt.nach)} disabled={pending} className={`btn-touch whitespace-nowrap px-4 ${primaer ? "btn-ap-primary" : "btn-ap"}`}>
+        <button onClick={() => onWaehle(schritt.nach)} disabled={pending} className={`min-h-11 md:min-h-8 text-sekundaer whitespace-nowrap px-4 ${primaer ? "btn-ap-primary" : "btn-ap"}`}>
           <schritt.icon size={15} strokeWidth={2} aria-hidden="true" /> {schritt.label}
         </button>
       )}
       {darfAendern && !schritt && ersatzSchritt && (
-        <button onClick={ersatzSchritt.onClick} disabled={ersatzSchritt.disabled} className={`btn-touch whitespace-nowrap px-4 ${primaer ? "btn-ap-primary" : "btn-ap"}`}>
+        <button onClick={ersatzSchritt.onClick} disabled={ersatzSchritt.disabled} className={`min-h-11 md:min-h-8 text-sekundaer whitespace-nowrap px-4 ${primaer ? "btn-ap-primary" : "btn-ap"}`}>
           {ersatzSchritt.label}
         </button>
       )}
@@ -84,7 +84,7 @@ export function VorgangStatusAktionen({
               onClick={toggeln}
               aria-haspopup="menu"
               aria-expanded={offen}
-              className="btn-touch btn-ap whitespace-nowrap px-3"
+              className="min-h-11 md:min-h-8 btn-ap text-sekundaer whitespace-nowrap px-3"
             >
               Status ändern <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
             </button>

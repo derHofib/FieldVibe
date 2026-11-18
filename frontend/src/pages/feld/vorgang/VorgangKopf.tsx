@@ -291,12 +291,12 @@ export function VorgangKopf({
       ersatzSchritt={rechnung ? { label: "Rechnung erstellen", onClick: rechnung.onClick, disabled: rechnung.pending } : undefined}
     >
       {!primaerAktionKlebt && (vorgang.status === "neu" || vorgang.status === "geplant") && darfMirZuweisen && (
-        <button type="button" onClick={onUebernehmen} disabled={uebernehmenPending} className="btn-touch btn-ap whitespace-nowrap px-3">
+        <button type="button" onClick={onUebernehmen} disabled={uebernehmenPending} className="min-h-11 md:min-h-8 btn-ap text-sekundaer whitespace-nowrap px-3">
           <UserCheck size={14} strokeWidth={2} aria-hidden="true" /> Übernehmen
         </button>
       )}
       {!primaerAktionKlebt && vorgang.status === "in_arbeit" && onZeitErfassen && (
-        <button type="button" onClick={onZeitErfassen} className="btn-touch btn-ap whitespace-nowrap px-3">
+        <button type="button" onClick={onZeitErfassen} className="min-h-11 md:min-h-8 btn-ap text-sekundaer whitespace-nowrap px-3">
           <Clock size={14} strokeWidth={2} aria-hidden="true" /> Zeit erfassen
         </button>
       )}
@@ -323,6 +323,7 @@ export function VorgangKopf({
           )}
           <PulldownMenu
             ariaLabel="Weitere Aktionen"
+            ausrichtung="rechts"
             items={menue}
             trigger={({ offen, toggeln, triggerRef }) => (
               <button

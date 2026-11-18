@@ -1611,63 +1611,6 @@ export function VorgangDetailPage({
         </div>
       )}
 
-      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
-       * Abschnitten weiter unten -- reine <a href="#..."> statt
-       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
-       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
-       * role="tablist"/"tab" fuer Screenreader. */}
-      {layout === "dicht" ? (
-        <VorgangTabLeiste
-          // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite mehr,
-          // sondern eine staendig sichtbare zweite Spalte (siehe
-          // verlaufSpalteBreit) -- als Tab wuerde er nur verwirren, weil ein
-          // Klick nichts umschaltet.
-          abschnitte={ANCHOR_ABSCHNITTE.filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))}
-          aktiv={desktopTab}
-          onWaehle={setDesktopTab}
-          zaehler={tabZaehler}
-        />
-      ) : (
-        <nav
-          ref={tabNavRef}
-          aria-label="Vorgangs-Abschnitte"
-          onScroll={tabNavRandAktualisieren}
-          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
-          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
-        >
-          {ANCHOR_ABSCHNITTE.map((a) => {
-            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
-            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
-            // springen -- alle anderen bleiben Sprungmarken auf der
-            // durchlaufenden Seite.
-            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
-            return eigeneSeite ? (
-              <button
-                key={a.ziel}
-                type="button"
-                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
-                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
-              >
-                {a.label}
-              </button>
-            ) : (
-              <a
-                key={a.ziel}
-                href={`#${a.ziel}`}
-                onClick={() => setAktiverAnker(a.ziel)}
-                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
-                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
-                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
-                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
-                }`}
-              >
-                {a.label}
-              </a>
-            );
-          })}
-        </nav>
-      )}
-
       {/* Kennzahlen-Zeile: auf einen Blick, ob in den anderen Abschnitten
        * ueberhaupt etwas wartet, statt jeden einzeln aufklappen zu muessen
        * -- Zeit/Positionen/Verlauf verlinken zur eigenen Unterseite,
@@ -1723,6 +1666,63 @@ export function VorgangDetailPage({
             <span className="text-fliess font-semibold text-label">{verlaufEintraege.length} Einträge</span>
           </button>
         </div>
+      )}
+
+      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
+       * Abschnitten weiter unten -- reine <a href="#..."> statt
+       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
+       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
+       * role="tablist"/"tab" fuer Screenreader. */}
+      {layout === "dicht" ? (
+        <VorgangTabLeiste
+          // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite mehr,
+          // sondern eine staendig sichtbare zweite Spalte (siehe
+          // verlaufSpalteBreit) -- als Tab wuerde er nur verwirren, weil ein
+          // Klick nichts umschaltet.
+          abschnitte={ANCHOR_ABSCHNITTE.filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))}
+          aktiv={desktopTab}
+          onWaehle={setDesktopTab}
+          zaehler={tabZaehler}
+        />
+      ) : (
+        <nav
+          ref={tabNavRef}
+          aria-label="Vorgangs-Abschnitte"
+          onScroll={tabNavRandAktualisieren}
+          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
+          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
+        >
+          {ANCHOR_ABSCHNITTE.map((a) => {
+            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
+            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
+            // springen -- alle anderen bleiben Sprungmarken auf der
+            // durchlaufenden Seite.
+            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
+            return eigeneSeite ? (
+              <button
+                key={a.ziel}
+                type="button"
+                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
+              >
+                {a.label}
+              </button>
+            ) : (
+              <a
+                key={a.ziel}
+                href={`#${a.ziel}`}
+                onClick={() => setAktiverAnker(a.ziel)}
+                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
+                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
+                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
+                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
+                }`}
+              >
+                {a.label}
+              </a>
+            );
+          })}
+        </nav>
       )}
 
       {verlaufSpalteBreit ? (

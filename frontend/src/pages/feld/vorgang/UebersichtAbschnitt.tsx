@@ -155,51 +155,46 @@ export function UebersichtAbschnitt({
               <p className="pt-0.5 text-fliess text-label2">Keine Adresse hinterlegt.</p>
             )}
           </div>
-          <div className="flex items-center gap-3 py-2">
-            <span className={ZEILE_ICON}>
-              <Building2 size={15} strokeWidth={1.5} aria-hidden="true" />
-            </span>
-            {anlage ? (
-              <button onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-left text-fliess text-tint-text underline-offset-2 hover:underline">
-                {anlage.bezeichnung}
-              </button>
-            ) : (
-              <span className="text-fliess text-label2">Keine Anlage</span>
-            )}
-          </div>
-          {((weitereAnlagen?.length ?? 0) > 0 || (kannDisponieren && !showAnlageHinzufuegen)) && (
-            <div className="pt-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-wrap gap-1.5">
-                  {(weitereAnlagen ?? []).map((a) => (
-                    <span
-                      key={a.id}
-                      className="flex items-center gap-1 border rounded-[var(--radius-ap-pill)] border-sep px-2 py-1 text-sekundaer text-label"
-                    >
-                      <button onClick={() => navigate(`/anlagen/${a.id}`)} className="underline-offset-2 hover:underline">
-                        {a.bezeichnung}
-                      </button>
-                      {kannDisponieren && (
-                        <button
-                          onClick={() => anlageEntfernenMutation.mutate(a.id)}
-                          disabled={anlageEntfernenMutation.isPending}
-                          className="relative text-label2 before:absolute before:-inset-2.5 hover:text-st-fehlt"
-                          aria-label={`${a.bezeichnung} entfernen`}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                </div>
-                {kannDisponieren && !showAnlageHinzufuegen && (
-                  <button onClick={() => setShowAnlageHinzufuegen(true)} className={`${ABSCHNITT_AKTION} ml-auto`}>
-                    + Anlage
+          {[
+            { key: "haupt", anlage: anlage, weitere: false },
+            ...(weitereAnlagen ?? []).map((a) => ({ key: a.id, anlage: a, weitere: true })),
+          ].map((zeile, idx, alle) => {
+            const letzte = idx === alle.length - 1;
+            const plusAnlage =
+              letzte && kannDisponieren && !showAnlageHinzufuegen ? (
+                <button onClick={() => setShowAnlageHinzufuegen(true)} className={`${ABSCHNITT_AKTION} ml-auto`}>
+                  + Anlage
+                </button>
+              ) : null;
+            return (
+              <div key={zeile.key} className="flex items-center gap-3 py-2 last:pb-0">
+                <span className={ZEILE_ICON}>
+                  <Building2 size={15} strokeWidth={1.5} aria-hidden="true" />
+                </span>
+                {zeile.anlage ? (
+                  <button
+                    onClick={() => navigate(`/anlagen/${zeile.anlage!.id}`)}
+                    className="min-w-0 truncate text-left text-fliess text-tint-text underline-offset-2 hover:underline"
+                  >
+                    {zeile.anlage.bezeichnung}
+                  </button>
+                ) : (
+                  <span className="text-fliess text-label2">Keine Anlage</span>
+                )}
+                {zeile.weitere && kannDisponieren && (
+                  <button
+                    onClick={() => anlageEntfernenMutation.mutate(zeile.anlage!.id)}
+                    disabled={anlageEntfernenMutation.isPending}
+                    className="relative text-label2 before:absolute before:-inset-2.5 hover:text-st-fehlt"
+                    aria-label={`${zeile.anlage!.bezeichnung} entfernen`}
+                  >
+                    ✕
                   </button>
                 )}
+                {plusAnlage}
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
 
