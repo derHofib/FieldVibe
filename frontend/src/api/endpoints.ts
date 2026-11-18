@@ -99,6 +99,8 @@ import type {
   FormSchemaStatus,
   FormSchemaVerfuegbar,
   FormSubmission,
+  FormSubmissionUebersicht,
+  FormSubmissionUebersichtParams,
   FormView,
   FormViewFieldLayout,
   FormViewResolved,
@@ -1041,6 +1043,12 @@ export const formModulApi = {
   updateSchema: (id: string, body: Partial<{ name: string; beschreibung: string; status: FormSchemaStatus }>) =>
     apiFetch<FormSchemaDetail>(`/api/form-schemas/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 
+  // Druckvorschau als PDF; mit submission_id echte Werte, sonst Beispieldaten.
+  vorschauPdf: (schemaId: string, viewId: string, submissionId?: string) =>
+    apiFetchBlob(
+      `/api/form-schemas/${schemaId}/views/${viewId}/vorschau-pdf${submissionId ? `?submission_id=${submissionId}` : ""}`,
+    ),
+
   createGroup: (
     schemaId: string,
     body: { key: string; label?: Record<string, string>; repeatable?: boolean; min_items?: number | null; max_items?: number | null; reihenfolge?: number },
@@ -1169,6 +1177,14 @@ export const formSubmissionsApi = {
   verfuegbar: (vorgangId: string) =>
     apiFetch<FormSchemaVerfuegbar[]>(`/api/form-submissions/verfuegbar?vorgang_id=${vorgangId}`),
   list: (vorgangId: string) => apiFetch<FormSubmission[]>(`/api/form-submissions?vorgang_id=${vorgangId}`),
+  // Alle Protokolle ueber alle (fuer den Nutzer sichtbaren) Vorgaenge, 100 je Seite.
+  uebersicht: (params: FormSubmissionUebersichtParams = {}) => {
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
+    const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
+    return apiFetch<{ eintraege: FormSubmissionUebersicht[]; gesamt: number }>(
+      `/api/form-submissions/uebersicht${qs ? `?${qs}` : ""}`,
+    );
+  },
   start: (vorgangId: string, schemaId: string) =>
     apiFetch<FormSubmission>(`/api/form-submissions?vorgang_id=${vorgangId}`, {
       method: "POST",
@@ -1179,6 +1195,11 @@ export const formSubmissionsApi = {
     apiFetch<FormSubmission>(`/api/form-submissions/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ values }),
+    }),
+  setKundensichtbar: (id: string, kundensichtbar: boolean) =>
+    apiFetch<FormSubmission>(`/api/form-submissions/${id}/kundensichtbar`, {
+      method: "PATCH",
+      body: JSON.stringify({ kundensichtbar }),
     }),
   abschliessen: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}/abschliessen`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/form-submissions/${id}`, { method: "DELETE" }),

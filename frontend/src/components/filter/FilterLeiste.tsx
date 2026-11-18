@@ -28,6 +28,10 @@ export interface FilterLeisteProps<T> {
   variante?: Variante;
   ohneSuche?: boolean;
   className?: string;
+  /** Office: Platz links vor der Suche (z. B. Umschalter Vorlagen | Ausgefüllt). */
+  vorne?: React.ReactNode;
+  /** Office: Platz rechts außen (z. B. Trefferzahl). */
+  hinten?: React.ReactNode;
 }
 
 interface PillenEintrag {
@@ -72,6 +76,8 @@ export function FilterLeiste<T>(props: FilterLeisteProps<T>) {
   return (
     <OfficeLeiste
       {...{ felder, zustand, suchPlatzhalter, ansichten, ohneSuche, className, e, a, eintraege, anker, setAnker }}
+      vorne={props.vorne}
+      hinten={props.hinten}
       live={live}
     />
   );
@@ -103,7 +109,14 @@ function OfficeLeiste<T>({
   live,
   anker,
   setAnker,
-}: Gemeinsam<T> & { anker: HTMLElement | null; setAnker: (el: HTMLElement | null) => void }) {
+  vorne,
+  hinten,
+}: Gemeinsam<T> & {
+  anker: HTMLElement | null;
+  setAnker: (el: HTMLElement | null) => void;
+  vorne?: React.ReactNode;
+  hinten?: React.ReactNode;
+}) {
   const n = eintraege.length;
   const [alleOffen, setAlleOffen] = useState(false);
   const [passend, setPassend] = useState(n);
@@ -171,6 +184,12 @@ function OfficeLeiste<T>({
 
   return (
     <div className={`relative flex min-h-[42px] items-center gap-1.5 overflow-hidden rounded-[var(--radius-ap-md)] bg-card px-2 py-[7px] ${className}`}>
+      {vorne && (
+        <>
+          <div className="shrink-0">{vorne}</div>
+          <span className="mx-1 h-5 w-[0.5px] shrink-0 bg-sepstrong" aria-hidden="true" />
+        </>
+      )}
       {!ohneSuche && (
         <>
           <div
@@ -254,6 +273,7 @@ function OfficeLeiste<T>({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {hinten && <span className="text-sekundaer text-label2">{hinten}</span>}
         {hatAktives && (
           <button type="button" onClick={zustand.zuruecksetzen} className="text-sekundaer font-medium text-tint-text">
             Zurücksetzen

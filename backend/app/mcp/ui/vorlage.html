@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Protokoll-Vorlage</title>
+<style>/*STIL*/</style>
+</head>
+<body>
+<div id="wurzel"><p class="leer-hinweis">Vorlage wird geladen …</p></div>
+<script>/*BRUECKE*/</script>
+<script>
+// Alle Texte kommen aus dem Tool-Ergebnis und werden nur ueber textContent eingesetzt.
+var TYPEN = {
+  text: "Text", textarea: "Langtext", zahl: "Zahl", datum: "Datum", dropdown: "Auswahl", mehrfachauswahl: "Mehrfachauswahl",
+  ja_nein: "Ja/Nein", bewertung: "Bewertung", foto: "Foto", unterschrift: "Unterschrift", gps: "GPS", qr_scan: "QR-Scan",
+  datei: "Datei", email: "E-Mail", telefon: "Telefon", betrag: "Betrag", adresse: "Adresse", foto_plan: "Fotoplan"
+};
+function el(tag, klasse, text) {
+  var e = document.createElement(tag);
+  if (klasse) e.className = klasse;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+window.fvRendern = function (d) {
+  var wurzel = document.getElementById("wurzel");
+  wurzel.textContent = "";
+  var kopf = el("div", "kopf");
+  kopf.appendChild(el("h1", "", d.name));
+  kopf.appendChild(el("span", "badge offen", d.status === "draft" ? "Entwurf" : d.status));
+  kopf.appendChild(el("span", "badge claude", "✦ Von Claude"));
+  wurzel.appendChild(kopf);
+  if (d.beschreibung) wurzel.appendChild(el("div", "unter", d.beschreibung));
+
+  var abschnitte = (d.abschnitte || []).slice();
+  if (d.felder_ohne_abschnitt && d.felder_ohne_abschnitt.length) {
+    abschnitte.unshift({ titel: "Allgemein", wiederholbar: false, felder: d.felder_ohne_abschnitt });
+  }
+  abschnitte.forEach(function (a) {
+    wurzel.appendChild(el("h2", "", a.titel + (a.wiederholbar ? " (wiederholbar)" : "")));
+    var karte = el("div", "karte");
+    (a.felder || []).forEach(function (f) {
+      var zeile = el("div", "zeile");
+      zeile.appendChild(el("div", "l", f.label + (f.pflicht ? " *" : "")));
+      var typ = TYPEN[f.typ] || f.typ;
+      var w = el("div", "w", typ);
+      if (f.optionen && f.optionen.length) w.appendChild(el("div", "unter", f.optionen.join(" · ")));
+      zeile.appendChild(w);
+      karte.appendChild(zeile);
+    });
+    wurzel.appendChild(karte);
+  });
+
+  wurzel.appendChild(el("div", "hinweis", d.hinweis || "Entwurf – bitte im Formular-Baukasten prüfen und veröffentlichen."));
+  var fuss = el("div", "fuss");
+  fuss.appendChild(el("span", "", "Pflichtfelder sind mit * markiert."));
+  var link = el("a", "knopf", "Im Baukasten prüfen");
+  if (/^https?:\/\//i.test(d.link || "")) link.href = d.link;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.addEventListener("click", function (ev) { ev.preventDefault(); window.fvLinkOeffnen(d.link); });
+  fuss.appendChild(link);
+  wurzel.appendChild(fuss);
+};
+</script>
+</body>
+</html>

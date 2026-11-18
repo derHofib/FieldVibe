@@ -10,7 +10,8 @@ Zwei Router:
   eigenen Vorgang beschraenkt (siehe _require_own_vorgang, identisch zum
   Muster in app/api/routes/vorgang_formulare.py).
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
@@ -60,8 +61,10 @@ from app.schemas.form_modul import (
     FormSchemaRead,
     FormSchemaUpdate,
     FormSchemaVerfuegbar,
+    FormSubmissionKundensichtbarUpdate,
     FormSubmissionRead,
     FormSubmissionStart,
+    FormSubmissionUebersichtRead,
     FormSubmissionValuesUpdate,
     FormViewCreate,
     FormViewFieldLayoutIn,
@@ -71,7 +74,7 @@ from app.schemas.form_modul import (
     FormViewUpdate,
 )
 from app.services import form_modul_service, photo_service, storage_service
-from app.services.audit_service import ki_schreibzugriff_protokollieren
+from app.services.audit_service import ki_schreibzugriff_protokollieren, log_action
 from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
@@ -79,6 +82,7 @@ from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import require_vorgang_zugriff
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+UEBERSICHT_SEITENGROESSE = 100
 # "datei" erlaubt zusaetzlich PDFs (siehe datei_hochladen) -- foto/
 # unterschrift/foto_plan bleiben bewusst auf Bilder beschraenkt, das sind
 # Kamera-/Zeichenflaechen-Aufnahmen, kein allgemeiner Datei-Upload.
@@ -110,6 +114,31 @@ submissions_router = APIRouter(
 # --- form_schemas ------------------------------------------------------
 
 
+def _erstellt_via(auth: AuthContext) -> str:
+    return "ki" if auth.via == "mcp" else "app"
+
+
+# Grenzwert-Markierung (nur Anzeige, nie Blocker beim Speichern): siehe generate_form_submission_pdf.
+_GRENZWERT_KEYS = ("warn_min", "warn_max")
+
+
+def _validate_grenzwerte(feld_typ: str, validation: dict) -> None:
+    vorhanden = {k: validation[k] for k in _GRENZWERT_KEYS if validation.get(k) is not None}
+    if not vorhanden:
+        return
+    if feld_typ != "zahl":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Grenzwerte (warn_min/warn_max) gibt es nur bei Zahlenfeldern"
+        )
+    for key, wert in vorhanden.items():
+        if isinstance(wert, bool) or not isinstance(wert, (int, float)) or wert != wert or wert in (float("inf"), float("-inf")):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"validation.{key} muss eine Zahl sein")
+    if len(vorhanden) == 2 and vorhanden["warn_min"] > vorhanden["warn_max"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="validation.warn_min darf nicht groesser als warn_max sein"
+        )
+
+
 async def _get_schema_or_404(session: AsyncSession, schema_id: UUID) -> FormSchema:
     schema = await session.get(FormSchema, schema_id)
     if schema is None:
@@ -121,8 +150,9 @@ async def _schema_detail(session: AsyncSession, schema: FormSchema) -> FormSchem
     groups = await form_modul_service.groups_fuer(session, schema.id)
     fields = await form_modul_service.fields_fuer(session, schema.id)
     zuordnungen = await form_modul_service.zuordnungen_fuer(session, schema.id)
+    read = (await form_modul_service.schema_reads(session, [schema]))[0]
     return FormSchemaDetailRead(
-        **{k: getattr(schema, k) for k in FormSchemaRead.model_fields},
+        **read.model_dump(),
         groups=[FormGroupRead.model_validate(g) for g in groups],
         fields=[FormFieldRead.model_validate(f) for f in fields],
         zuordnungen=[FormAuftragstypZuordnungRead.model_validate(z) for z in zuordnungen],
@@ -160,11 +190,12 @@ async def _validate_symbol_ids(session: AsyncSession, feld_typ: str, optionen: d
 async def list_schemas(
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
-) -> list[FormSchema]:
+) -> list[FormSchemaRead]:
     stmt = select(FormSchema).order_by(FormSchema.name)
     if status_filter is not None:
         stmt = stmt.where(FormSchema.status == status_filter)
-    return list((await session.execute(stmt)).scalars().all())
+    schemas = list((await session.execute(stmt)).scalars().all())
+    return await form_modul_service.schema_reads(session, schemas)
 
 
 @router.post(
@@ -177,12 +208,14 @@ async def create_schema(
     body: FormSchemaCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> FormSchema:
+) -> FormSchemaRead:
     schema = FormSchema(
         mandant_id=auth.mandant_id,
         name=body.name,
         beschreibung=body.beschreibung,
         erstellt_von=auth.user_id,
+        # Nie aus dem Request: nur das signierte Token weiss, ob Claude handelt (wie mit_ki_kennzeichnung).
+        erstellt_via=_erstellt_via(auth),
     )
     session.add(schema)
     await session.flush()
@@ -191,7 +224,7 @@ async def create_schema(
         session, auth, aktion="ki_formular_vorlage_angelegt", entity_type="form_schema", entity_id=schema.id,
         payload={"name": schema.name},
     )
-    return schema
+    return (await form_modul_service.schema_reads(session, [schema]))[0]
 
 
 @router.get("/{schema_id}", response_model=FormSchemaDetailRead)
@@ -301,6 +334,7 @@ async def create_field(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=f"Gruppe '{body.group_key}' existiert nicht"
             )
     await _validate_symbol_ids(session, body.feld_typ, body.optionen)
+    _validate_grenzwerte(body.feld_typ, body.validation)
     field = FormField(mandant_id=auth.mandant_id, schema_id=schema_id, **body.model_dump())
     session.add(field)
     await session.flush()
@@ -336,6 +370,8 @@ async def update_field(
             )
     if "optionen" in daten:
         await _validate_symbol_ids(session, daten.get("feld_typ", field.feld_typ), daten["optionen"])
+    if "validation" in daten or "feld_typ" in daten:
+        _validate_grenzwerte(daten.get("feld_typ", field.feld_typ), daten.get("validation", field.validation))
     for f, value in daten.items():
         setattr(field, f, value)
     await session.flush()
@@ -420,6 +456,52 @@ async def get_view(
         layouts=[FormViewFieldLayoutRead.model_validate(layout) for layout in layouts],
         elements=[FormPresentationElementRead.model_validate(e) for e in elements],
         states=states,
+    )
+
+
+@router.get("/{schema_id}/views/{view_id}/vorschau-pdf")
+async def view_vorschau_pdf(
+    schema_id: UUID,
+    view_id: UUID,
+    submission_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    """Druckvorschau aus dem Baukasten: mit submission_id die echten Werte dieser Ausfuellung (gleiche
+    Sichtbarkeitspruefung wie beim Submission-PDF), sonst Platzhalterwerte je Feldtyp. Immer mit
+    Vorschau-Banner."""
+    schema = await _get_schema_or_404(session, schema_id)
+    view = await _get_view_or_404(session, schema_id, view_id)
+    fields = await form_modul_service.fields_fuer(session, schema_id)
+    groups = await form_modul_service.groups_fuer(session, schema_id)
+    layouts = await form_modul_service.layouts_fuer(session, view.id)
+    elements = await form_modul_service.elements_fuer(session, view.id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+
+    if submission_id is not None:
+        submission = await _get_own_submission(session, auth, submission_id)
+        if submission.schema_id != schema_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ausfüllung nicht gefunden")
+        vorgang = await session.get(Vorgang, submission.vorgang_id)
+        bilder = await _pdf_bilder(session, fields, submission.values)
+    else:
+        # Nicht in die Session gehaengt: reine Platzhalter fuer den Renderer, nichts wird gespeichert.
+        vorgang = Vorgang(vorgangsnummer="V-00000", titel="Beispielvorgang")
+        submission = FormSubmission(
+            values=form_modul_service.platzhalter_werte(fields, groups),
+            status="offen",
+            created_at=datetime.now(timezone.utc),
+        )
+        bilder = {}
+
+    pdf_bytes = generate_form_submission_pdf(
+        mandant, vorgang, submission, schema.name, fields, groups, layouts, elements, bilder, ist_vorschau=True
+    )
+    dateiname = f"Vorschau-{schema.name}".encode("latin-1", "replace").decode("latin-1").replace('"', "")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{dateiname}.pdf"'},
     )
 
 
@@ -745,6 +827,32 @@ async def list_submissions(
     return [await form_modul_service.to_submission_read(session, s) for s in result.scalars().all()]
 
 
+@submissions_router.get("/uebersicht", response_model=FormSubmissionUebersichtRead)
+async def submissions_uebersicht(
+    seite: int = Query(default=1, ge=1),
+    status_filter: Literal["offen", "abgeschlossen"] | None = Query(default=None, alias="status"),
+    schema_id: UUID | None = Query(default=None),
+    von: date | None = Query(default=None),
+    bis: date | None = Query(default=None),
+    suche: str | None = Query(default=None, max_length=200),
+    techniker_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FormSubmissionUebersichtRead:
+    return await form_modul_service.submissions_uebersicht(
+        session,
+        auth,
+        seite=seite,
+        seitengroesse=UEBERSICHT_SEITENGROESSE,
+        status=status_filter,
+        schema_id=schema_id,
+        von=von,
+        bis=bis,
+        suche=suche,
+        techniker_id=techniker_id,
+    )
+
+
 @submissions_router.post("", response_model=FormSubmissionRead, status_code=status.HTTP_201_CREATED)
 async def start_submission(
     body: FormSubmissionStart,
@@ -778,6 +886,7 @@ async def start_submission(
             fields, vorgang, kunde, anlage, standort, zugewiesener.name if zugewiesener else None
         ),
         ausgefuellt_von=auth.user_id,
+        erstellt_via=_erstellt_via(auth),
     )
     session.add(submission)
     await session.flush()
@@ -795,6 +904,33 @@ async def get_submission(
 ) -> FormSubmissionRead:
     submission = await _get_own_submission(session, auth, submission_id)
     return await form_modul_service.to_submission_read(session, submission)
+
+
+async def _pdf_bilder(session: AsyncSession, fields: list[FormField], values: dict) -> dict[str, bytes]:
+    bilder: dict[str, bytes] = {}
+    for field in fields:
+        if field.feld_typ not in ("foto", "unterschrift", "foto_plan"):
+            continue
+        wert = values.get(field.key)
+        if not isinstance(wert, dict):
+            continue
+        if field.feld_typ == "foto_plan":
+            foto = wert.get("foto")
+            if not isinstance(foto, dict) or not foto.get("key"):
+                continue
+            foto_bytes = await storage_service.download_bytes(foto["key"])
+            markierungen = wert.get("markierungen") or []
+            symbol_ids = {m["symbol_id"] for m in markierungen if isinstance(m, dict) and m.get("art") == "symbol" and m.get("symbol_id")}
+            symbol_bytes_je_id: dict[str, bytes] = {}
+            if symbol_ids:
+                result = await session.execute(select(PlanSymbol).where(PlanSymbol.id.in_(symbol_ids)))
+                for symbol in result.scalars().all():
+                    symbol_bytes_je_id[str(symbol.id)] = await storage_service.download_bytes(symbol.object_key)
+            bilder[field.key] = await photo_service.compose_foto_plan_bild(foto_bytes, markierungen, symbol_bytes_je_id)
+        elif wert.get("key"):
+            bilder[field.key] = await storage_service.download_bytes(wert["key"])
+
+    return bilder
 
 
 @submissions_router.get("/{submission_id}/pdf")
@@ -830,28 +966,7 @@ async def submission_pdf(
     layouts = await form_modul_service.layouts_fuer(session, view.id)
     elements = await form_modul_service.elements_fuer(session, view.id)
 
-    bilder: dict[str, bytes] = {}
-    for field in fields:
-        if field.feld_typ not in ("foto", "unterschrift", "foto_plan"):
-            continue
-        wert = submission.values.get(field.key)
-        if not isinstance(wert, dict):
-            continue
-        if field.feld_typ == "foto_plan":
-            foto = wert.get("foto")
-            if not isinstance(foto, dict) or not foto.get("key"):
-                continue
-            foto_bytes = await storage_service.download_bytes(foto["key"])
-            markierungen = wert.get("markierungen") or []
-            symbol_ids = {m["symbol_id"] for m in markierungen if isinstance(m, dict) and m.get("art") == "symbol" and m.get("symbol_id")}
-            symbol_bytes_je_id: dict[str, bytes] = {}
-            if symbol_ids:
-                result = await session.execute(select(PlanSymbol).where(PlanSymbol.id.in_(symbol_ids)))
-                for symbol in result.scalars().all():
-                    symbol_bytes_je_id[str(symbol.id)] = await storage_service.download_bytes(symbol.object_key)
-            bilder[field.key] = await photo_service.compose_foto_plan_bild(foto_bytes, markierungen, symbol_bytes_je_id)
-        elif wert.get("key"):
-            bilder[field.key] = await storage_service.download_bytes(wert["key"])
+    bilder = await _pdf_bilder(session, fields, submission.values)
 
     ist_vorschau = submission.status != "abgeschlossen"
     pdf_bytes = generate_form_submission_pdf(
@@ -904,6 +1019,45 @@ async def update_submission_values(
             session, auth, aktion="ki_protokoll_ergaenzt", entity_type="form_submission", entity_id=submission.id,
             payload={"felder": sorted(k for k in neue_werte if alte_werte.get(k) != neue_werte[k])},
         )
+    return await form_modul_service.to_submission_read(session, submission)
+
+
+@submissions_router.patch("/{submission_id}/kundensichtbar", response_model=FormSubmissionRead)
+async def set_submission_kundensichtbar(
+    submission_id: UUID,
+    body: FormSubmissionKundensichtbarUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FormSubmissionRead:
+    """Gibt eine Ausfuellung fuers Kundenportal frei bzw. blendet sie aus. Auch bei abgeschlossenen
+    Ausfuellungen erlaubt (Freigabe ist keine Wertaenderung); der Feed-Eintrag wird mitgezogen, weil
+    das Portal ueber ihn liest."""
+    # Freigabe an Kunden ist eine Entscheidung des Menschen, nie der KI (nicht in der MCP-Allowlist, hier doppelt gesichert).
+    if getattr(auth, "via", None) == "mcp":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Für den KI-Zugriff nicht erlaubt")
+    submission = await _get_own_submission(session, auth, submission_id)
+    if submission.kundensichtbar != body.kundensichtbar:
+        submission.kundensichtbar = body.kundensichtbar
+        events = (
+            await session.execute(
+                select(VorgangEvent).where(
+                    VorgangEvent.ref_entity_type == "form_submission", VorgangEvent.ref_entity_id == submission.id
+                )
+            )
+        ).scalars().all()
+        for event in events:
+            event.kundensichtbar = body.kundensichtbar
+        await log_action(
+            session,
+            aktion="form_submission_kundensichtbar",
+            mandant_id=auth.mandant_id,
+            actor_user_id=auth.user_id,
+            entity_type="form_submission",
+            entity_id=submission.id,
+            payload={"kundensichtbar": body.kundensichtbar},
+        )
+        await session.flush()
+        await session.refresh(submission)
     return await form_modul_service.to_submission_read(session, submission)
 
 

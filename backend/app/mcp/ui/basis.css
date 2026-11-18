@@ -1,0 +1,46 @@
+/* Farben wie docs/DESIGN.md (Apple-HIG-Tokens aus frontend/src/index.css), Claude-Marke = Violett (st-wartet). */
+:root {
+  --label: #000000; --label2: #6c6c70; --insp: #f7f7f9; --fill: rgba(118, 118, 128, 0.12);
+  --sep: rgba(60, 60, 67, 0.16); --tint: #0071e3; --tint-solid: #0071e3;
+  --fehlt-text: #c4000f; --fehlt-bg: rgba(255, 59, 48, 0.12);
+  --erledigt-text: #17692b; --erledigt-bg: rgba(52, 199, 89, 0.17);
+  --arbeit-text: #8f4000; --arbeit-bg: rgba(255, 149, 0, 0.18);
+  --claude-text: #6e3ba8; --claude-bg: rgba(175, 82, 222, 0.14);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --label: #ffffff; --label2: #98989f; --insp: #242426; --fill: rgba(118, 118, 128, 0.24);
+    --sep: rgba(84, 84, 88, 0.5); --tint: #0a84ff; --tint-solid: #0a6ad1;
+    --fehlt-text: #ff7b73; --fehlt-bg: rgba(255, 69, 58, 0.2);
+    --erledigt-text: #4ade6e; --erledigt-bg: rgba(48, 209, 88, 0.18);
+    --arbeit-text: #ffb340; --arbeit-bg: rgba(255, 159, 10, 0.2);
+    --claude-text: #c89eff; --claude-bg: rgba(191, 90, 242, 0.22);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; color: var(--label); }
+body { font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; }
+h1 { font-size: 17px; margin: 0; line-height: 1.25; }
+h2 { font-size: 13px; margin: 16px 0 6px; color: var(--label2); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.kopf { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.unter { color: var(--label2); font-size: 13px; margin-top: 2px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.offen { color: var(--arbeit-text); background: var(--arbeit-bg); }
+.badge.fertig { color: var(--erledigt-text); background: var(--erledigt-bg); }
+.badge.claude { color: var(--claude-text); background: var(--claude-bg); }
+.karte { background: var(--insp); border-radius: 12px; padding: 4px 12px; margin-bottom: 8px; }
+.zeile { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--sep); }
+.zeile:first-child { border-top: 0; }
+.zeile .l { color: var(--label2); flex: 0 1 45%; }
+.zeile .w { text-align: right; font-weight: 500; word-break: break-word; flex: 1 1 55%; }
+.zeile .w.leer { color: var(--label2); font-weight: 400; }
+.zeile .w.ueber { color: var(--fehlt-text); }
+.marke { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--fehlt-text); background: var(--fehlt-bg); }
+.ja { color: var(--erledigt-text); }
+.nein { color: var(--fehlt-text); }
+.eintrag-titel { font-size: 12px; font-weight: 600; color: var(--label2); padding: 8px 0 0; }
+.hinweis { border-radius: 12px; padding: 8px 12px; margin: 12px 0 0; background: var(--arbeit-bg); color: var(--arbeit-text); }
+.fuss { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; color: var(--label2); font-size: 13px; }
+.knopf { display: inline-block; padding: 8px 14px; border-radius: 10px; background: var(--tint-solid); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; }
+.knopf:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.leer-hinweis { color: var(--label2); padding: 16px 0; }

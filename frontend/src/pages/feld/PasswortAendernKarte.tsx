@@ -3,12 +3,17 @@ import { KeyRound } from "lucide-react";
 
 import { ApiError } from "../../api/client";
 import { authApi } from "../../api/endpoints";
+import { GroupedListRow } from "../../components/apple/GroupedList";
+import { SymbolKachel } from "../../components/apple/SymbolKachel";
 import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 
-/** Passwort ändern im Profil (Feld-App und Office teilen sich die Seite). */
-export function PasswortAendernKarte() {
+/** Passwort ändern im Profil (Feld-App und Office teilen sich die Seite).
+ * `variante="zeile"` (Office): Listenzeile für eine gemeinsame GroupedList
+ * "Sicherheit", das Formular klappt darunter auf. */
+export function PasswortAendernKarte({ variante = "karte", last = false }: { variante?: "karte" | "zeile"; last?: boolean }) {
+  const zeile = variante === "zeile";
   const { loginMitToken } = useAuth();
   const [offen, setOffen] = useState(false);
   const [altesPasswort, setAltesPasswort] = useState("");
@@ -49,21 +54,30 @@ export function PasswortAendernKarte() {
     }
   }
 
+  const umschalten = () => {
+    setOffen((o) => !o);
+    setErfolg(false);
+    zuruecksetzen();
+  };
+
   return (
-    <div className="card-ap">
-      <button
-        type="button"
-        onClick={() => {
-          setOffen((o) => !o);
-          setErfolg(false);
-          zuruecksetzen();
-        }}
-        aria-expanded={offen}
-        className="btn-touch flex w-full items-center gap-3 p-4 text-left"
-      >
-        <IconBadge icon={KeyRound} tone="violet" size="sm" />
-        <span className="font-medium text-label">Passwort ändern</span>
-      </button>
+    <div className={zeile ? undefined : "card-ap"}>
+      {zeile ? (
+        <GroupedListRow onClick={umschalten} navigierbar last={last && !offen && !erfolg}>
+          <SymbolKachel icon={KeyRound} farbe="indigo" />
+          <span className="text-zeile text-label">Passwort ändern</span>
+        </GroupedListRow>
+      ) : (
+        <button
+          type="button"
+          onClick={umschalten}
+          aria-expanded={offen}
+          className="btn-touch flex w-full items-center gap-3 p-4 text-left"
+        >
+          <IconBadge icon={KeyRound} tone="violet" size="sm" />
+          <span className="font-medium text-label">Passwort ändern</span>
+        </button>
+      )}
 
       {erfolg && !offen && (
         <p className="mx-4 mb-4 border rounded-[var(--radius-ap-md)] border-st-erledigt px-3 py-2 text-fliess text-st-erledigt">

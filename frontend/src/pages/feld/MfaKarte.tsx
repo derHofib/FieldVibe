@@ -4,14 +4,18 @@ import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../../api/client";
 import { mfaApi } from "../../api/endpoints";
+import { GroupedListRow } from "../../components/apple/GroupedList";
+import { SymbolKachel } from "../../components/apple/SymbolKachel";
 import { IconBadge } from "../../components/IconBadge";
 import { MfaEinrichtenFormular } from "../../components/MfaEinrichtenFormular";
 import { useAuth } from "../../context/AuthContext";
 
 type Aktion = "deaktivieren" | "codes" | null;
 
-/** Zwei-Faktor-Anmeldung im Profil (Feld-App und Office teilen sich die Seite). */
-export function MfaKarte() {
+/** Zwei-Faktor-Anmeldung im Profil (Feld-App und Office teilen sich die Seite).
+ * `variante="zeile"` (Office): Listenzeile für die gemeinsame GroupedList "Sicherheit". */
+export function MfaKarte({ variante = "karte", last = false }: { variante?: "karte" | "zeile"; last?: boolean }) {
+  const zeile = variante === "zeile";
   const { loginMitToken, zeigeMfaCodes } = useAuth();
   const queryClient = useQueryClient();
   const [offen, setOffen] = useState(false);
@@ -49,17 +53,25 @@ export function MfaKarte() {
 
   const s = status.data;
   return (
-    <div className="card-ap">
-      <button
-        type="button"
-        onClick={() => setOffen((o) => !o)}
-        aria-expanded={offen}
-        className="btn-touch flex w-full items-center gap-3 p-4 text-left"
-      >
-        <IconBadge icon={ShieldCheck} tone="emerald" size="sm" />
-        <span className="flex-1 font-medium text-label">Zwei-Faktor-Anmeldung</span>
-        {s && <span className="text-sekundaer text-label2">{s.aktiv ? "Aktiv" : "Aus"}</span>}
-      </button>
+    <div className={zeile ? undefined : "card-ap"}>
+      {zeile ? (
+        <GroupedListRow onClick={() => setOffen((o) => !o)} navigierbar last={last && !offen}>
+          <SymbolKachel icon={ShieldCheck} farbe="green" />
+          <span className="flex-1 text-zeile text-label">Zwei-Faktor-Anmeldung</span>
+          {s && <span className="text-fliess text-label2">{s.aktiv ? "Aktiv" : "Aus"}</span>}
+        </GroupedListRow>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOffen((o) => !o)}
+          aria-expanded={offen}
+          className="btn-touch flex w-full items-center gap-3 p-4 text-left"
+        >
+          <IconBadge icon={ShieldCheck} tone="emerald" size="sm" />
+          <span className="flex-1 font-medium text-label">Zwei-Faktor-Anmeldung</span>
+          {s && <span className="text-sekundaer text-label2">{s.aktiv ? "Aktiv" : "Aus"}</span>}
+        </button>
+      )}
 
       {offen && s && (
         <div className="space-y-3 px-4 pb-4">

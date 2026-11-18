@@ -24,6 +24,7 @@ from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 from app.services import privatkunden_service, steuer_service
 from app.services.angebot_gliederung import ist_titel, ordnungszahlen, zwischensummen
+from app.services.form_grenzwert import grenzwert_abweichung, grenzwert_text
 from app.services.steuer_service import SteuerGruppe
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
@@ -1286,9 +1287,19 @@ class _FormularPDF(FPDF):
         self.set_text_color(0, 0, 0)
 
 
+_FORMULAR_ROT = (220, 38, 38)
+
+
+def _grenzwert_hinweis(field: FormField, wert: object) -> str | None:
+    return grenzwert_text(grenzwert_abweichung(field.feld_typ, field.validation, wert))
+
+
 def _form_antwort_text(field: FormField, wert: object) -> str:
     if wert is None or wert == "":
         return "-"
+    hinweis = _grenzwert_hinweis(field, wert)
+    if hinweis:
+        return f"{_pdf_safe_text(wert)} ({hinweis})"
     if field.feld_typ == "ja_nein":
         return "Ja" if wert else "Nein"
     if field.feld_typ == "mehrfachauswahl" and isinstance(wert, list):
@@ -1340,7 +1351,12 @@ def _render_form_feld_zelle(
 
     pdf.set_xy(x, wert_y)
     pdf.set_font("Helvetica", "", 9)
+    ausserhalb = _grenzwert_hinweis(field, wert) is not None
+    if ausserhalb:
+        pdf.set_text_color(*_FORMULAR_ROT)
     pdf.multi_cell(breite, min(wert_hoehe, 5.0), _form_antwort_text(field, wert))
+    if ausserhalb:
+        pdf.set_text_color(0, 0, 0)
 
 
 def generate_form_submission_pdf(
@@ -1450,10 +1466,16 @@ def generate_form_submission_pdf(
             pdf.set_font("Helvetica", "", 9)
             for field in gruppen_felder:
                 label = field.label.get("de", field.key)
-                text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
+                zellwert = zeile.get(field.key) if isinstance(zeile, dict) else None
+                text = _form_antwort_text(field, zellwert)
+                ausserhalb = _grenzwert_hinweis(field, zellwert) is not None
+                if ausserhalb:
+                    pdf.set_text_color(*_FORMULAR_ROT)
                 # Cursor zurueck an den linken Rand: nach multi_cell steht er sonst rechts, und das
                 # naechste Feld derselben Gruppe scheitert mit "Not enough horizontal space".
                 pdf.multi_cell(0, 5, f"{label}: {text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                if ausserhalb:
+                    pdf.set_text_color(0, 0, 0)
             pdf.ln(2)
             if not group.repeatable:
                 break

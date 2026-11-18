@@ -13,7 +13,7 @@ import { DauerauftragNeuPage } from "../pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "../pages/feld/DauerauftraegePage";
 import { EingangsrechnungDetailPage } from "../pages/feld/EingangsrechnungDetailPage";
 import { FormSchemaEditorPage } from "../pages/feld/FormSchemaEditorPage";
-import { FormSchemasPage } from "../pages/feld/FormSchemasPage";
+import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
 import { FormSubmissionAusfuellenPage } from "../pages/feld/FormSubmissionAusfuellenPage";
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
@@ -157,6 +157,25 @@ export function OfficeApp() {
               dafuer die Desktop-Breite; die Feld-App behaelt die Kartenliste. */}
           <Route path="/zeiten-buchen" element={<div className="max-w-[1400px]"><ZeitenBuchenPage layout="dicht" /></div>} />
 
+          {/* Formulare: Vorlagen-/Protokolltabelle mit Vorschau-Panel und der Drei-Spalten-Baukasten
+              brauchen die Desktop-Breite; die Feld-App behaelt FormSchemasPage (schmal, mobil). */}
+          <Route
+            path="/form-schemas"
+            element={
+              <div className="max-w-[1760px]">
+                <OfficeFormularePage />
+              </div>
+            }
+          />
+          <Route
+            path="/form-schemas/:id"
+            element={
+              <div className="max-w-[1760px]">
+                <FormSchemaEditorPage layout="office" />
+              </div>
+            }
+          />
+
           {/* Rechte-Matrix je Account-Typ braucht die Desktop-Breite (Bereich x 9 Aktionen). */}
           <Route
             path="/account-typen"
@@ -184,8 +203,6 @@ export function OfficeApp() {
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
           <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
-          <Route path="/form-schemas" element={<FormSchemasPage />} />
-          <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

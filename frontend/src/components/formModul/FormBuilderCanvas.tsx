@@ -343,6 +343,7 @@ function InspectorFeld({
   onLoeschen,
   planSymbole,
   onSymbolIdsSpeichern,
+  onGrenzwerteSpeichern,
 }: {
   feld: FormField;
   regelnAnzahl: number;
@@ -352,9 +353,20 @@ function InspectorFeld({
   onLoeschen: () => void;
   planSymbole: PlanSymbol[];
   onSymbolIdsSpeichern: (ids: string[]) => void;
+  onGrenzwerteSpeichern: (warnMin: number | null, warnMax: number | null) => void;
 }) {
   const uid = useId();
   const [label, setLabel] = useState(feld.label.de ?? feld.key);
+  const [warnMin, setWarnMin] = useState(typeof feld.validation.warn_min === "number" ? String(feld.validation.warn_min) : "");
+  const [warnMax, setWarnMax] = useState(typeof feld.validation.warn_max === "number" ? String(feld.validation.warn_max) : "");
+
+  function grenzwerteSpeichern() {
+    const alt = [feld.validation.warn_min, feld.validation.warn_max];
+    const neu = [warnMin.trim() === "" ? null : Number(warnMin.replace(",", ".")), warnMax.trim() === "" ? null : Number(warnMax.replace(",", "."))];
+    if (neu.some((n) => n !== null && !Number.isFinite(n))) return;
+    if (neu[0] === (alt[0] ?? null) && neu[1] === (alt[1] ?? null)) return;
+    onGrenzwerteSpeichern(neu[0], neu[1]);
+  }
   const ausgewaehlteSymbolIds = Array.isArray(feld.optionen.symbol_ids) ? (feld.optionen.symbol_ids as string[]) : [];
 
   function symbolUmschalten(symbolId: string) {
@@ -390,6 +402,32 @@ function InspectorFeld({
         Pflichtfeld
         <input type="checkbox" checked={feld.pflichtfeld} onChange={onPflichtfeldToggle} className="h-4 w-4" />
       </label>
+      {feld.feld_typ === "zahl" && (
+        <fieldset>
+          <legend className="mb-1 block text-sekundaer font-medium text-label">Grenzwert markieren</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block"><span className="mb-0.5 block text-meta text-label2">Unter</span><input
+              aria-label="Markieren unter"
+              inputMode="decimal"
+              value={warnMin}
+              onChange={(e) => setWarnMin(e.target.value)}
+              onBlur={grenzwerteSpeichern}
+              placeholder="unter …"
+              className={inputClass}
+            /></label>
+            <label className="block"><span className="mb-0.5 block text-meta text-label2">Über</span><input
+              aria-label="Markieren über"
+              inputMode="decimal"
+              value={warnMax}
+              onChange={(e) => setWarnMax(e.target.value)}
+              onBlur={grenzwerteSpeichern}
+              placeholder="über …"
+              className={inputClass}
+            /></label>
+          </div>
+          <p className="mt-1 text-meta text-label2">Werte außerhalb erscheinen rot, beim Erfassen als Hinweis, nie als Sperre.</p>
+        </fieldset>
+      )}
       {feld.feld_typ === "foto_plan" && (
         <div>
           <label className="mb-1 block text-sekundaer font-medium text-label">Verfügbare Symbole</label>
@@ -1065,6 +1103,17 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
                     { onSuccess: invalidate },
                   )
                 }
+                onGrenzwerteSpeichern={(min, max) => {
+                  // Leere Grenzen komplett entfernen statt null zu speichern, damit validation sauber bleibt.
+                  const { warn_min: _a, warn_max: _b, ...rest } = ausgewaehltesFeld.validation;
+                  updateFieldMutation.mutate(
+                    {
+                      fieldId: ausgewaehltesFeld.id,
+                      body: { validation: { ...rest, ...(min !== null ? { warn_min: min } : {}), ...(max !== null ? { warn_max: max } : {}) } },
+                    },
+                    { onSuccess: invalidate },
+                  );
+                }}
               />
             ) : ausgewaehlteGruppe ? (
               <InspectorGruppe
