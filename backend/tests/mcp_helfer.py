@@ -17,6 +17,7 @@ from app.core.security import hash_password
 from app.db.session import system_session
 from app.main import app
 from app.mcp.server import integration
+from app.mcp.server import register_limiter
 from app.mcp.tools import _basis
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.mandant import Mandant
@@ -36,6 +37,7 @@ async def mcp_laeuft():
     und jeder Test hat seinen eigenen Event-Loop."""
     integration.neu_aufbauen()
     _basis.aufruf_limiter._failures.clear()
+    register_limiter._failures.clear()
     bereit, ende = asyncio.Event(), asyncio.Event()
 
     async def laufen():

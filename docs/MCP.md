@@ -85,7 +85,8 @@ engeren Filtern (die Antwort sagt das im Feld `hinweis`).
 - **Nachvollziehbarkeit.** Einwilligung und Widerruf stehen im Audit-Log
   (`ki_verbindung_erteilt`, `ki_verbindung_widerrufen`). Jeder Audit-Eintrag, der während
   eines KI-Aufrufs entsteht, trägt `quelle = "ki"` und `ki_verbindung_id` im Payload.
-- **Rate-Limit:** 120 Aufrufe pro Minute und Verbindung (In-Memory je Prozess).
+- **Rate-Limit:** 120 Tool-Aufrufe pro Minute und Verbindung, die offene Client-Registrierung
+  (`/register`) 30 pro Stunde und IP (In-Memory je Prozess).
 - **DNS-Rebinding-Schutz:** `/mcp` akzeptiert nur den Host aus `FIELDVIBE_API_PUBLIC_URL`
   (in Dev/Test zusätzlich localhost).
 

@@ -12,14 +12,21 @@ from urllib.parse import urlsplit
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
+from fastapi import HTTPException
+from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import get_settings
+from app.core.rate_limit import SlidingWindowRateLimiter
 from app.mcp.oauth_provider import FieldVibeOAuthProvider, resource_url
 from app.mcp.tools import auswertung, lesen
 from app.mcp.zugang import ALLE_SCOPES, SCOPE_LESEN
 
 logger = logging.getLogger(__name__)
+
+# /register ist offen (Dynamic Client Registration vor jedem Login): je IP begrenzen, damit niemand
+# die Tabelle ki_clients vollschreibt.
+register_limiter = SlidingWindowRateLimiter(max_attempts=30, window_seconds=60 * 60)
 
 # Muss mit docs/BEGRIFFE.md uebereinstimmen (Test). Eine Kopie, weil das Backend-Image
 # nur backend/ enthaelt (docker-compose: build.context ./backend), docs/ also fehlt.
@@ -159,6 +166,18 @@ class McpWeiche:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and integration.app is not None and scope["path"] in McpIntegration.PFADE:
+            if scope["path"] == "/register" and scope["method"] == "POST":
+                client = scope.get("client")
+                try:
+                    register_limiter.hit(client[0] if client else "unknown")
+                except HTTPException as exc:
+                    antwort = JSONResponse(
+                        {"error": "temporarily_unavailable", "error_description": exc.detail},
+                        status_code=exc.status_code,
+                        headers=exc.headers,
+                    )
+                    await antwort(scope, receive, send)
+                    return
             await integration.app(scope, receive, send)
             return
         await self.app(scope, receive, send)

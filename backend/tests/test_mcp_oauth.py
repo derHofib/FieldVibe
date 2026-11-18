@@ -83,6 +83,16 @@ async def test_mcp_ohne_token_liefert_401_mit_hinweis_auf_metadaten(mcp_client):
     assert "/.well-known/oauth-protected-resource/mcp" in resp.headers["www-authenticate"]
 
 
+async def test_registrierung_ist_je_ip_begrenzt(mcp_client, monkeypatch):
+    from app.mcp.server import register_limiter
+
+    monkeypatch.setattr(register_limiter, "_max_attempts", 2)
+    await client_registrieren(mcp_client)
+    await client_registrieren(mcp_client)
+    resp = await mcp_client.post("/register", json={"redirect_uris": ["http://localhost:9999/callback"]})
+    assert resp.status_code == 429 and resp.headers["retry-after"]
+
+
 async def test_request_id_middleware_greift_auch_fuer_mcp_und_oauth_pfade(mcp_client):
     for pfad in ("/mcp", "/.well-known/oauth-authorization-server"):
         antwort = await mcp_client.get(pfad, headers={"X-Request-ID": "test-request-1234"})
