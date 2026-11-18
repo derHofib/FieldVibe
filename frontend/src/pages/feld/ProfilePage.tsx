@@ -12,6 +12,7 @@ import { useAuth } from "../../context/AuthContext";
 import { SeitenKopf } from "../../office/OfficeUi";
 import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
+import { KiVerbindungenKarte } from "./KiVerbindungenKarte";
 import { MfaKarte } from "./MfaKarte";
 import { PasswortAendernKarte } from "./PasswortAendernKarte";
 import { ProfilArbeitszeitKarte, ProfilUrlaubKarte, ProfilVorgaengeKarte } from "./ProfilUebersichten";
@@ -49,6 +50,9 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
   const kannDisponieren = hatRecht("dispo", "bearbeiten");
   const dauerauftraege = kannDisponieren && istModulAktiv(currentUser, "dauerauftrag");
   const zeiterfassung = istModulAktiv(currentUser, "zeiterfassung");
+
+  // Bei Impersonation gehoert das Profil dem Super-Admin; er hat keine KI-Verbindungen.
+  const kiVerbindungen = !isImpersonating && istModulAktiv(currentUser, "ki_zugriff") && <KiVerbindungenKarte />;
 
   const rolle =
     currentUser &&
@@ -153,6 +157,7 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
             {verknuepfungen}
             {darstellung}
             {sicherheit}
+            {kiVerbindungen}
             {abmelden}
           </div>
           <div className="space-y-4">
@@ -174,6 +179,7 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
       {verknuepfungen}
       {darstellung}
       {sicherheit}
+      {kiVerbindungen}
       {abmelden}
     </div>
   );
