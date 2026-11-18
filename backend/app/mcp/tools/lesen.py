@@ -9,6 +9,8 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from app.mcp.aufbereitung import bereinigen, seite_aus
+from app.mcp.protokoll_ansicht import abschnitte_aus
+from app.mcp.protokoll_werte import fehlende_pflichtfelder
 from app.mcp.rest_client import api_get
 from app.mcp.tools._basis import zugriff
 
@@ -348,9 +350,22 @@ def registrieren(mcp: MCPServer) -> None:
     @mcp.tool(
         name="formular_lesen",
         title="Ausgefülltes Formular lesen",
-        description="Liest ein ausgefülltes Formular/Protokoll (Submission) mit allen Werten, Status und Vorgang.",
+        description=(
+            "Liest ein ausgefülltes Formular/Protokoll (Submission) mit allen Werten, Status und Vorgang. Die Werte "
+            "stehen roh unter `values` (Feld-Keys) und zusätzlich unter `abschnitte` gruppiert nach den Abschnitten "
+            "der Vorlage mit Beschriftungen, Grenzwert-Markierung und Hinweis auf fehlende Pflichtfelder; Fotos nur "
+            "als Hinweis. Die Gruppierung braucht das Recht Formulare › sehen, ohne bleibt es bei den Rohwerten."
+        ),
         annotations=NUR_LESEN,
     )
     async def formular_lesen(formular_id: Annotated[str, Field(description="ID der Submission.")]) -> dict[str, Any]:
         z = zugriff()
-        return bereinigen(await api_get(z, f"/api/form-submissions/{formular_id}"))
+        protokoll = await api_get(z, f"/api/form-submissions/{formular_id}")
+        ergebnis = bereinigen(protokoll)
+        schema = await _optional(api_get(z, f"/api/form-schemas/{protokoll['schema_id']}"))
+        if "fields" in schema:
+            ergebnis["abschnitte"] = bereinigen(abschnitte_aus(schema, protokoll["values"]))
+            ergebnis["fehlende_pflichtfelder"] = fehlende_pflichtfelder(schema, protokoll["values"])
+        else:
+            ergebnis["hinweis"] = f"Keine Gruppierung nach Abschnitten: {schema.get('hinweis', 'Vorlage nicht lesbar')}"
+        return ergebnis

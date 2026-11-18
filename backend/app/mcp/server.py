@@ -21,6 +21,7 @@ from app.core.config import get_settings
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.mcp.oauth_provider import FieldVibeOAuthProvider, KiAccessToken, resource_url
 from app.mcp import prompts
+from app.mcp.ansichten import baue_apps
 from app.mcp.tools import auswertung, lesen, protokolle, schreiben
 from app.mcp.zugang import ALLE_SCOPES, SCOPE_LESEN, SCOPE_SCHREIBEN
 
@@ -115,6 +116,7 @@ def baue_mcp_server() -> tuple[MCPServer, ASGIApp] | None:
             instructions=ANLEITUNG,
             auth_server_provider=FieldVibeOAuthProvider(),
             auth=auth,
+            extensions=[baue_apps()],
         )
         lesen.registrieren(server)
         auswertung.registrieren(server)

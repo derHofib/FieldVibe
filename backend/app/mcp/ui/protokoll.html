@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Protokoll</title>
+<style>/*STIL*/</style>
+</head>
+<body>
+<div id="wurzel"><p class="leer-hinweis">Protokoll wird geladen …</p></div>
+<script>/*BRUECKE*/</script>
+<script>
+// Alle Texte kommen aus dem Tool-Ergebnis und werden nur ueber textContent eingesetzt.
+function el(tag, klasse, text) {
+  var e = document.createElement(tag);
+  if (klasse) e.className = klasse;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+window.fvRendern = function (d) {
+  var wurzel = document.getElementById("wurzel");
+  wurzel.textContent = "";
+  var kopf = el("div", "kopf");
+  kopf.appendChild(el("h1", "", d.vorlage));
+  kopf.appendChild(el("span", "badge " + (d.status === "abgeschlossen" ? "fertig" : "offen"), d.status === "abgeschlossen" ? "Abgeschlossen" : "Offen"));
+  if (d.erstellt_via === "ki") kopf.appendChild(el("span", "badge claude", "✦ Von Claude"));
+  wurzel.appendChild(kopf);
+  var unter = [];
+  if (d.vorgang) unter.push([d.vorgang.nummer, d.vorgang.titel].filter(Boolean).join(" · "));
+  unter.push("Version " + d.version);
+  wurzel.appendChild(el("div", "unter", unter.filter(Boolean).join(" · ")));
+
+  (d.abschnitte || []).forEach(function (a) {
+    wurzel.appendChild(el("h2", "", a.titel));
+    (a.eintraege || []).forEach(function (eintrag, i) {
+      if (a.wiederholbar) wurzel.appendChild(el("div", "eintrag-titel", "Eintrag " + (i + 1)));
+      var karte = el("div", "karte");
+      (eintrag.felder || []).forEach(function (f) {
+        var zeile = el("div", "zeile");
+        zeile.appendChild(el("div", "l", f.label + (f.pflicht ? " *" : "")));
+        var w = el("div", "w" + (f.leer ? " leer" : "") + (f.grenzwert ? " ueber" : ""));
+        if (f.typ === "ja_nein" && !f.leer) {
+          var ja = f.wert === true;
+          w.appendChild(el("span", ja ? "ja" : "nein", (ja ? "✓ " : "✗ ") + f.anzeige));
+        } else {
+          w.appendChild(document.createTextNode(f.anzeige));
+        }
+        if (f.grenzwert) w.appendChild(el("span", "marke", "▲ " + f.grenzwert.text));
+        zeile.appendChild(w);
+        karte.appendChild(zeile);
+      });
+      wurzel.appendChild(karte);
+    });
+  });
+
+  if (d.fehlende_pflichtfelder && d.fehlende_pflichtfelder.length) {
+    wurzel.appendChild(el("div", "hinweis", "Noch fehlende Pflichtfelder: " + d.fehlende_pflichtfelder.join(", ")));
+  }
+  var fuss = el("div", "fuss");
+  fuss.appendChild(el("span", "", d.fotos_anzahl ? d.fotos_anzahl + (d.fotos_anzahl === 1 ? " Foto" : " Fotos") + " (nur in der App sichtbar)" : "Keine Fotos"));
+  var link = el("a", "knopf", "In FieldVibe öffnen");
+  if (/^https?:\/\//i.test(d.link || "")) link.href = d.link;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.addEventListener("click", function (ev) { ev.preventDefault(); window.fvLinkOeffnen(d.link); });
+  fuss.appendChild(link);
+  wurzel.appendChild(fuss);
+};
+</script>
+</body>
+</html>

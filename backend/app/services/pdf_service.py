@@ -24,6 +24,7 @@ from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 from app.services import privatkunden_service, steuer_service
 from app.services.angebot_gliederung import ist_titel, ordnungszahlen, zwischensummen
+from app.services.form_grenzwert import grenzwert_abweichung, grenzwert_text
 from app.services.steuer_service import SteuerGruppe
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
@@ -1289,28 +1290,8 @@ class _FormularPDF(FPDF):
 _FORMULAR_ROT = (220, 38, 38)
 
 
-def _fmt_grenze(grenze: object) -> str:
-    zahl = Decimal(str(grenze))
-    return str(int(zahl)) if zahl == zahl.to_integral_value() else str(zahl.normalize()).replace(".", ",")
-
-
 def _grenzwert_hinweis(field: FormField, wert: object) -> str | None:
-    """"über X"/"unter X", wenn ein Zahlenwert ausserhalb von validation.warn_max/warn_min liegt. Nur
-    Anzeige: gespeichert wird immer, ein nicht lesbarer Wert (Freitext im Zahlenfeld) bleibt unmarkiert."""
-    if field.feld_typ != "zahl" or wert is None or wert == "" or isinstance(wert, bool):
-        return None
-    validation = field.validation or {}
-    try:
-        zahl = Decimal(str(wert).strip().replace(",", "."))
-        warn_max = validation.get("warn_max")
-        warn_min = validation.get("warn_min")
-        if warn_max is not None and zahl > Decimal(str(warn_max)):
-            return f"über {_fmt_grenze(warn_max)}"
-        if warn_min is not None and zahl < Decimal(str(warn_min)):
-            return f"unter {_fmt_grenze(warn_min)}"
-    except ArithmeticError:
-        return None
-    return None
+    return grenzwert_text(grenzwert_abweichung(field.feld_typ, field.validation, wert))
 
 
 def _form_antwort_text(field: FormField, wert: object) -> str:

@@ -52,6 +52,7 @@ ERWARTETE_TOOLS = {
     "protokoll_vorlagen_auflisten",
     "protokoll_vorlage_lesen",
     "protokoll_pdf",
+    "protokoll_anzeigen",
     "maengelprotokoll_pdf",
 }
 
@@ -80,7 +81,7 @@ async def test_tools_list_enthaelt_genau_die_lesetools_alle_read_only(make_manda
 async def test_ressource_begriffe(make_mandant, make_user, mcp_client):
     _, _, t = await _admin_verbindung(make_mandant, make_user, mcp_client)
     liste = (await mcp_rpc(mcp_client, t["access_token"], "resources/list")).json()["result"]["resources"]
-    assert [r["uri"] for r in liste] == ["fieldvibe://begriffe"]
+    assert {r["uri"] for r in liste} == {"fieldvibe://begriffe", "ui://fieldvibe/protokoll.html", "ui://fieldvibe/vorlage.html"}
     gelesen = (await mcp_rpc(mcp_client, t["access_token"], "resources/read", {"uri": "fieldvibe://begriffe"})).json()
     text = gelesen["result"]["contents"][0]["text"]
     assert "Begriffsverzeichnis" in text and "Vorgang" in text

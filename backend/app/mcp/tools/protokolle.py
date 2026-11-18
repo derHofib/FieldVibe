@@ -7,13 +7,16 @@ Leistungstypen gibt es per KI bewusst nicht (rest_client.SCHREIB_ALLOWLIST), ebe
 import base64
 from typing import Annotated, Any, Literal
 
-from mcp.server.mcpserver import MCPServer
+from mcp.server.apps import client_supports_apps
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from mcp.types import BlobResourceContents, EmbeddedResource, TextContent
+from mcp.types import BlobResourceContents, CallToolResult, EmbeddedResource, TextContent
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import get_settings
+from app.mcp.ansichten import PROTOKOLL_URI, VORLAGE_URI, ui_meta
 from app.mcp.aufbereitung import bereinigen, seite_aus
+from app.mcp.protokoll_ansicht import protokoll_ansicht, protokoll_text
 from app.mcp.protokoll_werte import fehlende_pflichtfelder, werte_abbilden
 from app.mcp.rest_client import api_get, api_get_binaer, api_patch, api_post
 from app.mcp.tools._basis import NUR_ADDITIV, zugriff
@@ -54,6 +57,10 @@ def vorlagen_link(schema_id: str) -> str:
     # Die Seite liegt in Feld-App und Office unter derselben Route; frontend_base_url ist die Adresse, auf der
     # der Nutzer ohnehin angemeldet ist (Einwilligung, Passwort-Links), die Office-Domain kennt das Backend nicht.
     return f"{get_settings().frontend_base_url.rstrip('/')}/form-schemas/{schema_id}"
+
+
+def protokoll_link(protokoll_id: str) -> str:
+    return f"{get_settings().frontend_base_url.rstrip('/')}/form-submissions/{protokoll_id}"
 
 
 def _label(obj: dict[str, Any]) -> str:
@@ -183,6 +190,37 @@ def registrieren(mcp: MCPServer) -> None:
         return _pdf_ergebnis(daten, typ, f"fieldvibe://protokoll/{protokoll_id}.pdf", "Das Protokoll")
 
     @mcp.tool(
+        name="protokoll_anzeigen",
+        title="Protokoll anzeigen",
+        description=(
+            "Zeigt ein ausgefülltes Protokoll (Submission) als Zusammenfassung: Abschnitte mit Beschriftungen, "
+            "Ja/Nein, Zahlen mit Grenzwert-Markierung („über 50“), fehlende Pflichtfelder, Fotos nur als Anzahl, "
+            "dazu der Link zum Öffnen in FieldVibe. In Claude-Clients mit MCP Apps erscheint die Ansicht im Chat, "
+            "sonst kommt derselbe Inhalt als Text. Für die Rohwerte formular_lesen, für eine Datei protokoll_pdf. "
+            "Braucht die Rechte Vorgänge › sehen und Formulare › sehen."
+        ),
+        annotations=NUR_LESEN,
+        meta=ui_meta(PROTOKOLL_URI),
+    )
+    async def protokoll_anzeigen(
+        ctx: Context,
+        protokoll_id: Annotated[str, Field(description="ID des ausgefüllten Protokolls (Submission).")],
+    ) -> CallToolResult:
+        z = zugriff()
+        protokoll = await api_get(z, f"/api/form-submissions/{protokoll_id}")
+        schema = await api_get(z, f"/api/form-schemas/{protokoll['schema_id']}")
+        # Der Vorgang ist nur Kopfzeile: fehlt er (Recht/Papierkorb), bleibt die Ansicht trotzdem vollstaendig.
+        try:
+            vorgang = await api_get(z, f"/api/vorgaenge/{protokoll['vorgang_id']}")
+        except ToolError:
+            vorgang = None
+        ansicht = bereinigen(protokoll_ansicht(schema, protokoll, vorgang, protokoll_link(protokoll["id"])))
+        text = protokoll_text(ansicht)
+        if client_supports_apps(ctx):
+            text = "Die Ansicht wird im Chat angezeigt; fasse sie nicht erneut vollständig zusammen.\n\n" + text
+        return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=ansicht)
+
+    @mcp.tool(
         name="maengelprotokoll_pdf",
         title="Mängelprotokoll als PDF",
         description="Liefert das Mängelprotokoll eines Vorgangs (alle erfassten Mängel) als PDF. Benötigt das Modul Abrechnung.",
@@ -281,6 +319,7 @@ def registrieren(mcp: MCPServer) -> None:
             "Braucht das Recht Formulare › erstellen." + _NUR_SCHREIBZUGRIFF
         ),
         annotations=NUR_ADDITIV,
+        meta=ui_meta(VORLAGE_URI),
     )
     async def protokoll_vorlage_entwerfen(
         name: Annotated[str, Field(min_length=1, max_length=200, description="Name der Vorlage.")],
@@ -299,6 +338,7 @@ def registrieren(mcp: MCPServer) -> None:
             "zusammenfassung": zusammenfassung(abschnitte),
             "link": vorlagen_link(schema["id"]),
             "hinweis": f"KI-Entwurf, noch nicht veröffentlicht. {_ENTWURF_HINWEIS}",
+            **await _vorlage_ansicht(z, schema["id"]),
         }
 
     @mcp.tool(
@@ -312,6 +352,7 @@ def registrieren(mcp: MCPServer) -> None:
             "eine neue Variante mit protokoll_vorlage_entwerfen anlegen." + _NUR_SCHREIBZUGRIFF
         ),
         annotations=NUR_ADDITIV,
+        meta=ui_meta(VORLAGE_URI),
     )
     async def protokoll_vorlage_ueberarbeiten(
         vorlage_id: _Id,
@@ -338,7 +379,17 @@ def registrieren(mcp: MCPServer) -> None:
             "angewendet": [s.beschreibung for s in schritte],
             "link": vorlagen_link(detail["id"]),
             "hinweis": f"KI-Entwurf überarbeitet. {_ENTWURF_HINWEIS}",
+            **await _vorlage_ansicht(z, detail["id"]),
         }
+
+
+async def _vorlage_ansicht(z, schema_id: str) -> dict[str, Any]:
+    """Aufbau der Vorlage, wie er jetzt gespeichert ist, fuer die HTML-Ansicht (ui://fieldvibe/vorlage.html)."""
+    kompakt = bereinigen(vorlage_kompakt(await api_get(z, f"/api/form-schemas/{schema_id}")))
+    ergebnis: dict[str, Any] = {"art": "vorlage", "beschreibung": kompakt["beschreibung"], "abschnitte": kompakt["abschnitte"]}
+    if "felder_ohne_abschnitt" in kompakt:
+        ergebnis["felder_ohne_abschnitt"] = kompakt["felder_ohne_abschnitt"]
+    return ergebnis
 
 
 async def _ausfuehren(z, schema: dict[str, Any], name: str, schritte) -> None:
