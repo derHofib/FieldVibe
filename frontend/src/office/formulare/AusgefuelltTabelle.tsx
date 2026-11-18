@@ -77,7 +77,7 @@ export function AusgefuelltTabelle({
                 <td className="px-3 py-2">
                   {e.status === "offen" ? <StatusPille status="arbeit" label="Offen" /> : <StatusPille status="erledigt" label="Abgeschlossen" />}
                 </td>
-                <td className="px-3 py-2 text-label">
+                <td className="whitespace-nowrap px-3 py-2 text-label">
                   <AusgefuelltVon e={e} />
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-label2">{relativDatum(e.abgeschlossen_am ?? e.created_at, true)}</td>

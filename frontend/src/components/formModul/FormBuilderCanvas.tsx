@@ -406,7 +406,7 @@ function InspectorFeld({
         <fieldset>
           <legend className="mb-1 block text-sekundaer font-medium text-label">Grenzwert markieren</legend>
           <div className="grid grid-cols-2 gap-2">
-            <input
+            <label className="block"><span className="mb-0.5 block text-meta text-label2">Unter</span><input
               aria-label="Markieren unter"
               inputMode="decimal"
               value={warnMin}
@@ -414,8 +414,8 @@ function InspectorFeld({
               onBlur={grenzwerteSpeichern}
               placeholder="unter …"
               className={inputClass}
-            />
-            <input
+            /></label>
+            <label className="block"><span className="mb-0.5 block text-meta text-label2">Über</span><input
               aria-label="Markieren über"
               inputMode="decimal"
               value={warnMax}
@@ -423,7 +423,7 @@ function InspectorFeld({
               onBlur={grenzwerteSpeichern}
               placeholder="über …"
               className={inputClass}
-            />
+            /></label>
           </div>
           <p className="mt-1 text-meta text-label2">Werte außerhalb erscheinen rot, beim Erfassen als Hinweis, nie als Sperre.</p>
         </fieldset>

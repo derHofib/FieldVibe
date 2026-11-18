@@ -52,7 +52,7 @@ export function AusgefuelltPanel({ eintrag }: { eintrag: FormSubmissionUebersich
     <div className="space-y-3 pt-3">
       <div className="flex items-start justify-between gap-2">
         <h2 className="min-w-0 text-zeile font-semibold text-label">
-          {eintrag.schema_name} <span className="font-normal text-label2">· {eintrag.vorgangsnummer}</span>
+          {eintrag.schema_name} <span className="whitespace-nowrap font-normal text-label2">· {eintrag.vorgangsnummer}</span>
         </h2>
         <div className="flex shrink-0 items-center gap-2">
           <VorgangLink id={eintrag.vorgang_id} className="btn-ap inline-flex h-8 items-center gap-1.5 px-3 text-sekundaer">
