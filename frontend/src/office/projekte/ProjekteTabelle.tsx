@@ -9,6 +9,7 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 
+import { StatusPille } from "../../components/apple/StatusPille";
 import type { Projekt } from "../../types";
 import { Karte } from "../OfficeUi";
 
@@ -28,6 +29,28 @@ const SPALTEN = [
           Aktiv
         </span>
       ),
+  }),
+  spalten.accessor((p) => p.anzahl_vorgaenge ?? -1, {
+    id: "umfang",
+    header: "Umfang",
+    cell: (info) => {
+      const p = info.row.original;
+      if (p.anzahl_auftraege === undefined || p.anzahl_vorgaenge === undefined) return <span className="text-label2">—</span>;
+      return `${p.anzahl_auftraege} ${p.anzahl_auftraege === 1 ? "Auftrag" : "Aufträge"} · ${p.anzahl_vorgaenge} ${p.anzahl_vorgaenge === 1 ? "Vorgang" : "Vorgänge"}`;
+    },
+  }),
+  spalten.accessor((p) => p.anzahl_offen ?? -1, {
+    id: "offen",
+    header: "Offen",
+    cell: (info) => {
+      const p = info.row.original;
+      if (p.anzahl_offen === undefined) return <span className="text-label2">—</span>;
+      return p.anzahl_offen > 0 ? (
+        <StatusPille status="arbeit" label={`${p.anzahl_offen} offen`} />
+      ) : (
+        <StatusPille status="erledigt" label="alle erledigt" />
+      );
+    },
   }),
   spalten.accessor("created_at", {
     header: "Erstellt am",

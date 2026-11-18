@@ -9,10 +9,11 @@ describe("bedingungenZuParameter", () => {
         { feld: "status", op: "ist", wert: ["neu", "geplant"] },
         { feld: "kunde", op: "ist", wert: ["k1"] },
         { feld: "projekt", op: "ist", wert: ["p1"] },
+        { feld: "auftrag", op: "ist", wert: ["a1"] },
         { feld: "tag", op: "enthaelt", wert: ["#eilig"] },
         { feld: "zugewiesen", op: "ist", wert: ["ich"] },
       ]),
-    ).toEqual({ status: "neu,geplant", kunde_id: "k1", projekt_id: "p1", tag: "eilig", nur_meine: "true" });
+    ).toEqual({ status: "neu,geplant", kunde_id: "k1", projekt_id: "p1", auftrag_id: "a1", tag: "eilig", nur_meine: "true" });
   });
 
   it("macht aus 'ist nicht' die Restmenge", () => {
@@ -41,10 +42,11 @@ describe("bedingungenZuParameter", () => {
 describe("alteVorlageUmrechnen", () => {
   it("rechnet flache Schlüssel um und ignoriert sort", () => {
     expect(
-      alteVorlageUmrechnen({ status: "neu,geplant", kunde_id: "k1", faellig_von: "2026-01-01", faellig_bis: "2026-01-31", nur_meine: "true", sort: "prioritaet" }),
+      alteVorlageUmrechnen({ status: "neu,geplant", kunde_id: "k1", auftrag_id: "a1", faellig_von: "2026-01-01", faellig_bis: "2026-01-31", nur_meine: "true", sort: "prioritaet" }),
     ).toEqual([
       { feld: "status", op: "ist", wert: ["neu", "geplant"] },
       { feld: "kunde", op: "ist", wert: ["k1"] },
+      { feld: "auftrag", op: "ist", wert: ["a1"] },
       { feld: "faellig", op: "zwischen", wert: { von: "2026-01-01", bis: "2026-01-31" } },
       { feld: "zugewiesen", op: "ist", wert: ["ich"] },
     ]);

@@ -26,6 +26,10 @@ class FeedCard(BaseModel):
     geo_lat: float | None = None
     geo_lng: float | None = None
     zugewiesener_name: str | None = None
+    # Null bei eigenstaendig gefuehrten Vorgaengen fuer Nutzer ohne Recht
+    # vorgaenge.eigenstaendig_setzen (siehe vorgang_verknuepfung_service).
+    projekt_name: str | None = None
+    auftrag_titel: str | None = None
 
 
 class FeedResponse(BaseModel):

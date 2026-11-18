@@ -93,6 +93,7 @@ export function bedingungenZuParameter(bedingungen: FilterBedingung[]): Record<s
     kunde: einzel("kunde_id"),
     anlage: einzel("anlage_id"),
     projekt: einzel("projekt_id"),
+    auftrag: einzel("auftrag_id"),
     leistungstyp: einzel("leistungstyp"),
     abrechnungsart: einzel("abrechnungsart"),
     tag: (b): Record<string, string> => {
@@ -122,6 +123,7 @@ export const ALTE_SCHLUESSEL = [
   "kunde_id",
   "anlage_id",
   "projekt_id",
+  "auftrag_id",
   "leistungstyp",
   "abrechnungsart",
   "faellig_von",
@@ -142,6 +144,7 @@ export function alteVorlageUmrechnen(alt: Record<string, string>): FilterBedingu
   ist("kunde", "kunde_id");
   ist("anlage", "anlage_id");
   ist("projekt", "projekt_id");
+  ist("auftrag", "auftrag_id");
   ist("leistungstyp", "leistungstyp");
   ist("abrechnungsart", "abrechnungsart");
   if (alt.faellig_von || alt.faellig_bis) {

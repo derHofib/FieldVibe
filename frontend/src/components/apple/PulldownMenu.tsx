@@ -27,12 +27,15 @@ export function PulldownMenu({
   items,
   ariaLabel,
   richtung = "unten",
+  ausrichtung = "links",
 }: {
   trigger: (opts: { offen: boolean; toggeln: () => void; triggerRef: React.RefObject<HTMLButtonElement | null> }) => React.ReactNode;
   items: PulldownItem[];
   ariaLabel: string;
   /** "oben": Panel öffnet über dem Auslöser (Auslöser am unteren Fensterrand). */
   richtung?: "unten" | "oben";
+  /** "rechts": Panel schließt rechtsbündig mit dem Auslöser ab (Auslöser am rechten Rand eines Panels). */
+  ausrichtung?: "links" | "rechts";
 }) {
   const [offen, setOffen] = useState(false);
   const [position, setPosition] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
@@ -50,7 +53,7 @@ export function PulldownMenu({
   function oeffnen() {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
-      const left = Math.min(rect.left, window.innerWidth - 280);
+      const left = Math.max(8, Math.min(ausrichtung === "rechts" ? rect.right - 264 : rect.left, window.innerWidth - 280));
       setPosition(
         richtung === "oben"
           ? { bottom: window.innerHeight - rect.top + 4, left }

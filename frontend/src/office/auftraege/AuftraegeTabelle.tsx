@@ -7,9 +7,11 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import type { Auftrag, AuftragStatus } from "../../types";
+import { projektLink } from "../../utils/verknuepfung";
 import { Karte } from "../OfficeUi";
 
 // "Industry"-Design (siehe docs/DESIGN.md): Rahmen-Tag statt gefuellter
@@ -32,23 +34,45 @@ const AUFTRAG_STATUS_BADGE: Record<AuftragStatus, string> = {
 
 const spalten = createColumnHelper<Auftrag>();
 
-const SPALTEN = [
-  spalten.accessor("titel", { header: "Titel" }),
-  spalten.accessor((a) => a.kunde_name ?? "—", { id: "kunde", header: "Kunde" }),
-  spalten.accessor("status", {
-    header: "Status",
-    cell: (info) => (
-      <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
-        {AUFTRAG_STATUS_LABEL[info.getValue()]}
-      </span>
-    ),
-  }),
-  spalten.accessor("vorgaenge_gesamt", { header: "Vorgänge", cell: (info) => info.getValue() || "—" }),
-  spalten.accessor("created_at", {
-    header: "Erstellt am",
-    cell: (info) => new Date(info.getValue()).toLocaleDateString("de-DE"),
-  }),
-];
+// Projektname bevorzugt vom Server (projekt_name), sonst aus der Projektliste der Seite.
+function baueSpalten(projektNamen: Map<string, string> | undefined) {
+  const projektName = (a: Auftrag) => a.projekt_name ?? (a.projekt_id ? projektNamen?.get(a.projekt_id) : undefined) ?? null;
+  return [
+    spalten.accessor("titel", { header: "Titel" }),
+    spalten.accessor((a) => a.kunde_name ?? "—", { id: "kunde", header: "Kunde" }),
+    spalten.accessor((a) => projektName(a) ?? "", {
+      id: "projekt",
+      header: "Projekt",
+      cell: (info) => {
+        const a = info.row.original;
+        const name = projektName(a);
+        if (!name || !a.projekt_id) return "—";
+        return (
+          // Zeilenklick öffnet das Auftrag-Panel, der Link darf es nicht mitauslösen.
+          <Link to={projektLink(a.projekt_id)} onClick={(e) => e.stopPropagation()} className="text-tint-text hover:underline">
+            {name}
+          </Link>
+        );
+      },
+    }),
+    spalten.accessor("status", {
+      header: "Status",
+      cell: (info) => (
+        <span className={`rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${AUFTRAG_STATUS_BADGE[info.getValue()]}`}>
+          {AUFTRAG_STATUS_LABEL[info.getValue()]}
+        </span>
+      ),
+    }),
+    spalten.accessor("vorgaenge_gesamt", {
+      header: "Vorgänge",
+      cell: (info) => (info.getValue() ? `${info.row.original.vorgaenge_erledigt ?? 0} / ${info.getValue()}` : "—"),
+    }),
+    spalten.accessor("created_at", {
+      header: "Erstellt am",
+      cell: (info) => new Date(info.getValue()).toLocaleDateString("de-DE"),
+    }),
+  ];
+}
 
 /** Sortierbare Tabellen-Ansicht aller Auftraege -- gleiches Muster wie
  * VorgaengeTabelle.tsx. Zeilenklick oeffnet das Detail-Panel (siehe
@@ -59,12 +83,16 @@ export function AuftraegeTabelle({
   auftraege,
   onZeileKlick,
   hervorgehoben,
+  projektNamen,
 }: {
   auftraege: Auftrag[];
   onZeileKlick: (auftrag: Auftrag) => void;
   /** Spalten-Ids, auf die gerade eine Filterbedingung wirkt. */
   hervorgehoben?: string[];
+  /** Ersatz für projekt_name, solange der Server es nicht liefert. */
+  projektNamen?: Map<string, string>;
 }) {
+  const SPALTEN = useMemo(() => baueSpalten(projektNamen), [projektNamen]);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({

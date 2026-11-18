@@ -4,7 +4,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-EventType = Literal[
+# Vom Client per POST setzbar; die Ereignisse der Verknuepfung (unten) schreibt
+# ausschliesslich der Server (Zuordnungswechsel, "Eigenstaendig fuehren").
+EventTypeSetzbar = Literal[
     "kommentar",
     "status_change",
     "foto",
@@ -22,10 +24,16 @@ EventType = Literal[
     "formular",
     "leistung",
 ]
+EventType = Literal[
+    *EventTypeSetzbar.__args__,
+    "zuordnung_geaendert",
+    "eigenstaendig_gesetzt",
+    "eigenstaendig_aufgehoben",
+]
 
 
 class VorgangEventCreate(BaseModel):
-    event_type: EventType
+    event_type: EventTypeSetzbar
     body: str | None = None
     payload: dict = {}
     ref_entity_type: str | None = None

@@ -1,4 +1,3 @@
-import { ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -202,12 +201,7 @@ export function VorgaengeListe({
           <VorgangDetailPage
             id={aktiv}
             layout="dicht"
-            kopfAktionen={
-              <button onClick={() => navigate(`/vorgaenge/${aktiv}/vollbild`)} className="btn-ap text-sekundaer">
-                <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-                Ganze Seite
-              </button>
-            }
+            onGanzeSeite={() => navigate(`/vorgaenge/${aktiv}/vollbild`)}
           />
         ) : (
           <p className="py-10 text-center text-sekundaer text-label2">Links einen Vorgang auswählen.</p>

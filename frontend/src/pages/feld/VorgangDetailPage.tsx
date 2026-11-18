@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { heuteIso } from "../../utils/format";
-import { AlertTriangle, Ban, Building2, Clock, MoreHorizontal, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, Ban } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -30,7 +29,6 @@ import {
 import { EmptyState } from "../../components/EmptyState";
 import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { Sheet } from "../../components/apple/Sheet";
-import { PulldownMenu } from "../../components/apple/PulldownMenu";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
@@ -43,6 +41,7 @@ import {
 } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
+import { istOfficeHost } from "../../office/hostname";
 import { openPdfBlob } from "../../utils/pdf";
 import type {
   Adresse,
@@ -55,17 +54,16 @@ import type {
   Zeiterfassung,
 } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { useToast } from "../../components/Toast";
 import { DetailSkeleton } from "../../components/Skeleton";
 import {
   type VerlaufEintrag,
   ANCHOR_ABSCHNITTE,
   ABSCHNITT_ROUTE,
   NEU_MATERIAL,
+  sichtbareAnker,
   VORGANG_STATUS_GESCHLOSSEN,
   VORGANG_STATUS_ZEIT_GESPERRT,
-  STATUS_LABEL,
-  LEISTUNGSTYP_LABEL,
-  ABRECHNUNGSART_LABEL,
   leereAdresse,
 } from "./vorgang/konstanten";
 import { ArbeitszeitInhalt } from "./vorgang/ArbeitszeitInhalt";
@@ -75,6 +73,10 @@ import { PartnerAbschnitt } from "./vorgang/PartnerAbschnitt";
 import { MaengelAbschnitt } from "./vorgang/MaengelAbschnitt";
 import { TermineAbschnitt } from "./vorgang/TermineAbschnitt";
 import { UebersichtAbschnitt } from "./vorgang/UebersichtAbschnitt";
+import { VerknuepfungTab } from "./vorgang/VerknuepfungTab";
+import { VorgangKopf } from "./vorgang/VorgangKopf";
+import { KopfDialoge } from "./vorgang/KopfDialoge";
+import { VorgangTabLeiste } from "./vorgang/VorgangTabLeiste";
 
 // id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
@@ -95,17 +97,18 @@ export function VorgangDetailPage({
   // eine feste zweite Spalte fuer den Verlauf (immer sichtbar statt Tab,
   // siehe verlaufSpalteBreit unten), in der schmalen Spalte nicht.
   breit = false,
-  // Nur "dicht": zusaetzliche Aktionen in der Kopfzeile (Office-Panel:
-  // "Ganze Seite"), damit Zurueck, Aktionen und Menue eine Zeile teilen.
-  kopfAktionen,
+  // Nur "dicht" im Office-Panel: oeffnet die Vorgangs-Seite in voller Breite
+  // (Icon-Button in der Kopfzeile plus Eintrag im "..."-Menue).
+  onGanzeSeite,
 }: {
   id?: string;
   layout?: "kompakt" | "dicht";
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
   breit?: boolean;
-  kopfAktionen?: ReactNode;
+  onGanzeSeite?: () => void;
 } = {}) {
   const bestaetigen = useBestaetigung();
+  const toast = useToast();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -263,6 +266,32 @@ export function VorgangDetailPage({
     queryKey: ["standort", vorgang?.standort_id],
     queryFn: () => standorteApi.get(vorgang!.standort_id!),
     enabled: !!vorgang?.standort_id,
+  });
+  // Ohne Zugehoerigkeit gibt es weder Tab noch Abfrage. Ist der Vorgang eigenstaendig gefuehrt und
+  // fehlt das Recht, liefert der Server die IDs als null -- dann verschwindet der Tab von selbst.
+  const gehoertZuProjekt = !!(vorgang?.projekt_id || vorgang?.auftrag_id);
+  const {
+    data: verknuepfung,
+    isLoading: verknuepfungLaedt,
+    isError: verknuepfungFehler,
+    refetch: verknuepfungNeuLaden,
+  } = useQuery({
+    queryKey: ["vorgang-verknuepfung", id],
+    queryFn: () => vorgaengeApi.verknuepfung(id!),
+    enabled: !!id && gehoertZuProjekt,
+    retry: false,
+  });
+  useEffect(() => {
+    if (vorgang && !gehoertZuProjekt && desktopTab === "abschnitt-projekt") setDesktopTab(ANCHOR_ABSCHNITTE[0].ziel);
+  }, [vorgang, gehoertZuProjekt, desktopTab]);
+  const eigenstaendigMutation = useMutation({
+    mutationFn: (an: boolean) => vorgaengeApi.eigenstaendig(id!, an),
+    onSuccess: () => {
+      for (const key of [["vorgang", id], ["vorgang-verknuepfung", id], ["vorgang-events", id], ["feed"]]) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
+    onError: meldeAktionsFehler,
   });
   const { data: parentVorgang } = useQuery({
     queryKey: ["vorgang", vorgang?.parent_vorgang_id],
@@ -750,6 +779,27 @@ export function VorgangDetailPage({
     onError: meldeAktionsFehler,
   });
 
+  // Eigener Fehlerpfad statt Select-Wert: die Chips zeigen immer den
+  // gespeicherten Wert, nach einem Fehlschlag bleibt also nichts Falsches stehen.
+  const zuweisenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    mutationFn: (userId: string | null) => vorgaengeApi.update(id!, { zugewiesener_user_id: userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+    onError: meldeAktionsFehler,
+  });
+
+  const faelligkeitMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    // Mittag lokal, damit die Zeitzonenumrechnung das Datum nicht verschiebt.
+    mutationFn: (datum: string | null) =>
+      vorgaengeApi.update(id!, { faelligkeit_am: datum ? new Date(`${datum}T12:00:00`).toISOString() : null }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
+    onError: meldeAktionsFehler,
+  });
+
   const commentMutation = useMutation({
     mutationFn: async () => {
       try {
@@ -1019,8 +1069,89 @@ export function VorgangDetailPage({
   // Klebende Leiste nur im Feld-App-Layout der Hauptseite; dann ersetzt sie
   // den gleichlautenden Button in der Übersichts-Karte (UebersichtAbschnitt).
   const primaerAktionKlebt = layout !== "dicht" && ansicht === "voll" && !!primaerAktion;
-  const uebernehmenKlebt =
-    primaerAktionKlebt && !vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status);
+
+  // Gemeinsamer Weg fuer "Mir zuweisen" (Chip) und "Uebernehmen" (Aktionsleiste):
+  // eine fremde Zuweisung wird nicht ohne Rueckfrage ueberschrieben.
+  async function uebernehmen() {
+    if (
+      vorgang!.zugewiesener_user_id &&
+      vorgang!.zugewiesener_user_id !== currentUser?.id &&
+      !(await bestaetigen({ titel: `Dieser Vorgang ist bereits "${vorgang!.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`, bestaetigenLabel: "Übernehmen", destruktiv: false }))
+    ) {
+      return;
+    }
+    uebernehmenMutation.mutate();
+  }
+
+  function oeffneFolgeVorgangDialog() {
+    setFolgeAuftragLeistungstyp("stoerung");
+    setShowFolgeAuftragDialog(true);
+  }
+  function oeffneZuordnungBearbeiten() {
+    setEditKundeId(vorgang!.kunde_id);
+    setEditAnlageId(vorgang!.anlage_id ?? "");
+    setZuordnungError(null);
+    setEditingZuordnung(true);
+  }
+  async function vorgangLoeschen() {
+    if (await bestaetigen({ titel: "Vorgang löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
+      deleteVorgangMutation.mutate();
+    }
+  }
+  function linkKopieren() {
+    const pfad = layout === "dicht" ? `/vorgaenge/${id}/vollbild` : `/vorgaenge/${id}`;
+    navigator.clipboard
+      ?.writeText(`${window.location.origin}${pfad}`)
+      .then(() => toast.erfolg("Link kopiert"))
+      .catch(() => toast.fehler("Link konnte nicht kopiert werden"));
+  }
+  function statusWaehlen(status: VorgangStatus) {
+    if (status === "wartet_kunde") {
+      setWiedervorlageTage("");
+      setShowWartetKundeDialog(true);
+      return;
+    }
+    statusMutation.mutate({ status });
+  }
+  function zumTerminAbschnitt() {
+    if (layout === "dicht") setDesktopTab("abschnitt-termine");
+    else document.getElementById("abschnitt-termine")?.scrollIntoView?.({ block: "start" });
+  }
+
+  const erstelltVonName = vorgang.erstellt_von ? users?.find((u) => u.id === vorgang.erstellt_von)?.name : undefined;
+  const sichtbareAbschnitte = sichtbareAnker(gehoertZuProjekt);
+  // Links in Projekt/Auftrag gibt es nur im Office (dort liegen die Panels) und mit Recht projekte/sehen.
+  const projektLinksAktiv = (layout === "dicht" || istOfficeHost()) && hatRecht("projekte", "sehen");
+  const vorgangPfad = (vid: string) => (layout === "dicht" ? `/vorgaenge/${vid}/vollbild` : `/vorgaenge/${vid}`);
+  async function eigenstaendigUmschalten(an: boolean) {
+    const ok = await bestaetigen(
+      an
+        ? {
+            titel: "Vorgang eigenständig führen?",
+            text: "Projekt und Auftrag werden hier ausgeblendet (auch für Techniker und Nachunternehmer), die Zuordnung ist eingefroren. Zeit, Positionen, Mängel und Status zählen weiter im Auftrag und im Projekt mit.",
+            bestaetigenLabel: "Eigenständig führen",
+            destruktiv: false,
+          }
+        : {
+            titel: "Eigenständige Führung aufheben?",
+            text: "Projekt und Auftrag sind danach wieder sichtbar und folgen Änderungen am Auftrag.",
+            bestaetigenLabel: "Aufheben",
+            destruktiv: false,
+          },
+    );
+    if (ok) eigenstaendigMutation.mutate(an);
+  }
+
+  // Zaehler an den Tabs: ohne Inhalt bewusst keiner. Offene Maengel rot, die
+  // uebrigen als neutrale Kapsel.
+  const tabZaehler: Record<string, { text: string; warnung?: boolean } | undefined> = {
+    "abschnitt-zeit": gesamtSekunden > 0 ? { text: `${(Math.round(gesamtSekunden / 360) / 10).toLocaleString("de-DE")} h` } : undefined,
+    "abschnitt-termine": (termine?.length ?? 0) > 0 ? { text: String(termine!.length) } : undefined,
+    "abschnitt-maengel": offeneMaengelAnzahl > 0 ? { text: String(offeneMaengelAnzahl), warnung: true } : undefined,
+    "abschnitt-material": positionenAnzahl > 0 ? { text: String(positionenAnzahl) } : undefined,
+    "abschnitt-projekt": (verknuepfung?.geschwister.length ?? 0) > 0 ? { text: String(verknuepfung!.geschwister.length) } : undefined,
+    "abschnitt-verlauf": verlaufEintraege.length > 0 ? { text: String(verlaufEintraege.length) } : undefined,
+  };
 
   // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
   // Abschnitt 6.1/6.2) -- eine Zeile ist auswaehlbar, wenn sie zu einem der
@@ -1219,29 +1350,18 @@ export function VorgangDetailPage({
       <UebersichtAbschnitt
         istAktiverTab={istAktiverTab}
         tabPanelProps={tabPanelProps}
+        zweispaltigMoeglich={layout === "dicht" && !verlaufSpalteBreit}
         vorgang={vorgang}
         parentVorgang={parentVorgang}
         navigate={navigate}
-        kunde={kunde}
         anlage={anlage}
-        editingZuordnung={editingZuordnung}
-        setEditKundeId={setEditKundeId}
-        setEditAnlageId={setEditAnlageId}
-        setZuordnungError={setZuordnungError}
-        setEditingZuordnung={setEditingZuordnung}
-        editKundeId={editKundeId}
-        alleKunden={alleKunden}
-        editAnlageId={editAnlageId}
-        anlagenFuerEditKunde={anlagenFuerEditKunde}
-        zuordnungError={zuordnungError}
-        zuordnungMutation={zuordnungMutation}
+        standort={standort}
         kannDisponieren={kannDisponieren}
         editingAdresse={editingAdresse}
         setAdresseForm={setAdresseForm}
         setAdresseError={setAdresseError}
         setEditingAdresse={setEditingAdresse}
         anzeigeAdresse={anzeigeAdresse}
-        standort={standort}
         kartenKoordinaten={kartenKoordinaten}
         adresseForm={adresseForm}
         adresseError={adresseError}
@@ -1255,25 +1375,29 @@ export function VorgangDetailPage({
         anlagenFuerVorgangKunde={anlagenFuerVorgangKunde}
         bereitsZugeordneteAnlageIds={bereitsZugeordneteAnlageIds}
         anlageHinzufuegenMutation={anlageHinzufuegenMutation}
-        statusMutation={statusMutation}
-        setWiedervorlageTage={setWiedervorlageTage}
-        setShowWartetKundeDialog={setShowWartetKundeDialog}
-        prioritaetMutation={prioritaetMutation}
-        setFolgeAuftragLeistungstyp={setFolgeAuftragLeistungstyp}
-        setShowFolgeAuftragDialog={setShowFolgeAuftragDialog}
-        currentUser={currentUser}
-        bestaetigen={bestaetigen}
-        uebernehmenMutation={uebernehmenMutation}
-        uebernehmenKlebt={uebernehmenKlebt}
-        primaerAktionKlebt={primaerAktionKlebt}
-        showWartetKundeDialog={showWartetKundeDialog}
-        mandantEinstellungen={mandantEinstellungen}
-        wiedervorlageTage={wiedervorlageTage}
-        showFolgeAuftragDialog={showFolgeAuftragDialog}
-        folgeAuftragLeistungstyp={folgeAuftragLeistungstyp}
-        folgeAuftragMutation={folgeAuftragMutation}
-        folgeVorgangId={folgeVorgangId}
+        onFolgeVorgang={oeffneFolgeVorgangDialog}
         folgeAuftraege={folgeAuftraege}
+        verknuepfteAufgaben={verknuepfteAufgaben}
+        erstelltVonName={erstelltVonName}
+        formulare={<FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
+        partner={
+          <PartnerAbschnitt
+            kannPartnerVerwalten={kannPartnerVerwalten}
+            vorgang={vorgang}
+            setShowPartnerForm={setShowPartnerForm}
+            showPartnerForm={showPartnerForm}
+            partnerWarnung={partnerWarnung}
+            navigate={navigate}
+            zugewiesenerPartner={zugewiesenerPartner}
+            partnerAufhebenMutation={partnerAufhebenMutation}
+            partnerAuswahl={partnerAuswahl}
+            setPartnerAuswahl={setPartnerAuswahl}
+            partnerListe={partnerListe}
+            partnerHonorar={partnerHonorar}
+            setPartnerHonorar={setPartnerHonorar}
+            partnerZuweisenMutation={partnerZuweisenMutation}
+          />
+        }
       />
 
       {layout === "dicht" && (
@@ -1312,12 +1436,6 @@ export function VorgangDetailPage({
         deleteTerminMutation={deleteTerminMutation}
       />
 
-      {vorgang && (
-        <div className={istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"} {...tabPanelProps("abschnitt-uebersicht")}>
-          <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />
-        </div>
-      )}
-
       <MaengelAbschnitt
         istAktiverTab={istAktiverTab}
         tabPanelProps={tabPanelProps}
@@ -1340,34 +1458,6 @@ export function VorgangDetailPage({
         angebotAusMaengelnMutation={angebotAusMaengelnMutation}
       />
 
-      {(verknuepfteAufgaben ?? []).length > 0 && (
-        <div className="scroll-mt-4 card-ap p-3">
-          <h2 className="font-heading mb-2 text-fliess font-semibold text-label">Verknüpfte Aufgaben</h2>
-          {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
-              Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
-          <div className="space-y-1.5">
-            {verknuepfteAufgaben!.map((a) => (
-              <div key={a.id} className="rounded-[var(--radius-ap-md)] bg-fill p-2 text-fliess">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-label">{a.titel}</p>
-                  <span className="shrink-0 rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-meta font-medium text-label">
-                    {a.prioritaet}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-sekundaer text-label2">
-                  <span>
-                    {a.checkliste.length > 0
-                      ? `${a.checkliste.filter((p) => p.erledigt).length}/${a.checkliste.length} erledigt`
-                      : a.zugewiesener_name || "Nicht zugewiesen"}
-                  </span>
-                  {a.faelligkeit_am && <span>fällig {a.faelligkeit_am}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {layout === "dicht" && (
         <div
           id="abschnitt-material"
@@ -1378,24 +1468,22 @@ export function VorgangDetailPage({
         </div>
       )}
 
-      <PartnerAbschnitt
-        kannPartnerVerwalten={kannPartnerVerwalten}
-        istAktiverTab={istAktiverTab}
-        tabPanelProps={tabPanelProps}
-        vorgang={vorgang}
-        setShowPartnerForm={setShowPartnerForm}
-        showPartnerForm={showPartnerForm}
-        partnerWarnung={partnerWarnung}
-        navigate={navigate}
-        zugewiesenerPartner={zugewiesenerPartner}
-        partnerAufhebenMutation={partnerAufhebenMutation}
-        partnerAuswahl={partnerAuswahl}
-        setPartnerAuswahl={setPartnerAuswahl}
-        partnerListe={partnerListe}
-        partnerHonorar={partnerHonorar}
-        setPartnerHonorar={setPartnerHonorar}
-        partnerZuweisenMutation={partnerZuweisenMutation}
-      />
+      {gehoertZuProjekt && (
+        <VerknuepfungTab
+          vorgang={vorgang}
+          daten={verknuepfung}
+          laedt={verknuepfungLaedt}
+          fehler={verknuepfungFehler}
+          onErneut={() => void verknuepfungNeuLaden()}
+          linksAktiv={projektLinksAktiv}
+          navigate={navigate}
+          vorgangPfad={vorgangPfad}
+          onEigenstaendig={eigenstaendigUmschalten}
+          eigenstaendigPending={eigenstaendigMutation.isPending}
+          zweispaltigMoeglich={layout === "dicht" && !verlaufSpalteBreit}
+          wrapperProps={{ hidden: !istAktiverTab("abschnitt-projekt"), ...tabPanelProps("abschnitt-projekt") }}
+        />
+      )}
     </>
   );
 
@@ -1508,45 +1596,70 @@ export function VorgangDetailPage({
           : undefined
       }
     >
-      <div className={`flex items-center justify-between ${layout === "dicht" ? "gap-2 border-b-[0.5px] border-sep pb-2" : ""}`}>
-        <button onClick={() => navigate(-1)} className="text-sekundaer text-label2">
-          ← Zurück
-        </button>
-        <div className="flex items-center gap-2">
-        {layout === "dicht" && kopfAktionen}
-        {kannLoeschen && (
-          <PulldownMenu
-            ariaLabel="Weitere Aktionen"
-            items={[
-              {
-                label: "Vorgang löschen",
-                icon: Trash2,
-                destruktiv: true,
-                onSelect: async () => {
-                  if (await bestaetigen({ titel: "Vorgang löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
-                    deleteVorgangMutation.mutate();
-                  }
-                },
-              },
-            ]}
-            trigger={({ offen, toggeln, triggerRef }) => (
-              <button
-                ref={triggerRef}
-                type="button"
-                onClick={toggeln}
-                aria-haspopup="menu"
-                aria-expanded={offen}
-                aria-label="Weitere Aktionen"
-                disabled={deleteVorgangMutation.isPending}
-                className="btn-touch flex items-center justify-center text-label2 disabled:opacity-50"
-              >
-                <MoreHorizontal size={20} strokeWidth={2} aria-hidden="true" />
-              </button>
-            )}
-          />
-        )}
-        </div>
-      </div>
+      <VorgangKopf
+        vorgang={vorgang}
+        kunde={kunde}
+        anlage={anlage}
+        standort={standort}
+        anzeigeAdresse={anzeigeAdresse}
+        layout={layout}
+        primaerAktionKlebt={primaerAktionKlebt}
+        kannDisponieren={kannDisponieren}
+        kannLoeschen={kannLoeschen}
+        pfadLinksAktiv={projektLinksAktiv}
+        currentUser={currentUser}
+        users={users}
+        naechsterTermin={naechsterTermin}
+        navigate={navigate}
+        onZurueck={() => navigate(-1)}
+        onGanzeSeite={layout === "dicht" ? onGanzeSeite : undefined}
+        onLinkKopieren={linkKopieren}
+        onPrioritaet={(p) => prioritaetMutation.mutate(p)}
+        onZuweisen={(userId) => zuweisenMutation.mutate(userId)}
+        onUebernehmen={uebernehmen}
+        uebernehmenPending={uebernehmenMutation.isPending}
+        onFaelligkeit={(datum) => faelligkeitMutation.mutate(datum)}
+        onTerminOeffnen={zumTerminAbschnitt}
+        statusPending={statusMutation.isPending}
+        onStatusWaehle={statusWaehlen}
+        rechnung={
+          vorgang.status === "abgeschlossen"
+            ? { onClick: () => rechnungAusVorgangMutation.mutate(), pending: rechnungAusVorgangMutation.isPending }
+            : null
+        }
+        onZeitErfassen={VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) ? null : () => setZeitSheetModus("neu")}
+        onFolgeVorgang={oeffneFolgeVorgangDialog}
+        onZuordnungAendern={oeffneZuordnungBearbeiten}
+        onLoeschen={vorgangLoeschen}
+        loeschenPending={deleteVorgangMutation.isPending}
+      >
+        <KopfDialoge
+          navigate={navigate}
+          editingZuordnung={editingZuordnung}
+          setEditingZuordnung={setEditingZuordnung}
+          editKundeId={editKundeId}
+          setEditKundeId={setEditKundeId}
+          editAnlageId={editAnlageId}
+          setEditAnlageId={setEditAnlageId}
+          alleKunden={alleKunden}
+          anlagenFuerEditKunde={anlagenFuerEditKunde}
+          zuordnungError={zuordnungError}
+          setZuordnungError={setZuordnungError}
+          zuordnungMutation={zuordnungMutation}
+          showWartetKundeDialog={showWartetKundeDialog}
+          setShowWartetKundeDialog={setShowWartetKundeDialog}
+          mandantEinstellungen={mandantEinstellungen}
+          wiedervorlageTage={wiedervorlageTage}
+          setWiedervorlageTage={setWiedervorlageTage}
+          statusMutation={statusMutation}
+          showFolgeAuftragDialog={showFolgeAuftragDialog}
+          setShowFolgeAuftragDialog={setShowFolgeAuftragDialog}
+          folgeAuftragLeistungstyp={folgeAuftragLeistungstyp}
+          setFolgeAuftragLeistungstyp={setFolgeAuftragLeistungstyp}
+          folgeAuftragMutation={folgeAuftragMutation}
+          folgeVorgangId={folgeVorgangId}
+        />
+      </VorgangKopf>
 
       {aktionsFehler && (
         <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ap-md)] bg-st-fehlt-bg px-3 py-2 text-fliess text-st-fehlt">
@@ -1556,146 +1669,6 @@ export function VorgangDetailPage({
           <button onClick={() => setAktionsFehler(null)} className="btn-touch text-sekundaer underline">
             Ausblenden
           </button>
-        </div>
-      )}
-
-      {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
-          in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
-          Detail neu gedacht"). */}
-      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
-        <div className="flex flex-wrap gap-1.5">
-          {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-medium text-label">
-              <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
-            </span>
-          )}
-          {vorgang.faelligkeit_am && (
-            <span
-              className={`flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-sekundaer font-medium ${
-                vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
-                !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                  ? "bg-st-fehlt-bg text-st-fehlt"
-                  : "bg-fill text-label"
-              }`}
-            >
-              <Clock size={13} strokeWidth={1.5} />
-              {vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
-              !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                ? `${Math.round(
-                    (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /
-                      (1000 * 60 * 60 * 24),
-                  )} Tage überfällig`
-                : `Fällig: ${new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE")}`}
-            </span>
-          )}
-          {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="inline-flex items-center gap-[5px] rounded-[var(--radius-ap-pill)] bg-fill px-2.5 py-1 text-sekundaer font-semibold text-label">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-label3" aria-hidden="true" /> Nicht zugewiesen
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
-       * Abschnitten weiter unten -- reine <a href="#..."> statt
-       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
-       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
-       * role="tablist"/"tab" fuer Screenreader. */}
-      {layout === "dicht" ? (
-        <div
-          role="tablist"
-          aria-label="Vorgangs-Abschnitte"
-          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-fliess"
-        >
-          {ANCHOR_ABSCHNITTE
-            // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite
-            // mehr, sondern eine staendig sichtbare zweite Spalte (siehe
-            // verlaufSpalteBreit/dichtLinkeSpalteInhalt) -- als Tab-Pille
-            // wuerde er nur verwirren, weil ein Klick nichts umschaltet.
-            .filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))
-            .map((a) => (
-              <button
-                key={a.ziel}
-                type="button"
-                role="tab"
-                id={`tab-${a.ziel}`}
-                aria-selected={desktopTab === a.ziel}
-                aria-controls={a.ziel}
-                onClick={() => setDesktopTab(a.ziel)}
-                className={`shrink-0 rounded-[7px] px-2.5 py-1 font-medium whitespace-nowrap ${
-                  desktopTab === a.ziel ? "bg-fill text-label" : "text-label2 hover:text-label"
-                }`}
-              >
-                {a.label}
-              </button>
-            ))}
-        </div>
-      ) : (
-        <nav
-          ref={tabNavRef}
-          aria-label="Vorgangs-Abschnitte"
-          onScroll={tabNavRandAktualisieren}
-          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
-          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
-        >
-          {ANCHOR_ABSCHNITTE.map((a) => {
-            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
-            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
-            // springen -- alle anderen bleiben Sprungmarken auf der
-            // durchlaufenden Seite.
-            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
-            return eigeneSeite ? (
-              <button
-                key={a.ziel}
-                type="button"
-                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
-                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
-              >
-                {a.label}
-              </button>
-            ) : (
-              <a
-                key={a.ziel}
-                href={`#${a.ziel}`}
-                onClick={() => setAktiverAnker(a.ziel)}
-                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
-                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
-                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
-                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
-                }`}
-              >
-                {a.label}
-              </a>
-            );
-          })}
-        </nav>
-      )}
-
-      {/* Kurzuebersicht: bisher Teil des Uebersicht-Tabs (nur dort sichtbar),
-       * jetzt tab-uebergreifend oben angeheftet -- Status/Prioritaet/
-       * Zustaendigkeit bleiben so auch auf Zeit/Termine/Maengel/Positionen/
-       * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
-      {layout === "dicht" && (
-        <div className="card-ap mb-3 space-y-2.5 p-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-fliess lg:grid-cols-4">
-            {[
-              ["Status", STATUS_LABEL[vorgang.status]],
-              ["Priorität", String(vorgang.prioritaet)],
-              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
-              [
-                "Fälligkeit",
-                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
-              ],
-              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
-              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
-              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
-            ].map(([label, wert]) => (
-              <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
-                <dt className="text-sekundaer text-label2">{label}</dt>
-                <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       )}
 
@@ -1754,6 +1727,63 @@ export function VorgangDetailPage({
             <span className="text-fliess font-semibold text-label">{verlaufEintraege.length} Einträge</span>
           </button>
         </div>
+      )}
+
+      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
+       * Abschnitten weiter unten -- reine <a href="#..."> statt
+       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
+       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
+       * role="tablist"/"tab" fuer Screenreader. */}
+      {layout === "dicht" ? (
+        <VorgangTabLeiste
+          // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite mehr,
+          // sondern eine staendig sichtbare zweite Spalte (siehe
+          // verlaufSpalteBreit) -- als Tab wuerde er nur verwirren, weil ein
+          // Klick nichts umschaltet.
+          abschnitte={sichtbareAbschnitte.filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))}
+          aktiv={desktopTab}
+          onWaehle={setDesktopTab}
+          zaehler={tabZaehler}
+        />
+      ) : (
+        <nav
+          ref={tabNavRef}
+          aria-label="Vorgangs-Abschnitte"
+          onScroll={tabNavRandAktualisieren}
+          className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
+          style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
+        >
+          {sichtbareAbschnitte.map((a) => {
+            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
+            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
+            // springen -- alle anderen bleiben Sprungmarken auf der
+            // durchlaufenden Seite.
+            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
+            return eigeneSeite ? (
+              <button
+                key={a.ziel}
+                type="button"
+                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium text-label2 hover:text-label"
+              >
+                {a.label}
+              </button>
+            ) : (
+              <a
+                key={a.ziel}
+                href={`#${a.ziel}`}
+                onClick={() => setAktiverAnker(a.ziel)}
+                aria-current={aktiverAnker === a.ziel ? "location" : undefined}
+                data-aktiv={aktiverAnker === a.ziel ? "" : undefined}
+                className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap font-medium hover:text-label ${
+                  aktiverAnker === a.ziel ? "text-label" : "text-label2"
+                }`}
+              >
+                {a.label}
+              </a>
+            );
+          })}
+        </nav>
       )}
 
       {verlaufSpalteBreit ? (

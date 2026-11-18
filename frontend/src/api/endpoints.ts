@@ -201,6 +201,7 @@ import type {
   Vorgang,
   VorgangAbhaengigkeit,
   VorgangAbhaengigkeitenListe,
+  VorgangVerknuepfung,
   VorgangAnfrage,
   VorgangEvent,
   VorgangEventType,
@@ -911,6 +912,12 @@ export const vorgaengeApi = {
       wiedervorlage_tage?: number;
     }
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  eigenstaendig: (id: string, eigenstaendig: boolean) =>
+    apiFetch<Vorgang>(`/api/vorgaenge/${id}/eigenstaendig`, {
+      method: "POST",
+      body: JSON.stringify({ eigenstaendig }),
+    }),
+  verknuepfung: (id: string) => apiFetch<VorgangVerknuepfung>(`/api/vorgaenge/${id}/verknuepfung`),
   folgeAuftrag: (id: string, leistungstyp: Leistungstyp) =>
     apiFetch<Vorgang>(`/api/vorgaenge/${id}/folge-auftrag`, {
       method: "POST",

@@ -42,7 +42,9 @@ def _bereich(
 
 
 _BEREICHE: tuple[RechteBereichDef, ...] = (
-    _bereich("vorgaenge", "Aufträge", scopes=_VOLLE_KETTE),
+    # eigenstaendig_setzen: "Vorgänge eigenständig führen" -- Projekt/Auftrag
+    # ausblenden, Ergebnisse fließen weiter zurück (Konzept auftrag-projekt 4c).
+    _bereich("vorgaenge", "Aufträge", zusatz=("eigenstaendig_setzen",), scopes=_VOLLE_KETTE),
     _bereich("kunden", "Kunden & Anlagen", scopes=_VOLLE_KETTE, modul="kundenverwaltung"),
     _bereich("material", "Material", modul="material"),
     _bereich("dispo", "Dispo/Termine", scopes=_VOLLE_KETTE, modul="dispo"),

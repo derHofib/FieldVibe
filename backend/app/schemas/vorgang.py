@@ -129,6 +129,18 @@ class VorgangRead(BaseModel):
     # transient auf dem ORM-Objekt gesetzt -- erspart dem Frontend einen
     # zusaetzlichen User-Fetch nur fuer den Namen.
     zugewiesener_name: str | None = None
+    # Ebenfalls transient (siehe app/services/vorgang_verknuepfung_service.py):
+    # Namen fuer den Pfad Projekt > Auftrag. Bei einem eigenstaendig gefuehrten
+    # Vorgang sind projekt_id/auftrag_id und beide Namen fuer Nutzer ohne Recht
+    # vorgaenge.eigenstaendig_setzen serverseitig null.
+    projekt_name: str | None = None
+    auftrag_titel: str | None = None
+    verknuepfung_eigenstaendig: bool = False
+    verknuepfung_eigenstaendig_am: datetime | None = None
+    verknuepfung_eigenstaendig_von_name: str | None = None
+    # Darf der aktuelle Nutzer den Schalter "Eigenstaendig fuehren" an
+    # DIESEM Vorgang bedienen (Recht + Scope)?
+    darf_eigenstaendig_setzen: bool = False
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
     erstellt_von_kundenportal_zugang_id: UUID | None

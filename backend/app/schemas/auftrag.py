@@ -57,3 +57,9 @@ class AuftragRead(BaseModel):
     # zusaetzliche Kunde/Vorgang-Anzahl-Abfragen fuer die Tabellen-Ansicht.
     kunde_name: str | None = None
     vorgaenge_gesamt: int = 0
+    projekt_name: str | None = None
+    # Geschlossene Vorgaenge (abgeschlossen/abgerechnet/storniert, also
+    # VORGANG_STATUS_GESCHLOSSEN). Bewusst inklusive storniert, weil
+    # vorgaenge_gesamt stornierte mitzaehlt -- sonst erreichte ein Auftrag mit
+    # einem stornierten Vorgang nie "alle erledigt".
+    vorgaenge_erledigt: int = 0

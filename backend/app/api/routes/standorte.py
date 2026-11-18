@@ -12,6 +12,7 @@ from app.models.vorgang import Vorgang
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
+from app.services import vorgang_verknuepfung_service
 from app.services import papierkorb_service
 from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.zuweisung_service import erlaubte_kunde_ids
@@ -152,7 +153,9 @@ async def get_standort_profil(
         **StandortRead.model_validate(standort).model_dump(),
         kunde=KundeRead.model_validate(kunde) if kunde is not None else None,
         anlagen=list(anlagen_result.scalars().all()),
-        vorgaenge=list(vorgaenge_result.scalars().all()),
+        vorgaenge=await vorgang_verknuepfung_service.als_read(
+            session, auth, list(vorgaenge_result.scalars().all())
+        ),
         vorgaenge_nach_status=vorgaenge_nach_status,
     )
 
