@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { AccountTypenPage } from "./pages/AccountTypenPage";
 import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
@@ -13,6 +13,7 @@ import { BugfixDetailPage, BugfixesPage } from "./pages/BugfixesPage";
 import { DsgvoPage } from "./pages/DsgvoPage";
 import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { KiVerbindenPage } from "./pages/KiVerbindenPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
@@ -78,6 +79,7 @@ import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 import { PartnerPortalApp } from "./partner/PartnerPortalApp";
 import { NichtGefunden } from "./components/NichtGefunden";
+import { holeLoginZiel, loescheLoginZiel, merkeLoginZiel } from "./utils/loginZiel";
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -93,8 +95,27 @@ function OfficeApp() {
   );
 }
 
+// Merkt sich die angeforderte URL (inkl. Query), damit der Login dorthin zurueckfuehrt.
+function ZuLogin() {
+  const { pathname, search } = useLocation();
+  const [ziel] = useState(() => `${pathname}${search}`);
+  useEffect(() => merkeLoginZiel(ziel), [ziel]);
+  return <Navigate to="/login" replace />;
+}
+
+function NachLogin() {
+  const [ziel] = useState(() => holeLoginZiel() ?? "/");
+  return <Navigate to={ziel} replace />;
+}
+
 export function App({ istOffice = false }: { istOffice?: boolean }) {
   const { currentUser, isAuthenticated, isImpersonating, isLoading } = useAuth();
+  const { pathname } = useLocation();
+
+  // Das gemerkte Login-Ziel gilt nur fuer den Weg Login -> Ziel; danach verfaellt es.
+  useEffect(() => {
+    if (isAuthenticated && pathname !== "/login") loescheLoginZiel();
+  }, [isAuthenticated, pathname]);
 
   // Das Kundenportal ist unabhaengig vom Staff-Login erreichbar -- diese Route
   // muss vor der isAuthenticated-Verzweigung ausgewertet werden, sonst wuerde
@@ -134,13 +155,13 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
 
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+        element={isAuthenticated ? <NachLogin /> : <LoginPage />}
       />
       <Route path="/registrieren" element={<RegistrierenPage />} />
       <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
       <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
 
-      {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
+      {!isAuthenticated && <Route path="*" element={<ZuLogin />} />}
 
       {/* Desktop-Oberflaeche (office.-Subdomain). Bewusst NACH der
           Plattform-Admin-Weiche gedacht, aber vor der Feld-App: ein echter
@@ -177,6 +198,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
             <Route path="/neu" element={<NewVorgangPage />} />
             <Route path="/benachrichtigungen" element={<NotificationsPage />} />
             <Route path="/profil" element={<ProfilePage />} />
+            <Route path="/ki-verbinden" element={<KiVerbindenPage />} />
             <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
             <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
             <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
