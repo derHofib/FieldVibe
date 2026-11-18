@@ -26,6 +26,11 @@ const SPALTEN = [
     id: "anlage",
     header: "Anlage",
   }),
+  spalten.accessor((v) => [v.projekt_name, v.auftrag_titel].filter(Boolean).join(" › "), {
+    id: "projekt_auftrag",
+    header: "Projekt / Auftrag",
+    cell: (info) => info.getValue() || <span className="text-label2">—</span>,
+  }),
   spalten.accessor("status", {
     header: "Status",
     cell: (info) => <StatusPille status={vorgangStatusZuToken(info.getValue())} label={STATUS_LABEL[info.getValue()]} />,
