@@ -10,7 +10,8 @@ from app.models.kunde import Kunde
 from app.models.projekt import Projekt
 from app.models.vorgang import Vorgang
 from app.schemas.auftrag import AuftragCreate, AuftragRead, AuftragUpdate
-from app.services import papierkorb_service
+from app.services import papierkorb_service, vorgang_verknuepfung_service
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
 
 # Nutzt bewusst den bestehenden Rechte-Bereich "projekte" (siehe
@@ -59,6 +60,22 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
         .group_by(Vorgang.auftrag_id)
     )
     vorgaenge_counts = {row[0]: row[1] for row in count_result}
+    erledigt_result = await session.execute(
+        select(Vorgang.auftrag_id, func.count(Vorgang.id))
+        .where(
+            Vorgang.auftrag_id.in_(auftrag_ids),
+            Vorgang.geloescht_am.is_(None),
+            Vorgang.status.in_(sorted(VORGANG_STATUS_GESCHLOSSEN)),
+        )
+        .group_by(Vorgang.auftrag_id)
+    )
+    vorgaenge_erledigt = {row[0]: row[1] for row in erledigt_result}
+
+    projekt_ids = {a.projekt_id for a in auftraege if a.projekt_id is not None}
+    projekt_namen: dict[UUID, str] = {}
+    if projekt_ids:
+        projekt_result = await session.execute(select(Projekt.id, Projekt.name).where(Projekt.id.in_(projekt_ids)))
+        projekt_namen = {row.id: row.name for row in projekt_result}
 
     gelesen = []
     for auftrag in auftraege:
@@ -66,6 +83,9 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
         if auftrag.kunde_id is not None:
             read.kunde_name = kunden_namen.get(auftrag.kunde_id)
         read.vorgaenge_gesamt = vorgaenge_counts.get(auftrag.id, 0)
+        read.vorgaenge_erledigt = vorgaenge_erledigt.get(auftrag.id, 0)
+        if auftrag.projekt_id is not None:
+            read.projekt_name = projekt_namen.get(auftrag.projekt_id)
         gelesen.append(read)
     return gelesen
 
@@ -166,8 +186,13 @@ async def update_auftrag(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
+    altes_projekt_id = auftrag.projekt_id
     for feld, wert in changes.items():
         setattr(auftrag, feld, wert)
+    if "projekt_id" in changes and changes["projekt_id"] != altes_projekt_id:
+        await vorgang_verknuepfung_service.vorgaenge_des_auftrags_mitziehen(
+            session, auftrag, changes["projekt_id"], author_user_id=auth.user_id
+        )
     await session.flush()
     await session.refresh(auftrag)
     [gelesen] = await _anreichern(session, [auftrag])

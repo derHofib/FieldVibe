@@ -42,7 +42,7 @@ SEED_ACCOUNT_TYPEN = {
         "icon": "🧭",
         "nur_zugewiesene_kunden": False,
         "rechte": {
-            "vorgaenge": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "vorgaenge": {"sehen", "erstellen", "bearbeiten", "loeschen", "eigenstaendig_setzen"},
             "kunden": {"sehen", "erstellen", "bearbeiten", "loeschen"},
             "material": {"sehen", "erstellen", "bearbeiten", "loeschen"},
             "dispo": {"sehen", "erstellen", "bearbeiten", "loeschen"},

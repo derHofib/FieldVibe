@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     SmallInteger,
     Text,
     UniqueConstraint,
+    false,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -100,6 +102,19 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     # weiterhin direkt an einem Projekt haengen, ganz ohne Auftrag.
     auftrag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("auftraege.id"), nullable=True
+    )
+    # "Eigenstaendig fuehren": Zuordnung zu Projekt/Auftrag ist eingefroren
+    # (kein Mitziehen beim Projektwechsel des Auftrags, kein Zuordnungswechsel)
+    # und wird Nutzern ohne Recht vorgaenge.eigenstaendig_setzen ausgeblendet.
+    # Zeit/Positionen/Maengel zaehlen im Auftrag/Projekt unveraendert mit.
+    verknuepfung_eigenstaendig: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    verknuepfung_eigenstaendig_am: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    verknuepfung_eigenstaendig_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)

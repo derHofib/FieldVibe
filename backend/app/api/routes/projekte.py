@@ -14,6 +14,7 @@ from app.api.deps import (
     require_roles,
 )
 from app.models.anlage import Anlage
+from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt, ProjektAufgabe, ProjektSpalte
 from app.models.standort import Standort
@@ -33,6 +34,7 @@ from app.schemas.projekt import (
     ProjektUpdate,
 )
 from app.services import berechtigung_service, papierkorb_service
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import (
     erlaubte_kunde_ids,
     erlaubte_user_ids,
@@ -157,15 +159,49 @@ async def _pruefe_aufgaben_scope(
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
 
 
+async def _mit_zaehlern(session: AsyncSession, projekte: list[Projekt]) -> list[ProjektRead]:
+    """Zaehler je Projekt in drei Gruppen-Abfragen (kein N+1)."""
+    gelesen = [ProjektRead.model_validate(p) for p in projekte]
+    ids = [p.id for p in projekte]
+    if not ids:
+        return gelesen
+    auftraege = dict(
+        (
+            await session.execute(
+                select(Auftrag.projekt_id, func.count(Auftrag.id))
+                .where(Auftrag.projekt_id.in_(ids), Auftrag.geloescht_am.is_(None))
+                .group_by(Auftrag.projekt_id)
+            )
+        ).all()
+    )
+    offen = Vorgang.status.not_in(sorted(VORGANG_STATUS_GESCHLOSSEN))
+    zeilen = await session.execute(
+        select(
+            Vorgang.projekt_id,
+            func.count(Vorgang.id),
+            func.count(Vorgang.id).filter(offen),
+            func.count(Vorgang.id).filter(offen, Vorgang.faelligkeit_am < func.now()),
+        )
+        .where(Vorgang.projekt_id.in_(ids), Vorgang.geloescht_am.is_(None))
+        .group_by(Vorgang.projekt_id)
+    )
+    vorgaenge = {z[0]: z[1:] for z in zeilen.all()}
+    for read in gelesen:
+        read.anzahl_auftraege = auftraege.get(read.id, 0)
+        gesamt, anzahl_offen, ueberfaellig = vorgaenge.get(read.id, (0, 0, 0))
+        read.anzahl_vorgaenge, read.anzahl_offen, read.anzahl_ueberfaellig = gesamt, anzahl_offen, ueberfaellig
+    return gelesen
+
+
 @router.get("", response_model=list[ProjektRead])
 async def list_projekte(
     vertrag_id: UUID | None = Query(default=None), session: AsyncSession = Depends(get_db)
-) -> list[Projekt]:
+) -> list[ProjektRead]:
     stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
     if vertrag_id:
         stmt = stmt.where(Projekt.vertrag_id == vertrag_id)
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await _mit_zaehlern(session, list(result.scalars().all()))
 
 
 @router.post(
@@ -181,7 +217,7 @@ async def create_projekt(
     body: ProjektCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Projekt:
+) -> ProjektRead:
     if body.vertrag_id is not None and await session.get(Vertrag, body.vertrag_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -206,12 +242,12 @@ async def create_projekt(
 
     await session.flush()
     await session.refresh(projekt)
-    return projekt
+    return (await _mit_zaehlern(session, [projekt]))[0]
 
 
 @router.get("/{projekt_id}", response_model=ProjektRead)
-async def get_projekt(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> Projekt:
-    return await _require_projekt(session, projekt_id)
+async def get_projekt(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> ProjektRead:
+    return (await _mit_zaehlern(session, [await _require_projekt(session, projekt_id)]))[0]
 
 
 @router.patch(
@@ -226,7 +262,7 @@ async def update_projekt(
     projekt_id: UUID,
     body: ProjektUpdate,
     session: AsyncSession = Depends(get_db),
-) -> Projekt:
+) -> ProjektRead:
     projekt = await _require_projekt(session, projekt_id)
     changes = body.model_dump(exclude_unset=True)
     if changes.get("vertrag_id") is not None and await session.get(Vertrag, changes["vertrag_id"]) is None:
@@ -238,7 +274,7 @@ async def update_projekt(
         setattr(projekt, feld, wert)
     await session.flush()
     await session.refresh(projekt)
-    return projekt
+    return (await _mit_zaehlern(session, [projekt]))[0]
 
 
 @router.delete(

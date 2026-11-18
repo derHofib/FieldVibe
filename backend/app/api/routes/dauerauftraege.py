@@ -25,6 +25,7 @@ from app.schemas.dauerauftrag import (
     DauerauftragZieleUpdate,
     DauerauftragZielRead,
 )
+from app.services import vorgang_verknuepfung_service
 from app.services import papierkorb_service
 from app.services.zuweisung_service import erlaubte_kunde_ids
 
@@ -203,7 +204,9 @@ async def get_dauerauftrag(
     )
     return DauerauftragMitVerlauf(
         **_read_mit_zielen(dauerauftrag, ziele).model_dump(),
-        vorgaenge=list(vorgaenge_result.scalars().all()),
+        vorgaenge=await vorgang_verknuepfung_service.als_read(
+            session, auth, list(vorgaenge_result.scalars().all())
+        ),
     )
 
 

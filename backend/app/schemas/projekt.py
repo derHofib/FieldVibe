@@ -40,6 +40,15 @@ class ProjektRead(BaseModel):
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime
+    # Nicht persistiert, in den Projekt-Routen transient gesetzt (wie
+    # AuftragRead.vorgaenge_gesamt). anzahl_vorgaenge zaehlt alle Vorgaenge mit
+    # projekt_id, also auch die in Auftraegen (Regel "eine Kette"); offen =
+    # nicht abgeschlossen/abgerechnet/storniert, ueberfaellig = offen mit
+    # Faelligkeit in der Vergangenheit.
+    anzahl_auftraege: int = 0
+    anzahl_vorgaenge: int = 0
+    anzahl_offen: int = 0
+    anzahl_ueberfaellig: int = 0
 
 
 class ProjektSpalteCreate(BaseModel):

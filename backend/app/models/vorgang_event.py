@@ -24,6 +24,9 @@ EVENT_TYPEN = (
     "eingangsrechnung_status",
     "formular",
     "leistung",
+    "zuordnung_geaendert",
+    "eigenstaendig_gesetzt",
+    "eigenstaendig_aufgehoben",
 )
 
 
