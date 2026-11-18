@@ -2,10 +2,10 @@
 // und Leistungstyp-Zuordnungen verwalten. Der Felder-Tab ist ein visueller
 // WYSIWYG-Drag&Drop-Builder (siehe FormBuilderCanvas.tsx) -- Kategorien-
 // Palette links, Formular-Vorschau in der Mitte, feste Eigenschaften-Spalte
-// rechts. Positionierung je VIEW (Druck/PDF) passiert weiterhin ueber
-// "Layout automatisch aus Feldern übernehmen" (stapelt alle Root-Felder der
-// Reihe nach), nicht per Maus -- das ist ein eigenes Thema (Seiten-Layout
-// fuer den Druck) und unabhaengig von der Feld-Reihenfolge im Canvas.
+// rechts. Positionierung je VIEW (Druck/PDF) passiert im Tab Visualisierung
+// (VisualisierungTab.tsx) ueber "Layout aus Feldern" und Zahlenfelder in mm,
+// nicht per Maus -- freies Ziehen ist ein eigenes Thema (Seiten-Layout fuer
+// den Druck) und unabhaengig von der Feld-Reihenfolge im Canvas.
 //
 // Bewusst in drei Tabs aufgeteilt (Felder / Visualisierung / Zuordnungen)
 // statt einer langen Seite mit allem untereinander -- das Anlegen eines
@@ -23,21 +23,23 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { ClaudeMarke } from "../../components/formModul/ClaudeMarke";
 import { FormBuilderCanvas } from "../../components/formModul/FormBuilderCanvas";
+import { VisualisierungTab } from "../../components/formModul/VisualisierungTab";
 import { FieldValueInput, RuleConditionBuilder } from "../../components/formModul/RuleConditionBuilder";
 import { FormulaBuilder } from "../../components/formModul/FormulaBuilder";
 import { SeitenPanel } from "../../components/SeitenPanel";
-import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormViewTyp, Leistungstyp } from "../../types";
-import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
+import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, Leistungstyp } from "../../types";
+import { StatusPille } from "../../components/apple/StatusPille";
+import { AusgefuelltTab } from "../../office/formulare/AusgefuelltTab";
+import { FORM_SCHEMA_STATUS_LABEL, FORM_SCHEMA_STATUS_TOKEN, FORM_VIEW_TYP_LABEL, LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
 
-const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
-const inputClass = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-fliess text-label";
 const sectionClass = "space-y-3 card-ap p-4";
 
 const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
@@ -154,7 +156,7 @@ function RegelForm({
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} ({v.type})
+              {FORM_VIEW_TYP_LABEL[v.type]}
             </option>
           ))}
         </Select>
@@ -310,14 +312,17 @@ function useDeleteRuleMutation(id: string, invalidate: () => void) {
   });
 }
 
-type EditorTab = "felder" | "visualisierung" | "zuordnungen";
+type EditorTab = "felder" | "visualisierung" | "zuordnungen" | "ausgefuellt";
 const TAB_LABEL: Record<EditorTab, string> = {
   felder: "Felder",
   visualisierung: "Visualisierung",
   zuordnungen: "Zuordnungen",
+  ausgefuellt: "Ausgefüllt",
 };
 
-export function FormSchemaEditorPage() {
+/** layout="office": Breite Seite mit Ausgefüllt-Tab (Route in OfficeApp); die Feld-App
+ * behält dieselben Tabs ohne die Tabelle der ausgefüllten Protokolle. */
+export function FormSchemaEditorPage({ layout = "feld" }: { layout?: "feld" | "office" }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -352,34 +357,6 @@ export function FormSchemaEditorPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Konnte nicht veröffentlicht werden"),
   });
 
-  // --- Views ---
-  const [viewTyp, setViewTyp] = useState<FormViewTyp>("capture");
-  const [viewName, setViewName] = useState("");
-
-  const createViewMutation = useMutation({
-    meta: { erfolg: "Angelegt" },
-    mutationFn: () => formModulApi.createView(id!, { type: viewTyp, name: viewName.trim() }),
-    onSuccess: () => {
-      setViewName("");
-      invalidate();
-    },
-    onError: (err) => setFehler(err instanceof ApiError ? err.message : "View konnte nicht angelegt werden"),
-  });
-  const deleteViewMutation = useMutation({
-    meta: { erfolg: "Gelöscht" },
-    mutationFn: (viewId: string) => formModulApi.deleteView(id!, viewId),
-    onSuccess: invalidate,
-  });
-  const autoLayoutMutation = useMutation({
-    mutationFn: (viewId: string) => {
-      const rootFelder = (schema?.fields ?? []).filter((f) => f.group_key === null).sort((a, b) => a.reihenfolge - b.reihenfolge);
-      const layouts = rootFelder.map((f, i) => ({ field_key: f.key, seite: 0, x_mm: 0, y_mm: i * 12, breite_mm: 85, hoehe_mm: 10 }));
-      return formModulApi.replaceLayouts(id!, viewId, layouts);
-    },
-    onSuccess: invalidate,
-    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Layout konnte nicht übernommen werden"),
-  });
-
   // --- Regeln (im Seitenpanel je Feld/Gruppe, siehe RegelnPanelInhalt) ---
   const [regelFehler, setRegelFehler] = useState<string | null>(null);
   const [regelnZiel, setRegelnZiel] = useState<{ key: string; label: string } | null>(null);
@@ -411,16 +388,27 @@ export function FormSchemaEditorPage() {
   if (isLoading) return <DetailSkeleton />;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 
+  const tabs: EditorTab[] = layout === "office" ? ["felder", "visualisierung", "zuordnungen", "ausgefuellt"] : ["felder", "visualisierung", "zuordnungen"];
+  const zaehler: Partial<Record<EditorTab, number>> = {
+    felder: schema.fields.length,
+    zuordnungen: schema.zuordnungen.length,
+    ausgefuellt: schema.ausgefuellt_anzahl,
+  };
+
   return (
     <div className="space-y-4 pb-8">
       <button onClick={() => navigate("/form-schemas")} className="text-sekundaer text-label2">
-        ← Zurück
+        {layout === "office" ? "‹ Formulare" : "← Zurück"}
       </button>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-titel-mobil font-bold text-label">{schema.name}</h1>
-          <p className="text-sekundaer text-label2">Version {schema.version} · {schema.status}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sekundaer text-label2">
+            <StatusPille status={FORM_SCHEMA_STATUS_TOKEN[schema.status]} label={FORM_SCHEMA_STATUS_LABEL[schema.status]} />
+            <span>Version {schema.version}</span>
+            {schema.erstellt_via === "ki" && <ClaudeMarke label="von Claude entworfen" klein />}
+          </p>
         </div>
         {schema.status === "draft" && (
           <button onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending} className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50">
@@ -428,22 +416,28 @@ export function FormSchemaEditorPage() {
           </button>
         )}
       </div>
-      {fehler && <p className="text-fliess text-st-fehlt ">{fehler}</p>}
+      {fehler && <p role="alert" className="text-fliess text-st-fehlt ">{fehler}</p>}
 
-      <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
-        {(Object.keys(TAB_LABEL) as EditorTab[]).map((t) => (
+      <div role="tablist" aria-label="Bereiche der Vorlage" className="flex gap-5 border-b-[0.5px] border-sepstrong overflow-x-auto">
+        {tabs.map((t) => (
           <button
             key={t}
+            role="tab"
+            id={`tab-${t}`}
+            aria-selected={tab === t}
+            aria-controls="tab-inhalt"
             onClick={() => setTab(t)}
-            className={`flex-1 px-3 py-2 text-sekundaer font-semibold ${
-              tab === t ? "bg-tint-solid text-white" : "text-label hover:bg-fill"
+            className={`-mb-[0.5px] whitespace-nowrap border-b-2 px-0.5 pb-2 text-fliess font-semibold ${
+              tab === t ? "border-tint text-tint-text" : "border-transparent text-label2 hover:text-label"
             }`}
           >
             {TAB_LABEL[t]}
+            {zaehler[t] !== undefined && <span className="ml-1.5 font-medium tabular-nums text-label2">{zaehler[t]}</span>}
           </button>
         ))}
       </div>
 
+      <div role="tabpanel" id="tab-inhalt" aria-labelledby={`tab-${tab}`} className="space-y-4">
       {tab === "felder" && (
         <FormBuilderCanvas
           schemaId={id!}
@@ -456,39 +450,9 @@ export function FormSchemaEditorPage() {
         />
       )}
 
-      {tab === "visualisierung" && (
-        <div className={sectionClass}>
-          <h2 className="text-fliess font-semibold text-label">Views</h2>
-          {(views ?? []).map((v) => (
-            <div key={v.id} className="flex items-center justify-between border-b border-sep py-1.5 text-fliess">
-              <span className="text-label">{v.name} <span className="text-label2">({v.type})</span></span>
-              <div className="flex items-center gap-2">
-                {v.type !== "capture" ? null : (
-                  <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-sekundaer text-cyan-700 dark:text-cyan-400">
-                    Layout aus Feldern übernehmen
-                  </button>
-                )}
-                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-label2 hover:text-st-fehlt">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)}>
-              {VIEW_TYPEN.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-            <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
-            <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-ap px-3 disabled:opacity-50">
-              <Plus size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      {tab === "visualisierung" && <VisualisierungTab schemaId={id!} schema={schema} onGeaendert={invalidate} setFehler={setFehler} />}
+
+      {tab === "ausgefuellt" && layout === "office" && <AusgefuelltTab schemaId={id!} />}
 
       {tab === "zuordnungen" && (
         <div className={sectionClass}>
@@ -520,6 +484,8 @@ export function FormSchemaEditorPage() {
           </div>
         </div>
       )}
+
+      </div>
 
       {regelnZiel && (
         <SeitenPanel
