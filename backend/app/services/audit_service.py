@@ -154,6 +154,31 @@ async def log_action(
     return entry
 
 
+async def ki_schreibzugriff_protokollieren(
+    session: AsyncSession,
+    auth,
+    *,
+    aktion: str,
+    entity_type: str,
+    entity_id: UUID | None,
+    payload: dict | None = None,
+) -> None:
+    """Protokolliert, dass ein KI-Assistent (MCP) etwas angelegt hat. Nur Routen, die der MCP-Adapter fuer
+    Schreib-Tools nutzt, rufen das auf; bei normalen App-Aufrufen (auth.via leer) passiert nichts, weil
+    diese Aktionen dort bisher nicht einzeln protokolliert werden. quelle=ki setzt log_action."""
+    if getattr(auth, "via", None) != "mcp":
+        return
+    await log_action(
+        session,
+        aktion=aktion,
+        mandant_id=auth.mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        payload=payload,
+    )
+
+
 async def log_aenderung(
     session: AsyncSession,
     *,

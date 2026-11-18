@@ -1,4 +1,4 @@
-"""MCP-Tools (Etappe 1, nur Lesen): Rechte, Mandantentrennung, Aufbereitung, Fehlerabbildung."""
+"""MCP-Tools (Lesen): Rechte, Mandantentrennung, Aufbereitung, Fehlerabbildung."""
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -47,6 +47,12 @@ ERWARTETE_TOOLS = {
     "kennzahlen_vorgaenge",
     "insights",
     "offene_posten",
+    "auswertung",
+    "arbeitszeit_saldo",
+    "protokoll_vorlagen_auflisten",
+    "protokoll_vorlage_lesen",
+    "protokoll_pdf",
+    "maengelprotokoll_pdf",
 }
 
 

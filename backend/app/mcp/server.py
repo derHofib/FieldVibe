@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
@@ -18,9 +19,10 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import get_settings
 from app.core.rate_limit import SlidingWindowRateLimiter
-from app.mcp.oauth_provider import FieldVibeOAuthProvider, resource_url
-from app.mcp.tools import auswertung, lesen
-from app.mcp.zugang import ALLE_SCOPES, SCOPE_LESEN
+from app.mcp.oauth_provider import FieldVibeOAuthProvider, KiAccessToken, resource_url
+from app.mcp import prompts
+from app.mcp.tools import auswertung, lesen, protokolle, schreiben
+from app.mcp.zugang import ALLE_SCOPES, SCOPE_LESEN, SCOPE_SCHREIBEN
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,10 @@ Das Glossar steht vollständig in der Ressource fieldvibe://begriffe.
 
 Einstieg: mit "suchen" nach Kunde, Titel oder Nummer suchen, dann mit den *_lesen-Tools Details holen.
 Listen sind auf 100 Einträge je Aufruf begrenzt (Parameter seite); bei großen Mengen Filter nutzen.
-Alles hier ist nur lesend.
+Lesend ist alles erlaubt, was der Nutzer in der App sehen darf. Mit Schreibzugriff (nur wenn der Nutzer ihn
+erteilt hat) legst du Neues an: Kommentare, Mängel, Vorgänge (Status neu), Protokoll-Entwürfe und Entwürfe
+für Protokoll-Vorlagen. Du löschst, schließt, unterschreibst, veröffentlichst oder versendest nichts; das
+bleibt beim Menschen in der App. Sage dem Nutzer nach dem Anlegen immer, was er in der App noch tun muss.
 """
 
 
@@ -66,6 +71,25 @@ def _transport_security() -> TransportSecuritySettings:
         allowed_hosts=erlaubte_hosts,
         allowed_origins=sorted(herkuenfte),
     )
+
+
+SCHREIB_TOOLS = schreiben.SCHREIB_TOOLS | protokolle.SCHREIB_TOOLS
+
+
+def _schreib_tools_nach_scope_listen(server: MCPServer) -> None:
+    """Ohne Schreib-Scope (nicht erteilt oder Recht ki_zugriff.bearbeiten entzogen, siehe load_access_token)
+    sind Schreib-Tools gar nicht gelistet. Das ist nur Komfort: aufgerufen werden sie trotzdem nur mit Scope
+    (tools/_basis.zugriff)."""
+    original = server.list_tools
+
+    async def list_tools():
+        tools = await original()
+        token = get_access_token()
+        if isinstance(token, KiAccessToken) and SCOPE_SCHREIBEN in token.scopes:
+            return tools
+        return [t for t in tools if t.name not in SCHREIB_TOOLS]
+
+    server.list_tools = list_tools  # type: ignore[method-assign]
 
 
 def baue_mcp_server() -> tuple[MCPServer, ASGIApp] | None:
@@ -94,6 +118,10 @@ def baue_mcp_server() -> tuple[MCPServer, ASGIApp] | None:
         )
         lesen.registrieren(server)
         auswertung.registrieren(server)
+        protokolle.registrieren(server)
+        schreiben.registrieren(server)
+        prompts.registrieren(server)
+        _schreib_tools_nach_scope_listen(server)
 
         @server.resource(
             "fieldvibe://begriffe",
