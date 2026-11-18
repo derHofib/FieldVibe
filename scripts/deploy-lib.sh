@@ -92,12 +92,52 @@ deploy_vorgaenger_sichern() {
   fi
 }
 
+# Bestandsinstallation = Postgres-Container laeuft schon; sonst Erstinstallation.
+deploy_postgres_laeuft() {
+  [[ -n "$("${COMPOSE[@]}" ps -q postgres 2>/dev/null || true)" ]]
+}
+
+_dl_env() { # key, aus .env
+  grep -E "^${1}=" "$REPO_DIR/.env" 2>/dev/null | head -n1 | cut -d= -f2- || true
+}
+
+# Steht die Umstellung auf die getrennte Owner-Rolle (scripts/app_rolle_einrichten.sh) noch
+# an? Nein, wenn bewusst abgeschaltet (DB_GETRENNTER_OWNER=0) oder schon umgestellt
+# (.env.migration vorhanden und Marker bzw. Strikt-Schalter gesetzt).
+deploy_owner_umstellung_ansteht() {
+  local marker
+  marker="$(_dl_env DB_GETRENNTER_OWNER)"
+  [[ "$marker" == "0" ]] && return 1
+  if [[ -f "$REPO_DIR/.env.migration" ]] && [[ "$marker" == "1" || "$(_dl_env FIELDVIBE_DB_BESITZ_VERBOTEN)" == "1" ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# Fuehrt scripts/sql/besitz_pruefen.sql gegen die Produktions-Datenbank aus. stdout =
+# Ergebniszeile (ok|<eigentuemer>|...) bzw. die Fehlermeldung, Rueckgabe != 0 bei Verstoss.
+deploy_besitz_pruefen() {
+  local pg_user pg_db app sys owner="" args
+  pg_user="$(_dl_env POSTGRES_USER)"; pg_user="${pg_user:-fieldvibe}"
+  pg_db="$(_dl_env POSTGRES_DB)"; pg_db="${pg_db:-fieldvibe}"
+  app="$(_dl_env APP_DB_USER)"; app="${app:-fieldvibe_app}"
+  sys="$(_dl_env APP_DB_SYSTEM_USER)"; sys="${sys:-fieldvibe_system}"
+  if [[ "$(_dl_env DB_GETRENNTER_OWNER)" == "1" ]]; then
+    owner="$(grep -E '^APP_DB_OWNER_USER=' "$REPO_DIR/.env.migration" 2>/dev/null | head -n1 | cut -d= -f2- || true)"
+    owner="${owner:-fieldvibe_owner}"
+  fi
+  args=(-v "app_rolle=$app" -v "system_rolle=$sys")
+  [[ -z "$owner" ]] || args+=(-v "owner_rolle=$owner")
+  "${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -Atq -U "$pg_user" -d "$pg_db" "${args[@]}" -f - \
+    <"$REPO_DIR/scripts/sql/besitz_pruefen.sql" 2>&1
+}
+
 deploy_backup() {
   if [[ "$DEPLOY_OHNE_BACKUP" == "1" ]]; then
     _dw "Backup uebersprungen (--ohne-backup): bei einer fehlgeschlagenen Migration gibt es keinen frischen Wiederherstellungspunkt."
     return 0
   fi
-  if [[ -z "$("${COMPOSE[@]}" ps -q postgres 2>/dev/null || true)" ]]; then
+  if ! deploy_postgres_laeuft; then
     _dl "Noch keine laufende Datenbank (Erstinstallation) -- kein Backup noetig."
     return 0
   fi

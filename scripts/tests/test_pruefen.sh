@@ -60,6 +60,27 @@ assert_enthaelt "$OUT" "Test-Restore ok" "Plausibilitaetsergebnis"
 assert_enthaelt "$OUT" "mandanten=3" "Zeilenanzahl mandanten ausgegeben"
 assert_enthaelt "$OUT" "users=3" "Zeilenanzahl users ausgegeben"
 assert_enthaelt "$OUT" "alembic 0099_stub" "alembic-Version ausgegeben"
+assert_enthaelt "$OUT" "Besitz ok: Owner fieldvibe_owner" "Besitzpruefung der Wegwerf-DB im Ergebnis"
+assert_enthaelt "$T/psql-args" "-d $TESTDB" "--nur-besitz gegen die Wegwerf-DB"
+assert_enthaelt "$T/psql-stdin.bin" "\\set nur_besitz 1" "Besitz-SQL im Modus nur_besitz"
+assert_enthaelt "$T/psql-pruefen-args" "-d $TESTDB" "Besitzpruefung gegen die Wegwerf-DB"
+testumgebung_loeschen
+
+szenario "Besitzpruefung: Rollen fehlen -> Hinweis statt Fehler; Verstoss -> Exit != 0, Wegwerf-DB trotzdem geloescht"
+testumgebung_anlegen
+lauf "$REPO/scripts/backup.sh"
+S="$(neuester_stamp "$BD")"
+LAUF_ENV=(STUB_ROLLEN_ANZAHL=0)
+lauf "$REPO/scripts/backup-pruefen.sh"
+assert_rc 0 "Rollen nicht vorhanden"
+assert_enthaelt "$OUT" "Besitzpruefung uebersprungen: Rollen nicht vorhanden" "Hinweis"
+LAUF_ENV=(STUB_BESITZ_FAIL=1)
+lauf "$REPO/scripts/backup-pruefen.sh"
+assert_rc 1 "Besitzverstoss"
+assert_enthaelt "$OUT" "Besitz-/Rechtepruefung der Wegwerf-Datenbank fehlgeschlagen" "Meldung"
+TESTDB="restore_test_${S//-/_}"
+assert_eq "DROP DATABASE IF EXISTS \"$TESTDB\"" "$(tail -n 1 "$T/sql.log" | sed 's/^SQL: //')" "Wegwerf-DB geloescht"
+LAUF_ENV=()
 testumgebung_loeschen
 
 szenario "Test-Restore scheitert: Exit != 0 und die Wegwerf-DB wird trotzdem geloescht"

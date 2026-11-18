@@ -36,7 +36,7 @@ cp .env.example .env
 # Secrets in .env ersetzen (siehe Kommentare in der Datei)
 
 docker compose up -d --build
-docker compose run --rm backend alembic upgrade head
+docker compose run --rm backend alembic upgrade head   # nur lokal; auf dem Server immer scripts/migrieren.sh (Owner-Rolle, docs/DEPLOYMENT.md)
 docker compose run --rm backend python -m app.seed   # Beispieldaten
 ```
 

@@ -325,8 +325,9 @@ Zertifikate zu holen (`docker compose logs -f caddy` zum Verfolgen).
 ## 4. Migrationen + Superadmin
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  run --rm backend alembic upgrade head
+# Migrationen immer über scripts/migrieren.sh (nutzt bei eingerichteter Owner-Rolle deren
+# Zugang aus .env.migration, siehe "Datenbank-Rolle: Besitz der Tabellen")
+./scripts/migrieren.sh --compose "docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   run --rm backend python -m app.cli create-super-admin
@@ -653,10 +654,16 @@ scripts/restore.sh secrets --von rclone:storagebox:fieldvibe-backups
   ohne `--ja` bricht das Skript ab). Objekte, die im Dump nicht vorkommen
   (z. B. Tabellen einer neueren Migration), bleiben bestehen – war der Code zur
   Sicherungszeit älter, danach `docker compose … run --rm backend alembic
-  upgrade head`. Eigentümer werden mit zurückgespielt, damit die App-Rolle
-  (`fieldvibe_app`) die Tabellen weiter besitzt; sie muss dafür existieren
-  (`scripts/app_rolle_einrichten.sh`, macht auch `deploy.sh`). Ausnahme:
-  `--ohne-eigentuemer`, danach `scripts/app_rolle_einrichten.sh` ausführen.
+  upgrade head` (richtig: `scripts/migrieren.sh`). Der Dump wird immer als Admin mit
+  `--no-owner --no-acl` eingespielt; danach setzt `scripts/app_rolle_einrichten.sh
+  --nur-besitz` mit demselben SQL wie bei der Einrichtung Eigentum (Owner-Rolle
+  `fieldvibe_owner`) und Rechte, und `scripts/sql/besitz_pruefen.sql` prüft das Ergebnis,
+  bevor Backend und Worker wieder starten. Die Rollen müssen dafür existieren
+  (`scripts/app_rolle_einrichten.sh`, macht auch `deploy.sh`). Bei einem Verstoß endet das
+  Skript mit Exit 1 und lässt Backend/Worker gestoppt; nach Behebung
+  `docker compose start backend worker`. `--ohne-eigentuemer` ist veraltet und
+  wirkungslos (das Verhalten ist jetzt Standard). `backup-pruefen.sh` prüft den Besitz in
+  der Wegwerf-Datenbank mit (übersprungen, wenn die Rollen auf dem Rechner fehlen).
 - Das Altformat `db-*.sql.gz` (Plain-SQL vor der Umstellung) wird weiter
   unterstützt: Schema `public` wird vorher neu angelegt und alles mit
   `psql -v ON_ERROR_STOP=1 --single-transaction` eingespielt.
@@ -702,7 +709,7 @@ getrennt aufbewahren.
 7. **Fotos:**
    `scripts/restore.sh minio --von rclone:storagebox:fieldvibe-backups --stamp <stamp>`
 8. **Migrationen**, falls der Code neuer ist als der Satz:
-   `docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head`
+   `scripts/migrieren.sh --compose "docker compose -f docker-compose.yml -f docker-compose.prod.yml"`
 9. **Funktionstest:** Login in Feld-App und Office, ein altes Foto öffnen
    (beweist den KMS-Schlüssel), Integrationen testen, `/healthz` prüfen;
    dann `scripts/backup.sh` und `scripts/backup-pruefen.sh` ausführen und
@@ -804,7 +811,7 @@ scripts/backup.sh
 $C build backend frontend worker
 $C up -d postgres minio
 $C stop worker
-$C run --rm backend alembic upgrade head      # oder scripts/migrieren.sh --compose "$C"
+scripts/migrieren.sh --compose "$C"          # einziger Weg: nutzt die Owner-Rolle aus .env.migration
 $C up -d --no-build --remove-orphans
 ```
 
@@ -980,28 +987,50 @@ warnt.
 
 ### Datenbank-Rolle: Besitz der Tabellen
 
-Backend und Worker laufen als `NOSUPERUSER NOBYPASSRLS`-Rolle (Abschnitt 3).
-Gehören dieser Rolle aber die Tabellen – der bisherige Standard, weil die
-Migrationen über dieselbe Rolle laufen –, könnte sie RLS per `ALTER TABLE …
-DISABLE ROW LEVEL SECURITY` selbst abschalten. Beim Start prüft
-`app/db/rollen_pruefung.py` das und **warnt**. Härtung (opt-in):
+Backend und Worker laufen als `NOSUPERUSER NOBYPASSRLS`-Rolle (Abschnitt 3). Gehörten dieser
+Rolle die Tabellen, könnte sie RLS per `ALTER TABLE … DISABLE ROW LEVEL SECURITY` selbst
+abschalten. Deshalb ist die **getrennte Owner-Rolle der Standard**:
 
-```bash
-./scripts/app_rolle_einrichten.sh --getrennter-owner --compose "docker compose -f docker-compose.yml -f docker-compose.prod.yml"
-# oder bei deploy.sh: DB_GETRENNTER_OWNER=1 in die .env, Skript erneut ausführen
-```
+| Rolle | Zweck |
+|---|---|
+| `fieldvibe` (`POSTGRES_USER`) | Bootstrap-Superuser, nur Admin |
+| `fieldvibe_app` | Backend/Worker, nur DML-Rechte, `NOBYPASSRLS` |
+| `fieldvibe_system` | `system_session()`, `BYPASSRLS`, besitzt nichts |
+| `fieldvibe_owner` | besitzt Tabellen, Funktionen, Typen; Migrationen laufen als sie |
 
-Danach gehören Tabellen/Funktionen/Typen einer eigenen Owner-Rolle
-(`fieldvibe_owner`), die App-Rolle hat nur DML-Rechte (inkl. Default-Privilegien
-für künftige Migrationen), die Owner-Zugangsdaten stehen in `.env.migration`
-(nicht in `.env`, die als `env_file` in Backend/Worker geladen wird), Migrationen
-laufen über `scripts/migrieren.sh`, und `FIELDVIBE_DB_BESITZ_VERBOTEN=1` lässt
-den Start scheitern, falls die App-Rolle doch wieder Besitzerin wird. **Das SQL
-und die Skriptverdrahtung wurden nicht gegen eine echte Datenbank mit
-Rollenrechten getestet** – vor dem Einsatz auf einer Kopie der Produktionsdaten
-probieren (`scripts/backup.sh` zuvor). `restore.sh`/Runbook-Schritte mit
-`alembic` gehen weiter davon aus, dass die App-Rolle migriert; bei getrenntem
-Owner stattdessen `scripts/migrieren.sh` verwenden.
+Der Owner-Zugang steht **bewusst nicht in `.env`** (die ist `env_file` von Backend/Worker),
+sondern in `.env.migration` (immer `chmod 600`). In `.env` stehen nur die Marker
+`DB_GETRENNTER_OWNER=1` und `FIELDVIBE_DB_BESITZ_VERBOTEN=1`; Letzterer lässt den Start
+scheitern, falls die App-Rolle doch Tabellen besitzt.
+
+**Beim nächsten `deploy.sh` auf einer Bestandsinstallation:** Backup (Pflicht; mit
+`--ohne-backup` bricht das Skript ab) → `app_rolle_einrichten.sh --nur-rolle` überträgt das
+Eigentum einmalig an `fieldvibe_owner`, vergibt Rechte und Default-Privilegien und legt
+`.env.migration` an (die erste Umstellung nimmt kurz Sperren auf alle Tabellen; bei Deadlock
+bis zu drei Versuche) → Logzeile der Besitzprüfung (`scripts/sql/besitz_pruefen.sql`), Eintrag
+`DB_OWNER_UMGESTELLT_AM`/`DB_OWNER_UMSTELLUNG_BACKUP` in `.deploy-state` → Migration als Owner →
+Start mit `FIELDVIBE_DB_BESITZ_VERBOTEN=1`. Fehlt `.env.migration` bei gesetztem Marker
+(z. B. nach Server-Neuaufbau), legt `deploy.sh` bzw. `./scripts/app_rolle_einrichten.sh --nur-rolle`
+den Zugang mit neuem Passwort neu an (Warnung "Owner-Zugang fehlte"); `migrieren.sh`,
+`restore.sh` und `--nur-besitz` brechen dann mit klarer Meldung ab.
+
+**Migrationen** laufen ausschließlich über `scripts/migrieren.sh` (bzw. `deploy.sh`); es loggt die
+verwendete Rolle. Ein direktes `docker compose run --rm backend alembic upgrade head` würde als
+App-Rolle laufen und scheitern. Lokal mit `docker-compose.override.yml` gibt es keine Owner-Rolle.
+
+**Zurückdrehen (nicht empfohlen):** `DB_GETRENNTER_OWNER=0` in `.env` (oder
+`./scripts/app_rolle_einrichten.sh --nur-rolle --ohne-getrennten-owner`). Das Eigentum geht zurück an
+`fieldvibe_app`, `.env.migration` wird nach `.env.migration.deaktiviert-<Zeitstempel>` verschoben,
+`FIELDVIBE_DB_BESITZ_VERBOTEN=0`, `deploy.sh` und das Skript warnen laut. Wieder einschalten:
+Zeile `DB_GETRENNTER_OWNER` entfernen und `deploy.sh` erneut ausführen.
+
+**Teststand:** Der CI-Job `db-owner-umstellung` (`scripts/tests/test_db_owner_echt.sh`) läuft gegen
+ein echtes Postgres 16 und das echte alembic. Er prüft: (a) Besitz-SQL und unabhängige Zählung, (b) DML,
+Sequenz-USAGE und dass `DISABLE/NO FORCE RLS`, `DROP POLICY`, `CREATE TABLE` für die App-Rolle scheitern,
+(c) RLS-Isolation zweier Mandanten, (d) zweiter Lauf ist No-op, (e) Migration als Owner mit
+Default-Privilegien, (f) Startprüfung ohne Warnung; dazu fehlende `.env.migration`, `backup.sh` →
+`restore.sh` mit Besitz-/RLS-Check, `backup-pruefen.sh` und das Abschalten. **Nicht getestet:** ein echter
+Docker-Compose-Lauf von `deploy.sh` – der Test ersetzt `docker` durch einen Shim gegen lokales Postgres.
 
 ## 6d. Betrieb: Monitoring, Logs, Healthchecks, Mail-Outbox
 

@@ -7,7 +7,9 @@ set -euo pipefail
 # Ablauf: neuesten (oder --stamp) Satz aus dem lokalen BACKUP_DIR oder von einem
 # Ziel (--von) nehmen, alle Pruefsummen gegen das Manifest pruefen, entschluesseln,
 # das DB-Dump in eine WEGWERF-Datenbank restore_test_<stamp> im Postgres-Container
-# einspielen und auf Plausibilitaet pruefen, MinIO-Archiv und Secrets-Buendel auf
+# einspielen, auf Plausibilitaet pruefen und mit der Besitz-Logik des echten Restores
+# (Owner-Rolle, Rechte, FORCE RLS; uebersprungen, wenn die Rollen hier nicht existieren)
+# gegenpruefen, MinIO-Archiv und Secrets-Buendel auf
 # Lesbarkeit pruefen. Die Produktions-Datenbank wird nie angefasst; die Wegwerf-
 # Datenbank wird in jedem Fall wieder geloescht.
 #
@@ -34,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     --stamp) STAMP="${2:?--stamp braucht einen Wert}"; shift ;;
     --von)   VON="${2:?--von braucht ein Ziel (<typ:ziel> oder lokal)}"; shift ;;
     --nur-pruefsummen) NUR_PRUEFSUMMEN=1 ;;
-    -h | --help) sed -n '4,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '4,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) fehler "Unbekannte Option: $1"; exit 1 ;;
   esac
   shift
@@ -175,7 +177,20 @@ pruefen_hauptteil() {
     if (( ok == 1 )) && [[ "$dump" == *.dump ]]; then
       : "${POSTGRES_USER:?POSTGRES_USER fehlt in .env}"
       : "${POSTGRES_DB:?POSTGRES_DB fehlt in .env}"
-      if db_testrestore "$dump" "$STAMP"; then HINWEISE+=("Test-Restore: ${TESTRESTORE_ERGEBNIS:-ok}"); else problem "Test-Restore der Datenbank fehlgeschlagen"; fi
+      if db_testrestore "$dump" "$STAMP"; then
+        HINWEISE+=("Test-Restore: ${TESTRESTORE_ERGEBNIS:-ok}")
+        # Dieselbe Eigentums-/Rechte-Logik wie beim echten Restore: zeigt, ob ein Restore
+        # dieses Satzes die Besitzverhaeltnisse (Owner-Rolle, DML-Rechte, FORCE RLS) herstellt.
+        local besitz_rc=0 besitz_owner
+        db_besitz_herstellen_und_pruefen "$TESTDB" || besitz_rc=$?
+        case "$besitz_rc" in
+          0) IFS='|' read -r _ besitz_owner _ <<<"${BESITZ_ERGEBNIS:-}"; HINWEISE+=("Besitz ok: Owner ${besitz_owner:-?}") ;;
+          2) HINWEISE+=("Besitzpruefung uebersprungen: Rollen nicht vorhanden") ;;
+          *) problem "Besitz-/Rechtepruefung der Wegwerf-Datenbank fehlgeschlagen (Eigentum, DML-Rechte oder FORCE RLS nach dem Restore nicht in Ordnung)" ;;
+        esac
+      else
+        problem "Test-Restore der Datenbank fehlgeschlagen"
+      fi
     elif (( ok == 1 )); then
       problem "Datenbank-Dump im Altformat ($dateiname) -- kein Test-Restore moeglich (neues Backup anlegen)"
     fi

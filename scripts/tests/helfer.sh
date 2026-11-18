@@ -75,6 +75,11 @@ testumgebung_anlegen() {
   mkdir -p "$REPO/scripts" "$BIN" "$BD" "$T/home" "$T/tmp" "$T/minio-daten"
   cp -r "$FV_SCRIPTS_DIR/backup" "$REPO/scripts/backup"
   cp "$FV_SCRIPTS_DIR/backup.sh" "$FV_SCRIPTS_DIR/restore.sh" "$FV_SCRIPTS_DIR/backup-pruefen.sh" "$REPO/scripts/"
+  # restore.sh/backup-pruefen.sh rufen app_rolle_einrichten.sh --nur-besitz auf.
+  mkdir -p "$REPO/scripts/sql"
+  cp "$FV_SCRIPTS_DIR/app_rolle_einrichten.sh" "$FV_SCRIPTS_DIR/migrieren.sh" "$REPO/scripts/"
+  cp "$FV_SCRIPTS_DIR/sql/app_rolle_einrichten.sql" "$FV_SCRIPTS_DIR/sql/besitz_pruefen.sql" "$REPO/scripts/sql/"
+  : >"$REPO/docker-compose.yml"
   printf 'foto-1\n' >"$T/minio-daten/foto1.jpg"
   mkdir -p "$T/minio-daten/.minio.sys"
   printf 'meta\n' >"$T/minio-daten/.minio.sys/config.json"
@@ -199,12 +204,37 @@ if [[ "$1" == "compose" ]]; then
           psql_argumente="$*"
           while [[ $# -gt 0 ]]; do if [[ "$1" == "-c" ]]; then sql="$2"; shift; fi; shift; done
           if [[ -z "$sql" ]]; then
+            # Altformat-Restore (--single-transaction) und die SQL-Skripte (app_rolle_einrichten,
+            # besitz_pruefen) landen in getrennten Dateien, damit sie sich nicht ueberschreiben.
+            if [[ "$psql_argumente" == *--single-transaction* ]]; then
+              echo "psql $psql_argumente" >>"$FV_T/psql-restore-args"
+              cat >"$FV_T/psql-restore-stdin.bin"
+              exit 0
+            fi
+            cat >"$FV_T/psql-skript.tmp"
+            if grep -q 'Besitzpruefung fehlgeschlagen' "$FV_T/psql-skript.tmp"; then
+              mv "$FV_T/psql-skript.tmp" "$FV_T/psql-pruefen-stdin.bin"
+              echo "psql $psql_argumente" >>"$FV_T/psql-pruefen-args"
+              if [[ "${STUB_BESITZ_FAIL:-0}" == "1" ]]; then
+                echo "ERROR:  Besitzpruefung fehlgeschlagen: stub-verstoss" >&2
+                exit 3
+              fi
+              echo "ok|fieldvibe_owner|110|12|5|4"
+              exit 0
+            fi
+            mv "$FV_T/psql-skript.tmp" "$FV_T/psql-stdin.bin"
             echo "psql $psql_argumente" >>"$FV_T/psql-args"
-            cat >"$FV_T/psql-stdin.bin"
+            if [[ -n "${STUB_SQL_FAIL_ANZAHL:-}" ]]; then
+              # Die ersten N Aufrufe scheitern (z. B. Deadlock), danach klappt es.
+              versuche="$(cat "$FV_T/sql-versuche" 2>/dev/null || echo 0)"
+              echo $((versuche + 1)) >"$FV_T/sql-versuche"
+              if (( versuche < STUB_SQL_FAIL_ANZAHL )); then echo "ERROR:  stub: deadlock detected" >&2; exit 3; fi
+            fi
             exit 0
           fi
           echo "SQL: $sql" >>"$FV_T/sql.log"
           case "$sql" in
+            *pg_roles*) echo "${STUB_ROLLEN_ANZAHL:-3}" ;;
             *server_version*) echo "16.4" ;;
             *version_num*) echo "0099_stub" ;;
             *alembic_version*) echo "${STUB_ALEMBIC_ZEILEN:-1}" ;;

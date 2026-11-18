@@ -39,8 +39,8 @@ async def _pruefe_app_rolle(engine: AsyncEngine) -> None:
     """Superuser und BYPASSRLS-Rollen ignorieren jede RLS-Policy (auch mit
     FORCE ROW LEVEL SECURITY) -- die Mandantentrennung waere dann nur noch
     Anwendungslogik. Nur die App-/Worker-Verbindung wird geprueft;
-    Migrationen laufen bewusst ueber dieselbe Rolle und brauchen keine
-    Sonderrechte."""
+    Migrationen laufen standardmaessig als eigene Owner-Rolle (NOSUPERUSER,
+    NOBYPASSRLS) und brauchen ebenfalls keine Sonderrechte."""
     async with engine.connect() as conn:
         row = (
             await conn.execute(
@@ -75,10 +75,11 @@ async def _pruefe_app_rolle(engine: AsyncEngine) -> None:
 async def _pruefe_besitz(engine: AsyncEngine, rolle: str) -> None:
     """Eine Rolle, der die RLS-Tabellen gehoeren, kann RLS per ALTER TABLE ...
     DISABLE ROW LEVEL SECURITY / NO FORCE selbst abschalten -- ein SQL-Injection-
-    Treffer reichte dann, die Mandantentrennung auszuhebeln. Standardmaessig nur
-    eine Warnung, weil die Migrationen bisher ueber dieselbe Rolle laufen; mit
-    FIELDVIBE_DB_BESITZ_VERBOTEN=1 bricht der Start ab (getrennte Owner-Rolle,
-    siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."""
+    Treffer reichte dann, die Mandantentrennung auszuhebeln. Standard ist eine
+    getrennte Owner-Rolle fuer Migrationen; scripts/app_rolle_einrichten.sh setzt
+    dann FIELDVIBE_DB_BESITZ_VERBOTEN=1 und der Start bricht ab. Nur bei bewusst
+    abgeschalteter Trennung (DB_GETRENNTER_OWNER=0) bzw. in Dev/Tests bleibt es
+    bei der Warnung (siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."""
     async with engine.connect() as conn:
         tabellen = await rls_tabellen_im_besitz(conn, rolle)
     if not tabellen:
@@ -86,7 +87,8 @@ async def _pruefe_besitz(engine: AsyncEngine, rolle: str) -> None:
     meldung = (
         f"Datenbank-Rolle {rolle} besitzt {len(tabellen)} RLS-Tabellen und koennte die "
         "Row-Level-Security selbst abschalten. Abhilfe: getrennte Owner-Rolle fuer "
-        "Migrationen (scripts/app_rolle_einrichten.sh --getrennter-owner)."
+        "Migrationen (scripts/app_rolle_einrichten.sh --getrennter-owner; Standard bei deploy.sh, "
+        "abgeschaltet per DB_GETRENNTER_OWNER=0?)."
     )
     if get_settings().db_besitz_verboten:
         raise UnsichereDbRolleError(meldung)

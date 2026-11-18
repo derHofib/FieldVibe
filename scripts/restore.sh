@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # Usage:
 #   scripts/restore.sh liste [--von <typ:ziel>]
-#   scripts/restore.sh db      <datei> | --von <typ:ziel> [--stamp <stamp>]  [--ja] [--ohne-eigentuemer]
+#   scripts/restore.sh db      <datei> | --von <typ:ziel> [--stamp <stamp>]  [--ja] [--ohne-eigentuemer (veraltet, Verhalten ist jetzt Standard)]
 #   scripts/restore.sh minio   <datei> | --von <typ:ziel> [--stamp <stamp>]  [--ja]
 #   scripts/restore.sh secrets <datei> | --von <typ:ziel> [--stamp <stamp>]
 #
@@ -21,13 +21,17 @@ set -euo pipefail
 # Manifest geprueft; .gpg-Dateien werden entschluesselt (privater Schluessel im
 # Schluesselbund noetig). Die Rueckfrage erscheint nur an einem Terminal; ohne
 # Terminal (Automatisierung) ist --ja Pflicht.
+#
+# --ohne-eigentuemer: veraltet, wirkungslos. Das Eigentum wird immer neu gesetzt: der
+# Dump wird als Admin (--no-owner --no-acl) eingespielt und danach ueber
+# scripts/app_rolle_einrichten.sh --nur-besitz der Owner-/App-Rolle zugeordnet.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 # shellcheck source=scripts/backup/lib.sh
 source "$REPO_DIR/scripts/backup/lib.sh"
 
-usage() { sed -n '4,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,27p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 MODUS="${1:-}"
 [[ -n "$MODUS" ]] || { usage >&2; exit 1; }
@@ -42,13 +46,12 @@ DATEI=""
 VON=""
 STAMP=""
 JA=0
-OHNE_EIGENTUEMER=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --von)   VON="${2:?--von braucht ein Ziel (<typ:ziel>)}"; shift ;;
     --stamp) STAMP="${2:?--stamp braucht einen Wert}"; shift ;;
     --ja)    JA=1 ;;
-    --ohne-eigentuemer) OHNE_EIGENTUEMER=1 ;;
+    --ohne-eigentuemer) ;;  # veraltet: Verhalten ist jetzt Standard
     -h | --help) usage; exit 0 ;;
     -*) fehler "Unbekannte Option: $1"; exit 1 ;;
     *) [[ -z "$DATEI" ]] || { fehler "Mehrere Dateien angegeben."; exit 1; }; DATEI="$1" ;;
@@ -190,13 +193,16 @@ case "$MODUS" in
     DIENSTE_GESTOPPT=1
     # --single-transaction: scheitert etwas, bleibt die bisherige Datenbank
     # unveraendert statt halb ueberschrieben zurueckzubleiben.
+    # Immer als Admin und ohne Eigentuemer/ACLs einspielen: mit --role=<owner> scheitert
+    # --clean an Objekten des Superusers (Extensions). Das Eigentum setzt danach dasselbe
+    # SQL wie bei der Einrichtung (app_rolle_einrichten.sh --nur-besitz), bevor Backend
+    # und Worker wieder starten.
     case "$NAME" in
       *.dump)
-        pg_optionen=(--clean --if-exists --exit-on-error --single-transaction)
-        (( OHNE_EIGENTUEMER == 1 )) && pg_optionen+=(--no-owner)
+        pg_optionen=(--clean --if-exists --exit-on-error --single-transaction --no-owner --no-acl)
         log "Spiele $NAME ein (pg_restore ${pg_optionen[*]})..."
         if ! db_restore_stream "$POSTGRES_DB" "${pg_optionen[@]}" <"$QUELLE"; then
-          fehler "pg_restore ist fehlgeschlagen -- die bisherige Datenbank ist unveraendert. Meldung 'role ... does not exist': zuerst App- und System-Rolle anlegen (scripts/app_rolle_einrichten.sh, macht auch deploy.sh) oder mit --ohne-eigentuemer erneut versuchen und danach scripts/app_rolle_einrichten.sh ausfuehren."
+          fehler "pg_restore ist fehlgeschlagen -- die bisherige Datenbank ist unveraendert."
           exit 1
         fi
         ;;
@@ -211,9 +217,23 @@ case "$MODUS" in
         ;;
       *) fehler "Unbekanntes Datenbank-Format: $NAME (erwartet .dump oder .sql.gz)"; exit 1 ;;
     esac
+    log "Setze Eigentum und Rechte (Owner-/App-/System-Rolle) in $POSTGRES_DB..."
+    rc=0
+    db_besitz_herstellen_und_pruefen "$POSTGRES_DB" || rc=$?
+    if (( rc != 0 )); then
+      # Die Datenbank ist eingespielt, aber Eigentum/Rechte stimmen nicht: Backend und
+      # Worker bleiben gestoppt, statt gegen ein nicht verifiziertes Schema zu starten.
+      DIENSTE_GESTOPPT=0
+      if (( rc == 2 )); then
+        fehler "Die Datenbank-Rollen (App/System/Owner) existieren auf diesem Server nicht vollstaendig -- Eigentum und Rechte konnten nicht gesetzt werden. Zuerst scripts/app_rolle_einrichten.sh --nur-rolle (bzw. scripts/deploy.sh) ausfuehren, danach scripts/app_rolle_einrichten.sh --nur-besitz und 'docker compose start backend worker' (mit denselben -f-Dateien wie beim Start). Backend und Worker bleiben gestoppt."
+      else
+        fehler "Eigentum/Rechte nach dem Restore nicht in Ordnung (siehe oben). Backend und Worker bleiben gestoppt. Nachholen: scripts/app_rolle_einrichten.sh --nur-besitz, danach 'docker compose start backend worker'."
+      fi
+      exit 1
+    fi
     log "Datenbank wiederhergestellt."
     echo "Hinweis: War der Code zum Zeitpunkt der Sicherung aelter als der jetzige, danach die Migrationen ausfuehren:"
-    echo "  docker compose run --rm backend alembic upgrade head   (mit denselben -f-Dateien wie beim Start)"
+    echo "  scripts/migrieren.sh   (mit --compose \"docker compose -f ... -f ...\" wie beim Start, siehe docs/DEPLOYMENT.md)"
     ;;
   minio)
     [[ "$NAME" == *.tar.gz ]] || { fehler "Unbekanntes MinIO-Format: $NAME (erwartet .tar.gz)"; exit 1; }

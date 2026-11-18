@@ -147,7 +147,7 @@ $C logs --tail 80 backend                  # (Fehlermeldung der Migration steht 
 ```
 
 Typische Ursachen: Daten, die eine neue Constraint verletzen (die Meldung nennt Tabelle und Constraint),
-fehlende Rechte der Owner-Rolle (`.env.migration`), zwei Heads (Branches mit gleicher Revisionsnummer; nach
+fehlende Rechte der Owner-Rolle (`.env.migration`; fehlt sie, legt `./scripts/app_rolle_einrichten.sh --nur-rolle` den Zugang neu an), zwei Heads (Branches mit gleicher Revisionsnummer; nach
 einem Merge `alembic merge`). Den Fehler beheben (Daten bereinigen oder Migration korrigieren) und
 `scripts/deploy.sh` erneut ausführen.
 

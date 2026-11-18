@@ -325,6 +325,52 @@ jobs:
       - name: Shell-Tests (Backup/Restore/Deploy)
         run: bash scripts/tests/run.sh
 
+  # Echter Test der getrennten Datenbank-Owner-Rolle (Standard, scripts/app_rolle_einrichten.sh):
+  # Umstellung einer Bestandsinstallation, Besitz/DML-Rechte/RLS-Isolation, Migration als Owner,
+  # Restore, backup-pruefen.sh und Abschalten laufen gegen ein echtes Postgres 16 und das
+  # echte alembic (docker ist dabei durch einen Shim ersetzt). Ersetzt den frueheren Hinweis
+  # "nicht gegen eine echte Datenbank getestet". In scripts-tests (ohne Python-Abhaengigkeiten)
+  # ueberspringt sich der Test selbst; hier ist ein SKIP per FV_ECHT_PFLICHT=1 ein Fehler.
+  db-owner-umstellung:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fieldvibe
+          POSTGRES_PASSWORD: fieldvibe
+          POSTGRES_DB: fieldvibe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fieldvibe"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements-dev.lock
+
+      - name: Backend-Abhaengigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r backend/requirements-dev.lock
+
+      # Client-Major muss zum Server (postgres:16) passen, siehe scripts-tests.
+      - name: Werkzeuge installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16 gnupg
+
+      # python/alembic liegen durch setup-python im PATH, FV_PYTHON_BIN bleibt leer.
+      - name: Owner-Umstellung gegen echtes Postgres testen
+        env:
+          FV_ECHT_PFLICHT: "1"
+        run: bash scripts/tests/run.sh test_db_owner_echt.sh
+
   # Abhaengigkeits-Audits: bewusst NICHT blockierend (continue-on-error), damit ein neu
   # veroeffentlichter CVE keine unbeteiligte Aenderung rot macht. Befunde stehen im Job-Log
   # und in der Zusammenfassung; Umgang mit Ausnahmen: docs/BETRIEB.md, "Abhaengigkeiten".
@@ -384,7 +430,7 @@ jobs:
   # Domains des Servers selbst (VITE_* werden zur Build-Zeit eingebacken).
   images:
     runs-on: ubuntu-24.04
-    needs: [backend-tests, frontend, docker-build, scripts-tests]
+    needs: [backend-tests, frontend, docker-build, scripts-tests, db-owner-umstellung]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     permissions:
       contents: read

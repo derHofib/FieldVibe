@@ -18,6 +18,11 @@
 -- per ALTER TABLE selbst abschalten; die App-Rolle kann es so nicht mehr.
 -- Ohne owner_rolle bleibt es beim bisherigen Verhalten (App-Rolle = Eigentuemerin).
 --
+-- Modus nur_besitz (-v nur_besitz=1): fuer scripts/restore.sh und backup-pruefen.sh.
+-- Keine Passwoerter noetig, Rollen werden weder angelegt noch geaendert -- sie muessen
+-- existieren. Eigentumsuebertragung, Grants, Default-Privilegien und Kontrollen laufen
+-- wie gewohnt: nach einem pg_restore --no-owner --no-acl gehoert alles dem Admin.
+--
 -- Optional System-Rolle (-v system_rolle=fieldvibe_system -v system_passwort=...):
 -- LOGIN NOSUPERUSER BYPASSRLS, besitzt keine Objekte, nur DML-Rechte (Bestand und
 -- per Default-Privileg alles, was die Eigentuemer-Rolle kuenftig anlegt). Sie
@@ -29,10 +34,20 @@
   DO $$ BEGIN RAISE EXCEPTION 'psql-Variable app_rolle fehlt (-v app_rolle=...)'; END $$;
   \quit
 \endif
+\if :{?nur_besitz}
+\else
+  \set nur_besitz ''
+\endif
+SELECT (:'nur_besitz' <> '') AS ist_nur_besitz \gset
+
 \if :{?app_passwort}
 \else
-  DO $$ BEGIN RAISE EXCEPTION 'psql-Variable app_passwort fehlt (-v app_passwort=...)'; END $$;
-  \quit
+  \if :ist_nur_besitz
+    \set app_passwort ''
+  \else
+    DO $$ BEGIN RAISE EXCEPTION 'psql-Variable app_passwort fehlt (-v app_passwort=...)'; END $$;
+    \quit
+  \endif
 \endif
 \if :{?db_name}
 \else
@@ -43,11 +58,17 @@
 \if :{?owner_rolle}
 \else
   \set owner_rolle ''
+\endif
+\if :{?owner_passwort}
+\else
   \set owner_passwort ''
 \endif
 \if :{?system_rolle}
 \else
   \set system_rolle ''
+\endif
+\if :{?system_passwort}
+\else
   \set system_passwort ''
 \endif
 
@@ -60,7 +81,8 @@ SELECT set_config('fieldvibe.app_rolle', :'app_rolle', false),
        set_config('fieldvibe.owner_rolle', :'owner_rolle', false),
        set_config('fieldvibe.owner_passwort', :'owner_passwort', false),
        set_config('fieldvibe.system_rolle', :'system_rolle', false),
-       set_config('fieldvibe.system_passwort', :'system_passwort', false) \gset ignore_
+       set_config('fieldvibe.system_passwort', :'system_passwort', false),
+       set_config('fieldvibe.nur_besitz', :'nur_besitz', false) \gset ignore_
 
 DO $$
 DECLARE
@@ -71,6 +93,7 @@ DECLARE
   opw text := current_setting('fieldvibe.owner_passwort');
   sys text := current_setting('fieldvibe.system_rolle');
   spw text := current_setting('fieldvibe.system_passwort');
+  nb  boolean := current_setting('fieldvibe.nur_besitz') <> '';  -- Rollen nur pruefen, nicht anlegen
   eigner text;  -- Rolle, der die Objekte in public gehoeren sollen
   r   record;
   n   integer;
@@ -78,7 +101,7 @@ BEGIN
   IF app = current_user THEN
     RAISE EXCEPTION 'App-Rolle % ist identisch mit dem ausfuehrenden Admin-User -- dann waere nichts abgesichert.', app;
   END IF;
-  IF length(pw) < 8 THEN
+  IF NOT nb AND length(pw) < 8 THEN
     RAISE EXCEPTION 'Passwort der App-Rolle ist zu kurz (mindestens 8 Zeichen).';
   END IF;
 
@@ -86,7 +109,7 @@ BEGIN
     IF own = app OR own = current_user THEN
       RAISE EXCEPTION 'Owner-Rolle % muss sich von App-Rolle und ausfuehrendem Admin-User unterscheiden.', own;
     END IF;
-    IF length(opw) < 8 THEN
+    IF NOT nb AND length(opw) < 8 THEN
       RAISE EXCEPTION 'Passwort der Owner-Rolle ist zu kurz (mindestens 8 Zeichen).';
     END IF;
     eigner := own;
@@ -98,20 +121,29 @@ BEGIN
     IF sys IN (app, own, current_user) THEN
       RAISE EXCEPTION 'System-Rolle % muss sich von App-Rolle, Owner-Rolle und ausfuehrendem Admin-User unterscheiden.', sys;
     END IF;
-    IF length(spw) < 8 THEN
+    IF NOT nb AND length(spw) < 8 THEN
       RAISE EXCEPTION 'Passwort der System-Rolle ist zu kurz (mindestens 8 Zeichen).';
     END IF;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app) THEN
+  IF nb THEN
+    -- Rollen sind clusterweit und gehoeren nicht zur wiederhergestellten Datenbank.
+    FOR r IN SELECT x AS rolle FROM unnest(ARRAY[app, NULLIF(own, ''), NULLIF(sys, '')]) AS x WHERE x IS NOT NULL LOOP
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r.rolle) THEN
+        RAISE EXCEPTION 'Rolle % existiert nicht -- zuerst scripts/app_rolle_einrichten.sh (bzw. scripts/deploy.sh) ausfuehren.', r.rolle;
+      END IF;
+    END LOOP;
+  ELSIF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app) THEN
     EXECUTE format('CREATE ROLE %I LOGIN', app);
     RAISE NOTICE 'Rolle % angelegt.', app;
   ELSE
     RAISE NOTICE 'Rolle % existiert bereits -- Attribute und Passwort werden neu gesetzt.', app;
   END IF;
-  EXECUTE format(
-    'ALTER ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
-    app, pw);
+  IF NOT nb THEN
+    EXECUTE format(
+      'ALTER ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
+      app, pw);
+  END IF;
 
   -- CREATE auf der DB: Migration 0001 legt die (trusted) Extensions
   -- pgcrypto/pg_trgm an, sofern sie noch nicht existieren.
@@ -119,13 +151,15 @@ BEGIN
     EXECUTE format('GRANT CONNECT, CREATE ON DATABASE %I TO %I', db, app);
     EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', app);
   ELSE
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = own) THEN
-      EXECUTE format('CREATE ROLE %I LOGIN', own);
-      RAISE NOTICE 'Owner-Rolle % angelegt.', own;
+    IF NOT nb THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = own) THEN
+        EXECUTE format('CREATE ROLE %I LOGIN', own);
+        RAISE NOTICE 'Owner-Rolle % angelegt.', own;
+      END IF;
+      EXECUTE format(
+        'ALTER ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
+        own, opw);
     END IF;
-    EXECUTE format(
-      'ALTER ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
-      own, opw);
     EXECUTE format('GRANT CONNECT, CREATE ON DATABASE %I TO %I', db, own);
     EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', own);
     -- Die App-Rolle darf verbinden und das Schema benutzen, aber nichts anlegen.
@@ -242,14 +276,16 @@ BEGIN
   END IF;
 
   IF sys <> '' THEN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = sys) THEN
-      EXECUTE format('CREATE ROLE %I LOGIN', sys);
-      RAISE NOTICE 'System-Rolle % angelegt.', sys;
+    IF NOT nb THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = sys) THEN
+        EXECUTE format('CREATE ROLE %I LOGIN', sys);
+        RAISE NOTICE 'System-Rolle % angelegt.', sys;
+      END IF;
+      -- BYPASSRLS ist hier gewollt: nur diese Rolle darf Policies umgehen.
+      EXECUTE format(
+        'ALTER ROLE %I LOGIN NOSUPERUSER BYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
+        sys, spw);
     END IF;
-    -- BYPASSRLS ist hier gewollt: nur diese Rolle darf Policies umgehen.
-    EXECUTE format(
-      'ALTER ROLE %I LOGIN NOSUPERUSER BYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
-      sys, spw);
     -- Als Eigentuemerin koennte sie RLS per ALTER TABLE abschalten (und haette
     -- BYPASSRLS ohnehin): ihr duerfen keine Objekte gehoeren.
     SELECT count(*) INTO n FROM pg_class

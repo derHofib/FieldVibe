@@ -14,6 +14,7 @@ echo "test_deploy.sh"
 umgebung() {
   testumgebung_anlegen
   cp "$FV_SCRIPTS_DIR/deploy-lib.sh" "$REPO/scripts/"
+  cp "$FV_SCRIPTS_DIR/sql/besitz_pruefen.sql" "$REPO/scripts/sql/"
   mkdir -p "$T/images"
   : >"$REPO/docker-compose.yml"
   # Treiber: ruft die Bibliotheksfunktionen wie scripts/deploy.sh auf.
@@ -262,6 +263,38 @@ assert_eq "2" "$(wc -l <"$REPO/.deploy-state" | tr -d ' ')" "genau zwei Zeilen"
 assert_enthaelt "$REPO/.deploy-state" "CURRENT_TAG=b" "ersetzt"
 treiber deploy_state_lesen PREVIOUS_TAG
 assert_eq "a" "$(cat "$OUT")" "gelesen"
+testumgebung_loeschen
+
+szenario "Owner-Umstellung: Erkennung, ob sie noch ansteht (Marker, .env.migration, Strikt-Schalter)"
+umgebung
+treiber deploy_owner_umstellung_ansteht
+assert_rc 0 "ohne Marker steht die Umstellung an"
+env_schreiben "DB_GETRENNTER_OWNER=0"
+treiber deploy_owner_umstellung_ansteht
+assert_rc 1 "bewusst abgeschaltet (=0)"
+env_schreiben "DB_GETRENNTER_OWNER=1"
+treiber deploy_owner_umstellung_ansteht
+assert_rc 0 "Marker 1 aber .env.migration fehlt (Selbstheilung steht an)"
+: >"$REPO/.env.migration"
+treiber deploy_owner_umstellung_ansteht
+assert_rc 1 "Marker 1 und .env.migration vorhanden: schon umgestellt"
+env_schreiben "FIELDVIBE_DB_BESITZ_VERBOTEN=1"
+treiber deploy_owner_umstellung_ansteht
+assert_rc 1 "aeltere Owner-Installation (Datei + Strikt-Schalter, ohne Marker)"
+rm -f "$REPO/.env.migration"
+testumgebung_loeschen
+
+szenario "Besitzpruefung im Deploy: psql gegen die Produktions-DB mit Rollen aus .env; Owner nur im Owner-Modus"
+umgebung
+env_schreiben "DB_GETRENNTER_OWNER=1" "APP_DB_USER=app_x"
+printf 'APP_DB_OWNER_USER=besitzer_x\n' >"$REPO/.env.migration"
+treiber deploy_besitz_pruefen
+assert_rc 0 "Besitzpruefung"
+assert_enthaelt "$T/stub.log" "-U fieldvibe -d fieldvibe -v app_rolle=app_x -v system_rolle=fieldvibe_system -v owner_rolle=besitzer_x" "Rollen aus .env/.env.migration"
+: >"$T/stub.log"
+env_schreiben "DB_GETRENNTER_OWNER=0"
+treiber deploy_besitz_pruefen
+assert_enthaelt_nicht "$T/stub.log" "owner_rolle" "ohne Owner-Modus keine Owner-Rolle"
 testumgebung_loeschen
 
 test_ende

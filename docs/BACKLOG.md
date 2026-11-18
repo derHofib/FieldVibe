@@ -153,9 +153,10 @@ Stand und Annahmen: `docs/konzepte/DATEV.md`.
 - **MFA-Pflicht für `super_admin`** — bewusst Teil der späteren „Console"
   (Super-Admin-Frontend); technisch ist MFA für `super_admin` schon möglich,
   nur die Pflicht (`mfa_service.einrichtung_erforderlich`) nimmt die Rolle aus.
-- **Getrennte DB-Owner-Rolle als Standard** — heute opt-in
-  (`--getrennter-owner`), nicht gegen echtes Postgres mit Rollenrechten
-  getestet; `restore.sh`/Backup-Prüfung kennen die Owner-Rolle noch nicht.
+- ~~**Getrennte DB-Owner-Rolle als Standard**~~ — erledigt: Standard bei
+  `deploy.sh` (Abschalten per `DB_GETRENNTER_OWNER=0`), `restore.sh` und
+  `backup-pruefen.sh` setzen/prüfen den Besitz, CI-Job `db-owner-umstellung`
+  testet gegen echtes Postgres (siehe `docs/DEPLOYMENT.md`).
 - **MinIO-Service-Account gegen echtes MinIO verifizieren** und
   Schlüsselrotation (heute: Zeilen in `.env` löschen, Skript erneut ausführen).
 - **Access-Token nicht im `localStorage`** — bleibt dort, damit die Feld-App

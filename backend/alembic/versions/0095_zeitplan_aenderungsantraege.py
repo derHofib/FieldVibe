@@ -16,6 +16,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from app.db.migrations_helfer import rls_fuer_backfill_aufheben
+
 revision: str = "0095"
 down_revision: Union[str, None] = "0094"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -95,25 +97,29 @@ def upgrade() -> None:
         "ALTER TABLE account_typ_rechte ADD CONSTRAINT ck_account_typ_rechte_aktion_valid "
         f"CHECK (aktion IN {_AKTIONEN_NEU})"
     )
-    op.execute(
-        """
-        INSERT INTO account_typ_rechte (id, account_typ_id, bereich, aktion, erlaubt)
-        SELECT gen_random_uuid(), t.id, 'projekte', a.aktion, true
-        FROM account_typen t
-        CROSS JOIN (VALUES ('zeitplan_sehen'), ('zeitplan_beantragen')) AS a(aktion)
-        WHERE t.name = 'Techniker'
-           OR EXISTS (
-                SELECT 1 FROM account_typ_rechte r
-                WHERE r.account_typ_id = t.id AND r.bereich = 'projekte'
-                  AND r.aktion = 'sehen' AND r.erlaubt
-           )
-        ON CONFLICT (account_typ_id, bereich, aktion) DO UPDATE SET erlaubt = true
-        """
-    )
+    # Seit env.py kein is_super_admin mehr setzt, sieht der Backfill sonst nur die
+    # Zeilen des (nicht gesetzten) Mandanten -- relevant beim down/up ueber 0117 hinweg.
+    with rls_fuer_backfill_aufheben("account_typen", "account_typ_rechte"):
+        op.execute(
+            """
+            INSERT INTO account_typ_rechte (id, account_typ_id, bereich, aktion, erlaubt)
+            SELECT gen_random_uuid(), t.id, 'projekte', a.aktion, true
+            FROM account_typen t
+            CROSS JOIN (VALUES ('zeitplan_sehen'), ('zeitplan_beantragen')) AS a(aktion)
+            WHERE t.name = 'Techniker'
+               OR EXISTS (
+                    SELECT 1 FROM account_typ_rechte r
+                    WHERE r.account_typ_id = t.id AND r.bereich = 'projekte'
+                      AND r.aktion = 'sehen' AND r.erlaubt
+               )
+            ON CONFLICT (account_typ_id, bereich, aktion) DO UPDATE SET erlaubt = true
+            """
+        )
 
 
 def downgrade() -> None:
-    op.execute("DELETE FROM account_typ_rechte WHERE aktion IN ('zeitplan_sehen', 'zeitplan_beantragen')")
+    with rls_fuer_backfill_aufheben("account_typ_rechte"):
+        op.execute("DELETE FROM account_typ_rechte WHERE aktion IN ('zeitplan_sehen', 'zeitplan_beantragen')")
     op.execute("ALTER TABLE account_typ_rechte DROP CONSTRAINT ck_account_typ_rechte_aktion_valid")
     op.execute(
         "ALTER TABLE account_typ_rechte ADD CONSTRAINT ck_account_typ_rechte_aktion_valid "
