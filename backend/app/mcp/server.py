@@ -27,8 +27,8 @@ _BEGRIFFE = Path(__file__).with_name("begriffe.md")
 
 ANLEITUNG = """\
 FieldVibe ist ein CRM für Handwerksbetriebe (Aufträge, Kunden, Anlagen, Termine, Rechnungen).
-Du arbeitest hier im Namen eines Mitarbeiters; alle Daten kommen mit genau dessen Rechten, Nicht
-Sichtbares fehlt oder liefert eine Fehlermeldung. Antworte auf Deutsch.
+Du arbeitest hier im Namen eines Mitarbeiters; alle Daten kommen mit genau dessen Rechten, was er in
+der App nicht sehen darf, fehlt oder liefert eine Fehlermeldung. Antworte auf Deutsch.
 
 Begriffe, wie sie in der App verwendet werden:
 - Vorgang: das Ticket/der Einsatz (Titel, Status, Chat/Verlauf, Zeit). Das ist, was Mitarbeiter im Alltag "Auftrag" nennen.

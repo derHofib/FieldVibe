@@ -225,7 +225,7 @@ class FieldVibeOAuthProvider:
         self, client: OAuthClientInformationFull, refresh_token: KiRefreshToken, scopes: list[str]
     ) -> OAuthToken:
         mandant_id, kv = refresh_token.mandant_id, refresh_token.kv
-        replay = False
+        replay = widerrufen = False
         async with tenant_session(mandant_id=mandant_id) as session:
             # FOR UPDATE: zwei gleichzeitige Refreshs desselben Tokens duerfen nicht beide gelingen.
             verbindung = await session.scalar(
@@ -236,8 +236,8 @@ class FieldVibeOAuthProvider:
                 or verbindung.widerrufen_am is not None
                 or verbindung.user_id != refresh_token.user_id
             ):
-                raise TokenError(error="invalid_grant", error_description="refresh token revoked")
-            if verbindung.refresh_jti != refresh_token.jti:
+                widerrufen = True
+            elif verbindung.refresh_jti != refresh_token.jti:
                 replay = True
                 await self._widerrufen_in(session, kv)
             else:
@@ -252,6 +252,10 @@ class FieldVibeOAuthProvider:
                     if SCOPE_LESEN not in gewaehrt:
                         gewaehrt.insert(0, SCOPE_LESEN)
                     return self._ausstellen(zugang, verbindung, gewaehrt)
+        # TokenError ist ein frozen dataclass: innerhalb von "async with tenant_session" geworfen,
+        # scheitert contextlib beim Setzen von __traceback__ -- deshalb erst hier ausserhalb.
+        if widerrufen:
+            raise TokenError(error="invalid_grant", error_description="refresh token revoked")
         if replay:
             raise TokenError(error="invalid_grant", error_description="refresh token already used")
         raise TokenError(error="invalid_grant", error_description=_beschreibung(ablehnung))
