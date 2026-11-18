@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { planSymboleApi } from "../../api/endpoints";
 import { QrScanner } from "../QrScanner";
 import type { FormField, FotoPlanWert, PlanMarkierungLinie, PlanMarkierungSymbol } from "../../types";
+import { grenzwertHinweis } from "../../utils/formular";
 import { Select } from "../apple/Select";
 
 interface DateiAntwort {
@@ -410,6 +411,8 @@ export function FormFieldRenderer({
       {required && <span className="ml-1 text-st-fehlt">*</span>}
     </label>
   );
+  const grenzwert = field.feld_typ === "zahl" ? grenzwertHinweis(field.validation, value) : null;
+  const hinweis = grenzwert ? grenzwert.replace(/^über /, "Über dem Grenzwert ").replace(/^unter /, "Unter dem Grenzwert ") : null;
   const wrapperClass = "card-ap p-3";
   const inputClass =
     "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-sekundaer disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
@@ -470,6 +473,12 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           <input type="number" value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass} />
+          {hinweis && (
+            // Nur Hinweis, kein Fehler: der Wert darf trotzdem gespeichert werden (Messwert kann real so sein).
+            <p role="status" className="mt-1 text-sekundaer font-medium text-st-fehlt">
+              {hinweis}
+            </p>
+          )}
         </div>
       );
     case "betrag":
