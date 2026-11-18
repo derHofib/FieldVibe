@@ -5,9 +5,11 @@
 // erzeugte Tabelle in der Summary-Ansicht" aus den Abnahmekriterien. Numerische
 // Spalten bekommen zusaetzlich eine Summenzeile (einfache Aggregation, siehe
 // Migrationsplan Schritt 9).
+import { Check, X } from "lucide-react";
 import { useMemo } from "react";
 
 import { applyRules } from "../../utils/formLogicEngine";
+import { grenzwertHinweis } from "../../utils/formular";
 import { FotoPlanBild } from "./FotoPlanBild";
 import type { FormField, FormGroup, FormLogicRule, FormPresentationElement, FotoPlanWert } from "../../types";
 
@@ -22,6 +24,52 @@ interface SummaryRendererProps {
   elements: FormPresentationElement[];
   values: Record<string, unknown>;
   viewId?: string | null;
+}
+
+interface DateiWert {
+  url: string;
+}
+
+function istDatei(wert: unknown): wert is DateiWert {
+  return typeof wert === "object" && wert !== null && typeof (wert as DateiWert).url === "string";
+}
+
+/** Wert eines Feldes in der Zusammenfassung: Ja/Nein mit Symbol (Farbe allein
+ * traegt die Aussage nicht), Zahlen mit Grenzwert-Markierung, Fotos und
+ * Unterschriften als Bild statt "Datei hinterlegt". */
+function WertAnzeige({ feld, wert }: { feld: FormField; wert: unknown }) {
+  if (feld.feld_typ === "ja_nein" && typeof wert === "boolean") {
+    return wert ? (
+      <span className="inline-flex items-center gap-1 text-label">
+        <Check size={14} strokeWidth={2.5} className="text-st-erledigt" aria-hidden="true" /> Ja
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 text-label">
+        <X size={14} strokeWidth={2.5} className="text-st-fehlt" aria-hidden="true" /> Nein
+      </span>
+    );
+  }
+  if (feld.feld_typ === "foto" && istDatei(wert)) {
+    return <img src={wert.url} alt={feld.label.de ?? feld.key} className="h-16 w-20 rounded-[var(--radius-ap-sm)] object-cover" />;
+  }
+  if (feld.feld_typ === "unterschrift" && istDatei(wert)) {
+    return (
+      <img
+        src={wert.url}
+        alt={`Unterschrift: ${feld.label.de ?? feld.key}`}
+        className="h-14 rounded-[var(--radius-ap-sm)] border border-sep bg-white object-contain"
+      />
+    );
+  }
+  const hinweis = feld.feld_typ === "zahl" ? grenzwertHinweis(feld.validation, wert) : null;
+  if (hinweis) {
+    return (
+      <span className="font-semibold text-st-fehlt">
+        {formatWert(feld, wert)} <span className="text-sekundaer">{hinweis}</span>
+      </span>
+    );
+  }
+  return <>{formatWert(feld, wert)}</>;
 }
 
 function formatWert(feld: FormField, wert: unknown): string {
@@ -90,7 +138,7 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
           return (
             <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
               <span className="text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
-              <span className="text-right text-fliess font-medium text-label">{formatWert(feld, values[feld.key])}</span>
+              <span className="text-right text-fliess font-medium text-label"><WertAnzeige feld={feld} wert={values[feld.key]} /></span>
             </div>
           );
         })}
@@ -124,7 +172,7 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
                 return (
                   <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
                     <span className="text-sekundaer text-label2">{feld.label.de ?? feld.key}</span>
-                    <span className="text-right text-fliess font-medium text-label">{formatWert(feld, zeile[feld.key])}</span>
+                    <span className="text-right text-fliess font-medium text-label"><WertAnzeige feld={feld} wert={zeile[feld.key]} /></span>
                   </div>
                 );
               })}
@@ -154,7 +202,7 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
                       <tr key={index} className="border-b border-sep">
                         {gruppenFelder.map((f) => (
                           <td key={f.id} className="py-1.5 pr-3 text-label">
-                            {formatWert(f, zeile[f.key])}
+                            <WertAnzeige feld={f} wert={zeile[f.key]} />
                           </td>
                         ))}
                       </tr>
