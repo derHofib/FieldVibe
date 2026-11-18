@@ -8,6 +8,7 @@ import { LaeuftPille } from "../../components/apple/LaeuftPille";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { VORGANG_STATUS_LABEL, vorgangStatusZuToken } from "../../components/apple/status";
 import { IconBadge, type IconTone } from "../../components/IconBadge";
+import { VorgangStatusPille } from "../../components/VorgangStatusPille";
 import { useAuth } from "../../context/AuthContext";
 import { useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { ABWESENHEIT_ART_LABEL, formatTage, formatTageMitEinheit, formatZeitraum, resturlaubHinweis } from "../../utils/abwesenheit";
@@ -73,7 +74,7 @@ export function ProfilArbeitszeitKarte() {
   const hatSoll = !!saldo && parseStunden(saldo.soll_stunden) > 0;
 
   return (
-    <section className="card-ap p-4" aria-label="Meine Arbeitszeit">
+    <section className="card-ap flex h-full flex-col p-4" aria-label="Meine Arbeitszeit">
       <KartenKopf
         icon={Timer}
         tone="cyan"
@@ -109,7 +110,7 @@ export function ProfilArbeitszeitKarte() {
           </span>
         </p>
       )}
-      <Link to="/statistik" className="mt-3 flex items-center gap-1 text-fliess font-medium text-tint-text">
+      <Link to="/statistik" className="mt-auto flex items-center gap-1 pt-3 text-fliess font-medium text-tint-text">
         Zeiten ansehen <ChevronRight size={14} aria-hidden="true" />
       </Link>
     </section>
@@ -146,7 +147,7 @@ export function ProfilUrlaubKarte({ mitLink }: { mitLink: boolean }) {
   const verfall = konto ? resturlaubHinweis(konto) : null;
 
   return (
-    <section className="card-ap p-4" aria-label="Urlaub und Abwesenheit">
+    <section className="card-ap flex h-full flex-col p-4" aria-label="Urlaub und Abwesenheit">
       <KartenKopf icon={CalendarDays} tone="amber" titel={`Urlaub ${jahr}`} />
       {konto && (
         <div className="grid grid-cols-3 gap-2">
@@ -184,7 +185,7 @@ export function ProfilUrlaubKarte({ mitLink }: { mitLink: boolean }) {
         )}
       </div>
       {mitLink && (
-        <Link to="/statistik" className="mt-3 flex items-center gap-1 text-fliess font-medium text-tint-text">
+        <Link to="/statistik" className="mt-auto flex items-center gap-1 pt-3 text-fliess font-medium text-tint-text">
           Beantragen und verwalten <ChevronRight size={14} aria-hidden="true" />
         </Link>
       )}
@@ -195,9 +196,13 @@ export function ProfilUrlaubKarte({ mitLink }: { mitLink: boolean }) {
 const OFFENE_STATUS = "neu,geplant,in_arbeit,wartet_kunde";
 const ANZAHL_ZEILEN = 5;
 
+const ANZAHL_KURZLISTE = 3;
+
 /** Dem Nutzer zugewiesene, noch nicht abgeschlossene Vorgänge. Nutzt dieselbe
- * Feed-Query wie der Tab "Meine Vorgänge" und bleibt so per SSE aktuell. */
-export function ProfilVorgaengeKarte({ listeLink }: { listeLink: string }) {
+ * Feed-Query wie der Tab "Meine Vorgänge" und bleibt so per SSE aktuell.
+ * `kurzliste` (Office): nur Nummer, Titel und Status der ersten drei, damit die
+ * Karte neben Arbeitszeit/Urlaub nicht höher wird. */
+export function ProfilVorgaengeKarte({ listeLink, kurzliste = false }: { listeLink: string; kurzliste?: boolean }) {
   const heute = heuteIso();
   const { data } = useVorgangsListe({ nur_meine: "true", status: OFFENE_STATUS });
   const items = data?.pages.flatMap((p) => p.items) ?? [];
@@ -205,7 +210,7 @@ export function ProfilVorgaengeKarte({ listeLink }: { listeLink: string }) {
   if (!data) return null;
 
   return (
-    <section className="card-ap p-4" aria-label="Meine offenen Vorgänge">
+    <section className="card-ap flex h-full flex-col p-4" aria-label="Meine offenen Vorgänge">
       <KartenKopf
         icon={ListChecks}
         tone="indigo"
@@ -214,6 +219,18 @@ export function ProfilVorgaengeKarte({ listeLink }: { listeLink: string }) {
       />
       {items.length === 0 ? (
         <p className="text-fliess text-label2">Dir ist aktuell nichts zugewiesen.</p>
+      ) : kurzliste ? (
+        <ul>
+          {items.slice(0, ANZAHL_KURZLISTE).map((v) => (
+            <li key={v.id} className="border-t border-sep first:border-t-0">
+              <Link to={`/vorgaenge/${v.id}`} className="flex items-center gap-2 py-2 text-fliess hover:bg-fill">
+                <span className="w-16 shrink-0 text-sekundaer tabular-nums text-label2">{v.vorgangsnummer}</span>
+                <span className="min-w-0 flex-1 truncate text-label">{v.titel}</span>
+                <VorgangStatusPille status={v.status} />
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : (
         <ul className="-mx-1 space-y-0.5">
           {items.slice(0, ANZAHL_ZEILEN).map((v) => (
@@ -237,7 +254,7 @@ export function ProfilVorgaengeKarte({ listeLink }: { listeLink: string }) {
           ))}
         </ul>
       )}
-      <Link to={listeLink} className="mt-3 flex items-center gap-1 text-fliess font-medium text-tint-text">
+      <Link to={listeLink} className="mt-auto flex items-center gap-1 pt-3 text-fliess font-medium text-tint-text">
         Alle ansehen <ChevronRight size={14} aria-hidden="true" />
       </Link>
     </section>

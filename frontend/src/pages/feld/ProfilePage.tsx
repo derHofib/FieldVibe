@@ -18,8 +18,8 @@ import { PasswortAendernKarte } from "./PasswortAendernKarte";
 import { ProfilArbeitszeitKarte, ProfilUrlaubKarte, ProfilVorgaengeKarte } from "./ProfilUebersichten";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 
-/** Profil: Feld-App (einspaltig) und Office (zweispaltig, `layout="office"`)
- * teilen sich diese Seite. */
+/** Profil: Feld-App (einspaltig) und Office (volle Breite mit Kopfzeile, Überblick,
+ * Einstellungen und Verbindungen, `layout="office"`) teilen sich diese Seite. */
 export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" }) {
   const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht, isImpersonating, logout } = useAuth();
@@ -52,7 +52,8 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
   const zeiterfassung = istModulAktiv(currentUser, "zeiterfassung");
 
   // Bei Impersonation gehoert das Profil dem Super-Admin; er hat keine KI-Verbindungen.
-  const kiVerbindungen = !isImpersonating && istModulAktiv(currentUser, "ki_zugriff") && <KiVerbindungenKarte />;
+  const kiAktiv = !isImpersonating && istModulAktiv(currentUser, "ki_zugriff");
+  const kiVerbindungen = kiAktiv && <KiVerbindungenKarte />;
 
   const rolle =
     currentUser &&
@@ -148,24 +149,71 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
   );
 
   if (office) {
+    // auto-fit statt fester Spaltenzahl: ausgeblendete Blöcke (ohne Modul/Recht)
+    // lassen keine Lücke, die übrigen teilen sich die Breite.
+    const raster = "grid items-start gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))]";
     return (
-      <div className="max-w-[1100px]">
+      <div className="max-w-[1400px] space-y-4">
         <SeitenKopf titel="Profil" />
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
-            {konto}
-            {verknuepfungen}
-            {darstellung}
-            {sicherheit}
-            {kiVerbindungen}
-            {abmelden}
+        <div className="card-ap flex flex-wrap items-center gap-x-6 gap-y-4 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <Monogramm name={currentUser?.name ?? "?"} groesse={64} />
+            <div className="min-w-0">
+              <p className="truncate text-titel-mobil font-semibold text-label">{currentUser?.name}</p>
+              <p className="text-sekundaer text-label2">{rolle}</p>
+            </div>
           </div>
-          <div className="space-y-4">
+          <div className="flex min-w-0 flex-wrap gap-x-7 gap-y-3 lg:border-l lg:border-sep lg:pl-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <SymbolKachel icon={Mail} farbe="blue" />
+              <div className="min-w-0">
+                <p className="text-meta text-label2">E-Mail</p>
+                <p className="truncate text-fliess text-label">{currentUser?.email}</p>
+              </div>
+            </div>
+            <div className="flex min-w-0 items-center gap-3">
+              <SymbolKachel icon={Building2} farbe="indigo" />
+              <div className="min-w-0">
+                <p className="text-meta text-label2">Mandant</p>
+                <p className="truncate text-fliess text-label">{currentUser?.mandant_name}</p>
+              </div>
+            </div>
+          </div>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button onClick={ueberallAbmelden} disabled={abmeldenLaeuft} className="btn-ap flex items-center gap-2 px-4 py-2 disabled:opacity-50">
+              <MonitorSmartphone size={16} strokeWidth={1.5} /> Auf allen Geräten abmelden
+            </button>
+            <button onClick={logout} className="btn-ap flex items-center gap-2 px-4 py-2">
+              <LogOut size={16} strokeWidth={1.5} /> Abmelden
+            </button>
+          </div>
+          {abmeldenFehler && <p className="w-full text-fliess text-st-fehlt">{abmeldenFehler}</p>}
+        </div>
+
+        <section aria-label="Überblick">
+          <AbschnittskopfB titel="Überblick" />
+          <div className={raster + " items-stretch"}>
             <ProfilArbeitszeitKarte />
             <ProfilUrlaubKarte mitLink={zeiterfassung} />
-            <ProfilVorgaengeKarte listeLink="/vorgaenge" />
+            <ProfilVorgaengeKarte listeLink="/vorgaenge" kurzliste />
           </div>
+        </section>
+
+        <div className={raster}>
+          {verknuepfungen}
+          {darstellung}
+          {!isImpersonating && (
+            <div>
+              <AbschnittskopfB titel="Sicherheit" />
+              <GroupedList>
+                <PasswortAendernKarte variante="zeile" />
+                <MfaKarte variante="zeile" last />
+              </GroupedList>
+            </div>
+          )}
         </div>
+
+        {kiAktiv && <KiVerbindungenKarte variante="zeilen" />}
       </div>
     );
   }
