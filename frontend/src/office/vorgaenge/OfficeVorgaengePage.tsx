@@ -1,4 +1,4 @@
-import { Columns3, Inbox, LayoutGrid, List, Plus, Table2 } from "lucide-react";
+import { Columns3, Inbox, LayoutGrid, List, Plus, Rss } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -22,10 +22,10 @@ type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 const ANSICHT_KEY = "fieldvibe-office-vorgaenge-ansicht";
 
 const UMSCHALTER = [
-  { wert: "liste" as const, label: "Liste", icon: List },
+  { wert: "liste" as const, label: "Feed", icon: Rss },
   { wert: "kanban" as const, label: "Kanban", icon: Columns3 },
   { wert: "raster" as const, label: "Raster", icon: LayoutGrid },
-  { wert: "tabelle" as const, label: "Tabelle", icon: Table2 },
+  { wert: "tabelle" as const, label: "Liste", icon: List },
 ];
 
 function gespeicherteAnsicht(): Ansicht {
