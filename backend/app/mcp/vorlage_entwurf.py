@@ -118,6 +118,17 @@ class Plan:
     schritte: list[Schritt] = field(default_factory=list)
 
 
+def ansicht_schritte() -> list[Schritt]:
+    """Erfassungs- und Druckansicht, wie sie ein Nutzer im Baukasten (Tab Visualisierung) anlegt. Ohne Druckansicht
+    scheitert das PDF eines Protokolls ("Keine Druckansicht"). Layout-Eintraege gibt es nur fuer Felder ohne
+    Abschnitt (der Baukasten uebernimmt nur diese, das PDF rendert Abschnittsfelder aus den Werten); KI-Entwuerfe
+    haben ausschliesslich Abschnittsfelder, deshalb braucht es keinen PUT auf die Layouts."""
+    return [
+        Schritt("views", {"type": "capture", "name": "Erfassung"}, "Ansicht „Erfassung“"),
+        Schritt("views", {"type": "print", "name": "Druck"}, "Ansicht „Druck“"),
+    ]
+
+
 def feld_body(feld: FeldEntwurf, key: str, gruppe_key: str, reihenfolge: int, wo: str) -> dict[str, Any]:
     optionen = pruefe_feld(feld, wo)
     return {

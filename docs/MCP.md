@@ -86,6 +86,20 @@ wiederholbare Abschnitte als Liste mit einer Zeile. Schlüssel (Keys) werden aus
 (die Seite liegt in Feld-App und Office unter derselben Route). Scheitert ein Teilschritt, nennt die
 Fehlermeldung ID und Link des Entwurfs, damit ihn der Nutzer im Baukasten vollenden oder löschen kann.
 
+**Ansichten:** Das Backend legt keine Ansichten automatisch an; im Baukasten tut das der Nutzer (Tab
+Visualisierung, Typ + Name). Ohne Druckansicht scheitert das Protokoll-PDF. Deshalb legt
+`protokoll_vorlage_entwerfen` eine Erfassungsansicht („Erfassung“) und eine Druckansicht („Druck“) an
+(`POST …/views`, in der Allowlist nur POST, kein PATCH/DELETE/PUT). `protokoll_vorlage_ueberarbeiten`
+ergänzt sie nur, wenn der Entwurf noch gar keine Ansicht hat. Layout-Einträge gibt es nicht: der Baukasten
+übernimmt nur Felder ohne Abschnitt, KI-Entwürfe haben ausschließlich Abschnittsfelder, und neue Felder
+erscheinen in Feld-App und PDF direkt aus dem Schema (Abschnitte werden im PDF aus den Werten ausgegeben).
+
+**Rechte beim Ausfüllen:** `protokoll_entwurf_anlegen`/`_ergaenzen` laden die Felder über
+`GET /api/form-schemas/{id}` und brauchen deshalb Formulare › sehen. Das ist dieselbe Route wie in der
+Feld-App (`FormSubmissionAusfuellenPage`: Schema, Ansichten, Regeln); eine Route, die Felddefinitionen ohne dieses
+Recht liefert, gibt es nicht. Ein Techniker-Account-Typ ohne Formulare › sehen kann also auch in der Feld-App
+kein Formular ausfüllen. Das Recht ist dafür zu vergeben (Rechte-Matrix), im MCP nicht zu umgehen.
+
 **Nie per KI:** Löschen, Status ändern/abschließen, Protokoll abschließen/unterschreiben, Vorlage
 veröffentlichen/archivieren oder Leistungstypen zuordnen, Angebote/Rechnungen, E-Mails, Exporte,
 Rechte/Nutzer. Durchgesetzt wird das fail-closed in `app/mcp/rest_client.py`

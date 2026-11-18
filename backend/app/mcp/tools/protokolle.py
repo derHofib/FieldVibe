@@ -24,6 +24,7 @@ from app.mcp.vorlage_entwurf import (
     FeldEntwurf,
     Schritt,
     abschnitte_planen,
+    ansicht_schritte,
     feld_body,
     key_aus,
     norm,
@@ -290,7 +291,7 @@ def registrieren(mcp: MCPServer) -> None:
         pruefe_abschnitte(abschnitte)
         plan = abschnitte_planen(abschnitte, set())
         schema = await api_post(z, "/api/form-schemas", {"name": name, "beschreibung": beschreibung})
-        await _ausfuehren(z, schema, name, plan.schritte)
+        await _ausfuehren(z, schema, name, [*ansicht_schritte(), *plan.schritte])
         return {
             "id": schema["id"],
             "name": schema["name"],
@@ -325,6 +326,10 @@ def registrieren(mcp: MCPServer) -> None:
         if detail["status"] != "draft":
             raise ToolError("Veröffentlichte Vorlagen ändert Claude nicht – lege eine neue Variante an.")
         schritte = _ueberarbeitung_planen(detail, abschnitte_hinzufuegen or [], felder_hinzufuegen or [], felder_aendern or [])
+        # Entwuerfe ohne jede Ansicht (aeltere KI-Entwuerfe) bekommen sie nachtraeglich; wer im Baukasten schon
+        # Ansichten angelegt hat, behaelt seine Auswahl.
+        if not await api_get(z, f"/api/form-schemas/{vorlage_id}/views"):
+            schritte = [*ansicht_schritte(), *schritte]
         await _ausfuehren(z, detail, detail["name"], schritte)
         return {
             "id": detail["id"],

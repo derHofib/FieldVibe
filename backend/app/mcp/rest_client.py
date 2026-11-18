@@ -91,6 +91,9 @@ SCHREIB_ALLOWLIST: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
         ("POST", rf"/api/form-schemas/{_UUID}/groups"),
         ("POST", rf"/api/form-schemas/{_UUID}/fields"),
         ("PATCH", rf"/api/form-schemas/{_UUID}/fields/{_UUID}"),
+        # Ansichten (Erfassung/Druck) nur anlegen, nie aendern oder loeschen: ohne Druckansicht scheitert das PDF
+        # eines Protokolls. Wie die Felder-Routen nur auf Entwuerfen, die das Tool selbst entwirft/ueberarbeitet.
+        ("POST", rf"/api/form-schemas/{_UUID}/views"),
     )
 )
 

@@ -431,11 +431,107 @@ async def test_pdf_ueber_5_mb_liefert_hinweis_statt_blob(make_mandant, make_user
 
 async def test_pdf_ohne_druckansicht_gibt_verstaendlichen_fehler(make_mandant, make_user, make_kunde, make_vorgang, mcp_client):
     mandant, token, kopf, vorlage_id, vorgang = await _bereit(make_mandant, make_user, make_kunde, make_vorgang, mcp_client)
+    for v in (await mcp_client.get(f"/api/form-schemas/{vorlage_id}/views", headers=kopf)).json():
+        assert (await mcp_client.delete(f"/api/form-schemas/{vorlage_id}/views/{v['id']}", headers=kopf)).status_code == 204
     angelegt = await tool_aufrufen(
         mcp_client, token, "protokoll_entwurf_anlegen", {"vorgang_id": str(vorgang.id), "vorlage_id": vorlage_id, "werte": {}}
     )
     r = await tool_aufrufen(mcp_client, token, "protokoll_pdf", {"protokoll_id": angelegt["daten"]["id"]})
     assert r["fehler"] and "Druckansicht" in r["text"]
+
+
+async def test_entwurf_hat_erfassungs_und_druckansicht_und_pdf_nach_abschluss(make_mandant, make_user, make_kunde, make_vorgang, mcp_client):
+    mandant, admin, token, kopf = await _schreibverbindung(make_mandant, make_user, mcp_client)
+    # Ohne Foto-/Unterschrift-Pflicht, damit sich das Protokoll ohne Datei-Upload abschliessen laesst.
+    abschnitte = [
+        {"titel": "Messwerte", "felder": [{"label": "CO-Wert (ppm)", "typ": "zahl", "pflicht": True}]},
+        {"titel": "Mängel", "wiederholbar": True, "felder": [{"label": "Beschreibung", "typ": "textarea"}]},
+    ]
+    vorlage_id = (await _vorlage_entwerfen(mcp_client, token, abschnitte))["id"]
+    views = (await mcp_client.get(f"/api/form-schemas/{vorlage_id}/views", headers=kopf)).json()
+    assert sorted(v["type"] for v in views) == ["capture", "print"]
+    await _veroeffentlichen(mcp_client, kopf, vorlage_id)
+    vorgang = await make_vorgang(mandant=mandant, kunde=await make_kunde(mandant=mandant), leistungstyp="wartung")
+    angelegt = await tool_aufrufen(
+        mcp_client, token, "protokoll_entwurf_anlegen",
+        {"vorgang_id": str(vorgang.id), "vorlage_id": vorlage_id, "werte": {"CO-Wert (ppm)": 7, "Mängel": [{"Beschreibung": "Dichtung porös"}]}},
+    )
+    pid = angelegt["daten"]["id"]
+    assert angelegt["daten"]["noch_fehlende_pflichtfelder"] == []
+    abschluss = await mcp_client.post(f"/api/form-submissions/{pid}/abschliessen", headers=kopf)
+    assert abschluss.status_code == 200, abschluss.text
+    pdf = await mcp_client.get(f"/api/form-submissions/{pid}/pdf", headers=kopf)
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
+
+
+async def test_ueberarbeiten_legt_fehlende_ansichten_nach_und_laesst_vorhandene(make_mandant, make_user, mcp_client):
+    mandant, admin, token, kopf = await _schreibverbindung(make_mandant, make_user, mcp_client)
+    # Entwurf ohne Ansichten, wie ihn Etappe 2 oder der Baukasten ohne Visualisierung hinterlaesst.
+    schema = (await mcp_client.post("/api/form-schemas", json={"name": "Alt"}, headers=kopf)).json()
+    r = await tool_aufrufen(
+        mcp_client, token, "protokoll_vorlage_ueberarbeiten",
+        {"vorlage_id": schema["id"], "abschnitte_hinzufuegen": [{"titel": "Kopf", "felder": [{"label": "Notiz", "typ": "text"}]}]},
+    )
+    assert r["fehler"] is False, r["text"]
+    views = (await mcp_client.get(f"/api/form-schemas/{schema['id']}/views", headers=kopf)).json()
+    assert sorted(v["type"] for v in views) == ["capture", "print"]
+    # Zweiter Aufruf: keine Duplikate.
+    r = await tool_aufrufen(
+        mcp_client, token, "protokoll_vorlage_ueberarbeiten",
+        {"vorlage_id": schema["id"], "felder_hinzufuegen": [{"abschnitt": "Kopf", "label": "Mehr", "typ": "text"}]},
+    )
+    assert r["fehler"] is False, r["text"]
+    assert len((await mcp_client.get(f"/api/form-schemas/{schema['id']}/views", headers=kopf)).json()) == 2
+
+
+async def test_allowlist_views_nur_post():
+    from app.mcp.rest_client import schreibaufruf_erlaubt
+
+    sid = "11111111-1111-1111-1111-111111111111"
+    assert schreibaufruf_erlaubt("POST", f"/api/form-schemas/{sid}/views")
+    assert not schreibaufruf_erlaubt("DELETE", f"/api/form-schemas/{sid}/views/{sid}")
+    assert not schreibaufruf_erlaubt("PATCH", f"/api/form-schemas/{sid}/views/{sid}")
+    assert not schreibaufruf_erlaubt("PUT", f"/api/form-schemas/{sid}/views/{sid}/layouts")
+
+
+async def test_techniker_ohne_formulare_sehen_bekommt_klare_ablehnung(make_mandant, make_user, make_kunde, make_vorgang, mcp_client):
+    """Die Feld-App laedt die Felder ueber dieselbe Route (GET /api/form-schemas/{id}, Recht formulare.sehen);
+    eine andere Route mit Felddefinitionen gibt es nicht. Ohne das Recht scheitert Ausfuellen dort wie hier."""
+    mandant, token, kopf, vorlage_id, vorgang = await _bereit(make_mandant, make_user, make_kunde, make_vorgang, mcp_client)
+    tech = await custom_nutzer(
+        mandant, "Tech", {"vorgaenge": ("sehen", "bearbeiten"), "ki_zugriff": ("sehen", "bearbeiten")},
+        scopes_je_bereich={"vorgaenge": "eigene"},
+    )
+    t = await verbinden(mcp_client, tech, [LESEN, SCHREIBEN])
+    r = await tool_aufrufen(
+        mcp_client, t["access_token"], "protokoll_entwurf_anlegen", {"vorgang_id": str(vorgang.id), "vorlage_id": vorlage_id, "werte": {}}
+    )
+    assert r["fehler"] is True and "Recht" in r["text"]
+    assert await _submissions(vorgang.id) == []
+
+
+async def test_techniker_mit_formulare_sehen_scope_eigene(make_mandant, make_user, make_kunde, make_vorgang, mcp_client):
+    mandant, token, kopf, vorlage_id, fremder = await _bereit(make_mandant, make_user, make_kunde, make_vorgang, mcp_client)
+    tech = await custom_nutzer(
+        mandant, "Tech2", {"vorgaenge": ("sehen", "bearbeiten"), "formulare": ("sehen",), "ki_zugriff": ("sehen", "bearbeiten")},
+        scopes_je_bereich={"vorgaenge": "eigene"},
+    )
+    eigener = await make_vorgang(mandant=mandant, kunde=await make_kunde(mandant=mandant), leistungstyp="wartung", zugewiesener_user_id=tech.id)
+    t = await verbinden(mcp_client, tech, [LESEN, SCHREIBEN])
+    ok = await tool_aufrufen(
+        mcp_client, t["access_token"], "protokoll_entwurf_anlegen",
+        {"vorgang_id": str(eigener.id), "vorlage_id": vorlage_id, "werte": {"CO-Wert (ppm)": 3}},
+    )
+    assert ok["fehler"] is False, ok["text"]
+    ergaenzt = await tool_aufrufen(
+        mcp_client, t["access_token"], "protokoll_entwurf_ergaenzen", {"protokoll_id": ok["daten"]["id"], "werte": {"Zustand": 4}}
+    )
+    assert ergaenzt["fehler"] is False, ergaenzt["text"]
+    fremd = await tool_aufrufen(
+        mcp_client, t["access_token"], "protokoll_entwurf_anlegen", {"vorgang_id": str(fremder.id), "vorlage_id": vorlage_id, "werte": {}}
+    )
+    assert fremd["fehler"] is True
+    assert await _submissions(fremder.id) == []
 
 
 # --- Auswertung --------------------------------------------------------------------------------------
