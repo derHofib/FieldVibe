@@ -134,8 +134,15 @@ export const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
   { ziel: "abschnitt-termine", label: "Termine" },
   { ziel: "abschnitt-maengel", label: "Mängel" },
   { ziel: "abschnitt-material", label: "Positionen" },
+  // Nur bei Zugehoerigkeit zu Projekt/Auftrag (siehe VorgangDetailPage).
+  { ziel: "abschnitt-projekt", label: "Projekt" },
   { ziel: "abschnitt-verlauf", label: "Verlauf" },
 ];
+
+/** Der Tab "Projekt" existiert nur bei Zugehoerigkeit zu Projekt oder Auftrag. */
+export function sichtbareAnker(gehoertZuProjekt: boolean) {
+  return ANCHOR_ABSCHNITTE.filter((a) => a.ziel !== "abschnitt-projekt" || gehoertZuProjekt);
+}
 
 // Abschnitte, die im "kompakt"-Layout als eigene Unterseite statt als Teil
 // der durchlaufenden Seite existieren (siehe arbeitszeitInhalt/

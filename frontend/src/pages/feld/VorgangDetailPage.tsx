@@ -18,7 +18,6 @@ import {
   materialApi,
   materialBedarfeApi,
   partnerApi,
-  projekteApi,
   projektAufgabenApi,
   standorteApi,
   termineApi,
@@ -42,6 +41,7 @@ import {
 } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
+import { istOfficeHost } from "../../office/hostname";
 import { openPdfBlob } from "../../utils/pdf";
 import type {
   Adresse,
@@ -61,6 +61,7 @@ import {
   ANCHOR_ABSCHNITTE,
   ABSCHNITT_ROUTE,
   NEU_MATERIAL,
+  sichtbareAnker,
   VORGANG_STATUS_GESCHLOSSEN,
   VORGANG_STATUS_ZEIT_GESPERRT,
   leereAdresse,
@@ -72,6 +73,7 @@ import { PartnerAbschnitt } from "./vorgang/PartnerAbschnitt";
 import { MaengelAbschnitt } from "./vorgang/MaengelAbschnitt";
 import { TermineAbschnitt } from "./vorgang/TermineAbschnitt";
 import { UebersichtAbschnitt } from "./vorgang/UebersichtAbschnitt";
+import { VerknuepfungTab } from "./vorgang/VerknuepfungTab";
 import { VorgangKopf } from "./vorgang/VorgangKopf";
 import { KopfDialoge } from "./vorgang/KopfDialoge";
 import { VorgangTabLeiste } from "./vorgang/VorgangTabLeiste";
@@ -265,12 +267,31 @@ export function VorgangDetailPage({
     queryFn: () => standorteApi.get(vorgang!.standort_id!),
     enabled: !!vorgang?.standort_id,
   });
-  // Nur mit Projekte-Recht: ohne Recht liefert der Endpunkt 403, die Zeile
-  // "Projekt" unter Details entfaellt dann.
-  const { data: projekt } = useQuery({
-    queryKey: ["projekt", vorgang?.projekt_id],
-    queryFn: () => projekteApi.get(vorgang!.projekt_id!),
-    enabled: !!vorgang?.projekt_id && hatRecht("projekte", "sehen"),
+  // Ohne Zugehoerigkeit gibt es weder Tab noch Abfrage. Ist der Vorgang eigenstaendig gefuehrt und
+  // fehlt das Recht, liefert der Server die IDs als null -- dann verschwindet der Tab von selbst.
+  const gehoertZuProjekt = !!(vorgang?.projekt_id || vorgang?.auftrag_id);
+  const {
+    data: verknuepfung,
+    isLoading: verknuepfungLaedt,
+    isError: verknuepfungFehler,
+    refetch: verknuepfungNeuLaden,
+  } = useQuery({
+    queryKey: ["vorgang-verknuepfung", id],
+    queryFn: () => vorgaengeApi.verknuepfung(id!),
+    enabled: !!id && gehoertZuProjekt,
+    retry: false,
+  });
+  useEffect(() => {
+    if (vorgang && !gehoertZuProjekt && desktopTab === "abschnitt-projekt") setDesktopTab(ANCHOR_ABSCHNITTE[0].ziel);
+  }, [vorgang, gehoertZuProjekt, desktopTab]);
+  const eigenstaendigMutation = useMutation({
+    mutationFn: (an: boolean) => vorgaengeApi.eigenstaendig(id!, an),
+    onSuccess: () => {
+      for (const key of [["vorgang", id], ["vorgang-verknuepfung", id], ["vorgang-events", id], ["feed"]]) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
+    },
+    onError: meldeAktionsFehler,
   });
   const { data: parentVorgang } = useQuery({
     queryKey: ["vorgang", vorgang?.parent_vorgang_id],
@@ -1097,8 +1118,30 @@ export function VorgangDetailPage({
     else document.getElementById("abschnitt-termine")?.scrollIntoView?.({ block: "start" });
   }
 
-  const projektName = projekt?.name;
   const erstelltVonName = vorgang.erstellt_von ? users?.find((u) => u.id === vorgang.erstellt_von)?.name : undefined;
+  const sichtbareAbschnitte = sichtbareAnker(gehoertZuProjekt);
+  // Links in Projekt/Auftrag gibt es nur im Office (dort liegen die Panels) und mit Recht projekte/sehen.
+  const projektLinksAktiv = (layout === "dicht" || istOfficeHost()) && hatRecht("projekte", "sehen");
+  const vorgangPfad = (vid: string) => (layout === "dicht" ? `/vorgaenge/${vid}/vollbild` : `/vorgaenge/${vid}`);
+  async function eigenstaendigUmschalten(an: boolean) {
+    const ok = await bestaetigen(
+      an
+        ? {
+            titel: "Vorgang eigenständig führen?",
+            text: "Projekt und Auftrag werden hier ausgeblendet (auch für Techniker und Nachunternehmer), die Zuordnung ist eingefroren. Zeit, Positionen, Mängel und Status zählen weiter im Auftrag und im Projekt mit.",
+            bestaetigenLabel: "Eigenständig führen",
+            destruktiv: false,
+          }
+        : {
+            titel: "Eigenständige Führung aufheben?",
+            text: "Projekt und Auftrag sind danach wieder sichtbar und folgen Änderungen am Auftrag.",
+            bestaetigenLabel: "Aufheben",
+            destruktiv: false,
+          },
+    );
+    if (ok) eigenstaendigMutation.mutate(an);
+  }
+
   // Zaehler an den Tabs: ohne Inhalt bewusst keiner. Offene Maengel rot, die
   // uebrigen als neutrale Kapsel.
   const tabZaehler: Record<string, { text: string; warnung?: boolean } | undefined> = {
@@ -1106,6 +1149,7 @@ export function VorgangDetailPage({
     "abschnitt-termine": (termine?.length ?? 0) > 0 ? { text: String(termine!.length) } : undefined,
     "abschnitt-maengel": offeneMaengelAnzahl > 0 ? { text: String(offeneMaengelAnzahl), warnung: true } : undefined,
     "abschnitt-material": positionenAnzahl > 0 ? { text: String(positionenAnzahl) } : undefined,
+    "abschnitt-projekt": (verknuepfung?.geschwister.length ?? 0) > 0 ? { text: String(verknuepfung!.geschwister.length) } : undefined,
     "abschnitt-verlauf": verlaufEintraege.length > 0 ? { text: String(verlaufEintraege.length) } : undefined,
   };
 
@@ -1334,7 +1378,6 @@ export function VorgangDetailPage({
         onFolgeVorgang={oeffneFolgeVorgangDialog}
         folgeAuftraege={folgeAuftraege}
         verknuepfteAufgaben={verknuepfteAufgaben}
-        projektName={projektName}
         erstelltVonName={erstelltVonName}
         formulare={<FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
         partner={
@@ -1423,6 +1466,23 @@ export function VorgangDetailPage({
         >
           {positionenInhalt}
         </div>
+      )}
+
+      {gehoertZuProjekt && (
+        <VerknuepfungTab
+          vorgang={vorgang}
+          daten={verknuepfung}
+          laedt={verknuepfungLaedt}
+          fehler={verknuepfungFehler}
+          onErneut={() => void verknuepfungNeuLaden()}
+          linksAktiv={projektLinksAktiv}
+          navigate={navigate}
+          vorgangPfad={vorgangPfad}
+          onEigenstaendig={eigenstaendigUmschalten}
+          eigenstaendigPending={eigenstaendigMutation.isPending}
+          zweispaltigMoeglich={layout === "dicht" && !verlaufSpalteBreit}
+          wrapperProps={{ hidden: !istAktiverTab("abschnitt-projekt"), ...tabPanelProps("abschnitt-projekt") }}
+        />
       )}
     </>
   );
@@ -1546,6 +1606,7 @@ export function VorgangDetailPage({
         primaerAktionKlebt={primaerAktionKlebt}
         kannDisponieren={kannDisponieren}
         kannLoeschen={kannLoeschen}
+        pfadLinksAktiv={projektLinksAktiv}
         currentUser={currentUser}
         users={users}
         naechsterTermin={naechsterTermin}
@@ -1679,7 +1740,7 @@ export function VorgangDetailPage({
           // sondern eine staendig sichtbare zweite Spalte (siehe
           // verlaufSpalteBreit) -- als Tab wuerde er nur verwirren, weil ein
           // Klick nichts umschaltet.
-          abschnitte={ANCHOR_ABSCHNITTE.filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))}
+          abschnitte={sichtbareAbschnitte.filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))}
           aktiv={desktopTab}
           onWaehle={setDesktopTab}
           zaehler={tabZaehler}
@@ -1692,7 +1753,7 @@ export function VorgangDetailPage({
           className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 text-fliess"
           style={{ maskImage: tabNavMaske, WebkitMaskImage: tabNavMaske }}
         >
-          {ANCHOR_ABSCHNITTE.map((a) => {
+          {sichtbareAbschnitte.map((a) => {
             // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
             // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
             // springen -- alle anderen bleiben Sprungmarken auf der

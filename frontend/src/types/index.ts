@@ -488,6 +488,58 @@ export interface Vorgang {
   partner_honorar_netto: string | null;
   created_at: string;
   updated_at: string;
+  // Transient vom Backend (Kette Projekt > Auftrag > Vorgang). Bei eigenstaendig
+  // gefuehrten Vorgaengen liefert der Server ohne Recht projekt_id/auftrag_id/
+  // Namen als null -- alle Felder defensiv lesen (aeltere Server-Staende).
+  projekt_name?: string | null;
+  auftrag_titel?: string | null;
+  verknuepfung_eigenstaendig?: boolean;
+  verknuepfung_eigenstaendig_am?: string | null;
+  verknuepfung_eigenstaendig_von_name?: string | null;
+  darf_eigenstaendig_setzen?: boolean;
+}
+
+export type VorgangHerkunftArt =
+  | "projekt_angelegt"
+  | "auftrag_angelegt"
+  | "vorgang_angelegt"
+  | "folge_vorgang"
+  | "zuordnung_geaendert"
+  | "eigenstaendig_gesetzt"
+  | "eigenstaendig_aufgehoben";
+
+export interface VorgangHerkunftEintrag {
+  art: VorgangHerkunftArt;
+  text: string;
+  ref_typ: "projekt" | "auftrag" | "vorgang" | null;
+  ref_id: string | null;
+  ref_label: string | null;
+  datum: string;
+  person_name: string | null;
+  zusatz: string | null;
+  /** true = der aktuell geoeffnete Vorgang. */
+  aktuell: boolean;
+}
+
+export interface VorgangVerknuepfung {
+  herkunft: VorgangHerkunftEintrag[];
+  rueckmeldung: {
+    arbeitszeit_sekunden: number;
+    arbeitszeit_sekunden_auftrag: number | null;
+    positionen_anzahl: number;
+    positionen_netto: string | number | null;
+    offene_maengel: number;
+    status: VorgangStatus;
+  };
+  geschwister: {
+    id: string;
+    vorgangsnummer: string;
+    titel: string;
+    status: VorgangStatus;
+    ist_aktuell: boolean;
+  }[];
+  projekt: { id: string; name: string } | null;
+  auftrag: { id: string; titel: string; status: AuftragStatus } | null;
 }
 
 // --- Vorgangsanfragen (Kundenportal) ----------------------------------------
@@ -728,6 +780,8 @@ export interface FeedCard {
   geo_lat: number | null;
   geo_lng: number | null;
   zugewiesener_name: string | null;
+  projekt_name?: string | null;
+  auftrag_titel?: string | null;
 }
 
 export interface FeedResponse {
@@ -2377,6 +2431,11 @@ export interface Projekt {
   erstellt_von: string;
   created_at: string;
   updated_at: string;
+  // Transient vom Backend; optional, damit aeltere Server-Staende nicht crashen.
+  anzahl_auftraege?: number;
+  anzahl_vorgaenge?: number;
+  anzahl_offen?: number;
+  anzahl_ueberfaellig?: number;
 }
 
 export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
@@ -2609,6 +2668,8 @@ export interface Auftrag {
   // Transient vom Backend angereichert (siehe app/api/routes/auftraege.py).
   kunde_name: string | null;
   vorgaenge_gesamt: number;
+  projekt_name?: string | null;
+  vorgaenge_erledigt?: number;
 }
 
 export interface ProjektSpalte {

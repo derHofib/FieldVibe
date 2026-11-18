@@ -1,6 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { Building2, GitBranch, MapPin } from "lucide-react";
-import { Suspense, lazy, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { Suspense, lazy, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 import { Select } from "../../../components/apple/Select";
@@ -8,15 +8,12 @@ import { VorgangStatusPille } from "../../../components/VorgangStatusPille";
 import type { Adresse, Anlage, ProjektAufgabe, Standort, Vorgang } from "../../../types";
 import { ABRECHNUNGSART_LABEL, LEISTUNGSTYP_LABEL, adresseAlsZeile, leereAdresse } from "./konstanten";
 import { ABSCHNITT_AKTION, Abschnitt } from "./Abschnitt";
+import { useZweispaltig } from "./useZweispaltig";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
 // (und den PWA-Precache-Limit von 2 MiB sprengen).
 const MapboxMap = lazy(() => import("../../../components/MapboxMap").then((m) => ({ default: m.MapboxMap })));
-
-// Ab dieser Breite des Panels passt die rechte Spalte (320px) neben den Inhalt,
-// ohne dass Adressen umbrechen.
-const ZWEISPALTIG_AB = 900;
 
 const ZEILE_ICON = "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-ap-md)] bg-fill text-label2";
 
@@ -51,7 +48,6 @@ export function UebersichtAbschnitt({
   onFolgeVorgang,
   folgeAuftraege,
   verknuepfteAufgaben,
-  projektName,
   erstelltVonName,
   formulare,
   partner,
@@ -87,24 +83,13 @@ export function UebersichtAbschnitt({
   onFolgeVorgang: () => void;
   folgeAuftraege: Vorgang[] | undefined;
   verknuepfteAufgaben: ProjektAufgabe[] | undefined;
-  projektName: string | undefined;
   erstelltVonName: string | undefined;
   /** FormularAbschnitt (rendert sich selbst nur, wenn es Formulare gibt). */
   formulare: ReactNode;
   /** PartnerAbschnitt (nur mit Recht/Modul). */
   partner: ReactNode;
 }) {
-  // Breite des Panels, nicht des Viewports: die Liste links ist verschiebbar.
-  const wurzel = useRef<HTMLDivElement>(null);
-  const [breit, setBreit] = useState(false);
-  useEffect(() => {
-    const el = wurzel.current;
-    if (!el || !zweispaltigMoeglich || typeof ResizeObserver === "undefined") return;
-    const beobachter = new ResizeObserver(([eintrag]) => setBreit(eintrag.contentRect.width >= ZWEISPALTIG_AB));
-    beobachter.observe(el);
-    return () => beobachter.disconnect();
-  }, [zweispaltigMoeglich]);
-  const zweispaltig = zweispaltigMoeglich && breit;
+  const { wurzel, zweispaltig } = useZweispaltig(zweispaltigMoeglich);
 
   const adresseText = adresseAlsZeile(anzeigeAdresse);
   const hatVerknuepft =
@@ -286,7 +271,6 @@ export function UebersichtAbschnitt({
   const detailZeilen: [string, string | undefined][] = [
     ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
     ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
-    ["Projekt", projektName],
     ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
     ["Erstellt von", erstelltVonName ?? (vorgang.erstellt_von_kundenportal_zugang_id ? "Kundenportal" : undefined)],
   ];

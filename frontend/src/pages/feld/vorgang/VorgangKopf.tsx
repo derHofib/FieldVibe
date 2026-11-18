@@ -1,4 +1,4 @@
-import { CalendarClock, ChevronDown, Clock, ExternalLink, Flag, GitBranch, Link2, MoreHorizontal, Pencil, Trash2, User, UserCheck } from "lucide-react";
+import { CalendarClock, ChevronDown, Clock, ExternalLink, Flag, FolderTree, GitBranch, Link2, MoreHorizontal, Pencil, Trash2, User, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
@@ -6,15 +6,17 @@ import { VorgangStatusPille } from "../../../components/VorgangStatusPille";
 import type { Adresse, Anlage, CurrentUser, Kunde, Standort, UserAuswahl, Vorgang, VorgangStatus } from "../../../types";
 import { heuteIso } from "../../../utils/format";
 import { PRIORITAET_OPTIONEN, VORGANG_STATUS_GESCHLOSSEN, adresseAlsZeile } from "./konstanten";
+import { VerknuepfungPfad } from "./VerknuepfungPfad";
 import { VorgangStatusAktionen } from "./VorgangStatusAktionen";
+import { ZuordnungPanel } from "./ZuordnungPanel";
 
-const CHIP = "inline-flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-sekundaer font-medium whitespace-nowrap";
-const CHIP_NEUTRAL = `${CHIP} bg-fill text-label`;
-const CHIP_BUTTON = `min-h-11 md:min-h-8 ${CHIP_NEUTRAL} hover:bg-fill2`;
+export const CHIP = "inline-flex items-center gap-1.5 rounded-[var(--radius-ap-pill)] px-2.5 py-1 text-sekundaer font-medium whitespace-nowrap";
+export const CHIP_NEUTRAL = `${CHIP} bg-fill text-label`;
+export const CHIP_BUTTON = `min-h-11 md:min-h-8 ${CHIP_NEUTRAL} hover:bg-fill2`;
 
 /** Kleines Popover für Chips mit Suche/Datum (PulldownMenu kann nur Einträge).
  * Esc und Klick außerhalb schließen; Esc gibt den Fokus an den Chip zurück. */
-function ChipPopover({
+export function ChipPopover({
   chip,
   label,
   children,
@@ -77,6 +79,7 @@ export function VorgangKopf({
   primaerAktionKlebt,
   kannDisponieren,
   kannLoeschen,
+  pfadLinksAktiv = false,
   currentUser,
   users,
   naechsterTermin,
@@ -110,6 +113,8 @@ export function VorgangKopf({
   primaerAktionKlebt: boolean;
   kannDisponieren: boolean;
   kannLoeschen: boolean;
+  /** Pfad Projekt › Auftrag klickbar (Office mit Recht projekte/sehen), sonst grauer Text. */
+  pfadLinksAktiv?: boolean;
   currentUser: CurrentUser | undefined;
   users: UserAuswahl[] | undefined;
   naechsterTermin: { start_at: string } | undefined;
@@ -139,12 +144,16 @@ export function VorgangKopf({
   const geschlossen = VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status);
   const istMir = !!currentUser && vorgang.zugewiesener_user_id === currentUser.id;
   const adresseText = adresseAlsZeile(anzeigeAdresse);
+  const [zuordnungOffen, setZuordnungOffen] = useState(false);
+  // Eigenständig geführt = Zuordnung eingefroren, der Server lehnt Änderungen mit 409 ab.
+  const zuordnungAenderbar = kannDisponieren && !vorgang.verknuepfung_eigenstaendig;
 
   const menue: PulldownItem[] = [
     ...(onGanzeSeite ? [{ label: "In ganzer Seite öffnen", icon: ExternalLink, onSelect: onGanzeSeite }] : []),
     { label: "Link kopieren", icon: Link2, onSelect: onLinkKopieren },
     { label: "Folge-Vorgang anlegen", icon: GitBranch, onSelect: onFolgeVorgang },
     { label: "Kunde / Anlage ändern", icon: Pencil, onSelect: onZuordnungAendern },
+    ...(zuordnungAenderbar ? [{ label: "Zuordnung ändern", icon: FolderTree, onSelect: () => setZuordnungOffen(true) }] : []),
     ...(kannLoeschen ? (["trenner", { label: "Vorgang löschen", icon: Trash2, destruktiv: true, onSelect: onLoeschen }] as PulldownItem[]) : []),
   ];
 
@@ -309,7 +318,8 @@ export function VorgangKopf({
         <button onClick={onZurueck} className="text-sekundaer text-label2">
           ← Zurück
         </button>
-        <div className="flex items-center gap-1">
+        <div className="relative flex items-center gap-1">
+          {zuordnungOffen && <ZuordnungPanel vorgang={vorgang} onSchliessen={() => setZuordnungOffen(false)} />}
           {dicht && onGanzeSeite && (
             <button
               type="button"
@@ -344,6 +354,7 @@ export function VorgangKopf({
       </div>
 
       <div>
+        <VerknuepfungPfad vorgang={vorgang} linksAktiv={pfadLinksAktiv} navigate={navigate} />
         <div className="flex items-center gap-2">
           <span className="text-sekundaer text-label2">{vorgang.vorgangsnummer}</span>
           <VorgangStatusPille status={vorgang.status} />

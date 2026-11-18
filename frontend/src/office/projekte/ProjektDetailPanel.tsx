@@ -1,22 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { datumZuIso } from "../../utils/format";
-import { KanbanSquare, Trash2 } from "lucide-react";
+import { KanbanSquare, Plus, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { auftraegeApi, materialBedarfeApi, projekteApi, termineApi, usersApi, vorgaengeApi, zeiterfassungApi } from "../../api/endpoints";
+import { materialBedarfeApi, projekteApi, termineApi, usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { AktionsMenue } from "../../components/AktionsMenue";
-import { EmptyState } from "../../components/EmptyState";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { StatusPille } from "../../components/apple/StatusPille";
-import { AUFTRAG_STATUS_LABEL } from "../auftraege/AuftraegeTabelle";
-import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
+import { Abschnitt, ABSCHNITT_AKTION } from "../../pages/feld/vorgang/Abschnitt";
+import { formatDatum } from "../../utils/format";
 import type { Projekt, Zeiterfassung } from "../../types";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
-import { KennzahlKarte } from "../OfficeUi";
+import { AuftraegeUndVorgaenge, ProjektKennzahlen, useProjektInhalt } from "./AuftraegeUndVorgaenge";
 import { ZeitplanTab } from "./zeitplan/ZeitplanTab";
 
 // Fuer den Termine-Wochenkalender -- gleiche Rechenlogik wie in
@@ -72,7 +71,10 @@ export function ProjektDetailPanel({
   const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [bearbeiten, setBearbeiten] = useState(false);
   const [name, setName] = useState(projekt.name);
+  const [beschreibung, setBeschreibung] = useState(projekt.beschreibung ?? "");
+  const [archiviertForm, setArchiviertForm] = useState(projekt.archiviert);
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>(startTab ?? "uebersicht");
   const [terminWocheOffset, setTerminWocheOffset] = useState(0);
   const [sheetEintrag, setSheetEintrag] = useState<Zeiterfassung | null>(null);
@@ -83,15 +85,7 @@ export function ProjektDetailPanel({
     initialData: projekt,
   });
 
-  const { data: auftraege } = useQuery({
-    queryKey: ["auftraege", "projekt", projekt.id],
-    queryFn: () => auftraegeApi.list({ projekt_id: projekt.id }),
-  });
-
-  const { data: vorgaenge } = useQuery({
-    queryKey: ["vorgaenge", "projekt", projekt.id],
-    queryFn: () => vorgaengeApi.list({ projekt_id: projekt.id }),
-  });
+  const { auftraege, vorgaenge, laedt: inhaltLaedt } = useProjektInhalt(projekt.id);
 
   const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: tab === "zeit" });
 
@@ -118,6 +112,7 @@ export function ProjektDetailPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projekte"] });
       queryClient.invalidateQueries({ queryKey: ["projekte", projekt.id] });
+      setBearbeiten(false);
     },
   });
 
@@ -126,6 +121,11 @@ export function ProjektDetailPanel({
     mutationFn: (id: string) => materialBedarfeApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "projekt", projekt.id] }),
   });
+
+  const aktiv = aktuell ?? projekt;
+  // Projekte tragen keinen eigenen Kunden: nur anzeigen, wenn alle Aufträge denselben haben.
+  const kundenNamen = new Set((auftraege ?? []).map((a) => a.kunde_name).filter(Boolean));
+  const kundeName = kundenNamen.size === 1 ? [...kundenNamen][0] : null;
 
   const zeitEintraegeAbgeschlossen = (zeiterfassungListe ?? [])
     .filter((e) => e.ende_at)
@@ -144,10 +144,35 @@ export function ProjektDetailPanel({
         </button>
       }
     >
+      <div className="space-y-2 px-4 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-meta font-semibold tracking-wide text-label2 uppercase">Projekt</span>
+          <StatusPille status={aktiv.archiviert ? "geplant" : "arbeit"} label={aktiv.archiviert ? "Archiviert" : "Aktiv"} />
+        </div>
+        <h1 className="font-heading text-titel-mobil font-bold text-label">{aktiv.name}</h1>
+        {kundeName && <p className="text-fliess text-label2">{kundeName}</p>}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <button
+            type="button"
+            onClick={() => navigate(`/auftraege?neu=1&projekt_id=${projekt.id}`)}
+            className="btn-touch btn-ap-primary inline-flex items-center gap-1.5 px-3 text-sekundaer"
+          >
+            <Plus size={14} strokeWidth={2.5} aria-hidden="true" /> Auftrag
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/neu?projekt_id=${projekt.id}`)}
+            className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 text-sekundaer"
+          >
+            <Plus size={14} strokeWidth={2.5} aria-hidden="true" /> Vorgang
+          </button>
+        </div>
+      </div>
+
       <div
         role="tablist"
         aria-label="Projekt-Abschnitte"
-        className="mb-3 flex gap-1 overflow-x-auto border-b border-sep px-4 pt-3 pb-2 text-fliess"
+        className="mt-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-4 pt-3 pb-2 text-fliess"
       >
         {TABS.map((t) => (
           <button
@@ -172,84 +197,84 @@ export function ProjektDetailPanel({
           id="projekt-tabpanel-uebersicht"
           role="tabpanel"
           aria-labelledby="projekt-tab-uebersicht"
-          className="space-y-5 p-4 pt-0"
+          className="space-y-4 p-4 pt-0"
         >
-          <div className="grid grid-cols-2 gap-3">
-            <KennzahlKarte label="Aufträge" wert={String(auftraege?.length ?? 0)} />
-            <KennzahlKarte label="Vorgänge" wert={String(vorgaenge?.length ?? 0)} />
-          </div>
+          <ProjektKennzahlen projekt={aktiv} auftraege={auftraege} vorgaenge={vorgaenge} />
 
-          <div>
-            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Name</label>
-            <input id={`${uid}-0`}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => name.trim() && name !== aktuell?.name && aktualisieren.mutate({ name: name.trim() })}
-              className="field-ap"
-            />
-          </div>
+          <AuftraegeUndVorgaenge
+            projektId={projekt.id}
+            auftraege={auftraege}
+            vorgaenge={vorgaenge}
+            laedt={inhaltLaedt}
+            navigate={navigate}
+          />
 
-          <label className="flex items-center gap-2 text-fliess text-label">
-            <input
-              type="checkbox"
-              checked={aktuell?.archiviert ?? projekt.archiviert}
-              onChange={(e) => aktualisieren.mutate({ archiviert: e.target.checked })}
-              className="h-4 w-4"
-            />
-            Archiviert
-          </label>
-
-          <div>
-            <label className="mb-1.5 block text-meta font-bold text-label3">
-              Aufträge ({auftraege?.length ?? 0})
-            </label>
-            {!auftraege || auftraege.length === 0 ? (
-              <EmptyState icon={KanbanSquare} text="Noch kein Auftrag in diesem Projekt." />
-            ) : (
-              <div className="space-y-1.5">
-                {auftraege.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-fliess">
-                    <span className="min-w-0 flex-1 truncate text-label">{a.titel}</span>
-                    <span className="shrink-0 text-sekundaer text-label2">{AUFTRAG_STATUS_LABEL[a.status]}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="block text-meta font-bold text-label3">
-                Vorgänge direkt am Projekt ({vorgaenge?.length ?? 0})
-              </label>
-              <button
-                onClick={() => navigate(`/neu?projekt_id=${projekt.id}`)}
-                className="text-sekundaer font-medium text-tint hover:underline"
-              >
-                + Neuer Vorgang
-              </button>
-            </div>
-            {!vorgaenge || vorgaenge.length === 0 ? (
-              <p className="text-sekundaer text-label2">Keine Vorgänge direkt zugeordnet.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {vorgaenge.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
-                    className="flex w-full items-center justify-between gap-2 border rounded-[var(--radius-ap-md)] border-sepstrong px-2.5 py-2 text-left text-sekundaer hover:bg-fill"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-label">
-                      {v.vorgangsnummer} · {v.titel}
-                    </span>
-                    <span className={`shrink-0 rounded-[var(--radius-ap-pill)] px-2 py-0.5 text-meta font-semibold ${STATUS_BADGE[v.status]}`}>
-                      {STATUS_LABEL[v.status]}
-                    </span>
+          <Abschnitt
+            titel="Details"
+            aktion={
+              !bearbeiten ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setName(aktiv.name);
+                    setBeschreibung(aktiv.beschreibung ?? "");
+                    setArchiviertForm(aktiv.archiviert);
+                    setBearbeiten(true);
+                  }}
+                  className={ABSCHNITT_AKTION}
+                >
+                  Bearbeiten
+                </button>
+              ) : undefined
+            }
+          >
+            {bearbeiten ? (
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">Name</label>
+                  <input id={`${uid}-0`} value={name} onChange={(e) => setName(e.target.value)} className="field-ap" />
+                </div>
+                <div>
+                  <label htmlFor={`${uid}-1`} className="mb-1.5 block text-meta font-bold text-label3">Beschreibung</label>
+                  <textarea id={`${uid}-1`} value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
+                </div>
+                <label className="flex items-center gap-2 text-fliess text-label">
+                  <input
+                    type="checkbox"
+                    checked={archiviertForm}
+                    onChange={(e) => setArchiviertForm(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Archiviert
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setBearbeiten(false)} className="btn-touch btn-ap px-3 text-sekundaer">
+                    Abbrechen
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    disabled={!name.trim() || aktualisieren.isPending}
+                    onClick={() => aktualisieren.mutate({ name: name.trim(), beschreibung: beschreibung.trim(), archiviert: archiviertForm })}
+                    className="btn-touch btn-ap-primary px-3 text-sekundaer"
+                  >
+                    Speichern
+                  </button>
+                </div>
               </div>
+            ) : (
+              <dl className="space-y-1.5 text-fliess">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-label2">Status</dt>
+                  <dd className="font-medium text-label">{aktiv.archiviert ? "Archiviert" : "Aktiv"}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-label2">Erstellt am</dt>
+                  <dd className="font-medium text-label">{formatDatum(aktiv.created_at)}</dd>
+                </div>
+                {aktiv.beschreibung && <p className="whitespace-pre-line pt-1 text-label">{aktiv.beschreibung}</p>}
+              </dl>
             )}
-          </div>
+          </Abschnitt>
         </div>
       )}
 
