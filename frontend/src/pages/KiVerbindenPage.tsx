@@ -74,7 +74,8 @@ export function KiVerbindenPage({ layout = "feld" }: { layout?: "feld" | "office
     );
   }
 
-  const schreibenWaehlbar = data.schreiben_erlaubt && data.scopes_angefragt.includes("fieldvibe.schreiben");
+  // Claude fragt nur den Pflicht-Scope an; ob geschrieben werden darf, entscheidet der Nutzer.
+  const schreibenWaehlbar = data.schreiben_erlaubt;
   const fehler = antwort.error instanceof ApiError ? antwort.error.message : antwort.error ? "Die Antwort konnte nicht gesendet werden." : null;
 
   return (

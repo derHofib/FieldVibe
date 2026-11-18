@@ -102,10 +102,12 @@ async def autorisieren(
 ) -> KiRedirect:
     p = _anfrage(body.anfrage)
     zugang = await _zugang(session, auth)
-    unzulaessig = [s for s in body.scopes if s not in p["sc"] or s not in ALLE_SCOPES]
+    # Nicht auf die angefragten Scopes begrenzt: Claude fragt beim Verbinden nur den Pflicht-
+    # Scope an, ueber Schreibzugriff entscheidet der Nutzer hier (gedeckt durch sein Recht).
+    unzulaessig = [s for s in body.scopes if s not in ALLE_SCOPES]
     if unzulaessig:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Scope nicht angefragt: {unzulaessig[0]}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unbekannter Scope: {unzulaessig[0]}"
         )
     if SCOPE_SCHREIBEN in body.scopes and not zugang.schreiben_erlaubt:
         raise HTTPException(
