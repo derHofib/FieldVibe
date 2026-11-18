@@ -423,3 +423,56 @@ async def test_vorschau_pdf_braucht_recht_formulare_sehen(client, make_mandant, 
     tech_token = await login(client, tech.email, PW)
     r = await client.get(f"/api/form-schemas/{schema['id']}/views/{view['id']}/vorschau-pdf", headers=auth_headers(tech_token))
     assert r.status_code == 403
+
+
+# --- Kundensichtbarkeit -------------------------------------------------------------------------
+
+
+async def test_kundensichtbar_umschalten_zieht_feed_eintrag_mit(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant, admin, token = await _admin_token(client, make_mandant, make_user)
+    vorgang = await make_vorgang(mandant=mandant, kunde=await make_kunde(mandant=mandant))
+    schema = await _schema(client, token)
+    sub = await _start(client, token, vorgang, schema)
+    assert sub["kundensichtbar"] is False
+    assert (await client.post(f"/api/form-submissions/{sub['id']}/abschliessen", headers=auth_headers(token))).status_code == 200
+
+    url = f"/api/form-submissions/{sub['id']}/kundensichtbar"
+    r = await client.patch(url, headers=auth_headers(token), json={"kundensichtbar": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["kundensichtbar"] is True and r.json()["status"] == "abgeschlossen"
+    async with system_session(grund="test") as session:
+        ev = (await session.execute(text("SELECT kundensichtbar FROM vorgang_events WHERE ref_entity_id = :i"), {"i": sub["id"]})).scalar()
+        assert ev is True
+    uebersicht = (await client.get("/api/form-submissions/uebersicht", headers=auth_headers(token))).json()
+    assert uebersicht["eintraege"][0]["kundensichtbar"] is True
+
+    r = await client.patch(url, headers=auth_headers(token), json={"kundensichtbar": False})
+    assert r.json()["kundensichtbar"] is False
+    async with system_session(grund="test") as session:
+        assert (await session.execute(text("SELECT kundensichtbar FROM vorgang_events WHERE ref_entity_id = :i"), {"i": sub["id"]})).scalar() is False
+    assert (await client.patch(url, headers=auth_headers(token), json={})).status_code == 422
+
+
+async def test_kundensichtbar_fremder_mandant_und_fremder_kunde(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
+    mandant, admin, token = await _admin_token(client, make_mandant, make_user)
+    fremder_mandant, _, token_b = await _admin_token(client, make_mandant, make_user, name="Admin Berta")
+    vorgang = await make_vorgang(mandant=mandant, kunde=await make_kunde(mandant=mandant))
+    sub = await _start(client, token, vorgang, await _schema(client, token))
+    url = f"/api/form-submissions/{sub['id']}/kundensichtbar"
+    # RLS: aus Sicht des anderen Mandanten existiert die Ausfuellung nicht.
+    assert (await client.patch(url, headers=auth_headers(token_b), json={"kundensichtbar": True})).status_code == 404
+
+    tech = await make_user(mandant=mandant, role="techniker", password=PW, name="Tom Techniker")
+    await make_kunde_zuweisung(mandant=mandant, kunde=await make_kunde(mandant=mandant, name="Anderer"), techniker=tech)
+    tech_token = await login(client, tech.email, PW)
+    assert (await client.patch(url, headers=auth_headers(tech_token), json={"kundensichtbar": True})).status_code in (403, 404)
+    async with system_session(grund="test") as session:
+        assert (await session.execute(text("SELECT kundensichtbar FROM form_submissions WHERE id = :i"), {"i": sub["id"]})).scalar() is False
+
+
+async def test_kundensichtbar_nicht_per_mcp(client, make_mandant):
+    from app.mcp.rest_client import schreibaufruf_erlaubt
+
+    pfad = "/api/form-submissions/00000000-0000-0000-0000-000000000001/kundensichtbar"
+    assert not schreibaufruf_erlaubt("PATCH", pfad)
+    assert schreibaufruf_erlaubt("PATCH", "/api/form-submissions/00000000-0000-0000-0000-000000000001")

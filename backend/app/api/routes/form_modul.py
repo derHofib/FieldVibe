@@ -61,6 +61,7 @@ from app.schemas.form_modul import (
     FormSchemaRead,
     FormSchemaUpdate,
     FormSchemaVerfuegbar,
+    FormSubmissionKundensichtbarUpdate,
     FormSubmissionRead,
     FormSubmissionStart,
     FormSubmissionUebersichtRead,
@@ -73,7 +74,7 @@ from app.schemas.form_modul import (
     FormViewUpdate,
 )
 from app.services import form_modul_service, photo_service, storage_service
-from app.services.audit_service import ki_schreibzugriff_protokollieren
+from app.services.audit_service import ki_schreibzugriff_protokollieren, log_action
 from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
@@ -1018,6 +1019,45 @@ async def update_submission_values(
             session, auth, aktion="ki_protokoll_ergaenzt", entity_type="form_submission", entity_id=submission.id,
             payload={"felder": sorted(k for k in neue_werte if alte_werte.get(k) != neue_werte[k])},
         )
+    return await form_modul_service.to_submission_read(session, submission)
+
+
+@submissions_router.patch("/{submission_id}/kundensichtbar", response_model=FormSubmissionRead)
+async def set_submission_kundensichtbar(
+    submission_id: UUID,
+    body: FormSubmissionKundensichtbarUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FormSubmissionRead:
+    """Gibt eine Ausfuellung fuers Kundenportal frei bzw. blendet sie aus. Auch bei abgeschlossenen
+    Ausfuellungen erlaubt (Freigabe ist keine Wertaenderung); der Feed-Eintrag wird mitgezogen, weil
+    das Portal ueber ihn liest."""
+    # Freigabe an Kunden ist eine Entscheidung des Menschen, nie der KI (nicht in der MCP-Allowlist, hier doppelt gesichert).
+    if getattr(auth, "via", None) == "mcp":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Für den KI-Zugriff nicht erlaubt")
+    submission = await _get_own_submission(session, auth, submission_id)
+    if submission.kundensichtbar != body.kundensichtbar:
+        submission.kundensichtbar = body.kundensichtbar
+        events = (
+            await session.execute(
+                select(VorgangEvent).where(
+                    VorgangEvent.ref_entity_type == "form_submission", VorgangEvent.ref_entity_id == submission.id
+                )
+            )
+        ).scalars().all()
+        for event in events:
+            event.kundensichtbar = body.kundensichtbar
+        await log_action(
+            session,
+            aktion="form_submission_kundensichtbar",
+            mandant_id=auth.mandant_id,
+            actor_user_id=auth.user_id,
+            entity_type="form_submission",
+            entity_id=submission.id,
+            payload={"kundensichtbar": body.kundensichtbar},
+        )
+        await session.flush()
+        await session.refresh(submission)
     return await form_modul_service.to_submission_read(session, submission)
 
 

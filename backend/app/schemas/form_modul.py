@@ -340,6 +340,10 @@ class FormSubmissionValuesUpdate(BaseModel):
     values: dict[str, Any]
 
 
+class FormSubmissionKundensichtbarUpdate(BaseModel):
+    kundensichtbar: bool
+
+
 class FormSubmissionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
