@@ -13,6 +13,7 @@ import {
   type ProtokollFilter,
   type ProtokollListe,
 } from "../office/protokoll/protokollUtils";
+import type { KiAnfrage, KiRedirect, KiScope, KiVerbindung } from "../types/ki";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
@@ -240,6 +241,16 @@ import type {
 } from "../types";
 
 import type { UserTokenPair, LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
+
+export const kiApi = {
+  anfrage: (anfrage: string) => apiFetch<KiAnfrage>(`/api/ki/anfrage?anfrage=${encodeURIComponent(anfrage)}`),
+  autorisieren: (anfrage: string, scopes: KiScope[]) =>
+    apiFetch<KiRedirect>("/api/ki/autorisieren", { method: "POST", body: JSON.stringify({ anfrage, scopes }) }),
+  ablehnen: (anfrage: string) =>
+    apiFetch<KiRedirect>("/api/ki/ablehnen", { method: "POST", body: JSON.stringify({ anfrage }) }),
+  verbindungen: (alle = false) => apiFetch<KiVerbindung[]>(`/api/ki/verbindungen?alle=${alle}`),
+  trennen: (id: string) => apiFetch<void>(`/api/ki/verbindungen/${id}`, { method: "DELETE" }),
+};
 
 export const authApi = {
   login: (email: string, password: string) =>
