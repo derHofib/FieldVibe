@@ -26,6 +26,7 @@ import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage
 import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
+import { KiVerbindenPage } from "../pages/KiVerbindenPage";
 import { ProfilePage } from "../pages/feld/ProfilePage";
 import { OfficePruefmittelPage } from "./pruefmittel/OfficePruefmittelPage";
 import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
@@ -176,6 +177,7 @@ export function OfficeApp() {
           <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
           <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
           <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
+          <Route path="/ki-verbinden" element={<KiVerbindenPage layout="office" />} />
           <Route path="/neu" element={<NewVorgangPage />} />
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />

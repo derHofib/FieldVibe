@@ -41,6 +41,8 @@ def _bereich(
     return RechteBereichDef(key=key, label=label, aktionen=BASIS_AKTIONEN + zusatz, scopes=scopes, modul=modul)
 
 
+_KI_AKTIONEN: tuple[str, ...] = ("sehen", "bearbeiten")
+
 _BEREICHE: tuple[RechteBereichDef, ...] = (
     # eigenstaendig_setzen: "Vorgänge eigenständig führen" -- Projekt/Auftrag
     # ausblenden, Ergebnisse fließen weiter zurück (Konzept auftrag-projekt 4c).
@@ -65,6 +67,14 @@ _BEREICHE: tuple[RechteBereichDef, ...] = (
     ),
     _bereich("fehlerberichte", "Fehlerberichte", zusatz=("freigeben",)),
     _bereich("organigramm", "Organigramm", zusatz=("rechte_verwalten",), scopes=_VOLLE_KETTE),
+    # sehen = per KI lesen, bearbeiten = per KI schreiben (OAuth-Scope fieldvibe.schreiben).
+    RechteBereichDef(
+        key="ki_zugriff",
+        label="KI-Assistent (Claude)",
+        aktionen=_KI_AKTIONEN,
+        scopes=_NUR_MANDANT,
+        modul="ki_zugriff",
+    ),
 )
 
 _BEREICH_NACH_KEY: dict[str, RechteBereichDef] = {b.key: b for b in _BEREICHE}

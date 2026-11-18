@@ -29,6 +29,12 @@ class TokenType(StrEnum):
     USER_MFA = "user_mfa"
     EINLADUNG = "einladung"
     STREAM = "stream"
+    # KI-Zugriff (MCP-Server, docs/MCP.md): gelten nie an den normalen /api-Routen
+    # (get_current_user akzeptiert nur access/impersonation).
+    MCP = "mcp"
+    MCP_CODE = "mcp_code"
+    MCP_REFRESH = "mcp_refresh"
+    MCP_ANFRAGE = "mcp_anfrage"
 
 
 def hash_password(password: str) -> str:
@@ -103,10 +109,22 @@ def create_access_token(
     token_version: int,
     account_typ_id: UUID | None = None,
     mfa_einrichtung: bool = False,
+    via: str | None = None,
+    ki_verbindung_id: UUID | None = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     # mfa_einrichtung: Pflicht-MFA des Mandanten ist an, der Account hat aber
     # noch keine -- das Token oeffnet nur die Einrichtungsendpunkte (siehe
     # app/api/deps.py:get_current_user).
+    # via/ki_verbindung_id: Aufruf-Token des MCP-Adapters (app/mcp/rest_client.py); die
+    # Claims landen als Quelle "ki" im Audit-Protokoll.
+    extra: dict = {}
+    if mfa_einrichtung:
+        extra["mfa_einrichtung"] = True
+    if via:
+        extra["via"] = via
+    if ki_verbindung_id:
+        extra["kv"] = str(ki_verbindung_id)
     return _create_token(
         subject=subject,
         role=role,
@@ -114,8 +132,8 @@ def create_access_token(
         account_typ_id=account_typ_id,
         token_version=token_version,
         token_type=TokenType.ACCESS,
-        expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
-        extra_claims={"mfa_einrichtung": True} if mfa_einrichtung else None,
+        expires_delta=expires_delta or timedelta(minutes=_settings.access_token_expire_minutes),
+        extra_claims=extra or None,
     )
 
 
@@ -330,3 +348,114 @@ def create_stream_ticket(
     }
     token = jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
     return token, gueltig_bis
+
+
+# --- KI-Zugriff (MCP): OAuth-Tokens ----------------------------------------
+# Alle Tokens tragen mandant_id und tv im signierten Payload. Der Token-Endpunkt
+# braucht dadurch keinen mandantenuebergreifenden Lookup: er oeffnet direkt
+# tenant_session(mandant_id).
+MCP_CODE_MINUTEN = 5
+MCP_ANFRAGE_MINUTEN = 10
+
+
+def create_mcp_access_token(
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID,
+    token_version: int,
+    account_typ_id: UUID | None,
+    ki_verbindung_id: UUID,
+    scopes: list[str],
+) -> tuple[str, int]:
+    """Liefert Token und Lebensdauer in Sekunden."""
+    expires_delta = timedelta(minutes=_settings.access_token_expire_minutes)
+    token = _create_token(
+        subject=subject,
+        role=role,
+        mandant_id=mandant_id,
+        account_typ_id=account_typ_id,
+        token_version=token_version,
+        token_type=TokenType.MCP,
+        expires_delta=expires_delta,
+        extra_claims={"kv": str(ki_verbindung_id), "scope": " ".join(scopes)},
+    )
+    return token, int(expires_delta.total_seconds())
+
+
+def create_mcp_code(
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID,
+    token_version: int,
+    account_typ_id: UUID | None,
+    ki_verbindung_id: UUID,
+    scopes: list[str],
+    code_challenge: str,
+    redirect_uri: str,
+    redirect_uri_explizit: bool,
+    client_id: str,
+) -> str:
+    return _create_token(
+        subject=subject,
+        role=role,
+        mandant_id=mandant_id,
+        account_typ_id=account_typ_id,
+        token_version=token_version,
+        token_type=TokenType.MCP_CODE,
+        expires_delta=timedelta(minutes=MCP_CODE_MINUTEN),
+        extra_claims={
+            "kv": str(ki_verbindung_id),
+            "scope": " ".join(scopes),
+            "cc": code_challenge,
+            "ru": redirect_uri,
+            "rue": redirect_uri_explizit,
+            "cid": client_id,
+            # Ohne jti waeren zwei Codes derselben Sekunde mit gleichem Inhalt identisch.
+            "jti": uuid4().hex,
+        },
+    )
+
+
+def create_mcp_refresh_token(
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID,
+    token_version: int,
+    account_typ_id: UUID | None,
+    ki_verbindung_id: UUID,
+    scopes: list[str],
+    client_id: str,
+    jti: str,
+) -> str:
+    return _create_token(
+        subject=subject,
+        role=role,
+        mandant_id=mandant_id,
+        account_typ_id=account_typ_id,
+        token_version=token_version,
+        token_type=TokenType.MCP_REFRESH,
+        expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
+        extra_claims={
+            "kv": str(ki_verbindung_id),
+            "scope": " ".join(scopes),
+            "cid": client_id,
+            "jti": jti,
+        },
+    )
+
+
+def create_mcp_anfrage_token(*, anfrage: dict) -> str:
+    """Signierte Autorisierungsanfrage fuer die Einwilligungsseite: traegt die
+    gepruefte Anfrage des Clients durch den Browser-Login, ohne serverseitigen
+    Zustand. Weder Nutzer noch Mandant -- wer zustimmt, entscheidet erst der Login."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        **anfrage,
+        "type": TokenType.MCP_ANFRAGE.value,
+        "iat": now,
+        "exp": now + timedelta(minutes=MCP_ANFRAGE_MINUTEN),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)

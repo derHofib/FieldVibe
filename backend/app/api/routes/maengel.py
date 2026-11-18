@@ -19,6 +19,8 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.mangel import MangelCreate, MangelRead, MangelUpdate
 from app.services import papierkorb_service
+from app.services.audit_service import ki_schreibzugriff_protokollieren
+from app.services.vorgang_event_service import mit_ki_kennzeichnung
 from app.services.pdf_service import generate_maengel_protokoll_pdf
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen, require_kunde_zugriff
 
@@ -186,10 +188,16 @@ async def create_mangel(
             event_type="mangel",
             author_user_id=auth.user_id,
             body=f"Mangel erfasst ({mangel.schweregrad}): {mangel.beschreibung}",
-            payload={"mangel_id": str(mangel.id), "schweregrad": mangel.schweregrad, "status": mangel.status},
+            payload=mit_ki_kennzeichnung(
+                auth, {"mangel_id": str(mangel.id), "schweregrad": mangel.schweregrad, "status": mangel.status}
+            ),
         )
     )
     await session.flush()
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_mangel_erfasst", entity_type="mangel", entity_id=mangel.id,
+        payload={"vorgang_id": str(mangel.vorgang_id), "schweregrad": mangel.schweregrad},
+    )
     return mangel
 
 

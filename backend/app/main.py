@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     fehlerberichte,
     health,
+    ki,
     rechte,
     organigramm,
     account_typen,
@@ -89,6 +90,7 @@ from app.services.audit_service import siegel_vor_antwort
 from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import konfiguriere_logging
 from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
+from app.mcp.server import McpWeiche, integration as mcp_integration
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_engine
 from app.services.health_service import watchdog_schleife
@@ -110,7 +112,9 @@ async def lifespan(_: FastAPI):
     sampler_task = asyncio.create_task(resource_sampler_loop())
     # Erkennt auch einen toten Worker: die Auswertung laeuft im Backend-Prozess.
     watchdog_task = asyncio.create_task(watchdog_schleife())
-    yield
+    # Der Session-Manager des MCP-Servers braucht seine Task-Gruppe waehrend der gesamten Laufzeit.
+    async with mcp_integration.lebenszeit():
+        yield
     sampler_task.cancel()
     watchdog_task.cancel()
 
@@ -142,6 +146,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=[REQUEST_ID_HEADER],
 )
+# Zwischen CORS und Request-Kontext: MCP-/OAuth-Pfade laufen durch Request-ID und Audit-Kontext,
+# aber nicht durch CORS (das SDK setzt fuer seine Endpunkte eigene Header, siehe app/mcp/server.py).
+app.add_middleware(McpWeiche)
 # Zuletzt hinzugefuegt = aeusserste Schicht: die Request-ID gilt auch fuer
 # CORS-Preflights und Fehlerantworten der inneren Schichten.
 app.add_middleware(RequestKontextMiddleware)
@@ -230,3 +237,4 @@ app.include_router(zeitplan.router)
 app.include_router(zeitplan.vorlagen_router)
 app.include_router(fehlerberichte.router)
 app.include_router(fehlerberichte.service_router)
+app.include_router(ki.router)

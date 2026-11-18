@@ -2,6 +2,7 @@ import { authStore } from "./authStore";
 import type { UserTokenPair } from "../types";
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export const API_BASE_URL = BASE_URL;
 
 // A request out in the field can stall indefinitely on a degrading signal
 // (fetch() gives no built-in ceiling), which would otherwise hang mutations

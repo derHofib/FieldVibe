@@ -16,6 +16,15 @@ function VerlaufTypTag({ children }: { children: string }) {
   );
 }
 
+// Vom KI-Assistenten (MCP) angelegte Eintraege; das Backend setzt payload.via nur aus dem signierten Token.
+export function istKiEvent(event: Pick<VorgangEvent, "payload">): boolean {
+  return event.payload?.via === "claude";
+}
+
+function ViaClaude() {
+  return <VerlaufTypTag>via Claude</VerlaufTypTag>;
+}
+
 export function EventBubble({
   event,
   onHighlight,
@@ -31,6 +40,7 @@ export function EventBubble({
     return (
       <div className="my-2 text-center text-meta text-label2">
         {label} · {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
+        {istKiEvent(event) && <span className="ml-1.5 inline-block align-middle"><ViaClaude /></span>}
       </div>
     );
   }
@@ -41,6 +51,7 @@ export function EventBubble({
         <div className="flex items-center gap-1.5">
           <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
+          {istKiEvent(event) && <ViaClaude />}
         </div>
         <div className="flex items-center gap-1.5">
           {event.partner_sichtbar && event.author_user_id !== null && (

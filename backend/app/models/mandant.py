@@ -46,6 +46,7 @@ MANDANT_MODULE = (
     "karten",
     "nachunternehmer",
     "postfach",
+    "ki_zugriff",
 )
 
 
@@ -101,12 +102,13 @@ class Mandant(TimestampMixin, Base):
         SmallInteger, nullable=True
     )
     # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
-    # Ausnahme "karten": anders als alle anderen Module bewusst opt-IN
-    # (Default-Liste enthaelt "karten"), weil eine aktivierte Kartenansicht
-    # laufende Mapbox-Kosten verursacht -- siehe Migration 0048, die
-    # bestehende Mandanten auf denselben Stand bringt.
+    # Ausnahmen "karten" und "ki_zugriff": anders als alle anderen Module bewusst
+    # opt-IN (Default-Liste enthaelt sie). "karten", weil eine aktivierte
+    # Kartenansicht laufende Mapbox-Kosten verursacht (Migration 0048);
+    # "ki_zugriff", weil Daten dabei an einen KI-Anbieter fliessen und der Betrieb
+    # das (AV-Vertrag, Datenschutzhinweis) bewusst freigeben muss (Migration 0118).
     deaktivierte_module: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=lambda: ["karten"]
+        JSONB, nullable=False, default=lambda: ["karten", "ki_zugriff"]
     )
     # Firmenstammdaten fuer den PDF-Briefkopf (Angebot): adresse (dict mit
     # strasse/plz/ort, gleiche Form wie Kunde.adresse), telefon, email,

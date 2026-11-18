@@ -1,16 +1,26 @@
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_recht, require_roles
+from app.api.routes.auswertung import _nicht_eingeschraenkt
 from app.models.user import User
-from app.models.vorgang import Vorgang
-from app.schemas.statistik import TechnikerOffeneVorgaenge, VorgangKennzahlen
+from app.models.vorgang import VORGANG_STATUS, Vorgang
+from app.schemas.statistik import (
+    AggregatAntwort,
+    AggregatBereich,
+    AggregatGruppierung,
+    AggregatKennzahl,
+    TechnikerOffeneVorgaenge,
+    VorgangKennzahlen,
+)
+from app.services.date_utils import add_months
+from app.services.statistik_aggregat_service import UngueltigeAbfrage, aggregat_berechnen, pruefe_kombination
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
-from app.services.zuweisung_service import erlaubte_kunde_ids
+from app.services.zuweisung_service import erlaubte_kunde_ids, erlaubte_user_ids
 
 router = APIRouter(
     prefix="/api/statistik",
@@ -101,3 +111,76 @@ async def vorgang_kennzahlen(
         ),
         abgeschlossene_vorgaenge_zeitraum=abgeschlossen_anzahl,
     )
+
+
+# Statistik-Modul wie bei /api/insights und der Zeit-Statistik; nur hier, nicht am
+# Router, damit die bestehenden Kennzahlen-Endpunkte unveraendert bleiben.
+@router.get(
+    "/aggregat",
+    response_model=AggregatAntwort,
+    dependencies=[Depends(require_module("statistik"))],
+)
+async def aggregat(
+    bereich: AggregatBereich = Query(...),
+    kennzahl: AggregatKennzahl = Query(...),
+    gruppierung: AggregatGruppierung = Query(...),
+    von: date = Query(...),
+    bis: date = Query(...),
+    techniker_id: UUID | None = Query(default=None),
+    kunde_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AggregatAntwort:
+    if bereich == "rechnungen":
+        # Rechnungsumsaetze unterliegen denselben Sperren wie /api/auswertung --
+        # der Router hier prueft nur statistik.
+        await require_module("abrechnung")(auth, session)
+        await require_recht("abrechnung", "sehen")(auth, session)
+        await _nicht_eingeschraenkt(auth, session)
+    try:
+        pruefe_kombination(bereich, kennzahl, gruppierung)
+    except UngueltigeAbfrage as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if bis < von:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="'bis' darf nicht vor 'von' liegen"
+        )
+    if bis > add_months(von, 36):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Der Zeitraum darf höchstens 3 Jahre umfassen"
+        )
+    if status_filter is not None and bereich != "vorgaenge":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Der Filter 'status' gilt nur für den Bereich 'vorgaenge'"
+        )
+    if status_filter is not None and status_filter not in VORGANG_STATUS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unbekannter Status '{status_filter}' (erlaubt: {', '.join(VORGANG_STATUS)})",
+        )
+
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    erlaubte_techniker = (
+        await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", "bearbeiten")
+        if kennzahl == "arbeitszeit_stunden"
+        else None
+    )
+    try:
+        return await aggregat_berechnen(
+            session,
+            bereich=bereich,
+            kennzahl=kennzahl,
+            gruppierung=gruppierung,
+            von=von,
+            bis=bis,
+            techniker_id=techniker_id,
+            kunde_id=kunde_id,
+            projekt_id=projekt_id,
+            status=status_filter,
+            erlaubte_kunden=erlaubte_kunden,
+            erlaubte_techniker=erlaubte_techniker,
+        )
+    except UngueltigeAbfrage as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc

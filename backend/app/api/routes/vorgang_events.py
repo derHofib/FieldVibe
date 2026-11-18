@@ -11,6 +11,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang_event import VorgangEventCreate, VorgangEventRead
 from app.services import storage_service
 from app.services import vorgang_verknuepfung_service
+from app.services.audit_service import ki_schreibzugriff_protokollieren
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
@@ -18,7 +19,7 @@ from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
 )
-from app.services.vorgang_event_service import to_read_model as _to_read_model
+from app.services.vorgang_event_service import mit_ki_kennzeichnung, to_read_model as _to_read_model
 from app.services.zuweisung_service import require_vorgang_zugriff
 
 router = APIRouter(
@@ -108,7 +109,7 @@ async def create_event(
         event_type=body.event_type,
         author_user_id=auth.user_id,
         body=body.body,
-        payload=body.payload,
+        payload=mit_ki_kennzeichnung(auth, body.payload),
         ref_entity_type=body.ref_entity_type,
         ref_entity_id=body.ref_entity_id,
         kundensichtbar=body.kundensichtbar,
@@ -122,6 +123,11 @@ async def create_event(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
         ) from exc
+
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_vorgang_event_angelegt", entity_type="vorgang", entity_id=vorgang_id,
+        payload={"event_id": event.id, "event_type": event.event_type},
+    )
 
     if body.body:
         await extract_and_notify_mentions(

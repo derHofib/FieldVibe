@@ -71,6 +71,7 @@ from app.schemas.form_modul import (
     FormViewUpdate,
 )
 from app.services import form_modul_service, photo_service, storage_service
+from app.services.audit_service import ki_schreibzugriff_protokollieren
 from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
@@ -186,6 +187,10 @@ async def create_schema(
     session.add(schema)
     await session.flush()
     await session.refresh(schema)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_formular_vorlage_angelegt", entity_type="form_schema", entity_id=schema.id,
+        payload={"name": schema.name},
+    )
     return schema
 
 
@@ -233,6 +238,10 @@ async def create_group(
     session.add(group)
     await session.flush()
     await session.refresh(group)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_formular_abschnitt_angelegt", entity_type="form_schema", entity_id=schema_id,
+        payload={"key": group.key},
+    )
     return group
 
 
@@ -296,6 +305,10 @@ async def create_field(
     session.add(field)
     await session.flush()
     await session.refresh(field)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_formular_feld_angelegt", entity_type="form_schema", entity_id=schema_id,
+        payload={"key": field.key, "feld_typ": field.feld_typ},
+    )
     return field
 
 
@@ -305,7 +318,11 @@ async def create_field(
     dependencies=[Depends(require_recht("formulare", "bearbeiten"))],
 )
 async def update_field(
-    schema_id: UUID, field_id: UUID, body: FormFieldUpdate, session: AsyncSession = Depends(get_db)
+    schema_id: UUID,
+    field_id: UUID,
+    body: FormFieldUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> FormField:
     field = await session.get(FormField, field_id)
     if field is None or field.schema_id != schema_id:
@@ -323,6 +340,10 @@ async def update_field(
         setattr(field, f, value)
     await session.flush()
     await session.refresh(field)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_formular_feld_geaendert", entity_type="form_schema", entity_id=schema_id,
+        payload={"key": field.key, "geaendert": sorted(daten)},
+    )
     return field
 
 
@@ -761,6 +782,10 @@ async def start_submission(
     session.add(submission)
     await session.flush()
     await session.refresh(submission)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_protokoll_angelegt", entity_type="form_submission", entity_id=submission.id,
+        payload={"vorgang_id": str(vorgang_id), "schema_id": str(schema.id)},
+    )
     return await form_modul_service.to_submission_read(session, submission)
 
 
@@ -874,6 +899,11 @@ async def update_submission_values(
     submission.values = neue_werte
     await session.flush()
     await session.refresh(submission)
+    if neue_werte != alte_werte:
+        await ki_schreibzugriff_protokollieren(
+            session, auth, aktion="ki_protokoll_ergaenzt", entity_type="form_submission", entity_id=submission.id,
+            payload={"felder": sorted(k for k in neue_werte if alte_werte.get(k) != neue_werte[k])},
+        )
     return await form_modul_service.to_submission_read(session, submission)
 
 

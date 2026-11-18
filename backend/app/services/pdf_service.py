@@ -1426,7 +1426,8 @@ def generate_form_submission_pdf(
             bild = bilder.get(field.key) if field.feld_typ in ("foto", "unterschrift", "foto_plan") else None
             _render_form_feld_zelle(pdf, field, wert, bild, x, y, layout.breite_mm, layout.hoehe_mm)
 
-    if not layouts and not headings_je_seite:
+    # Abschnitte werden unten angehaengt; "keine Felder" gilt nur, wenn auch dort nichts ausgegeben wird.
+    if not layouts and not headings_je_seite and not any(isinstance(values.get(g.key), list) and values.get(g.key) for g in groups):
         pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     for group in groups:
@@ -1450,7 +1451,9 @@ def generate_form_submission_pdf(
             for field in gruppen_felder:
                 label = field.label.get("de", field.key)
                 text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
-                pdf.multi_cell(0, 5, f"{label}: {text}")
+                # Cursor zurueck an den linken Rand: nach multi_cell steht er sonst rechts, und das
+                # naechste Feld derselben Gruppe scheitert mit "Not enough horizontal space".
+                pdf.multi_cell(0, 5, f"{label}: {text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(2)
             if not group.repeatable:
                 break

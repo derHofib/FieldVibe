@@ -46,7 +46,7 @@ from app.schemas.vorgang_abhaengigkeit import (
     VorgangAbhaengigkeitRead,
 )
 from app.services import papierkorb_service
-from app.services.audit_service import log_action
+from app.services.audit_service import ki_schreibzugriff_protokollieren, log_action
 from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
@@ -55,6 +55,7 @@ from app.services.form_modul_service import offene_pflichtschemas
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.partner_service import partner_hat_gueltige_freistellungsbescheinigung
 from app.services.rechte_service import darf_vorgang_selbst_uebernehmen
+from app.services.vorgang_event_service import mit_ki_kennzeichnung
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
@@ -312,11 +313,15 @@ async def create_vorgang(
             author_user_id=auth.user_id,
             is_system=True,
             body="Vorgang angelegt",
-            payload={"status": vorgang.status},
+            payload=mit_ki_kennzeichnung(auth, {"status": vorgang.status}),
         )
     )
     await session.flush()
     await session.refresh(vorgang)
+    await ki_schreibzugriff_protokollieren(
+        session, auth, aktion="ki_vorgang_angelegt", entity_type="vorgang", entity_id=vorgang.id,
+        payload={"vorgangsnummer": vorgang.vorgangsnummer},
+    )
 
     await event_bus.publish(
         auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "erstellt"}

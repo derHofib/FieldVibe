@@ -24,6 +24,11 @@ OHNE_MANDANT_ID: dict[str, str] = {
         "bewusst ohne RLS; Zugriff nur ueber super_admin-Route und Download-URLs"
     ),
     "alembic_version": "Migrationsstand von Alembic, keine Fachdaten",
+    "ki_clients": (
+        "per Dynamic Client Registration angelegte OAuth-Clients des MCP-Servers (Migration 0118): "
+        "die Registrierung passiert vor jedem Login ohne Mandanten-Kontext, enthalten sind nur "
+        "Client-Metadaten; die Mandantenbindung liegt in ki_verbindungen (RLS)"
+    ),
 }
 
 # Teilmenge von OHNE_MANDANT_ID, bei der RLS dennoch aktiv und erzwungen sein muss.

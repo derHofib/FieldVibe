@@ -96,6 +96,7 @@ export type MandantModul =
   | "fahrzeuge"
   | "highlights"
   | "karten"
+  | "ki_zugriff"
   | "nachunternehmer"
   | "postfach";
 

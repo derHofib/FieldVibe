@@ -36,6 +36,7 @@ from app.models.mail_outbox import MailOutbox
 from app.models.integration import MandantIntegration
 from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
+from app.models.ki_verbindung import KiClient, KiVerbindung
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.leistungsverzeichnis import (
@@ -89,6 +90,8 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
+    "KiClient",
+    "KiVerbindung",
     "Abwesenheitsantrag",
     "Urlaubsanspruch",
     "ArbeitszeitSoll",

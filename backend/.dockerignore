@@ -5,3 +5,5 @@ __pycache__
 *.pyc
 .pytest_cache
 *.md
+# Glossar der MCP-Ressource fieldvibe://begriffe (app/mcp/server.py) gehoert ins Image.
+!app/mcp/begriffe.md

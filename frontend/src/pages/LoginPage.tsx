@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import Blueprint from "../components/Blueprint";
 import { Logo } from "../components/brand/Logo";
 import { RechtlicheLinks } from "../components/RechtlicheLinks";
+import { holeLoginZiel } from "../utils/loginZiel";
 
 export function LoginPage() {
   const { login, loginMfa } = useAuth();
@@ -33,7 +34,7 @@ export function LoginPage() {
       }
       // "/" leitet je Rolle zur Startseite um (Plattform-Dashboard, Feed, Papierkorb);
       // ein fester Pfad landet fuer Mandanten-Nutzer seit der 404-Seite dort.
-      navigate("/", { replace: true });
+      navigate(holeLoginZiel() ?? "/", { replace: true });
     } catch (err) {
       // Abgelaufener Zwischen-Token (401): zurueck zur Passwort-Eingabe.
       if (mfaToken && err instanceof ApiError && err.status === 401 && !/Code/.test(err.message)) {
