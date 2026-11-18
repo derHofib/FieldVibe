@@ -83,6 +83,12 @@ async def test_mcp_ohne_token_liefert_401_mit_hinweis_auf_metadaten(mcp_client):
     assert "/.well-known/oauth-protected-resource/mcp" in resp.headers["www-authenticate"]
 
 
+async def test_request_id_middleware_greift_auch_fuer_mcp_und_oauth_pfade(mcp_client):
+    for pfad in ("/mcp", "/.well-known/oauth-authorization-server"):
+        antwort = await mcp_client.get(pfad, headers={"X-Request-ID": "test-request-1234"})
+        assert antwort.headers.get("x-request-id") == "test-request-1234", pfad
+
+
 async def test_fremder_host_wird_vom_dns_rebinding_schutz_abgelehnt(make_mandant, make_user, mcp_client):
     from httpx import ASGITransport, AsyncClient
 

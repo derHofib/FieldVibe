@@ -60,7 +60,9 @@ def fehler_fuer(antwort: httpx.Response) -> ToolError:
             + (f" ({detail})." if detail else ".")
         )
     if status == 404:
-        return ToolError(f"Nicht gefunden: {detail or 'der Eintrag existiert nicht oder ist für dich nicht sichtbar'}.")
+        return ToolError(
+            f"Nicht gefunden: {detail.rstrip('.') or 'der Eintrag existiert nicht oder ist für dich nicht sichtbar'}."
+        )
     if status == 422:
         return ToolError(f"Ungültige Eingabe: {detail or 'die Parameter passen nicht'}.")
     if status == 429:

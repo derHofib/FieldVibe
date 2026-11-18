@@ -231,6 +231,12 @@ In `.env` mindestens setzen:
 - `CORS_ORIGINS=["https://<DOMAIN_APP>","https://<DOMAIN_OFFICE>"]` – beide
   Einträge, sonst bleibt die Desktop-Ansicht ohne Daten.
 - `VITE_API_BASE_URL=https://<DOMAIN_API>`
+- `FIELDVIBE_API_PUBLIC_URL=https://<DOMAIN_API>` – öffentliche Basis-URL der
+  API für den MCP-Server (OAuth-Issuer und Resource-URL, siehe `docs/MCP.md`).
+  `docker-compose.prod.yml` setzt sie aus `DOMAIN_API`; nur überschreiben, wenn
+  Claude die API unter einer anderen Adresse erreicht. OAuth verlangt HTTPS: im
+  IP-Betrieb ohne TLS bleibt der MCP-Server aus (Warnung im Log), die übrige API
+  läuft normal.
 - `S3_PUBLIC_URL_BASE=https://<DOMAIN_S3>`
 - `DATABASE_URL`/`DATABASE_URL_SYNC` – Passwort aus `POSTGRES_PASSWORD`
   übernehmen (siehe Kommentare in der Datei).

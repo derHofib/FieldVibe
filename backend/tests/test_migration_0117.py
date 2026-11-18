@@ -39,6 +39,9 @@ def _snapshot(engine) -> list[tuple]:
 async def test_migration_0117_bereinigt_policies_und_ist_reversibel():
     engine = create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
     try:
+        # Stand genau nach 0117: spaetere Migrationen legen eigene Policies an und
+        # verschieben sonst die Zaehlung unten.
+        await _migrieren("downgrade", "0117")
         nachher = _snapshot(engine)
         assert nachher
         assert not [p for p in nachher if "is_super_admin" in f"{p[5]}{p[6]}"]
@@ -59,7 +62,7 @@ async def test_migration_0117_bereinigt_policies_und_ist_reversibel():
         assert all("is_super_admin" in f"{p[5]}{p[6]}" for p in vorher if p[1] != "plattform_integrationen_lesbar")
         assert len(vorher) == len(nachher) + 2
 
-        await _migrieren("upgrade", "head")
+        await _migrieren("upgrade", "0117")
         assert _snapshot(engine) == nachher
 
         await _migrieren("downgrade", "0116")
