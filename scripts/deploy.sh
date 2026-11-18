@@ -320,12 +320,33 @@ export DEPLOY_BACKUP_ERLEDIGT
 # den Migrationen laufen; bei einer Neuinstallation ist das Schema noch
 # leer. Idempotent, bei jedem Lauf sicher wiederholbar.
 log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirksame Mandantentrennung per Row-Level-Security)..."
-# Optional (DB_GETRENNTER_OWNER=1 in der .env oder schon vorhandene .env.migration):
-# getrennte Owner-Rolle, damit die App-Rolle RLS nicht per ALTER TABLE abschalten kann.
-OWNER_ARG=()
-if [[ "$(get_env DB_GETRENNTER_OWNER)" == "1" || -f .env.migration ]]; then OWNER_ARG=(--getrennter-owner); fi
-./scripts/app_rolle_einrichten.sh --nur-rolle ${OWNER_ARG[@]+"${OWNER_ARG[@]}"} --compose "${COMPOSE[*]}" \
+# Standard ist die getrennte Owner-Rolle (APP_DB_OWNER_USER, Standard fieldvibe_owner):
+# ihr gehoeren die Tabellen, Migrationen laufen als sie (scripts/migrieren.sh), die App-
+# Rolle kann RLS nicht per ALTER TABLE abschalten. Die Moduswahl liegt in
+# app_rolle_einrichten.sh (DB_GETRENNTER_OWNER=0 in der .env schaltet sie ab).
+# Eine Bestandsinstallation wird dabei einmalig umgestellt -- ohne frisches Backup nicht.
+OWNER_UMSTELLUNG=0
+if deploy_owner_umstellung_ansteht && deploy_postgres_laeuft; then
+  OWNER_UMSTELLUNG=1
+  if [[ "$DEPLOY_OHNE_BACKUP" == "1" ]]; then
+    err "Die einmalige Umstellung auf die getrennte Datenbank-Owner-Rolle (Eigentumswechsel an allen Tabellen) braucht ein Backup. Ohne --ohne-backup erneut starten, oder die Umstellung bewusst abschalten: DB_GETRENNTER_OWNER=0 in die .env schreiben (siehe docs/DEPLOYMENT.md)."
+  fi
+  log "Bestandsinstallation: stelle die Datenbank auf die getrennte Owner-Rolle um (Backup liegt vor)."
+fi
+./scripts/app_rolle_einrichten.sh --nur-rolle --compose "${COMPOSE[*]}" \
   || err "Einrichtung der App-Rolle fehlgeschlagen -- Row-Level-Security wäre sonst wirkungslos, Deployment abgebrochen."
+if [[ "$(get_env DB_GETRENNTER_OWNER)" == "0" ]]; then
+  warn "DB_GETRENNTER_OWNER=0: die App-Rolle besitzt die Tabellen und könnte Row-Level-Security per ALTER TABLE selbst abschalten. Empfohlen: Zeile aus der .env entfernen und dieses Skript erneut ausführen."
+fi
+if BESITZ_ERGEBNIS="$(deploy_besitz_pruefen)"; then
+  log "Besitzprüfung der Datenbank: ${BESITZ_ERGEBNIS}"
+else
+  warn "Besitzprüfung der Datenbank meldet eine Abweichung: ${BESITZ_ERGEBNIS}"
+fi
+if [[ $OWNER_UMSTELLUNG -eq 1 && "$(get_env DB_GETRENNTER_OWNER)" == "1" ]]; then
+  deploy_state_setzen DB_OWNER_UMGESTELLT_AM "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  deploy_state_setzen DB_OWNER_UMSTELLUNG_BACKUP "$(deploy_letzter_backup_stamp)"
+fi
 
 # --- 8a. MinIO-Image bereitstellen -------------------------------------------
 # Das in docker-compose.yml gepinnte MinIO-Tag gibt es auf Docker Hub nicht

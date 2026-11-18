@@ -146,6 +146,67 @@ db_restore_sql_stream() {
     -v ON_ERROR_STOP=1 --single-transaction
 }
 
+# --- Besitz nach Restore --------------------------------------------------------
+
+# Compose-Aufruf fuer scripts/app_rolle_einrichten.sh --compose: wie restore.sh/lib.sh
+# sonst auch "docker compose", bei bekanntem DEPLOY_MODE (.env) mit den Overlay-Dateien.
+besitz_compose_arg() {
+  case "${DEPLOY_MODE:-}" in
+    domain) echo "docker compose -f docker-compose.yml -f docker-compose.prod.yml" ;;
+    ip)     echo "docker compose -f docker-compose.yml -f docker-compose.ip.yml" ;;
+    *)      echo "docker compose" ;;
+  esac
+}
+
+# Setzt BESITZ_APP, BESITZ_SYSTEM, BESITZ_OWNER (leer = Owner-Rolle aus, DB_GETRENNTER_OWNER=0).
+# Gleiche Regel wie scripts/app_rolle_einrichten.sh: Owner-Modus ist Standard.
+besitz_rollen_bestimmen() {
+  BESITZ_APP="${APP_DB_USER:-fieldvibe_app}"
+  BESITZ_SYSTEM="${APP_DB_SYSTEM_USER:-fieldvibe_system}"
+  BESITZ_OWNER=""
+  [[ "${DB_GETRENNTER_OWNER:-}" != "0" ]] || return 0
+  if [[ -f "$REPO_DIR/.env.migration" ]]; then
+    BESITZ_OWNER="$(grep '^APP_DB_OWNER_USER=' "$REPO_DIR/.env.migration" | head -n1 | cut -d= -f2- || true)"
+  fi
+  BESITZ_OWNER="${BESITZ_OWNER:-fieldvibe_owner}"
+}
+
+# $1 = Datenbank. stdout = Ergebniszeile von scripts/sql/besitz_pruefen.sql
+# (ok|<eigentuemer>|...), bei Verstoss Fehlermeldung und Rueckgabe != 0.
+db_besitz_pruefen() {
+  local args
+  besitz_rollen_bestimmen
+  args=(-v "app_rolle=$BESITZ_APP" -v "system_rolle=$BESITZ_SYSTEM")
+  [[ -z "$BESITZ_OWNER" ]] || args+=(-v "owner_rolle=$BESITZ_OWNER")
+  docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$1" -Atq -v ON_ERROR_STOP=1 \
+    "${args[@]}" -f - <"$REPO_DIR/scripts/sql/besitz_pruefen.sql" 2>&1
+}
+
+# $1 = Datenbank (nach einem pg_restore --no-owner --no-acl). Uebertraegt Eigentum und
+# Rechte mit demselben SQL wie die Einrichtung (app_rolle_einrichten.sh --nur-besitz) und
+# prueft das Ergebnis. Setzt BESITZ_ERGEBNIS. Rueckgabe: 0 ok, 2 Rollen existieren auf
+# diesem Server nicht (alle drei bzw. zwei, Aufrufer entscheidet), 1 Fehler bzw. Verstoss.
+db_besitz_herstellen_und_pruefen() {
+  local db="$1" anzahl
+  besitz_rollen_bestimmen
+  local rolle
+  for rolle in "$BESITZ_APP" "$BESITZ_SYSTEM" ${BESITZ_OWNER:+"$BESITZ_OWNER"}; do
+    [[ "$rolle" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] || { fehler "Ungueltiger Rollenname in .env: $rolle"; return 1; }
+  done
+  local liste
+  liste="'$BESITZ_APP', '$BESITZ_SYSTEM'${BESITZ_OWNER:+, '$BESITZ_OWNER'}"
+  anzahl="$(db_sql postgres "SELECT count(*) FROM pg_roles WHERE rolname IN ($liste)")" || return 1
+  [[ "$anzahl" =~ ^[0-9]+$ ]] && (( anzahl == $(tr -cd ',' <<<"$liste" | wc -c) + 1 )) || return 2
+  if ! "$REPO_DIR/scripts/app_rolle_einrichten.sh" --nur-besitz --datenbank "$db" --compose "$(besitz_compose_arg)"; then
+    return 1
+  fi
+  if ! BESITZ_ERGEBNIS="$(db_besitz_pruefen "$db")"; then
+    fehler "Besitzpruefung von $db: $BESITZ_ERGEBNIS"
+    return 1
+  fi
+  log "Besitzpruefung von $db: $BESITZ_ERGEBNIS"
+}
+
 # stdout = MinIO-Datenverzeichnis als tar.gz. --volumes-from statt "exec minio
 # tar": das MinIO-Image bringt kein garantiertes tar/sh mit, ein separater
 # Alpine-Container mit geteiltem Volume ist unabhaengig vom Image-Inhalt.

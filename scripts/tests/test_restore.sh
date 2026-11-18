@@ -6,7 +6,7 @@ set -euo pipefail
 # shellcheck source=scripts/tests/helfer.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/helfer.sh"
 
-zeile_von() { grep -n -- "$1" "$T/stub.log" | head -n 1 | cut -d: -f1; }
+zeile_von() { grep -n -- "$1" "$T/stub.log" | head -n 1 | cut -d: -f1 || true; }
 
 echo "test_restore.sh"
 
@@ -17,15 +17,64 @@ lauf "$REPO/scripts/backup.sh"
 S="$(neuester_stamp "$BD")"
 lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja
 assert_rc 0 "restore db"
-assert_enthaelt "$T/pgrestore-args" "--clean --if-exists --exit-on-error --single-transaction" "pg_restore-Optionen"
-assert_enthaelt_nicht "$T/pgrestore-args" "--no-owner" "Eigentuemer (App-Rolle) bleiben erhalten"
+assert_enthaelt "$T/pgrestore-args" "--clean --if-exists --exit-on-error --single-transaction --no-owner --no-acl" "pg_restore-Optionen (immer ohne Eigentuemer/ACLs)"
 assert_enthaelt "$T/pgrestore-args" "-d fieldvibe" "Ziel-Datenbank"
 assert_eq "$(sha256sum <"$BD/db-$S.dump")" "$(sha256sum <"$T/pgrestore-stdin.bin")" "pg_restore bekam genau den gesicherten Dump"
 z_stop="$(zeile_von "compose stop backend worker")"; z_rest="$(zeile_von "pg_restore")"; z_start="$(zeile_von "compose start backend worker")"
-if [[ -n "$z_stop" && -n "$z_rest" && -n "$z_start" ]] && (( z_stop < z_rest && z_rest < z_start )); then _fv_ok; else _fv_schlecht "Reihenfolge stop -> pg_restore -> start ($z_stop/$z_rest/$z_start)"; fi
+z_besitz="$(zeile_von "-U fieldvibe -d fieldvibe -f -")"; z_pruef="$(zeile_von "-Atq -v ON_ERROR_STOP=1 -v app_rolle")"
+if [[ -n "$z_stop" && -n "$z_rest" && -n "$z_start" && -n "$z_besitz" && -n "$z_pruef" ]] \
+   && (( z_stop < z_rest && z_rest < z_besitz && z_besitz < z_pruef && z_pruef < z_start )); then _fv_ok
+else _fv_schlecht "Reihenfolge stop -> pg_restore -> Besitz -> Pruefung -> start ($z_stop/$z_rest/$z_besitz/$z_pruef/$z_start)" "$(cat "$T/stub.log")"; fi
+assert_enthaelt "$T/psql-stdin.bin" "\\set nur_besitz 1" "Besitz-SQL im Modus nur_besitz"
+assert_enthaelt "$T/psql-stdin.bin" "\\set owner_rolle fieldvibe_owner" "Owner-Modus ist Standard"
+assert_enthaelt_nicht "$T/psql-stdin.bin" "app_passwort fieldvibe" "keine Passwoerter im Besitz-SQL"
+assert_enthaelt "$OUT" "Besitzpruefung von fieldvibe: ok|fieldvibe_owner" "Ergebnis der Besitzpruefung geloggt"
 rm -f "$T/pgrestore-args"
 lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja --ohne-eigentuemer
-assert_enthaelt "$T/pgrestore-args" "--no-owner" "--ohne-eigentuemer reicht --no-owner durch"
+assert_rc 0 "veraltete Option --ohne-eigentuemer wird akzeptiert"
+assert_enthaelt "$T/pgrestore-args" "--no-owner --no-acl" "--ohne-eigentuemer aendert nichts"
+testumgebung_loeschen
+
+szenario "db: Besitzpruefung schlaegt fehl -> Exit 1, Backend/Worker bleiben gestoppt"
+testumgebung_anlegen
+lauf "$REPO/scripts/backup.sh"
+S="$(neuester_stamp "$BD")"
+LAUF_ENV=(STUB_BESITZ_FAIL=1)
+lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja
+assert_rc 1 "Besitzpruefung scheitert"
+assert_enthaelt "$OUT" "Besitzpruefung fehlgeschlagen" "Meldung der Pruefung"
+assert_enthaelt "$OUT" "bleiben gestoppt" "Klare Meldung"
+assert_enthaelt_nicht "$T/stub.log" "compose start backend worker" "Dienste nicht gestartet"
+LAUF_ENV=()
+testumgebung_loeschen
+
+szenario "db: fehlende Rollen -> Exit 1 mit Hinweis auf app_rolle_einrichten.sh; DB_GETRENNTER_OWNER=1 ohne .env.migration -> Fehler"
+testumgebung_anlegen
+lauf "$REPO/scripts/backup.sh"
+S="$(neuester_stamp "$BD")"
+LAUF_ENV=(STUB_ROLLEN_ANZAHL=0)
+lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja
+assert_rc 1 "Rollen fehlen"
+assert_enthaelt "$OUT" "app_rolle_einrichten.sh" "Hinweis"
+LAUF_ENV=()
+env_schreiben "DB_GETRENNTER_OWNER=1"
+lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja
+assert_rc 1 "Marker ohne .env.migration"
+assert_enthaelt "$OUT" ".env.migration fehlt" "klare Meldung"
+assert_enthaelt "$OUT" "app_rolle_einrichten.sh --nur-rolle" "Hinweis auf Neuanlage"
+testumgebung_loeschen
+
+szenario "db: mit DB_GETRENNTER_OWNER=0 gehoert alles der App-Rolle (kein owner_rolle im Besitz-SQL)"
+testumgebung_anlegen
+env_schreiben "DB_GETRENNTER_OWNER=0"
+lauf "$REPO/scripts/backup.sh"
+S="$(neuester_stamp "$BD")"
+LAUF_ENV=(STUB_ROLLEN_ANZAHL=2)
+lauf "$REPO/scripts/restore.sh" db "$BD/db-$S.dump" --ja
+assert_rc 0 "restore im App-Modus"
+assert_enthaelt_nicht "$T/psql-stdin.bin" "\\set owner_rolle fieldvibe" "kein Owner im Besitz-SQL"
+assert_enthaelt_nicht "$T/psql-pruefen-args" "owner_rolle" "kein Owner in der Besitzpruefung"
+LAUF_ENV=()
 testumgebung_loeschen
 
 szenario "db: ohne Terminal und ohne --ja wird nichts veraendert"
@@ -54,10 +103,10 @@ testumgebung_anlegen
 printf 'CREATE TABLE t (id int);\nINSERT INTO t VALUES (1);\n' | gzip >"$BD/db-20200101-000000.sql.gz"
 lauf "$REPO/scripts/restore.sh" db "$BD/db-20200101-000000.sql.gz" --ja
 assert_rc 0 "Altformat"
-assert_enthaelt "$T/psql-args" "ON_ERROR_STOP=1" "ON_ERROR_STOP"
-assert_enthaelt "$T/psql-args" "--single-transaction" "eine Transaktion"
-assert_eq "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" "$(head -n 1 "$T/psql-stdin.bin")" "Schema wird vorher neu angelegt"
-assert_enthaelt "$T/psql-stdin.bin" "INSERT INTO t VALUES (1);" "Inhalt des Altformats"
+assert_enthaelt "$T/psql-restore-args" "ON_ERROR_STOP=1" "ON_ERROR_STOP"
+assert_enthaelt "$T/psql-restore-args" "--single-transaction" "eine Transaktion"
+assert_eq "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" "$(head -n 1 "$T/psql-restore-stdin.bin")" "Schema wird vorher neu angelegt"
+assert_enthaelt "$T/psql-restore-stdin.bin" "INSERT INTO t VALUES (1);" "Inhalt des Altformats"
 assert_enthaelt "$OUT" "Kein Manifest" "Hinweis: keine Pruefsumme beim Altformat"
 testumgebung_loeschen
 
