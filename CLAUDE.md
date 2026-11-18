@@ -38,6 +38,11 @@ Dauerauftrag=wiederkehrender Auftrag, Mangel=Defekt→Angebot→Rechnung-Workflo
 - Felder, die nicht direkt per PATCH erreichbar sein dürfen (z. B. Status
   "abgerechnet"), bekommen ein eigenes eingeschränktes Literal-Schema
   (`VorgangStatusSetzbar` vs. `VorgangStatus` in `schemas/vorgang.py`)
+- Backfills: Migrationen laufen als Tabellen-Eigentümerin ohne RLS-Bypass
+  (FORCE RLS, kein `is_super_admin` mehr). Daten-Backfills auf RLS-Tabellen
+  nur in `with rls_fuer_backfill_aufheben("tabelle"):` aus
+  `app/db/migrations_helfer.py` (Beispiel 0119); keine Session-Variablen,
+  kein Commit im Block
 
 ## Design/UI
 Siehe `docs/DESIGN.md` für geltende UI-Konventionen (Icon-Badges +

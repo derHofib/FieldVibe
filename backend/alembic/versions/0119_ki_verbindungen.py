@@ -11,9 +11,9 @@ Anzeige im Profil. RLS nach Repo-Konvention.
 
 "ki_zugriff" wird wie "karten" (0048) opt-IN: bestehende Mandanten bekommen es in
 deaktivierte_module nachgetragen. Die Policy auf mandanten kennt seit 0117 den
-Super-Admin-Bypass nicht mehr -- der Backfill hebt FORCE ROW LEVEL SECURITY dafuer
-kurz auf (die Migrationsrolle ist Tabellenbesitzerin, damit gilt die Policy fuer
-sie dann nicht) und setzt es in derselben Transaktion wieder.
+Super-Admin-Bypass nicht mehr -- der Backfill laeuft deshalb innerhalb von
+rls_fuer_backfill_aufheben("mandanten") (app/db/migrations_helfer.py), das
+FORCE ROW LEVEL SECURITY kurz aufhebt und in derselben Transaktion wieder setzt.
 
 Revision ID: 0119
 Revises: 0118
@@ -24,6 +24,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from app.db.migrations_helfer import rls_fuer_backfill_aufheben
 
 revision: str = "0119"
 down_revision: Union[str, None] = "0118"
@@ -83,18 +85,16 @@ def upgrade() -> None:
     )
     _enable_rls("ki_verbindungen")
 
-    op.execute("ALTER TABLE mandanten NO FORCE ROW LEVEL SECURITY")
-    op.execute(
-        "UPDATE mandanten SET deaktivierte_module = deaktivierte_module || '[\"ki_zugriff\"]'::jsonb "
-        "WHERE NOT deaktivierte_module @> '[\"ki_zugriff\"]'::jsonb"
-    )
-    op.execute("ALTER TABLE mandanten FORCE ROW LEVEL SECURITY")
+    with rls_fuer_backfill_aufheben("mandanten"):
+        op.execute(
+            "UPDATE mandanten SET deaktivierte_module = deaktivierte_module || '[\"ki_zugriff\"]'::jsonb "
+            "WHERE NOT deaktivierte_module @> '[\"ki_zugriff\"]'::jsonb"
+        )
 
 
 def downgrade() -> None:
-    op.execute("ALTER TABLE mandanten NO FORCE ROW LEVEL SECURITY")
-    op.execute("UPDATE mandanten SET deaktivierte_module = deaktivierte_module - 'ki_zugriff'")
-    op.execute("ALTER TABLE mandanten FORCE ROW LEVEL SECURITY")
+    with rls_fuer_backfill_aufheben("mandanten"):
+        op.execute("UPDATE mandanten SET deaktivierte_module = deaktivierte_module - 'ki_zugriff'")
 
     op.execute("DROP POLICY IF EXISTS mandant_isolation ON ki_verbindungen")
     op.drop_table("ki_verbindungen")

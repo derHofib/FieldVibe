@@ -92,8 +92,9 @@ class Settings(BaseSettings):
     )
 
     # Start verweigern, wenn die App-Rolle Eigentuemerin der RLS-Tabellen ist
-    # (app/db/rollen_pruefung.py). Aus, solange Migrationen ueber dieselbe Rolle
-    # laufen; an, sobald eine getrennte Owner-Rolle eingerichtet ist.
+    # (app/db/rollen_pruefung.py). Code-Default aus (Dev/Tests: App-Rolle ist
+    # Eigentuemerin); scripts/app_rolle_einrichten.sh setzt es bei getrennter
+    # Owner-Rolle (Standard) auf 1, nur bei DB_GETRENNTER_OWNER=0 bleibt es aus.
     db_besitz_verboten: bool = Field(
         default=False, validation_alias="FIELDVIBE_DB_BESITZ_VERBOTEN"
     )

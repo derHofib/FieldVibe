@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
@@ -49,27 +49,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Migrationen laufen ueber die normale App-DB-Rolle (kein
-        # Postgres-Superuser, siehe 0-Downtime-Deployment/NOSUPERUSER-
-        # Haertung), die denselben Row-Level-Security-Policies unterliegt
-        # wie jede App-Session. Ohne Bypass sieht ein Backfill-UPDATE nur
-        # Zeilen des (hier gar nicht gesetzten) app.current_mandant und
-        # laesst andere Mandanten unveraendert -- ein nachfolgendes
-        # ALTER COLUMN ... SET NOT NULL prueft aber alle Zeilen und
-        # schlaegt dann mit NotNullViolation fehl (siehe 0023, wo genau
-        # das bei bestehenden Mandantendaten passiert ist).
-        connection.execute(text("SET app.is_super_admin = 'true'"))
-        # SQLAlchemy 2.0 "autobegin" hat durch das obige execute() bereits
-        # eine Transaktion auf der Connection eroeffnet. Ohne diesen Commit
-        # haengt sich context.begin_transaction() unten in eben diese schon
-        # laufende Transaktion ein, deren Ende (Connection-Close ohne
-        # explizites commit()) SQLAlchemy 2.0 als Rollback behandelt -- die
-        # Migration liefe dann scheinbar fehlerfrei durch (kein Traceback,
-        # exit code 0), aber jede DDL/DML dieser Migration waere beim
-        # Verbindungsende wieder verworfen. Der Commit hier schliesst die
-        # SET-Transaktion sauber ab, damit die eigentliche Migration in
-        # einer frischen, von alembic selbst verwalteten Transaktion laeuft.
-        connection.commit()
+        # Migrationen unterliegen wegen FORCE ROW LEVEL SECURITY den Policies;
+        # Backfills auf RLS-Tabellen gehen ueber app/db/migrations_helfer.py
+        # (rls_fuer_backfill_aufheben).
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
