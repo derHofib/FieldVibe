@@ -2,8 +2,8 @@
 
 Mitarbeiter eines Betriebs können FieldVibe aus Claude (claude.ai, Claude Desktop,
 Claude Code) heraus abfragen und auswerten, mit genau den Rechten, die sie in der App
-haben. Konzept und Etappenplan: `analyse/konzept-mcp.md`. **Etappe 1 ist nur lesend**;
-Schreib-Tools (Protokoll-Entwürfe, Kommentare) folgen in Etappe 2.
+haben. Konzept und Etappenplan: `analyse/konzept-mcp.md`. Etappe 1 ist nur lesend,
+Etappe 2 ergänzt Auswertungen, Protokoll-Tools und additive Schreib-Tools (siehe unten).
 
 ## Einrichtung
 
@@ -36,7 +36,7 @@ Die OAuth-Endpunkte (`/authorize`, `/token`, `/register`, `/revoke`) und die
 `/.well-known`-Metadaten liegen an der Wurzel der API-Domain, so suchen MCP-Clients sie.
 Das Frontend braucht die Seite `/ki-verbinden` (Einwilligung).
 
-## Tools (Etappe 1, alle nur lesend)
+## Tools (Lesen, Scope `fieldvibe.lesen`)
 
 | Tool | Zweck |
 | --- | --- |
@@ -49,6 +49,10 @@ Das Frontend braucht die Seite `/ki-verbinden` (Einwilligung).
 | `pruefungen_faellig` | fällige Prüfzyklen und Prüfmittel (Parameter `tage`, Standard 30) |
 | `formular_vorlagen`, `formular_lesen` | Protokoll-Vorlagen eines Vorgangs, ausgefüllte Protokolle |
 | `kennzahlen_vorgaenge`, `insights`, `offene_posten` | Auswertungen (Recht Statistik bzw. Abrechnung) |
+| `auswertung` | Kennzahl nach Gruppierung über `GET /api/statistik/aggregat` (feste Whitelist, Kombinationen in der Tool-Beschreibung) |
+| `arbeitszeit_saldo` | Soll/Ist/Saldo eines Mitarbeiters (`/api/arbeitszeit/saldo`) |
+| `protokoll_vorlagen_auflisten`, `protokoll_vorlage_lesen` | Protokoll-Vorlagen (Recht Formulare › sehen), Abschnitte/Felder kompakt |
+| `protokoll_pdf`, `maengelprotokoll_pdf` | PDF als eingebettete Ressource (Blob, bis 5 MB, sonst Hinweis auf die App) |
 
 Ressource `fieldvibe://begriffe`: Glossar (Kopie von `docs/BEGRIFFE.md` in
 `backend/app/mcp/begriffe.md`, weil das Backend-Image `docs/` nicht enthält; ein Test hält
@@ -57,6 +61,48 @@ beide gleich).
 Listen sind auf 100 Einträge je Aufruf begrenzt (Parameter `seite`). Die
 Vorgänge-Schnittstelle liefert höchstens 200 Einträge je Filter; darüber hinaus nur mit
 engeren Filtern (die Antwort sagt das im Feld `hinweis`).
+
+## Schreib-Tools (Etappe 2, Scope `fieldvibe.schreiben`)
+
+Nur sichtbar, wenn die Verbindung den Schreib-Scope hat; zusätzlich prüft jeder Aufruf das
+Recht `ki_zugriff.bearbeiten` neu (`load_access_token` streicht den Scope bei entzogenem Recht,
+`tools/_basis.zugriff` lehnt dann ab). Alle Tools sind `readOnlyHint=false`,
+`destructiveHint=false`, `idempotentHint=false` und tragen „(nur mit Schreibzugriff)“.
+
+| Tool | Wirkung |
+| --- | --- |
+| `kommentar_anlegen` | interner Kommentar im Vorgangsverlauf, nicht kundensichtbar |
+| `mangel_erfassen` | Mangel im Status „offen“ |
+| `vorgang_anlegen` | Vorgang im Status „neu“, ohne Zuweisung/Termin; `leistungstyp` Pflicht, `abrechnungsart` Standard `aufwand` |
+| `protokoll_entwurf_anlegen` | Protokoll (Status „offen“) aus einer **veröffentlichten** Vorlage; `werte` per Feld-Key oder Beschriftung, Gruppen als Objekt bzw. Liste |
+| `protokoll_entwurf_ergaenzen` | nur offene Protokolle; Befülltes bleibt (außer `vorhandene_ueberschreiben`), Listeneinträge werden angehängt |
+| `protokoll_vorlage_entwerfen` | neue Vorlage im Status `draft` (Abschnitte, Felder, Optionen); Ergebnis mit ID, Zusammenfassung und Link `…/form-schemas/<id>` |
+| `protokoll_vorlage_ueberarbeiten` | nur `draft`: Abschnitte/Felder hinzufügen, Beschriftung/Pflicht/Hilfetext/Optionen ändern |
+
+Foto, Unterschrift, Datei, GPS, QR-Scan und Fotoplan kann Claude nicht füllen (Fehlermeldung).
+Datenformat der Werte wie in der Feld-App: Zahl/Betrag als String, Ja/Nein als bool, nicht
+wiederholbare Abschnitte als Liste mit einer Zeile. Schlüssel (Keys) werden aus Labels erzeugt
+(ASCII, Umlaute transliteriert, je Vorlage eindeutig); der Link zeigt auf `frontend_base_url`
+(die Seite liegt in Feld-App und Office unter derselben Route). Scheitert ein Teilschritt, nennt die
+Fehlermeldung ID und Link des Entwurfs, damit ihn der Nutzer im Baukasten vollenden oder löschen kann.
+
+**Nie per KI:** Löschen, Status ändern/abschließen, Protokoll abschließen/unterschreiben, Vorlage
+veröffentlichen/archivieren oder Leistungstypen zuordnen, Angebote/Rechnungen, E-Mails, Exporte,
+Rechte/Nutzer. Durchgesetzt wird das fail-closed in `app/mcp/rest_client.py`
+(`SCHREIB_ALLOWLIST` aus Methode und Pfadmuster; alles andere ist ein `PermissionError`, ein Test
+deckt Löschen, Abschließen und das Veröffentlichen per `PATCH /api/form-schemas/{id}` ab).
+
+**Kennzeichnung:** Events, die per MCP entstehen (Kommentar, Mangel, „Vorgang angelegt“), tragen im
+`payload` `via: "claude"` und `ki_verbindung_id` (nur aus dem signierten Token gesetzt, vom Client
+gesendete Werte werden entfernt). Der Vorgangsverlauf zeigt „via Claude“. Zusätzlich schreiben
+die genutzten Routen bei MCP-Aufrufen Audit-Einträge `ki_*` mit `quelle = "ki"`.
+Vorlagen-Entwürfe: nur der Audit-Eintrag, `beschreibung` bleibt unverändert; das Tool-Ergebnis
+sagt „KI-Entwurf“.
+
+### Prompts
+
+`protokoll_vorlage_entwerfen` (thema, vorgaben), `wartungsprotokoll_zu_vorgang_ausfuellen`
+(vorgang_id), `monatsbericht` (monat, team). Sie geben nur Anweisungen vor.
 
 ## Sicherheitsmodell
 
@@ -79,7 +125,7 @@ engeren Filtern (die Antwort sagt das im Feld `hinweis`).
   `ki_clients` (registrierte OAuth-Clients) ist bewusst mandantenlos und ohne RLS, weil die
   Registrierung vor jedem Login passiert; sie enthält nur Client-Metadaten.
 - **Scopes.** `fieldvibe.lesen` (immer dabei) und `fieldvibe.schreiben` (nur mit Recht
-  `ki_zugriff.bearbeiten`, Etappe 2). Jeder Tool-Aufruf prüft den Scope.
+  `ki_zugriff.bearbeiten`). Jeder Tool-Aufruf prüft den Scope.
 - **Datensparsamkeit.** Antworten enthalten keine Felder mit Namen wie IBAN/BIC, Passwort,
   MFA, Token, Secret, Hash und keine signierten Datei-Links. Listen max. 100 Einträge je Aufruf.
 - **Nachvollziehbarkeit.** Einwilligung und Widerruf stehen im Audit-Log
