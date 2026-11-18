@@ -72,11 +72,11 @@ describe("KiVerbindenPage", () => {
     expect(screen.queryByLabelText(/Lesen und schreiben/)).not.toBeInTheDocument();
   });
 
-  it("bietet Schreiben nicht an, wenn nicht angefragt", async () => {
+  it("bietet Schreiben auch an, wenn der Client nur Lesen anfragt", async () => {
     anfrage.mockResolvedValue({ ...basis, scopes_angefragt: ["fieldvibe.lesen"] });
     rendern();
     await screen.findByLabelText(/Nur lesen/);
-    expect(screen.queryByLabelText(/Lesen und schreiben/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Lesen und schreiben/)).toBeInTheDocument();
   });
 
   it("lehnt ab und leitet weiter", async () => {

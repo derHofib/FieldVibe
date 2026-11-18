@@ -201,15 +201,19 @@ async def test_ungueltige_oder_abgelaufene_anfrage_ist_400(make_mandant, make_us
     assert resp.status_code == 400 and "abgelaufen" in resp.json()["detail"]
 
 
-async def test_scopes_nur_teilmenge_der_angefragten(make_mandant, make_user, mcp_client):
+async def test_schreiben_erteilbar_auch_wenn_nur_lesen_angefragt(make_mandant, make_user, mcp_client):
     _, admin = await _admin(make_mandant, make_user)
     login_token = await login(mcp_client, admin.email, PASSWORT)
     reg = await client_registrieren(mcp_client)
-    _, challenge = pkce_paar()
+    verifier, challenge = pkce_paar()
     anfrage = await anfrage_starten(mcp_client, reg["client_id"], challenge, LESEN)
-    resp = await einwilligen(mcp_client, login_token, anfrage, [LESEN, SCHREIBEN])
-    assert resp.status_code == 400
     assert (await einwilligen(mcp_client, login_token, anfrage, ["unbekannt"])).status_code == 400
+    resp = await einwilligen(mcp_client, login_token, anfrage, [LESEN, SCHREIBEN])
+    assert resp.status_code == 200
+    code, _ = code_aus(resp.json()["redirect_url"])
+    tokens = await token_tauschen(mcp_client, reg["client_id"], code, verifier)
+    assert tokens.status_code == 200
+    assert set(tokens.json()["scope"].split()) == {LESEN, SCHREIBEN}
 
 
 # --- Code, PKCE, Refresh ----------------------------------------------------------------
