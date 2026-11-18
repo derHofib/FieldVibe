@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.vorgang import Leistungstyp
 
@@ -11,6 +11,8 @@ FormViewTyp = Literal["capture", "print", "summary", "table", "public"]
 FormPraesentationsTyp = Literal["heading", "richtext", "divider", "spacer", "callout", "image", "computed_text"]
 FormLogicEffekt = Literal["show", "hide", "require", "readonly", "set_value"]
 FormSubmissionStatus = Literal["offen", "abgeschlossen"]
+# NULL in der DB (vor Migration 0120 angelegt) gilt als "app".
+FormErstelltVia = Literal["app", "ki"]
 FormFeldTyp = Literal[
     "text",
     "textarea",
@@ -73,7 +75,16 @@ class FormSchemaUpdate(BaseModel):
     status: FormSchemaStatus | None = None
 
 
+class FormSchemaLeistungstyp(BaseModel):
+    leistungstyp: Leistungstyp
+    pflicht_vor_abschluss: bool
+
+
 class FormSchemaRead(BaseModel):
+    """Die Aggregate (erstellt_von_name .. ausgefuellt_anzahl) fuellt
+    form_modul_service.schema_reads in einem Rutsch fuer mehrere Schemas;
+    die Defaults greifen nur dort, wo ein ORM-Objekt direkt serialisiert wird."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -83,8 +94,18 @@ class FormSchemaRead(BaseModel):
     status: FormSchemaStatus
     vorgaenger_id: UUID | None
     erstellt_von: UUID | None
+    erstellt_via: FormErstelltVia = "app"
+    erstellt_von_name: str | None = None
+    felder_anzahl: int = 0
+    leistungstypen: list[FormSchemaLeistungstyp] = []
+    ausgefuellt_anzahl: int = 0
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("erstellt_via", mode="before")
+    @classmethod
+    def _via_default(cls, v: Any) -> Any:
+        return v or "app"
 
 
 class FormGroupCreate(BaseModel):
@@ -332,8 +353,36 @@ class FormSubmissionRead(BaseModel):
     ausgefuellt_von: UUID | None
     kundensichtbar: bool
     abgeschlossen_am: datetime | None
+    erstellt_via: FormErstelltVia = "app"
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("erstellt_via", mode="before")
+    @classmethod
+    def _via_default(cls, v: Any) -> Any:
+        return v or "app"
+
+
+class FormSubmissionUebersichtEintrag(BaseModel):
+    id: UUID
+    schema_id: UUID
+    schema_name: str
+    schema_version: int
+    vorgang_id: UUID
+    vorgangsnummer: str
+    vorgang_titel: str | None
+    kunde_name: str | None
+    status: FormSubmissionStatus
+    erstellt_via: FormErstelltVia
+    ausgefuellt_von_name: str | None
+    kundensichtbar: bool
+    created_at: datetime
+    abgeschlossen_am: datetime | None
+
+
+class FormSubmissionUebersichtRead(BaseModel):
+    eintraege: list[FormSubmissionUebersichtEintrag]
+    gesamt: int
 
 
 class FormSchemaVerfuegbar(BaseModel):

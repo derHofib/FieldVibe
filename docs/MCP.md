@@ -47,12 +47,13 @@ Das Frontend braucht die Seite `/ki-verbinden` (Einwilligung).
 | `kunde_lesen`, `anlage_lesen` | Kunde mit Standorten/Anlagen; Anlage mit Historie und Prüfzyklen |
 | `termine_auflisten` | Dispo-Termine |
 | `pruefungen_faellig` | fällige Prüfzyklen und Prüfmittel (Parameter `tage`, Standard 30) |
-| `formular_vorlagen`, `formular_lesen` | Protokoll-Vorlagen eines Vorgangs, ausgefüllte Protokolle |
+| `formular_vorlagen`, `formular_lesen` | Protokoll-Vorlagen eines Vorgangs, ausgefüllte Protokolle (`formular_lesen` zusätzlich gruppiert nach Abschnitten mit Beschriftung, Grenzwert-Markierung, fehlenden Pflichtfeldern) |
 | `kennzahlen_vorgaenge`, `insights`, `offene_posten` | Auswertungen (Recht Statistik bzw. Abrechnung) |
 | `auswertung` | Kennzahl nach Gruppierung über `GET /api/statistik/aggregat` (feste Whitelist, Kombinationen in der Tool-Beschreibung) |
 | `arbeitszeit_saldo` | Soll/Ist/Saldo eines Mitarbeiters (`/api/arbeitszeit/saldo`) |
 | `protokoll_vorlagen_auflisten`, `protokoll_vorlage_lesen` | Protokoll-Vorlagen (Recht Formulare › sehen), Abschnitte/Felder kompakt |
 | `protokoll_pdf`, `maengelprotokoll_pdf` | PDF als eingebettete Ressource (Blob, bis 5 MB, sonst Hinweis auf die App) |
+| `protokoll_anzeigen` | Protokoll als Zusammenfassung (Abschnitte, Ja/Nein, Grenzwerte, fehlende Pflichtfelder, Fotos nur als Anzahl) mit Link „In FieldVibe öffnen“; Ansicht im Chat per MCP Apps, sonst Text |
 
 Ressource `fieldvibe://begriffe`: Glossar (Kopie von `docs/BEGRIFFE.md` in
 `backend/app/mcp/begriffe.md`, weil das Backend-Image `docs/` nicht enthält; ein Test hält
@@ -112,6 +113,26 @@ gesendete Werte werden entfernt). Der Vorgangsverlauf zeigt „via Claude“. Zu
 die genutzten Routen bei MCP-Aufrufen Audit-Einträge `ki_*` mit `quelle = "ki"`.
 Vorlagen-Entwürfe: nur der Audit-Eintrag, `beschreibung` bleibt unverändert; das Tool-Ergebnis
 sagt „KI-Entwurf“.
+
+### Ansichten im Chat (MCP Apps)
+
+Der Server meldet die Erweiterung `io.modelcontextprotocol/ui` (`mcp.server.apps`). Zwei statische
+HTML-Ressourcen liegen in `backend/app/mcp/ui/` (hell/dunkel per `prefers-color-scheme`, keine externen
+Skripte, Daten nur aus dem Tool-Ergebnis, Texte nur per `textContent`):
+`ui://fieldvibe/protokoll.html` (Tool `protokoll_anzeigen`) und `ui://fieldvibe/vorlage.html`
+(Ergebnis von `protokoll_vorlage_entwerfen`/`_ueberarbeiten`, Link „Im Baukasten prüfen“). Die Tools
+tragen `_meta.ui.resourceUri`; die Daten stehen im `structuredContent`, dieselben Inhalte als Text im
+`content`. Clients ohne MCP Apps ignorieren den Verweis. Fotos erscheinen nur als Anzahl, nie als
+Storage-Key oder signierter Link. Links zeigen auf `frontend_base_url` (`/form-submissions/{id}`,
+`/form-schemas/{id}`).
+
+Hinweis zum Betrieb: Im zustandslosen Betrieb sieht der Server die Fähigkeiten eines Clients des
+älteren Protokolls (`initialize`) nicht; `client_supports_apps` greift dort nie, es bleibt beim Text plus
+`structuredContent`. Mit dem modernen Umschlag (Protokoll 2026-07-28, Fähigkeiten je Anfrage) erkennt der Server
+Apps-Clients und lässt den Hinweis „Ansicht wird im Chat angezeigt“ voranstellen.
+
+**Herkunft:** `form_schemas.erstellt_via` und `form_submissions.erstellt_via` (`app`/`ki`, NULL = `app`)
+werden nur aus `auth.via == "mcp"` gesetzt (Migration 0120), nie aus dem Request.
 
 ### Prompts
 
