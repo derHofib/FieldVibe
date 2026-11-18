@@ -1450,7 +1450,9 @@ def generate_form_submission_pdf(
             for field in gruppen_felder:
                 label = field.label.get("de", field.key)
                 text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
-                pdf.multi_cell(0, 5, f"{label}: {text}")
+                # Cursor zurueck an den linken Rand: nach multi_cell steht er sonst rechts, und das
+                # naechste Feld derselben Gruppe scheitert mit "Not enough horizontal space".
+                pdf.multi_cell(0, 5, f"{label}: {text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(2)
             if not group.repeatable:
                 break
