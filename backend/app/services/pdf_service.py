@@ -1286,9 +1286,39 @@ class _FormularPDF(FPDF):
         self.set_text_color(0, 0, 0)
 
 
+_FORMULAR_ROT = (220, 38, 38)
+
+
+def _fmt_grenze(grenze: object) -> str:
+    zahl = Decimal(str(grenze))
+    return str(int(zahl)) if zahl == zahl.to_integral_value() else str(zahl.normalize()).replace(".", ",")
+
+
+def _grenzwert_hinweis(field: FormField, wert: object) -> str | None:
+    """"über X"/"unter X", wenn ein Zahlenwert ausserhalb von validation.warn_max/warn_min liegt. Nur
+    Anzeige: gespeichert wird immer, ein nicht lesbarer Wert (Freitext im Zahlenfeld) bleibt unmarkiert."""
+    if field.feld_typ != "zahl" or wert is None or wert == "" or isinstance(wert, bool):
+        return None
+    validation = field.validation or {}
+    try:
+        zahl = Decimal(str(wert).strip().replace(",", "."))
+        warn_max = validation.get("warn_max")
+        warn_min = validation.get("warn_min")
+        if warn_max is not None and zahl > Decimal(str(warn_max)):
+            return f"über {_fmt_grenze(warn_max)}"
+        if warn_min is not None and zahl < Decimal(str(warn_min)):
+            return f"unter {_fmt_grenze(warn_min)}"
+    except ArithmeticError:
+        return None
+    return None
+
+
 def _form_antwort_text(field: FormField, wert: object) -> str:
     if wert is None or wert == "":
         return "-"
+    hinweis = _grenzwert_hinweis(field, wert)
+    if hinweis:
+        return f"{_pdf_safe_text(wert)} ({hinweis})"
     if field.feld_typ == "ja_nein":
         return "Ja" if wert else "Nein"
     if field.feld_typ == "mehrfachauswahl" and isinstance(wert, list):
@@ -1340,7 +1370,12 @@ def _render_form_feld_zelle(
 
     pdf.set_xy(x, wert_y)
     pdf.set_font("Helvetica", "", 9)
+    ausserhalb = _grenzwert_hinweis(field, wert) is not None
+    if ausserhalb:
+        pdf.set_text_color(*_FORMULAR_ROT)
     pdf.multi_cell(breite, min(wert_hoehe, 5.0), _form_antwort_text(field, wert))
+    if ausserhalb:
+        pdf.set_text_color(0, 0, 0)
 
 
 def generate_form_submission_pdf(
@@ -1450,10 +1485,16 @@ def generate_form_submission_pdf(
             pdf.set_font("Helvetica", "", 9)
             for field in gruppen_felder:
                 label = field.label.get("de", field.key)
-                text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
+                zellwert = zeile.get(field.key) if isinstance(zeile, dict) else None
+                text = _form_antwort_text(field, zellwert)
+                ausserhalb = _grenzwert_hinweis(field, zellwert) is not None
+                if ausserhalb:
+                    pdf.set_text_color(*_FORMULAR_ROT)
                 # Cursor zurueck an den linken Rand: nach multi_cell steht er sonst rechts, und das
                 # naechste Feld derselben Gruppe scheitert mit "Not enough horizontal space".
                 pdf.multi_cell(0, 5, f"{label}: {text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                if ausserhalb:
+                    pdf.set_text_color(0, 0, 0)
             pdf.ln(2)
             if not group.repeatable:
                 break

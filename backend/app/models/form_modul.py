@@ -89,6 +89,8 @@ class FormSchema(Base, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("form_schemas.id"), nullable=True
     )
     erstellt_von: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # Migration 0120: nur serverseitig aus dem Token gesetzt ('ki' bei auth.via == "mcp"); NULL = Altbestand = 'app'.
+    erstellt_via: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class FormGroup(Base):
@@ -232,6 +234,7 @@ class FormSubmission(Base, TimestampMixin):
     # befuellt, nicht ueber server_default -- siehe SoftDeleteMixin-
     # Docstring in app/db/base.py fuer dieselbe Falle.
     abgeschlossen_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    erstellt_via: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class FormSubmissionAudit(Base):
