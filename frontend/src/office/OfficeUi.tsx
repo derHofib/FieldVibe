@@ -10,18 +10,24 @@ import type { CSSProperties, ReactNode } from "react";
 export function SeitenKopf({
   titel,
   anzahl,
+  untertitel,
   children,
 }: {
   titel: string;
   anzahl?: number;
+  /** Ein erklärender Satz unter dem Titel (ohne Fachbegriffe). */
+  untertitel?: string;
   children?: ReactNode;
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="ap-heading text-titel-desktop font-semibold text-label">
-        {titel}
-        {anzahl !== undefined && <span className="ml-2 text-sekundaer font-medium text-label2">{anzahl}</span>}
-      </h1>
+      <div>
+        <h1 className="ap-heading text-titel-desktop font-semibold text-label">
+          {titel}
+          {anzahl !== undefined && <span className="ml-2 text-sekundaer font-medium text-label2">{anzahl}</span>}
+        </h1>
+        {untertitel && <p className="mt-1 text-sekundaer text-label2">{untertitel}</p>}
+      </div>
       <div className="flex items-center gap-2">{children}</div>
     </div>
   );
