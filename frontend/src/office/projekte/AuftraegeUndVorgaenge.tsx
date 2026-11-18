@@ -68,7 +68,7 @@ function VorgangZeile({ vorgang, onOeffnen }: { vorgang: Vorgang; onOeffnen: () 
         {vorgang.verknuepfung_eigenstaendig && (
           <span className="inline-flex shrink-0 items-center gap-1 text-meta text-label2" title="Eigenständig geführt, zählt trotzdem im Auftrag und Projekt mit">
             <Lock size={12} strokeWidth={1.5} aria-hidden="true" />
-            eigenständig
+            <span className="sr-only">eigenständig</span>
           </span>
         )}
         <VorgangStatusPille status={vorgang.status} />
@@ -118,7 +118,7 @@ export function AuftraegeUndVorgaenge({
             const offen = umgeschaltet[auftrag.id] ?? standard;
             return (
               <div key={auftrag.id} className="py-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5">
+                <div className="flex items-center gap-2 py-1.5">
                   <button
                     type="button"
                     aria-expanded={offen}
@@ -131,17 +131,20 @@ export function AuftraegeUndVorgaenge({
                   <span className={KACHEL}>
                     <ClipboardList size={15} strokeWidth={1.5} aria-hidden="true" />
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => navigate(auftragLink(auftrag.id))}
-                    className="min-w-0 truncate text-left text-fliess font-semibold text-label hover:underline"
-                  >
-                    {auftrag.titel}
-                  </button>
-                  <StatusPille status={auftragStatusZuToken(auftrag.status)} label={AUFTRAG_STATUS_LABEL[auftrag.status]} />
-                  <span className="ml-auto">
-                    <Fortschritt erledigt={erledigt} gesamt={eigene.length} />
-                  </span>
+                  {/* Titel und Kennzahlen zweizeilig, damit der Auftragstitel im schmalen Panel lesbar bleibt */}
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate(auftragLink(auftrag.id))}
+                      className="block max-w-full truncate text-left text-fliess font-semibold text-label hover:underline"
+                    >
+                      {auftrag.titel}
+                    </button>
+                    <div className="mt-0.5 flex items-center gap-3">
+                      <StatusPille status={auftragStatusZuToken(auftrag.status)} label={AUFTRAG_STATUS_LABEL[auftrag.status]} />
+                      <Fortschritt erledigt={erledigt} gesamt={eigene.length} />
+                    </div>
+                  </div>
                 </div>
                 {offen && (
                   <div className="pl-10">
