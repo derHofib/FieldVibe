@@ -35,6 +35,7 @@ import { SettingsPage } from "../pages/feld/SettingsPage";
 import { StandortDetailPage } from "../pages/feld/StandortDetailPage";
 import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
+import { Karte } from "./OfficeUi";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
 import { RouteGuard } from "../components/RouteGuard";
@@ -113,7 +114,9 @@ export function OfficeApp() {
             path="/vorgaenge/:id/vollbild"
             element={
               <div className="max-w-[1400px]">
-                <VorgangDetailPage layout="dicht" breit />
+                <Karte className="office-panel p-4">
+                  <VorgangDetailPage layout="dicht" breit />
+                </Karte>
               </div>
             }
           />

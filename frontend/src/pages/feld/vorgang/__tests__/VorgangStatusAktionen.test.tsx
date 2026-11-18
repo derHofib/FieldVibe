@@ -14,10 +14,33 @@ describe("VorgangStatusAktionen", () => {
     expect(onWaehle).toHaveBeenCalledWith("abgeschlossen");
   });
 
-  it("zeigt ohne Änderungsrecht nur den Status", () => {
+  it("zeigt ohne Änderungsrecht keine Buttons und keine Status-Pille (die steht im Kopf)", () => {
     render(<VorgangStatusAktionen status="neu" darfAendern={false} pending={false} onWaehle={vi.fn()} />);
-    expect(screen.getByText("Neu")).toBeTruthy();
+    expect(screen.queryByText("Neu")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it.each([
+    ["neu", "Starten"],
+    ["geplant", "Starten"],
+    ["in_arbeit", "Fertig melden"],
+    ["wartet_kunde", "Wieder aufnehmen"],
+  ] as const)("hat für %s genau die Hauptaktion '%s'", (status, label) => {
+    render(<VorgangStatusAktionen status={status} darfAendern pending={false} onWaehle={vi.fn()} />);
+    const primaer = screen.getAllByRole("button").filter((b) => b.className.includes("btn-ap-primary"));
+    expect(primaer).toHaveLength(1);
+    expect(primaer[0].textContent).toContain(label);
+  });
+
+  it("nutzt bei abgeschlossen den Ersatzschritt 'Rechnung erstellen' als Hauptaktion", () => {
+    const onClick = vi.fn();
+    render(
+      <VorgangStatusAktionen status="abgeschlossen" darfAendern pending={false} onWaehle={vi.fn()} ersatzSchritt={{ label: "Rechnung erstellen", onClick }} />,
+    );
+    const knopf = screen.getByRole("button", { name: "Rechnung erstellen" });
+    expect(knopf.className).toContain("btn-ap-primary");
+    fireEvent.click(knopf);
+    expect(onClick).toHaveBeenCalled();
   });
 
   it("macht den Schritt sekundär, wenn die Seite schon eine Primäraktion zeigt", () => {
