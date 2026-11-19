@@ -142,6 +142,7 @@ async def _b_daten_anlegen(mandant_b, user_b, kunde, vorgang, anlage) -> None:
         await _insert(s, "dauerauftraege", mandant_id=m, kunde_id=kunde.id, titel=f"Dauer {MARKER}", abrechnungsart="aufwand",
                       leistungstyp="wartung", intervall_tage=30)
         await _insert(s, "gespeicherte_filter", mandant_id=m, user_id=u, entitaet="vorgaenge", name=f"Filter {MARKER}")
+        await _insert(s, "kennzahlen_dashboards", mandant_id=m, user_id=u, name=f"Dashboard {MARKER}", layout={"zeitraum": "monat", "widgets": []})
         await _insert(s, "abwesenheitsantraege", mandant_id=m, user_id=u, art="urlaub", von=heute, bis=heute, erstellt_von=u)
         await _insert(s, "form_schemas", mandant_id=m, name=f"Formular {MARKER}")
         await _insert(s, "leistungsverzeichnisse", mandant_id=m, name=f"LV {MARKER}")
