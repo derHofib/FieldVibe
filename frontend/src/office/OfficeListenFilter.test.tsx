@@ -14,6 +14,7 @@ const daten = vi.hoisted(() => ({ kunden: [] as unknown[], partner: [] as unknow
 vi.mock("../api/endpoints", () => ({
   kundenApi: { list: () => Promise.resolve(daten.kunden) },
   partnerApi: { list: () => Promise.resolve(daten.partner) },
+  usersApi: { auswahl: () => Promise.resolve([]) },
   gespeicherteFilterApi: { list: () => Promise.resolve([]) },
 }));
 vi.mock("../context/AuthContext", () => ({
