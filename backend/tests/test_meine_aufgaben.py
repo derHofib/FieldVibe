@@ -242,3 +242,27 @@ async def test_gespeicherter_filter_entitaet_aufgaben(client, make_mandant, make
     assert resp.status_code == 201, resp.text
     liste = await client.get("/api/gespeicherte-filter?entitaet=aufgaben", headers=h)
     assert [f["name"] for f in liste.json()] == ["Offene"]
+
+
+@pytest.mark.asyncio
+async def test_einzelabruf_post_patch_liefern_details(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant, admin, h = await _admin(client, make_mandant, make_user)
+    kunde = await make_kunde(mandant=mandant)
+    projekt = await _projekt(mandant, admin)
+    auftrag = await _auftrag(mandant, admin, projekt=projekt)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, titel="Vorgangstitel", auftrag_id=auftrag.id)
+    erstellt = await client.post("/api/projekt-aufgaben", headers=h, json={"titel": "E", "vorgang_id": str(vorgang.id)})
+    assert erstellt.status_code == 201
+    assert erstellt.json()["pfad_projekt_name"] == "Projekt A"
+    aid = erstellt.json()["id"]
+
+    einzeln = await client.get(f"/api/projekt-aufgaben/{aid}", headers=h)
+    assert einzeln.status_code == 200
+    assert einzeln.json()["vorgang_titel"] == "Vorgangstitel"
+    assert einzeln.json()["pfad_auftrag_id"] == str(auftrag.id)
+    assert einzeln.json()["auftrag_titel"] == "Auftrag 1"
+
+    patch = await client.patch(f"/api/projekt-aufgaben/{aid}", headers=h, json={"titel": "E2"})
+    assert patch.status_code == 200
+    assert patch.json()["titel"] == "E2"
+    assert patch.json()["pfad_projekt_id"] == str(projekt.id)

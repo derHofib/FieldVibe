@@ -440,6 +440,92 @@ def _mit_details(zeilen) -> list[ProjektAufgabeMitDetails]:
     return ergebnis
 
 
+def _details_select():
+    """Gemeinsame Basis-Query (Joins fuer Namen/Pfad) fuer Liste und Einzelabruf."""
+    Kind = aliased(ProjektAufgabe)
+    VorgangKunde = aliased(Kunde)
+    KartenProjekt = aliased(Projekt)
+    Spalte = aliased(ProjektSpalte)
+    DirektAuftrag = aliased(Auftrag)
+    VorgangAuftrag = aliased(Auftrag)
+    DirektAuftragProjekt = aliased(Projekt)
+    VorgangAuftragProjekt = aliased(Projekt)
+    VorgangProjekt = aliased(Projekt)
+    unteraufgaben_gesamt_sq = (
+        select(func.count())
+        .select_from(Kind)
+        .where(Kind.eltern_aufgabe_id == ProjektAufgabe.id, Kind.geloescht_am.is_(None))
+        .correlate(ProjektAufgabe)
+        .scalar_subquery()
+    )
+    unteraufgaben_erledigt_sq = (
+        select(func.count())
+        .select_from(Kind)
+        .where(
+            Kind.eltern_aufgabe_id == ProjektAufgabe.id,
+            Kind.geloescht_am.is_(None),
+            Kind.erledigt_am.isnot(None),
+        )
+        .correlate(ProjektAufgabe)
+        .scalar_subquery()
+    )
+
+    return (
+        select(
+            ProjektAufgabe,
+            User.name.label("zugewiesener_name"),
+            Vorgang.vorgangsnummer.label("vorgangsnummer"),
+            VorgangKunde.name.label("vorgang_kunde_name"),
+            Anlage.bezeichnung.label("anlage_name"),
+            Kunde.name.label("kunde_name"),
+            Standort.bezeichnung.label("standort_name"),
+            unteraufgaben_gesamt_sq.label("unteraufgaben_gesamt"),
+            unteraufgaben_erledigt_sq.label("unteraufgaben_erledigt"),
+            KartenProjekt.name.label("karten_projekt_name"),
+            Spalte.name.label("spalte_name"),
+            Vorgang.titel.label("vorgang_titel"),
+            Vorgang.status.label("vorgang_status"),
+            VorgangAuftrag.id.label("va_id"),
+            VorgangAuftrag.titel.label("va_titel"),
+            VorgangAuftrag.status.label("va_status"),
+            VorgangAuftragProjekt.id.label("vap_id"),
+            VorgangAuftragProjekt.name.label("vap_name"),
+            VorgangProjekt.id.label("vp_id"),
+            VorgangProjekt.name.label("vp_name"),
+            DirektAuftrag.id.label("da_id"),
+            DirektAuftrag.titel.label("da_titel"),
+            DirektAuftrag.status.label("da_status"),
+            DirektAuftragProjekt.id.label("dap_id"),
+            DirektAuftragProjekt.name.label("dap_name"),
+        )
+        .outerjoin(User, User.id == ProjektAufgabe.zugewiesen_an)
+        .outerjoin(Vorgang, Vorgang.id == ProjektAufgabe.vorgang_id)
+        .outerjoin(VorgangKunde, VorgangKunde.id == Vorgang.kunde_id)
+        .outerjoin(Anlage, Anlage.id == ProjektAufgabe.anlage_id)
+        .outerjoin(Kunde, Kunde.id == ProjektAufgabe.kunde_id)
+        .outerjoin(Standort, Standort.id == ProjektAufgabe.standort_id)
+        .outerjoin(KartenProjekt, KartenProjekt.id == ProjektAufgabe.projekt_id)
+        .outerjoin(Spalte, Spalte.id == ProjektAufgabe.spalte_id)
+        .outerjoin(
+            DirektAuftrag, and_(DirektAuftrag.id == ProjektAufgabe.auftrag_id, DirektAuftrag.geloescht_am.is_(None))
+        )
+        .outerjoin(
+            DirektAuftragProjekt,
+            and_(DirektAuftragProjekt.id == DirektAuftrag.projekt_id, DirektAuftragProjekt.geloescht_am.is_(None)),
+        )
+        .outerjoin(
+            VorgangAuftrag, and_(VorgangAuftrag.id == Vorgang.auftrag_id, VorgangAuftrag.geloescht_am.is_(None))
+        )
+        .outerjoin(
+            VorgangAuftragProjekt,
+            and_(VorgangAuftragProjekt.id == VorgangAuftrag.projekt_id, VorgangAuftragProjekt.geloescht_am.is_(None)),
+        )
+        .outerjoin(
+            VorgangProjekt, and_(VorgangProjekt.id == Vorgang.projekt_id, VorgangProjekt.geloescht_am.is_(None))
+        )
+    )
+
+
 @aufgaben_router.get("", response_model=list[ProjektAufgabeMitDetails])
 async def list_aufgaben(
     projekt_id: UUID | None = Query(default=None),
@@ -498,87 +584,8 @@ async def list_aufgaben(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
         bedingung = ProjektAufgabe.projekt_id.isnot(None)
 
-    Kind = aliased(ProjektAufgabe)
-    VorgangKunde = aliased(Kunde)
-    KartenProjekt = aliased(Projekt)
-    Spalte = aliased(ProjektSpalte)
-    DirektAuftrag = aliased(Auftrag)
-    VorgangAuftrag = aliased(Auftrag)
-    DirektAuftragProjekt = aliased(Projekt)
-    VorgangAuftragProjekt = aliased(Projekt)
-    VorgangProjekt = aliased(Projekt)
-    unteraufgaben_gesamt_sq = (
-        select(func.count())
-        .select_from(Kind)
-        .where(Kind.eltern_aufgabe_id == ProjektAufgabe.id, Kind.geloescht_am.is_(None))
-        .correlate(ProjektAufgabe)
-        .scalar_subquery()
-    )
-    unteraufgaben_erledigt_sq = (
-        select(func.count())
-        .select_from(Kind)
-        .where(
-            Kind.eltern_aufgabe_id == ProjektAufgabe.id,
-            Kind.geloescht_am.is_(None),
-            Kind.erledigt_am.isnot(None),
-        )
-        .correlate(ProjektAufgabe)
-        .scalar_subquery()
-    )
-
     stmt = (
-        select(
-            ProjektAufgabe,
-            User.name.label("zugewiesener_name"),
-            Vorgang.vorgangsnummer.label("vorgangsnummer"),
-            VorgangKunde.name.label("vorgang_kunde_name"),
-            Anlage.bezeichnung.label("anlage_name"),
-            Kunde.name.label("kunde_name"),
-            Standort.bezeichnung.label("standort_name"),
-            unteraufgaben_gesamt_sq.label("unteraufgaben_gesamt"),
-            unteraufgaben_erledigt_sq.label("unteraufgaben_erledigt"),
-            KartenProjekt.name.label("karten_projekt_name"),
-            Spalte.name.label("spalte_name"),
-            Vorgang.titel.label("vorgang_titel"),
-            Vorgang.status.label("vorgang_status"),
-            VorgangAuftrag.id.label("va_id"),
-            VorgangAuftrag.titel.label("va_titel"),
-            VorgangAuftrag.status.label("va_status"),
-            VorgangAuftragProjekt.id.label("vap_id"),
-            VorgangAuftragProjekt.name.label("vap_name"),
-            VorgangProjekt.id.label("vp_id"),
-            VorgangProjekt.name.label("vp_name"),
-            DirektAuftrag.id.label("da_id"),
-            DirektAuftrag.titel.label("da_titel"),
-            DirektAuftrag.status.label("da_status"),
-            DirektAuftragProjekt.id.label("dap_id"),
-            DirektAuftragProjekt.name.label("dap_name"),
-        )
-        .outerjoin(User, User.id == ProjektAufgabe.zugewiesen_an)
-        .outerjoin(Vorgang, Vorgang.id == ProjektAufgabe.vorgang_id)
-        .outerjoin(VorgangKunde, VorgangKunde.id == Vorgang.kunde_id)
-        .outerjoin(Anlage, Anlage.id == ProjektAufgabe.anlage_id)
-        .outerjoin(Kunde, Kunde.id == ProjektAufgabe.kunde_id)
-        .outerjoin(Standort, Standort.id == ProjektAufgabe.standort_id)
-        .outerjoin(KartenProjekt, KartenProjekt.id == ProjektAufgabe.projekt_id)
-        .outerjoin(Spalte, Spalte.id == ProjektAufgabe.spalte_id)
-        .outerjoin(
-            DirektAuftrag, and_(DirektAuftrag.id == ProjektAufgabe.auftrag_id, DirektAuftrag.geloescht_am.is_(None))
-        )
-        .outerjoin(
-            DirektAuftragProjekt,
-            and_(DirektAuftragProjekt.id == DirektAuftrag.projekt_id, DirektAuftragProjekt.geloescht_am.is_(None)),
-        )
-        .outerjoin(
-            VorgangAuftrag, and_(VorgangAuftrag.id == Vorgang.auftrag_id, VorgangAuftrag.geloescht_am.is_(None))
-        )
-        .outerjoin(
-            VorgangAuftragProjekt,
-            and_(VorgangAuftragProjekt.id == VorgangAuftrag.projekt_id, VorgangAuftragProjekt.geloescht_am.is_(None)),
-        )
-        .outerjoin(
-            VorgangProjekt, and_(VorgangProjekt.id == Vorgang.projekt_id, VorgangProjekt.geloescht_am.is_(None))
-        )
+        _details_select()
         .where(
             ProjektAufgabe.geloescht_am.is_(None), ProjektAufgabe.typ.notin_(ZEITPLAN_NUR_TYPEN), bedingung
         )
@@ -673,12 +680,17 @@ async def _pruefe_verknuepfungen(
         )
 
 
-@aufgaben_router.post("", response_model=ProjektAufgabeRead, status_code=status.HTTP_201_CREATED)
+async def _lade_mit_details(session: AsyncSession, aufgabe_id: UUID) -> ProjektAufgabeMitDetails:
+    zeile = (await session.execute(_details_select().where(ProjektAufgabe.id == aufgabe_id))).first()
+    return _mit_details([zeile])[0]
+
+
+@aufgaben_router.post("", response_model=ProjektAufgabeMitDetails, status_code=status.HTTP_201_CREATED)
 async def create_aufgabe(
     body: ProjektAufgabeCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> ProjektAufgabe:
+) -> ProjektAufgabeMitDetails:
     if body.eltern_aufgabe_id is not None:
         eltern = await _require_aufgabe(session, auth, body.eltern_aufgabe_id)
         await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
@@ -736,27 +748,27 @@ async def create_aufgabe(
     )
     session.add(aufgabe)
     await session.flush()
-    return aufgabe
+    return await _lade_mit_details(session, aufgabe.id)
 
 
-@aufgaben_router.get("/{aufgabe_id}", response_model=ProjektAufgabeRead)
+@aufgaben_router.get("/{aufgabe_id}", response_model=ProjektAufgabeMitDetails)
 async def get_aufgabe(
     aufgabe_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> ProjektAufgabe:
+) -> ProjektAufgabeMitDetails:
     aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
     await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "sehen")
-    return aufgabe
+    return await _lade_mit_details(session, aufgabe.id)
 
 
-@aufgaben_router.patch("/{aufgabe_id}", response_model=ProjektAufgabeRead)
+@aufgaben_router.patch("/{aufgabe_id}", response_model=ProjektAufgabeMitDetails)
 async def update_aufgabe(
     aufgabe_id: UUID,
     body: ProjektAufgabeUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> ProjektAufgabe:
+) -> ProjektAufgabeMitDetails:
     aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
     await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "bearbeiten")
     changes = body.model_dump(exclude_unset=True)
@@ -819,7 +831,7 @@ async def update_aufgabe(
         setattr(aufgabe, feld, wert)
     await session.flush()
     await session.refresh(aufgabe)
-    return aufgabe
+    return await _lade_mit_details(session, aufgabe.id)
 
 
 @aufgaben_router.delete("/{aufgabe_id}", status_code=status.HTTP_204_NO_CONTENT)
