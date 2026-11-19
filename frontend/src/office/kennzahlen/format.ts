@@ -55,6 +55,8 @@ export function formatAchse(wert: number, einheit: KennzahlEinheit): string {
 
 export interface Abweichung {
   text: string;
+  /** Nur Pfeil und Betrag, ohne "ggü. ..." (Tabellenspalte). */
+  kurz: string;
   richtung: "hoch" | "runter" | "gleich";
   /** true = positiv zu werten, false = negativ, null = neutral (Kennzahl ohne klare Richtung). */
   gut: boolean | null;
@@ -72,7 +74,7 @@ export function abweichung(
 ): Abweichung | null {
   if (wert === null || vorperiode === null) return null;
   const differenz = wert - vorperiode;
-  if (Math.abs(differenz) < 1e-9) return { text: `= unverändert ggü.${NBSP}${vorLabel}`, richtung: "gleich", gut: null };
+  if (Math.abs(differenz) < 1e-9) return { text: `= unverändert ggü.${NBSP}${vorLabel}`, kurz: "= unverändert", richtung: "gleich", gut: null };
 
   const hoch = differenz > 0;
   let betrag: string;
@@ -89,5 +91,6 @@ export function abweichung(
 
   const richtung = richtungFuer(kennzahl);
   const gut = richtung === "neutral" ? null : hoch === (richtung === "hoeher_besser");
-  return { text: `${hoch ? "▲" : "▼"} ${betrag} ggü.${NBSP}${vorLabel}`, richtung: hoch ? "hoch" : "runter", gut };
+  const kurz = `${hoch ? "▲" : "▼"} ${betrag}`;
+  return { text: `${kurz} ggü.${NBSP}${vorLabel}`, kurz, richtung: hoch ? "hoch" : "runter", gut };
 }
