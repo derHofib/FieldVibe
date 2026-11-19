@@ -18,8 +18,15 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
+  # Vier Shards (je ein Runner, darin pytest-xdist mit eigener DB je Worker);
+  # die Aufteilung macht tests/conftest.py ueber TEST_SHARD_ANZAHL/-INDEX.
+  backend-tests-shard:
+    name: backend-tests-shard (${{ matrix.shard }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     services:
       postgres:
         image: postgres:16-alpine
@@ -99,14 +106,29 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
           DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
           DATABASE_URL_SYSTEM: postgresql+asyncpg://fieldvibe_test_system:fieldvibe_test_system@localhost:5432/fieldvibe_test
-        run: pytest
+          TEST_SHARD_ANZAHL: 4
+          TEST_SHARD_INDEX: ${{ matrix.shard }}
+        run: pytest -n 4 -p no:cacheprovider
+
+  # Stabiler Check-Name fuer needs/Branch-Protection, unabhaengig von der Shard-Anzahl.
+  backend-tests:
+    runs-on: ubuntu-24.04
+    needs: backend-tests-shard
+    if: always()
+    steps:
+      - name: Gesamtergebnis der Shards pruefen
+        run: |
+          if [ "${{ needs.backend-tests-shard.result }}" != "success" ]; then
+            echo "Mindestens ein Shard ist nicht erfolgreich: ${{ needs.backend-tests-shard.result }}"
+            exit 1
+          fi
 
   # Prueft die ausgehende E-Rechnung (CII, Profil EN 16931 und XRechnung) gegen die CEN-
   # Geschaeftsregeln und die BR-DE-Regeln (Schematron). Das Werkzeug kommt komplett aus Maven
   # Central und gepinnten Commits von ConnectingEurope/eInvoicing-EN16931 und
   # itplr-kosit/xrechnung-schematron (siehe scripts/e-rechnung/pins.sh, jede Datei mit
   # SHA-256 geprueft) -- keine Release-Downloads noetig. Dieser Job schlaegt
-  # bei uebersprungenen Tests fehl; backend-tests installiert das Werkzeug ebenfalls.
+  # bei uebersprungenen Tests fehl; backend-tests-shard installiert das Werkzeug ebenfalls.
   e-rechnung-konformitaet:
     runs-on: ubuntu-24.04
     services:
