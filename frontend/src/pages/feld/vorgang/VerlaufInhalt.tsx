@@ -257,8 +257,8 @@ export function VerlaufInhalt({
               Auch an Partner {zugewiesenerPartner?.name ?? ""}
             </label>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 onClick={() => setShowMentionPicker((v) => !v)}
                 title="Erwähnen"
@@ -322,7 +322,7 @@ export function VerlaufInhalt({
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sekundaer"
+              className="btn-touch btn-ap-primary ml-auto shrink-0 px-4 py-2 text-sekundaer"
             >
               Senden
             </button>

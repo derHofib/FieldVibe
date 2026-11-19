@@ -30,7 +30,14 @@ function ViaClaude() {
 }
 
 function formatZeitpunkt(iso: string): string {
-  return new Date(iso).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+  return new Date(iso).toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatRueckruf(iso: string): string {
@@ -110,8 +117,10 @@ export function TelefonatBubble({
                 {p.partner_nummer && <span className="font-normal text-label2">· {p.partner_nummer}</span>}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-sekundaer text-label2">
-                <span>{formatZeitpunkt(p.beginn ?? event.created_at)}</span>
-                {erfasser && <span>· erfasst von {erfasser}</span>}
+                <span>
+                  {formatZeitpunkt(p.beginn ?? event.created_at)}
+                  {erfasser && ` · erfasst von ${erfasser}`}
+                </span>
                 {istKiEvent(event) && <ViaClaude />}
               </div>
             </div>

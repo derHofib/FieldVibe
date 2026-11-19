@@ -498,6 +498,11 @@ body {
 .office-flaechen .office-panel .card-ap:last-child {
   border-bottom-width: 0;
 }
+/* Klebende Kommentarleiste: ohne eigene Flaeche scheint der Verlauf beim
+   Scrollen durch sie hindurch. */
+.office-flaechen .office-panel .card-ap.sticky {
+  background-color: var(--card);
+}
 
 /* Uebernommene Feld-Seiten (SchmaleSpalte) haben eigene, kleinere Seiten-
    titel; hier auf die Groesse von SeitenKopf gebracht. Titel innerhalb

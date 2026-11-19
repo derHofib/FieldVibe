@@ -8,7 +8,6 @@ import { StatusPille } from "../../../components/apple/StatusPille";
 import { IconBadge } from "../../../components/IconBadge";
 import { SkeletonList } from "../../../components/Skeleton";
 import { useTelefonat } from "../../../components/telefonat/TelefonatProvider";
-import { NEU_BUTTON_KLASSE } from "../../../components/FormularFeld";
 import { useAuth } from "../../../context/AuthContext";
 import { useKontaktverlauf } from "../../../hooks/useTelefonate";
 import type { Ansprechpartner, KontaktverlaufEintrag, Telefonat, Vorgang } from "../../../types";
@@ -99,7 +98,7 @@ export function KundeKontaktverlauf({
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-fliess font-semibold text-label2">Kontaktverlauf</h2>
         {kannErfassen && (
-          <button type="button" onClick={erfassen} className={NEU_BUTTON_KLASSE}>
+          <button type="button" onClick={erfassen} className="btn-touch btn-ap px-4">
             + Telefonat erfassen
           </button>
         )}
