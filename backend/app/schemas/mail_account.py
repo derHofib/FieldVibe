@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, computed_field
+
+from app.services.mail_anbieter import passender_anbieter
 
 MailVerschluesselung = Literal["ssl", "starttls", "keine"]
 
@@ -80,6 +82,19 @@ class MailAccountRead(BaseModel):
     # Bewusst kein Passwort-Feld -- das verschluesselte Passwort verlaesst
     # den Server nie wieder in Klartext-Richtung Client.
 
+    # Nicht gespeichert, sondern beim Lesen aus den Serverwerten abgeleitet
+    # (keine Migration) -- greift so in list/create/patch gleichermassen.
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def anbieter_id(self) -> str | None:
+        anbieter, _ = passender_anbieter(self)  # type: ignore[arg-type]
+        return anbieter.id if anbieter else None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def server_angepasst(self) -> bool:
+        return passender_anbieter(self)[1]  # type: ignore[arg-type]
+
 
 class MailAccountVerbindungTest(BaseModel):
     """Fuer den 'Verbindung testen'-Button vor dem eigentlichen Speichern:
@@ -97,3 +112,29 @@ class MailAccountVerbindungTest(BaseModel):
     smtp_benutzername: str
 
     passwort: str
+
+
+class MailAnbieterRead(BaseModel):
+    id: str
+    name: str
+    kuerzel: str
+    farbe: str
+    beschreibung: str
+    domains: list[str]
+    imap_host: str
+    imap_port: int
+    imap_verschluesselung: MailVerschluesselung
+    smtp_host: str
+    smtp_port: int
+    smtp_verschluesselung: MailVerschluesselung
+    hinweis: str | None
+    unterstuetzt: bool
+
+
+class MailAnbieterErkennen(BaseModel):
+    email_adresse: EmailStr
+
+
+class MailAnbieterErkennung(BaseModel):
+    anbieter: MailAnbieterRead | None
+    quelle: Literal["domain", "mx"] | None

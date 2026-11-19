@@ -12,6 +12,7 @@ class MailFolderRead(BaseModel):
     anzeigename: str
     sortierung: int
     letzter_sync_am: datetime | None
+    ungelesen: int = 0
 
 
 class MailAttachmentRead(BaseModel):

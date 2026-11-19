@@ -14,7 +14,11 @@ from app.schemas.mail_account import (
     MailAccountRead,
     MailAccountUpdate,
     MailAccountVerbindungTest,
+    MailAnbieterErkennen,
+    MailAnbieterErkennung,
+    MailAnbieterRead,
 )
+from app.services.mail_anbieter import ANBIETER, anbieter_erkennen
 from app.services.mail_netz import klartext_erlaubt
 from app.services.mail_service import (
     ImapZugang,
@@ -108,6 +112,22 @@ async def test_verbindung(body: MailAccountVerbindungTest) -> None:
         )
     except MailVerbindungFehler as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+def _anbieter_read(anbieter) -> MailAnbieterRead:
+    return MailAnbieterRead.model_validate({**anbieter.__dict__, "domains": list(anbieter.domains)})
+
+
+# Vor den "/{account_id}"-Routen, damit "anbieter" nicht als UUID gematcht wird.
+@router.get("/anbieter", response_model=list[MailAnbieterRead])
+async def list_anbieter() -> list[MailAnbieterRead]:
+    return [_anbieter_read(a) for a in ANBIETER]
+
+
+@router.post("/anbieter-erkennen", response_model=MailAnbieterErkennung)
+async def erkenne_anbieter(body: MailAnbieterErkennen) -> MailAnbieterErkennung:
+    anbieter, quelle = await anbieter_erkennen(body.email_adresse)
+    return MailAnbieterErkennung(anbieter=_anbieter_read(anbieter) if anbieter else None, quelle=quelle)
 
 
 @router.get("", response_model=list[MailAccountRead])
