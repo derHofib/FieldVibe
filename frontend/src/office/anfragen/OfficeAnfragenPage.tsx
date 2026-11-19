@@ -28,14 +28,14 @@ import { AnfragePanel } from "./AnfragePanel";
 import { ANFRAGE_STATUS_PILLE } from "./statusPille";
 
 const DREI_TAGE_MS = 3 * 86_400_000;
-const SCHMAL = "(max-width: 1439px)";
+const PANEL_ALLEIN = "(max-width: 1279px)";
 
-/** Unter 1440 px ist die Tabelle bei offenem Panel zu schmal für alle Spalten. */
-function useSchmalerBildschirm(): boolean {
-  const [schmal, setSchmal] = useState(() => (typeof window.matchMedia === "function" ? window.matchMedia(SCHMAL).matches : false));
+/** Unter 1280 px bleibt neben dem Panel keine brauchbare Tabellenbreite. */
+function useNurPanelBreite(): boolean {
+  const [schmal, setSchmal] = useState(() => (typeof window.matchMedia === "function" ? window.matchMedia(PANEL_ALLEIN).matches : false));
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
-    const mq = window.matchMedia(SCHMAL);
+    const mq = window.matchMedia(PANEL_ALLEIN);
     const onChange = () => setSchmal(mq.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
@@ -93,7 +93,7 @@ export function OfficeAnfragenPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { hatRecht } = useAuth();
-  const schmal = useSchmalerBildschirm();
+  const nurPanel = useNurPanelBreite();
   const query = params.toString() ? `?${params.toString()}` : "";
 
   const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
@@ -146,23 +146,36 @@ export function OfficeAnfragenPage() {
       label: "Anfrage",
       haupt: true,
       render: (a) => (
-        <span className="block max-w-md">
-          <span className="block font-semibold">{a.titel}</span>
+        <span className="block max-w-[18rem]">
+          <span className="block truncate font-semibold" title={a.titel}>
+            {a.titel}
+          </span>
           <span className="block truncate text-sekundaer font-normal text-label2">{ersteZeile(a.beschreibung)}</span>
         </span>
       ),
       sortWert: (a) => a.titel,
     },
-    { key: "kunde", label: "Kunde", render: (a) => a.kunde_name ?? "–", sortWert: (a) => a.kunde_name ?? "" },
+    {
+      key: "kunde",
+      label: "Kunde",
+      render: (a) => (
+        <span className="block max-w-[14rem] truncate" title={a.kunde_name ?? undefined}>
+          {a.kunde_name ?? "–"}
+        </span>
+      ),
+      sortWert: (a) => a.kunde_name ?? "" },
     {
       key: "standort",
       label: "Standort · Anlage",
-      render: (a) => (
-        <span className="block">
-          <span className="block">{a.standort_bezeichnung ?? "–"}</span>
-          <span className="block text-sekundaer text-label2">{a.anlage_bezeichnung ?? "–"}</span>
-        </span>
-      ),
+      render: (a) =>
+        a.standort_bezeichnung && a.anlage_bezeichnung ? (
+          <span className="block">
+            <span className="block">{a.standort_bezeichnung}</span>
+            <span className="block text-sekundaer text-label2">{a.anlage_bezeichnung}</span>
+          </span>
+        ) : (
+          <span className="block">{a.standort_bezeichnung || a.anlage_bezeichnung || "–"}</span>
+        ),
       sortWert: standortAnlage,
     },
     {
@@ -183,7 +196,7 @@ export function OfficeAnfragenPage() {
       sortWert: (a) => a.status,
     },
   ];
-  const spalten = id && schmal ? alleSpalten.filter((s) => s.key !== "gestellt_von" && s.key !== "standort") : alleSpalten;
+  const spalten = id ? alleSpalten.filter((s) => s.key !== "gestellt_von" && s.key !== "standort") : alleSpalten;
 
   const gewaehlt = id ? anfragen?.find((a) => a.id === id) : undefined;
   const panel = !id ? null : gewaehlt ? (
@@ -205,6 +218,7 @@ export function OfficeAnfragenPage() {
       <ListeMitPanel
         panelTitel="Anfrage"
         panel={panel}
+        nurPanel={nurPanel}
         onSchliessen={() => id && navigate(`/anfragen${query}`)}
         liste={
           isLoading ? (

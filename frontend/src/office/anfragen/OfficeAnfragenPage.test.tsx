@@ -142,4 +142,33 @@ describe("OfficeAnfragenPage", () => {
     expect(within(panel).queryByRole("link", { name: "Müller Haustechnik" })).toBeNull();
     expect(within(panel).getByText("Müller Haustechnik")).toBeInTheDocument();
   });
+
+  it("blendet bei offenem Panel Gestellt von und Standort · Anlage aus", async () => {
+    mocks.anfragen = [anfrage("1")];
+    rendere("/anfragen/1");
+    await panelGeladen();
+    expect(screen.queryByRole("columnheader", { name: /Gestellt von/ })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /Standort · Anlage/ })).toBeNull();
+    cleanup();
+    rendere();
+    await screen.findByText("Anfrage 1");
+    expect(screen.getByRole("columnheader", { name: /Gestellt von/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Standort · Anlage/ })).toBeInTheDocument();
+  });
+
+  it("zeigt in der Standort-Zelle nur vorhandene Werte und – nur wenn beide fehlen", async () => {
+    mocks.anfragen = [
+      anfrage("1", { standort_bezeichnung: "Nur Standort", anlage_bezeichnung: null }),
+      anfrage("2", { standort_bezeichnung: null, anlage_bezeichnung: "Nur Anlage" }),
+      anfrage("3", { standort_bezeichnung: null, anlage_bezeichnung: null }),
+    ];
+    rendere();
+    await screen.findByText("Anfrage 1");
+    expect(screen.getByText("Nur Standort")).toBeInTheDocument();
+    expect(screen.getByText("Nur Anlage")).toBeInTheDocument();
+    const zeile3 = screen.getByText("Anfrage 3").closest("tr")!;
+    expect(within(zeile3).getAllByText("–")).toHaveLength(1);
+    const zeile1 = screen.getByText("Anfrage 1").closest("tr")!;
+    expect(within(zeile1).queryByText("–")).toBeNull();
+  });
 });
