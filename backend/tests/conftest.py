@@ -5,6 +5,8 @@ import socket
 import uuid
 from urllib.parse import urlparse
 
+from sqlalchemy.engine import url as sqlalchemy_url
+
 os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
@@ -17,6 +19,29 @@ os.environ.setdefault(
     "DATABASE_URL_SYSTEM",
     "postgresql+asyncpg://fieldvibe_test_system:fieldvibe_test_system@localhost:5432/fieldvibe_test",
 )
+
+
+def _worker_index() -> int | None:
+    # pytest-xdist setzt PYTEST_XDIST_WORKER (gw0, gw1, ...) vor dem Import der
+    # conftest in jedem Worker; im Hauptprozess und ohne xdist ist er leer.
+    worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+    return int(worker[2:]) if worker.startswith("gw") and worker[2:].isdigit() else None
+
+
+def _db_je_worker() -> None:
+    # Jeder Worker migriert und leert (TRUNCATE) seine eigene Datenbank, sonst
+    # zerstoeren sich die Worker gegenseitig den Zustand. Alle drei URLs zeigen
+    # auf dieselbe DB und muessen gemeinsam umgestellt werden; die Settings
+    # lesen sie beim Import der App.
+    if _worker_index() is None:
+        return
+    worker = os.environ["PYTEST_XDIST_WORKER"]
+    for name in ("DATABASE_URL", "DATABASE_URL_SYNC", "DATABASE_URL_SYSTEM"):
+        url = sqlalchemy_url.make_url(os.environ[name])
+        os.environ[name] = url.set(database=f"{url.database}_{worker}").render_as_string(hide_password=False)
+
+
+_db_je_worker()
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
 # Ohne explizite Dev/Test-Umgebung bricht die Settings-Pruefung bei den
 # Test-Secrets ab (app/core/config.py).
@@ -29,25 +54,40 @@ os.environ.setdefault("FIELDVIBE_REFRESH_BODY_BIS", "2999-12-31")
 os.environ["FIELDVIBE_SYSTEM_SESSION_AUDIT"] = "false"
 
 
+def _freier_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
 def _moto_port_ermitteln() -> int:
     # Explizit gesetzt (TEST_MOTO_PORT oder vorhandene S3_ENDPOINT_URL) gewinnt;
     # sonst einen vom OS vergebenen freien Port nehmen, damit parallele
     # pytest-Laeufe nicht um denselben Port konkurrieren. Muss vor dem Import
     # der App passieren: storage_service baut seine boto3-Clients zur
     # Importzeit gegen S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE.
+    worker = _worker_index()
     if os.environ.get("TEST_MOTO_PORT"):
-        return int(os.environ["TEST_MOTO_PORT"])
+        # Je xdist-Worker ein eigener Port, sonst bindet nur der erste.
+        return int(os.environ["TEST_MOTO_PORT"]) + (worker or 0)
+    # Der Hauptprozess hat S3_ENDPOINT_URL per setdefault gesetzt und vererbt es
+    # an die Worker; diesen automatisch gewaehlten Port darf kein Worker erben.
+    automatisch = os.environ.get("_FIELDVIBE_MOTO_AUTO") == "1"
     vorhanden = urlparse(os.environ.get("S3_ENDPOINT_URL", "")).port
-    if vorhanden:
-        return vorhanden
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+    if vorhanden and not (worker is not None and automatisch):
+        return vorhanden + (worker or 0)
+    if worker is None:
+        os.environ["_FIELDVIBE_MOTO_AUTO"] = "1"
+    return _freier_port()
 
 
 _MOTO_PORT = _moto_port_ermitteln()
-os.environ.setdefault("S3_ENDPOINT_URL", f"http://localhost:{_MOTO_PORT}")
-os.environ.setdefault("S3_PUBLIC_URL_BASE", f"http://localhost:{_MOTO_PORT}")
+if _worker_index() is None:
+    os.environ.setdefault("S3_ENDPOINT_URL", f"http://localhost:{_MOTO_PORT}")
+    os.environ.setdefault("S3_PUBLIC_URL_BASE", f"http://localhost:{_MOTO_PORT}")
+else:
+    os.environ["S3_ENDPOINT_URL"] = f"http://localhost:{_MOTO_PORT}"
+    os.environ["S3_PUBLIC_URL_BASE"] = f"http://localhost:{_MOTO_PORT}"
 os.environ.setdefault("S3_BUCKET_FOTOS", "fieldvibe-fotos-test")
 
 import pytest
@@ -676,3 +716,20 @@ async def login(client: AsyncClient, email: str, password: str) -> str:
 
 def auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+def pytest_collection_modifyitems(config, items):
+    # Sharding ueber mehrere CI-Runner: jeder Runner behaelt nur jedes N-te Item.
+    # Sortiert nach nodeid, damit alle Runner (und alle xdist-Worker eines
+    # Runners) dieselbe Reihenfolge sehen -- xdist verlangt identische Sammlungen.
+    anzahl = os.environ.get("TEST_SHARD_ANZAHL")
+    index = os.environ.get("TEST_SHARD_INDEX")
+    if not anzahl or index is None:
+        return
+    anzahl, index = int(anzahl), int(index)
+    items.sort(key=lambda item: item.nodeid)
+    behalten = [item for i, item in enumerate(items) if i % anzahl == index]
+    abgewaehlt = [item for i, item in enumerate(items) if i % anzahl != index]
+    if abgewaehlt:
+        config.hook.pytest_deselected(items=abgewaehlt)
+    items[:] = behalten
