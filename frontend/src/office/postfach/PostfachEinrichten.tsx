@@ -197,7 +197,7 @@ export function PostfachEinrichten({ layout, onFertig, onAbbrechen }: Props) {
         </h2>
         {office && <span className="text-meta text-label2">Passt keiner, „Anderer Anbieter“ wählen</span>}
       </div>
-      <div className={`grid grid-cols-2 gap-3 ${office ? "md:grid-cols-3 xl:grid-cols-4" : ""}`}>
+      <div className={`grid gap-3 ${office ? "grid-cols-[repeat(auto-fill,minmax(160px,1fr))]" : "grid-cols-2"}`}>
         {(anbieterListe ?? []).map((a) => (
           <AnbieterKachel key={a.id} anbieter={a} aktiv={gewaehlt === a.id} onWaehlen={() => waehleKachel(a.id)} />
         ))}
