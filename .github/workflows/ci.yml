@@ -91,6 +91,14 @@ jobs:
           -c "ALTER SYSTEM SET full_page_writes = off"
           -c "SELECT pg_reload_conf()"
 
+      # Cache nur zur Ausfallsicherheit gegen Maven-Central-Aussetzer: installieren.sh
+      # prueft jede Datei auch aus dem Cache gegen die SHA-256 aus pins.sh.
+      - name: E-Rechnungs-Werkzeug-Cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/e-rechnung
+          key: e-rechnung-${{ hashFiles('scripts/e-rechnung/pins.sh', 'scripts/e-rechnung/installieren.sh') }}
+
       # Ohne das Werkzeug werden die Konformitaetstests in `pytest` still
       # uebersprungen (Java ist auf ubuntu-latest vorinstalliert).
       - name: E-Rechnungs-Pruefwerkzeug installieren
@@ -191,6 +199,14 @@ jobs:
 
       - name: Java pruefen
         run: java -version
+
+      # Cache nur zur Ausfallsicherheit gegen Maven-Central-Aussetzer: installieren.sh
+      # prueft jede Datei auch aus dem Cache gegen die SHA-256 aus pins.sh.
+      - name: E-Rechnungs-Werkzeug-Cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/e-rechnung
+          key: e-rechnung-${{ hashFiles('scripts/e-rechnung/pins.sh', 'scripts/e-rechnung/installieren.sh') }}
 
       - name: Pruefwerkzeug installieren
         run: scripts/e-rechnung/installieren.sh

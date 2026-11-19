@@ -49,7 +49,7 @@ herunterladen() { # <url> <ziel> <sha256>
     return
   fi
   echo "lade: $url"
-  curl -fsSL --retry 5 --retry-delay 3 -o "$ARBEIT/download" "$url"
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o "$ARBEIT/download" "$url"
   if ! pruefsumme_ok "$ARBEIT/download" "$soll"; then
     fehler "Pruefsumme von $(basename "$ziel") weicht ab (erwartet $soll, erhalten $(sha256_von "$ARBEIT/download")) -- abgebrochen"
     exit 1
