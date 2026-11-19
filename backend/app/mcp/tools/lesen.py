@@ -275,9 +275,11 @@ def registrieren(mcp: MCPServer) -> None:
         kunde = await api_get(z, f"/api/kunden/{kunde_id}")
         standorte = await _optional(api_get(z, "/api/standorte", {"kunde_id": kunde_id}))
         anlagen = await _optional(api_get(z, "/api/anlagen", {"kunde_id": kunde_id}))
+        betreuung = await _optional(api_get(z, f"/api/kunden/{kunde_id}/betreuung"))
         return bereinigen(
             {
                 "kunde": kunde,
+                "betreuung": betreuung,
                 "standorte": seite_aus(standorte, 1) if isinstance(standorte, list) else standorte,
                 "anlagen": seite_aus(anlagen, 1) if isinstance(anlagen, list) else anlagen,
             }

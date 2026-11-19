@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.kontakt import AnsprechpartnerEintrag
+from app.schemas.kunde_zuweisung import BetreuungKurz
 from app.services import leitweg_id
 from app.schemas.personenkonto import personenkonto_normalisieren
 
@@ -81,3 +82,8 @@ class KundeRead(BaseModel):
     logo_object_key: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class KundeListeEintrag(KundeRead):
+    # Hauptbetreuer zuerst, dann nach Name (siehe routes/kunden.py:list_kunden).
+    betreuung: list[BetreuungKurz] = []

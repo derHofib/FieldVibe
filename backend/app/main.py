@@ -83,7 +83,6 @@ from app.api.routes import (
     vorgang_events,
     zeiterfassung,
     zeitplan,
-    zuweisungen,
 )
 from app.core.audit_kontext import AuditKontextMiddleware
 from app.core.config import get_settings
@@ -219,7 +218,6 @@ app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
 app.include_router(public_rechtliches.router)
-app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
