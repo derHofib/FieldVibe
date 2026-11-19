@@ -4,8 +4,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-# Vom Client per POST setzbar; die Ereignisse der Verknuepfung (unten) schreibt
-# ausschliesslich der Server (Zuordnungswechsel, "Eigenstaendig fuehren").
+# Vom Client per POST setzbar; die Ereignisse der Verknuepfung (unten) und das
+# Telefonat-Event schreibt ausschliesslich der Server (Zuordnungswechsel,
+# "Eigenstaendig fuehren", POST /api/telefonate).
 EventTypeSetzbar = Literal[
     "kommentar",
     "status_change",
@@ -29,6 +30,7 @@ EventType = Literal[
     "zuordnung_geaendert",
     "eigenstaendig_gesetzt",
     "eigenstaendig_aufgehoben",
+    "telefonat",
 ]
 
 

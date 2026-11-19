@@ -77,6 +77,7 @@ from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
 from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
+from app.models.telefonat import Telefonat
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -90,6 +91,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
+    "Telefonat",
     "KiClient",
     "KiVerbindung",
     "Abwesenheitsantrag",
