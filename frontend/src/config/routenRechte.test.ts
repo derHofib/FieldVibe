@@ -107,6 +107,17 @@ describe("routeErlaubt", () => {
     expect(routeErlaubt("/dauerauftraege", ohneModul)).toBe(false);
   });
 
+  it("/telefonate braucht vorgaenge.sehen und ist nur im Office angeboten", () => {
+    expect(routeErlaubt("/telefonate", kontext("custom", {}))).toBe(false);
+    expect(routeErlaubt("/telefonate", kontext("custom", { vorgaenge: ["sehen"] }))).toBe(true);
+    expect(routeErlaubt("/telefonate", kontext("loesch_ansicht"))).toBe(false);
+    const feld = sichtbareNavSeiten(kontext("mandant_admin").currentUser, kontext("mandant_admin").hatRecht, "feld");
+    // nurOffice: kein Feld-Mehr-Eintrag, aber in der Office-Seitenleiste vorhanden.
+    expect(feld.find((s) => s.key === "telefonate")?.nurOffice).toBe(true);
+    const office = sichtbareNavSeiten(kontext("mandant_admin").currentUser, kontext("mandant_admin").hatRecht, "office");
+    expect(office.map((s) => s.key)).toContain("telefonate");
+  });
+
   it("/standorte/:id braucht kunden.sehen", () => {
     expect(routeErlaubt("/standorte/1", kontext("custom", {}))).toBe(false);
     expect(routeErlaubt("/standorte/1", kontext("custom", { kunden: ["sehen"] }))).toBe(true);

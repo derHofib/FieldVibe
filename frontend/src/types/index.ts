@@ -581,7 +581,8 @@ export type VorgangEventType =
   | "unterschrift"
   | "eingangsrechnung_status"
   | "formular"
-  | "leistung";
+  | "leistung"
+  | "telefonat";
 
 export interface VorgangEvent {
   id: number;
@@ -3000,3 +3001,4 @@ export interface AbwesenheitKalenderEintrag {
   halber_tag_bis: boolean;
   tage: string;
 }
+export * from "./telefonat";

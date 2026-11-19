@@ -67,7 +67,9 @@ import {
   leereAdresse,
 } from "./vorgang/konstanten";
 import { ArbeitszeitInhalt } from "./vorgang/ArbeitszeitInhalt";
+import { useTelefonat } from "../../components/telefonat/TelefonatProvider";
 import { VerlaufInhalt } from "./vorgang/VerlaufInhalt";
+import { outboxItemPasst, verlaufEintragPasst, type VerlaufFilter } from "./vorgang/verlaufFilter";
 import { PositionenInhalt } from "./vorgang/PositionenInhalt";
 import { PartnerAbschnitt } from "./vorgang/PartnerAbschnitt";
 import { MaengelAbschnitt } from "./vorgang/MaengelAbschnitt";
@@ -108,6 +110,7 @@ export function VorgangDetailPage({
   onGanzeSeite?: () => void;
 } = {}) {
   const bestaetigen = useBestaetigung();
+  const telefonat = useTelefonat();
   const toast = useToast();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
@@ -153,7 +156,7 @@ export function VorgangDetailPage({
   // "kommentare" = alles Nutzergenerierte (Kommentar/Foto/Unterschrift/
   // Dokument), "email" = E-Mail-Verlauf -- rein clientseitig auf der
   // bereits geladenen Liste, kein eigener Endpunkt noetig.
-  const [verlaufFilter, setVerlaufFilter] = useState<"alle" | "kommentare" | "system" | "email">("alle");
+  const [verlaufFilter, setVerlaufFilter] = useState<VerlaufFilter>("alle");
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [showUnterschriftPad, setShowUnterschriftPad] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
@@ -991,8 +994,9 @@ export function VorgangDetailPage({
   // Neuestes Ereignis oben, ältestes unten -- der Backend-Endpunkt liefert
   // bereits "ORDER BY id DESC" (siehe app/api/routes/vorgang_events.py),
   // hier also unveraendert uebernehmen statt umzudrehen.
+  // Telefonate sind immer intern (kundensichtbar=false) -- der zweite Test ist ein Sicherheitsnetz.
   const sichtbareEvents = kundenansicht
-    ? (events ?? []).filter((e) => e.kundensichtbar)
+    ? (events ?? []).filter((e) => e.kundensichtbar && e.event_type !== "telefonat")
     : events ?? [];
   const eigeneOutboxItems = (outboxItems ?? []).filter((i) => i.vorgang_id === id);
 
@@ -1004,19 +1008,8 @@ export function VorgangDetailPage({
     ...sichtbareEvents.map((event): VerlaufEintrag => ({ art: "event", zeit: event.created_at, event })),
     ...(kundenansicht ? [] : (emails ?? []).map((email): VerlaufEintrag => ({ art: "email", zeit: email.created_at, email }))),
   ].sort((a, b) => new Date(b.zeit).getTime() - new Date(a.zeit).getTime());
-  const verlaufEintraegeGefiltert = verlaufEintraege.filter((eintrag) => {
-    if (verlaufFilter === "alle") return true;
-    if (eintrag.art === "email") return verlaufFilter === "email";
-    if (verlaufFilter === "system") return eintrag.event.is_system || eintrag.event.event_type === "status_change";
-    // "kommentare": alles Nutzergenerierte -- Kommentar, Foto, Unterschrift, Dokument.
-    return !eintrag.event.is_system && eintrag.event.event_type !== "status_change";
-  });
-  const eigeneOutboxItemsGefiltert = eigeneOutboxItems.filter((item) => {
-    if (verlaufFilter === "alle") return true;
-    if (verlaufFilter === "email") return false; // Outbox kennt keine E-Mails.
-    if (verlaufFilter === "system") return item.kind === "status";
-    return item.kind !== "status";
-  });
+  const verlaufEintraegeGefiltert = verlaufEintraege.filter((eintrag) => verlaufEintragPasst(eintrag, verlaufFilter));
+  const eigeneOutboxItemsGefiltert = eigeneOutboxItems.filter((item) => outboxItemPasst(item, verlaufFilter));
 
   const gesamtSekunden = (zeiterfassungListe ?? []).reduce((summe, e) => {
     if (!e.ende_at) return summe;
@@ -1065,6 +1058,14 @@ export function VorgangDetailPage({
           : !VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status)
             ? { label: "Zeit erfassen", onClick: () => navigate(`/vorgaenge/${id}/zeit`) }
             : null;
+
+  const telefonatErfassen = () =>
+    telefonat.erfassen({
+      kundeId: vorgang.kunde_id,
+      vorgangId: id,
+      kontextText: [vorgang.vorgangsnummer, vorgang.titel, kunde?.name].filter(Boolean).join(" · "),
+      ansprechpartner: kunde?.ansprechpartner,
+    });
 
   // Klebende Leiste nur im Feld-App-Layout der Hauptseite; dann ersetzt sie
   // den gleichlautenden Button in der Übersichts-Karte (UebersichtAbschnitt).
@@ -1275,6 +1276,8 @@ export function VorgangDetailPage({
       commentMutation={commentMutation}
       showUnterschriftPad={showUnterschriftPad}
       unterschriftMutation={unterschriftMutation}
+      layout={layout}
+      onTelefonatErfassen={telefonatErfassen}
     />
   );
 
@@ -1628,6 +1631,7 @@ export function VorgangDetailPage({
             : null
         }
         onZeitErfassen={VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) ? null : () => setZeitSheetModus("neu")}
+        onTelefonat={telefonatErfassen}
         onFolgeVorgang={oeffneFolgeVorgangDialog}
         onZuordnungAendern={oeffneZuordnungBearbeiten}
         onLoeschen={vorgangLoeschen}

@@ -3,6 +3,7 @@ import { AnsprechpartnerVerwaltung } from "../../../components/AnsprechpartnerVe
 import { EmailSection } from "../../../components/EmailSection";
 import type { CurrentUser, KundeProfil } from "../../../types";
 import { istModulAktiv } from "../../../utils/module";
+import { KundeKontaktverlauf } from "./KundeKontaktverlauf";
 import { KundenPortalLinkUndLogo, PortalZugaengeVerwaltung } from "./KundePortalZugaenge";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -24,11 +25,14 @@ export function KundeKommunikationTab({
     <AnsprechpartnerVerwaltung
       liste={profil.ansprechpartner}
       kannVerwalten={kannVerwalten}
+      anrufKundeId={id}
       onSpeichern={async (naechsteListe) => {
         await kundenApi.update(id!, { ansprechpartner: naechsteListe });
         queryClient.invalidateQueries({ queryKey: ["kunde-profil", id] });
       }}
     />
+
+    {id && <KundeKontaktverlauf kundeId={id} ansprechpartner={profil.ansprechpartner} vorgaenge={profil.vorgaenge} />}
 
     {kannVerwalten && (
       <EmailSection
