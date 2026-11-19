@@ -34,6 +34,13 @@ const SONDERREGELN: RoutenRegel[] = [
       hatRecht("projekte", "sehen") || (oberflaeche !== "office" && hatRecht("projekte", "zeitplan_sehen")),
   },
   // Ohne Menueeintrag
+  // /insights ist im Office nur noch Weiterleitung auf /kennzahlen (dort greift dessen Regel); die Feld-App
+  // zeigt weiter die Admin-Seite, deren Endpunkt /api/insights nur mandant_admin kennt.
+  {
+    muster: "/insights",
+    pruefe: ({ currentUser, oberflaeche }) =>
+      oberflaeche === "office" || (istAdminRolle(currentUser) && istModulAktiv(currentUser, "statistik")),
+  },
   {
     muster: "/plan-symbole",
     pruefe: ({ currentUser, hatRecht }) => istAdminOderCustom(currentUser) && hatRecht("formulare", "sehen"),

@@ -16,7 +16,6 @@ import { FormSchemaEditorPage } from "../pages/feld/FormSchemaEditorPage";
 import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
 import { FormSubmissionAusfuellenPage } from "../pages/feld/FormSubmissionAusfuellenPage";
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
-import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
 import { OfficeArbeitszeitEinstellungenPage } from "./zeit/OfficeArbeitszeitEinstellungenPage";
 import { OfficeAbwesenheitenPage } from "./zeit/OfficeAbwesenheitenPage";
@@ -42,6 +41,7 @@ import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
 import { RouteGuard } from "../components/RouteGuard";
 import { OfficeKundenPage } from "./kunden/OfficeKundenPage";
 import { OfficePartnerPage } from "./partner/OfficePartnerPage";
+import { KennzahlenPage } from "./kennzahlen/KennzahlenPage";
 import { OfficeLayout } from "./OfficeLayout";
 import { OfficeMaterialPage } from "./material/OfficeMaterialPage";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
@@ -89,6 +89,10 @@ export function OfficeApp() {
           <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
           <Route path="/postfach" element={<OfficePostfachPage />} />
           <Route path="/telefonate" element={<OfficeTelefonatePage />} />
+          {/* Volle Breite: das Kennzahlen-Raster fuellt die Inhaltsflaeche, kein max-w-Wrapper wie bei den Lesespalten. */}
+          <Route path="/kennzahlen" element={<KennzahlenPage />} />
+          {/* Lesezeichen und Fehlerberichte mit route=/insights landen auf der neuen Seite. */}
+          <Route path="/insights" element={<Navigate to="/kennzahlen" replace />} />
           <Route path="/kunden" element={<OfficeKundenPage />} />
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />
           <Route path="/partner" element={<OfficePartnerPage />} />
@@ -216,7 +220,6 @@ export function OfficeApp() {
           <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />

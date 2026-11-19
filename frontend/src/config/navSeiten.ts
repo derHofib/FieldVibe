@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 
 import type { IconTone } from "../components/IconBadge";
+import { istOfficeHost } from "../office/hostname";
 import { istModulAktiv } from "../utils/module";
 import { darfRechteVerwalten, istAdminOderCustom, istAdminRolle } from "../utils/rollen";
 import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
@@ -289,10 +290,16 @@ export const NAV_SEITEN: NavSeite[] = [
     label: "Kennzahlen",
     icon: TrendingUp,
     tone: "sky",
-    route: "/insights",
+    route: "/kennzahlen",
     kategorie: "Finanzen",
-    // Backend: /api/insights nur mandant_admin (+loesch_operativ).
-    sichtbar: ({ currentUser }) => istAdminRolle(currentUser) && istModulAktiv(currentUser, "statistik"),
+    // Das Backend prueft dasselbe (Rolle + statistik.sehen); Finanz-Kennzahlen filtert der Katalog je Widget.
+    // Die Feld-App leitet /kennzahlen vorerst auf /insights um (nur mandant_admin), deshalb dort nur fuer Admins
+    // angeboten -- sonst fuehrte der Mehr-Eintrag einer Buero-Rolle in eine 403-Seite.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) &&
+      hatRecht("statistik", "sehen") &&
+      istModulAktiv(currentUser, "statistik") &&
+      (istOfficeHost() || istAdminRolle(currentUser)),
   },
   {
     key: "meldungen",
@@ -541,7 +548,7 @@ export const WORKSPACES: Workspace[] = [
     seiten: [
       "dispo", "projekte", "zeitplaene", "auftraege", "meine-aufgaben", "material", "pruefmittel",
       "zeiterfassung", "zeiten_buchen", "team_zeiten", "abwesenheiten", "techniker_zuweisungen",
-      "meldungen", "partner", "telefonate",
+      "meldungen", "partner", "telefonate", "kennzahlen",
     ],
   },
   {
@@ -565,7 +572,7 @@ export const WORKSPACES: Workspace[] = [
     start: ["nutzer", "protokoll"],
     seiten: [
       "nutzer", "account_typen", "organigramm", "anlagen_felder", "formulare", "integrationen",
-      "datenimport", "protokoll", "papierkorb",
+      "datenimport", "protokoll", "papierkorb", "kennzahlen",
     ],
   },
 ];

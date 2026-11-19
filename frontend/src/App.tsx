@@ -239,6 +239,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
             <Route path="/postfach" element={<PostfachPage />} />
             <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
             <Route path="/insights" element={<InsightsPage />} />
+            {/* Feld-Leseansicht der Dashboards folgt in Etappe C; bis dahin die bisherige Seite. */}
+            <Route path="/kennzahlen" element={<Navigate to="/insights" replace />} />
             <Route path="/integrationen" element={<IntegrationenPage />} />
             <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
             <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
