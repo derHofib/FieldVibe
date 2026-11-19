@@ -72,7 +72,6 @@ import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TeamZeitenPage } from "./pages/feld/TeamZeitenPage";
-import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
@@ -247,7 +246,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
             <Route path="/einstellungen" element={<SettingsPage />} />
             <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
             <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
-            <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+            <Route path="/techniker-zuweisungen" element={<Navigate to="/kunden" replace />} />
             <Route path="/statistik" element={<StatistikPage />} />
             <Route path="/team-zeiten" element={<TeamZeitenPage />} />
             <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />

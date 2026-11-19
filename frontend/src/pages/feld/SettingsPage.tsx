@@ -9,7 +9,6 @@ import {
   TrendingUp,
   UserCog,
   Users,
-  Wrench,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -84,15 +83,6 @@ export function SettingsPage() {
             label="Account-Typen & Rechte"
             beschreibung="Eigene Account-Typen definieren und ihre Rechte-Matrix einstellen"
             onClick={() => navigate("/account-typen")}
-          />
-        )}
-        {hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten") && (
-          <SettingsLink
-            icon={Wrench}
-            tone="emerald"
-            label="Techniker-Zuweisungen"
-            beschreibung="Welcher Account sieht welche Kunden"
-            onClick={() => navigate("/techniker-zuweisungen")}
           />
         )}
         {hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung") && (

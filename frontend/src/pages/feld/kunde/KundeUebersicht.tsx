@@ -1,14 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { kundenApi, usersApi } from "../../../api/endpoints";
+import { kundenApi } from "../../../api/endpoints";
 import { ApiError } from "../../../api/client";
 import { ERechnungFelder, zeigeERechnungFelder } from "../../../components/kunde/ERechnungFelder";
 import { FehlerMeldung } from "../../../components/Hinweiskasten";
 import { Nachweis13bFeld, Nachweis13bStatus } from "../../../components/kunde/Nachweis13b";
 import { validiereDebitorenkonto } from "../../../utils/datev";
 import { E_RECHNUNG_FORMAT_KURZ, type ERechnungFormat, leitwegIdFehler } from "../../../utils/eRechnungVersand";
-import type { Adresse, User } from "../../../types";
+import type { Adresse } from "../../../types";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -217,99 +217,6 @@ export function Stammdaten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || leitwegIdFehler(form.leitwegId) !== null || !!kontoFehler}
-          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
-        >
-          Speichern
-        </button>
-        <button
-          onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sekundaer font-medium text-label "
-        >
-          Abbrechen
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
-  const queryClient = useQueryClient();
-  const [bearbeiten, setBearbeiten] = useState(false);
-  const [auswahl, setAuswahl] = useState<string[]>([]);
-
-  const { data: alleUser } = useQuery({
-    queryKey: ["users", "auswahl"],
-    queryFn: usersApi.auswahl,
-    enabled: bearbeiten,
-  });
-  const techniker = alleUser?.filter((u) => u.nur_zugewiesene_kunden) ?? [];
-
-  const speichernMutation = useMutation({
-    meta: { erfolg: "Gespeichert" },
-    mutationFn: () => kundenApi.technikerSetzen(kundeId, auswahl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
-      setBearbeiten(false);
-    },
-  });
-
-  function toggle(userId: string) {
-    setAuswahl((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  }
-
-  if (!bearbeiten) {
-    return (
-      <div>
-        <h2 className="mb-2 text-fliess font-semibold text-label2">Zugewiesene Techniker</h2>
-        {zugewiesen.length === 0 ? (
-          <p className="text-sekundaer text-label2">Kein Techniker zugewiesen.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {zugewiesen.map((t) => (
-              <span key={t.id} className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
-                {t.name}
-              </span>
-            ))}
-          </div>
-        )}
-        <button
-          onClick={() => {
-            setAuswahl(zugewiesen.map((t) => t.id));
-            setBearbeiten(true);
-          }}
-          className="btn-touch mt-2 text-sekundaer text-tint underline "
-        >
-          Bearbeiten
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border rounded-[var(--radius-ap-card)] border-sepstrong p-3">
-      <h2 className="mb-2 text-fliess font-semibold text-label2">Zugewiesene Techniker</h2>
-      {techniker.length === 0 ? (
-        <p className="text-sekundaer text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
-      ) : (
-        <div className="space-y-1">
-          {techniker.map((u) => (
-            <label key={u.id} className="btn-touch flex items-center gap-2 text-sekundaer text-label">
-              <input
-                type="checkbox"
-                checked={auswahl.includes(u.id)}
-                onChange={() => toggle(u.id)}
-              />
-              {u.name}
-            </label>
-          ))}
-        </div>
-      )}
-      <div className="mt-2 flex gap-2">
-        <button
-          onClick={() => speichernMutation.mutate()}
-          disabled={speichernMutation.isPending}
           className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
         >
           Speichern

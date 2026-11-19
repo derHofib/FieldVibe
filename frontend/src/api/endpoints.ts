@@ -49,6 +49,8 @@ import type {
   AngebotZeilentyp,
   AngebotPositionUpdate,
   Anlage,
+  Betreuer,
+  KundeBetreuungSammelBody,
   AnlagenFeldDefinition,
   AnlagenFeldTyp,
   AnlagenObjekttyp,
@@ -185,7 +187,6 @@ import type {
   Tag,
   TagAssignment,
   TagEntityType,
-  TechnikerZuweisungUebersicht,
   Termin,
   TerminCreateResult,
   TokenPair,
@@ -609,12 +610,11 @@ export const kundenApi = {
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/kunden/${id}`, { method: "DELETE" }),
-  technikerListe: (id: string) => apiFetch<User[]>(`/api/kunden/${id}/techniker`),
-  technikerSetzen: (id: string, userIds: string[]) =>
-    apiFetch<User[]>(`/api/kunden/${id}/techniker`, {
-      method: "PUT",
-      body: JSON.stringify({ user_ids: userIds }),
-    }),
+  betreuung: (id: string) => apiFetch<Betreuer[]>(`/api/kunden/${id}/betreuung`),
+  betreuungSetzen: (id: string, body: { user_ids: string[]; hauptbetreuer_id: string | null }) =>
+    apiFetch<Betreuer[]>(`/api/kunden/${id}/betreuung`, { method: "PUT", body: JSON.stringify(body) }),
+  betreuungSammel: (body: KundeBetreuungSammelBody) =>
+    apiFetch<{ geaendert: number }>("/api/kunden/betreuung/sammel", { method: "POST", body: JSON.stringify(body) }),
   logoUpload: (id: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file, file.name);
@@ -701,11 +701,6 @@ export const partnerApi = {
     apiFetch<Einladung>(`/api/partner/${id}/einladungen/${einladungId}/erneut-senden`, { method: "POST" }),
   einladungWiderrufen: (id: string, einladungId: string) =>
     apiFetch<void>(`/api/partner/${id}/einladungen/${einladungId}`, { method: "DELETE" }),
-};
-
-export const technikerZuweisungenApi = {
-  uebersicht: () =>
-    apiFetch<TechnikerZuweisungUebersicht[]>("/api/techniker-zuweisungen"),
 };
 
 export const anlagenApi = {

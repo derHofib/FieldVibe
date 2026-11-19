@@ -370,17 +370,6 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: ({ hatRecht }) => hatRecht("organigramm", "sehen"),
   },
   {
-    key: "techniker_zuweisungen",
-    label: "Techniker-Zuweisungen",
-    icon: Wrench,
-    tone: "emerald",
-    route: "/techniker-zuweisungen",
-    kategorie: "Verwaltung",
-    // Backend: mandant_admin|custom plus kunden.bearbeiten (zusaetzlich zum bisherigen dispo.bearbeiten).
-    sichtbar: ({ currentUser, hatRecht }) =>
-      istAdminOderCustom(currentUser) && hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten"),
-  },
-  {
     key: "abwesenheiten",
     label: "Abwesenheiten",
     icon: CalendarCheck,
@@ -540,7 +529,7 @@ export const WORKSPACES: Workspace[] = [
     start: ["dispo", "auftraege", "meine-aufgaben", "projekte"],
     seiten: [
       "dispo", "projekte", "zeitplaene", "auftraege", "meine-aufgaben", "material", "pruefmittel",
-      "zeiterfassung", "zeiten_buchen", "team_zeiten", "abwesenheiten", "techniker_zuweisungen",
+      "zeiterfassung", "zeiten_buchen", "team_zeiten", "abwesenheiten",
       "meldungen", "partner", "telefonate",
     ],
   },

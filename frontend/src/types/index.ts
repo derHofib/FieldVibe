@@ -362,8 +362,35 @@ export interface Kunde {
   debitorenkonto?: string | null;
   portal_slug: string;
   logo_object_key: string | null;
+  /** Betreuer der Kundenliste, Hauptbetreuer zuerst. */
+  betreuung?: KundeBetreuungKurz[];
   created_at: string;
   updated_at: string;
+}
+
+export interface KundeBetreuungKurz {
+  user_id: string;
+  name: string;
+  hauptbetreuer: boolean;
+}
+
+export interface Betreuer {
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  hauptbetreuer: boolean;
+  aktiv: boolean;
+  nur_betreute_kunden: boolean;
+  account_typ_name: string | null;
+}
+
+export type KundeBetreuungSammelAktion = "hinzufuegen" | "entfernen" | "hauptbetreuer";
+
+export interface KundeBetreuungSammelBody {
+  kunde_ids: string[];
+  aktion: KundeBetreuungSammelAktion;
+  user_id: string;
+  auch_hauptbetreuer?: boolean;
 }
 
 export type AnlagenObjekttyp = "kundenanlage" | "fahrzeug" | "lager" | "baustelle";
@@ -835,11 +862,7 @@ export interface KundeProfil extends Kunde {
   vorgaenge: Vorgang[];
   tags: Tag[];
   techniker: User[];
-}
-
-export interface TechnikerZuweisungUebersicht {
-  techniker: User;
-  kunden: Kunde[];
+  betreuung: Betreuer[];
 }
 
 // --- Gespeicherte Filter-Vorlagen -----------------------------------------

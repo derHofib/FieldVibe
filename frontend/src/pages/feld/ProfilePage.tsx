@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, LogOut, Mail, MonitorSmartphone, Repeat, Timer, Wrench } from "lucide-react";
+import { Building2, LogOut, Mail, MonitorSmartphone, Repeat, Timer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { authApi } from "../../api/endpoints";
@@ -87,17 +87,11 @@ export function ProfilePage({ layout = "feld" }: { layout?: "feld" | "office" })
     </div>
   );
 
-  const verknuepfungen = (kannDisponieren || zeiterfassung) && (
+  const verknuepfungen = (dauerauftraege || zeiterfassung) && (
     <div>
       <AbschnittskopfB titel="Arbeit" />
       <div>
         <GroupedList>
-          {kannDisponieren && (
-            <GroupedListRow onClick={() => navigate("/techniker-zuweisungen")} navigierbar last={!dauerauftraege && !zeiterfassung}>
-              <SymbolKachel icon={Wrench} farbe="green" />
-              <span className="text-zeile text-label">Techniker-Zuweisungen</span>
-            </GroupedListRow>
-          )}
           {dauerauftraege && (
             <GroupedListRow onClick={() => navigate("/dauerauftraege")} navigierbar last={!zeiterfassung}>
               <SymbolKachel icon={Repeat} farbe="orange" />
