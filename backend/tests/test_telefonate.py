@@ -531,3 +531,30 @@ async def test_db_checks_greifen(szenario):
             async with db.begin_nested():
                 db.add(Telefonat(mandant_id=s["mandant"].id, kunde_id=s["kunde"].id, partner_name="x", richtung="ausgehend", ergebnis="erreicht", dauer_sekunden=-5, beginn=datetime.now(UTC), erfasst_von=user_id))
                 await db.flush()
+
+
+async def test_rueckruf_job_laeuft_stuendlich_und_doppelter_tick_benachrichtigt_nicht_doppelt(client, szenario, monkeypatch):
+    from app.services import job_runner
+
+    s = szenario
+    await client.post("/api/telefonate", headers=s["h"], json=_body(kunde_id=str(s["kunde"].id), rueckruf_am="2020-01-01T09:00:00Z"))
+    aufrufe = []
+    echt = job_runner.SYSTEM_JOBS["rueckrufe"][0]
+
+    async def zaehlend():
+        aufrufe.append(1)
+        return await echt()
+
+    assert job_runner.SYSTEM_JOBS["rueckrufe"][1] == "stuendlich" and "rueckrufe" not in job_runner.TAEGLICHE_JOBS
+    monkeypatch.setattr(job_runner, "SYSTEM_JOBS", {"rueckrufe": (zaehlend, "stuendlich")})
+    monkeypatch.setattr(job_runner, "TAEGLICHE_JOBS", {})
+    stunde = datetime(2031, 5, 1, 10, 5, tzinfo=UTC)
+
+    await job_runner.fuehre_tick(stunde)
+    await job_runner.fuehre_tick(stunde + timedelta(minutes=20))  # gleiche Stunde: kein zweiter Lauf
+    assert len(aufrufe) == 1
+    await job_runner.fuehre_tick(stunde + timedelta(hours=1))  # naechster Slot laeuft, benachrichtigt aber nicht erneut
+    assert len(aufrufe) == 2
+
+    async with system_session(grund="test") as db:
+        assert (await db.execute(select(func.count()).select_from(Notification).where(Notification.typ == "rueckruf"))).scalar_one() == 1

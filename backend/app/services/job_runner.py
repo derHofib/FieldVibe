@@ -52,7 +52,6 @@ TAEGLICHE_JOBS: dict[str, MandantenJob] = {
     "dauerauftraege": run_dauerauftraege_scheduler,
     "prioritaet": run_prioritaet_scheduler,
     "wiedervorlage": run_wiedervorlage_scheduler,
-    "rueckrufe": run_rueckruf_scheduler,
     "angebot_nachfassen": run_angebot_nachfassen,
     "mahnwesen": run_mahnwesen_eskalation,
     "kreditoren": run_kreditoren_faelligkeits_check,
@@ -61,6 +60,10 @@ TAEGLICHE_JOBS: dict[str, MandantenJob] = {
 
 async def _email_ingest() -> dict:
     return await run_email_ingest()
+
+
+async def _rueckrufe() -> dict:
+    return await run_rueckruf_scheduler()
 
 
 async def _datenimport_aufraeumen() -> dict:
@@ -75,6 +78,8 @@ async def _fehlerbericht_aufbewahrung() -> dict:
 # UTC-Tag ab scheduler_default_stunde_utc (Aufbewahrung gilt plattformweit).
 SYSTEM_JOBS: dict[str, tuple[SystemJob, str]] = {
     "email_ingest": (_email_ingest, "stuendlich"),
+    # Rueckrufe sind auf die Stunde genau faellig; alle aktiven Mandanten, Einmal-Kennzeichen am Telefonat.
+    "rueckrufe": (_rueckrufe, "stuendlich"),
     # Stuendlich: die Quelldatei eines Imports soll nach 24 Stunden weg sein, nicht erst am naechsten Tag.
     "datenimport_aufraeumen": (_datenimport_aufraeumen, "stuendlich"),
     "fehlerbericht_aufbewahrung": (_fehlerbericht_aufbewahrung, "taeglich"),

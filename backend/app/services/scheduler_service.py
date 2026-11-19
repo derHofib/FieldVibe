@@ -546,6 +546,9 @@ async def _rueckrufe_fuer_mandant(session: AsyncSession, mandant_id: UUID) -> di
         )
 
     ergebnis = {"rueckrufe_benachrichtigt": len(faellige)}
+    if not faellige:
+        # Stuendlicher Lauf: ohne Treffer keinen Audit-Eintrag je Mandant und Stunde.
+        return ergebnis
     session.add(
         AuditLog(
             mandant_id=mandant_id,
