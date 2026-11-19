@@ -45,9 +45,11 @@ export function sortierungAusUrl(roh: string | null): Sortierung {
 }
 
 /** Der Pfad (Projekt/Auftrag) kommt vom Server abgeleitet; die Rohfelder bleiben als Rückfall, falls er fehlt. */
-export const projektIdVon = (a: ProjektAufgabe) => a.pfad_projekt_id ?? a.projekt_id ?? null;
-export const projektNameVon = (a: ProjektAufgabe) => a.pfad_projekt_name ?? a.projekt_name ?? null;
-export const auftragIdVon = (a: ProjektAufgabe) => a.pfad_auftrag_id ?? a.auftrag_id ?? null;
+export type PfadFelder = Pick<ProjektAufgabe, "projekt_id" | "auftrag_id"> &
+  Partial<Pick<ProjektAufgabe, "projekt_name" | "pfad_projekt_id" | "pfad_projekt_name" | "pfad_auftrag_id">>;
+export const projektIdVon = (a: PfadFelder) => a.pfad_projekt_id ?? a.projekt_id ?? null;
+export const projektNameVon = (a: PfadFelder) => a.pfad_projekt_name ?? a.projekt_name ?? null;
+export const auftragIdVon = (a: PfadFelder) => a.pfad_auftrag_id ?? a.auftrag_id ?? null;
 export const kundeNameVon = (a: ProjektAufgabe) => a.kunde_name ?? a.vorgang_kunde_name ?? null;
 
 /** Alle Wörter müssen vorkommen (Reihenfolge egal), "ae" findet "ä". */
