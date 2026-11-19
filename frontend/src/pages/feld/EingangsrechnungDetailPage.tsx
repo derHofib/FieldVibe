@@ -12,7 +12,7 @@ import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatu
 import { BelegVorschau } from "../../components/rechnung/BelegVorschau";
 import { eingangStatusToken } from "../../components/rechnung/rechnungenFilter";
 import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
-import { formatEuro } from "../../utils/format";
+import { formatEuro, formatIsoTag, formatMenge, formatProzent } from "../../utils/format";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
@@ -399,7 +399,7 @@ export function EingangsrechnungDetailPage({
           <div className="text-meta text-label2">
             {eingangsrechnung.rechnungsnummer_lieferant}
           </div>
-          <h1 className="text-titel-mobil font-bold text-label">
+          <h1 className={dicht ? "text-zeile font-semibold text-label" : "text-titel-mobil font-bold text-label"}>
             {eingangsrechnung.lieferant_name}
           </h1>
         </div>
@@ -420,11 +420,11 @@ export function EingangsrechnungDetailPage({
         </div>
       )}
       <p className="mt-1 text-meta text-label2">
-        Rechnungsdatum {new Date(eingangsrechnung.rechnungsdatum).toLocaleDateString("de-DE")}
+        Rechnungsdatum {formatIsoTag(eingangsrechnung.rechnungsdatum.slice(0, 10))}
       </p>
       {eingangsrechnung.faellig_am && (
         <p className="mt-1 text-meta text-label2">
-          Fällig am {new Date(eingangsrechnung.faellig_am).toLocaleDateString("de-DE")}
+          Fällig am {formatIsoTag(eingangsrechnung.faellig_am.slice(0, 10))}
         </p>
       )}
       {eingangsrechnung.kategorie && (
@@ -437,8 +437,8 @@ export function EingangsrechnungDetailPage({
       )}
       {skontoAktiv && !vollbild && (
         <p className="mt-1 text-sekundaer font-medium text-tint">
-          Skonto {eingangsrechnung.skonto_prozent}% bis {new Date(eingangsrechnung.skonto_frist!).toLocaleDateString("de-DE")}
-          {" "}(Ersparnis {eingangsrechnung.skonto_betrag} EUR)
+          Skonto {formatProzent(eingangsrechnung.skonto_prozent!)} bis {formatIsoTag(eingangsrechnung.skonto_frist!.slice(0, 10))}
+          {" "}(Ersparnis {formatEuro(eingangsrechnung.skonto_betrag ?? 0)})
         </p>
       )}
 
@@ -460,7 +460,7 @@ export function EingangsrechnungDetailPage({
             {vollbild && skontoAktiv && (
               <div className="rounded-[var(--radius-ap-md)] bg-fill p-3">
                 <p className="text-meta text-label2">
-                  Skonto {eingangsrechnung.skonto_prozent}% bis {new Date(eingangsrechnung.skonto_frist!).toLocaleDateString("de-DE")}
+                  Skonto {formatProzent(eingangsrechnung.skonto_prozent!)} bis {formatIsoTag(eingangsrechnung.skonto_frist!.slice(0, 10))}
                 </p>
                 <p className="ap-heading text-titel-mobil font-semibold tabular-nums text-st-erledigt">
                   {formatEuro(eingangsrechnung.skonto_betrag ?? 0)}
@@ -475,13 +475,13 @@ export function EingangsrechnungDetailPage({
         </div>
       ) : (
         <div className="mt-3 text-right text-fliess">
-          <div className="text-label2">Netto: {eingangsrechnung.betrag_netto} EUR</div>
+          <div className="text-label2">Netto: {formatEuro(eingangsrechnung.betrag_netto)}</div>
           <div className="font-semibold text-label">
-            Brutto: {eingangsrechnung.betrag_brutto} EUR
+            Brutto: {formatEuro(eingangsrechnung.betrag_brutto)}
           </div>
           {Number(eingangsrechnung.bezahlter_betrag) > 0 && (
             <div className="text-sekundaer text-label2">
-              Bezahlt: {eingangsrechnung.bezahlter_betrag} EUR · Offen: {eingangsrechnung.offener_betrag} EUR
+              Bezahlt: {formatEuro(eingangsrechnung.bezahlter_betrag)} · Offen: {formatEuro(eingangsrechnung.offener_betrag)}
             </div>
           )}
         </div>
@@ -605,7 +605,7 @@ export function EingangsrechnungDetailPage({
         </div>
       </div>
       {eingangsrechnung.beleg_object_key ? (
-        <BelegVorschau id={eingangsrechnung.id} iframeKlasse="h-[calc(100vh-12rem)] w-full rounded-md" />
+        <BelegVorschau id={eingangsrechnung.id} iframeKlasse="h-[calc(100vh-13.5rem)] w-full rounded-md" />
       ) : eingangsrechnung.hat_xml ? (
         <p className="p-4 text-sekundaer text-label2">
           Zu dieser E-Rechnung gibt es kein PDF. Die XML ist der Beleg.
@@ -714,10 +714,10 @@ export function EingangsrechnungDetailPage({
               <div>
                 <div className="text-label">{p.beschreibung}</div>
                 <div className="text-sekundaer text-label2">
-                  {p.menge} {p.einheit} × {p.einzelpreis} EUR
+                  {formatMenge(p.menge)} {p.einheit} × {formatEuro(p.einzelpreis)}
                 </div>
               </div>
-              <div className="font-medium text-label">{p.gesamt} EUR</div>
+              <div className="font-medium text-label">{formatEuro(p.gesamt)}</div>
             </div>
           ))}
         </div>
@@ -778,9 +778,9 @@ export function EingangsrechnungDetailPage({
               className="flex items-center justify-between rounded-md bg-fill p-2 text-fliess"
             >
               <span className="text-label2">
-                {new Date(z.datum).toLocaleDateString("de-DE")}
+                {formatIsoTag(z.datum.slice(0, 10))}
               </span>
-              <span className="font-medium text-label">{z.betrag} EUR</span>
+              <span className="font-medium text-label">{formatEuro(z.betrag)}</span>
             </div>
           ))}
         </div>

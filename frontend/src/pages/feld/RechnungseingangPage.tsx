@@ -3,6 +3,7 @@ import { FileUp, ReceiptText, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { formatEuro, formatIsoTag } from "../../utils/format";
 import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
@@ -178,7 +179,7 @@ export function RechnungseingangPage() {
                 {e.lieferant_name}
               </div>
               <div className="text-meta text-label2">
-                {e.rechnungsnummer_lieferant} · {new Date(e.rechnungsdatum).toLocaleDateString("de-DE")}
+                {e.rechnungsnummer_lieferant} · {formatIsoTag(e.rechnungsdatum.slice(0, 10))}
                 {e.kategorie && ` · ${KATEGORIE_LABEL[e.kategorie]}`}
                 {e.hat_xml && " · E-Rechnung"}
                 {e.import_hinweis && " · Hinweis prüfen"}
@@ -186,7 +187,7 @@ export function RechnungseingangPage() {
             </div>
             <div className="text-right">
               <div className="text-fliess font-medium text-label">
-                {e.betrag_brutto} EUR
+                {formatEuro(e.betrag_brutto)}
               </div>
               <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-semibold text-label">
                 {STATUS_LABEL[e.status]}

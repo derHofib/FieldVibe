@@ -217,13 +217,13 @@ export function OfficeRechnungseingangPage() {
     key: "nummer",
     label: "Rechnungsnr.",
     sortWert: (e) => e.rechnungsnummer_lieferant,
-    render: (e) => <span className="text-label2">{e.rechnungsnummer_lieferant}</span>,
+    render: (e) => <span className="whitespace-nowrap text-label2">{e.rechnungsnummer_lieferant}</span>,
   };
   const rechnungsdatum: Spalte<Eingangsrechnung> = {
     key: "rechnungsdatum",
     label: "Rechnungsdatum",
     sortWert: (e) => e.rechnungsdatum.slice(0, 10),
-    render: (e) => tag(e.rechnungsdatum),
+    render: (e) => <span className="whitespace-nowrap">{tag(e.rechnungsdatum)}</span>,
   };
   const faellig: Spalte<Eingangsrechnung> = {
     key: "faellig",
@@ -232,12 +232,12 @@ export function OfficeRechnungseingangPage() {
     sortWert: (e) => e.faellig_am?.slice(0, 10) ?? "9999-12-31",
     render: (e) =>
       istUeberfaellig(e) ? (
-        <span className="font-semibold text-st-fehlt">
+        <span className="whitespace-nowrap font-semibold text-st-fehlt">
           {tag(e.faellig_am)}
           <span className="sr-only"> (überfällig)</span>
         </span>
       ) : (
-        tag(e.faellig_am)
+        <span className="whitespace-nowrap">{tag(e.faellig_am)}</span>
       ),
   };
   const skonto: Spalte<Eingangsrechnung> = {
@@ -246,7 +246,7 @@ export function OfficeRechnungseingangPage() {
     sortWert: (e) => e.skonto_frist?.slice(0, 10) ?? "9999-12-31",
     render: (e) =>
       e.skonto_frist && e.skonto_prozent ? (
-        <span className="text-tint-text">
+        <span className="whitespace-nowrap text-tint-text">
           {formatDatum(e.skonto_frist, true)} · {Number(e.skonto_prozent).toLocaleString("de-DE")} %
         </span>
       ) : (
@@ -264,21 +264,23 @@ export function OfficeRechnungseingangPage() {
     label: "Netto",
     align: "rechts",
     sortWert: (e) => Number(e.betrag_netto),
-    render: (e) => EURO.format(Number(e.betrag_netto)),
+    render: (e) => <span className="whitespace-nowrap">{EURO.format(Number(e.betrag_netto))}</span>,
   };
   const brutto: Spalte<Eingangsrechnung> = {
     key: "betrag",
     label: "Brutto",
     align: "rechts",
     sortWert: (e) => Number(e.betrag_brutto),
-    render: (e) => <span className="font-semibold">{EURO.format(Number(e.betrag_brutto))}</span>,
+    render: (e) => <span className="whitespace-nowrap font-semibold">{EURO.format(Number(e.betrag_brutto))}</span>,
   };
   const offen: Spalte<Eingangsrechnung> = {
     key: "offen",
     label: "Offen",
     align: "rechts",
     sortWert: (e) => Number(e.offener_betrag),
-    render: (e) => (Number(e.offener_betrag) === 0 ? "–" : EURO.format(Number(e.offener_betrag))),
+    render: (e) => (
+      <span className="whitespace-nowrap">{Number(e.offener_betrag) === 0 ? "–" : EURO.format(Number(e.offener_betrag))}</span>
+    ),
   };
   const status: Spalte<Eingangsrechnung> = {
     key: "status",
@@ -302,19 +304,19 @@ export function OfficeRechnungseingangPage() {
   const monat = heute.toLocaleDateString("de-DE", { month: "long" });
 
   const panel = id ? (
-    <div className="space-y-3">
-      <div className="flex justify-end pt-3">
-        <button
-          type="button"
-          onClick={() => navigate(`/rechnungseingang/${id}/vollbild`)}
-          className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-meta font-medium text-label2 hover:text-label"
-        >
-          <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-          Ganze Seite
-        </button>
-      </div>
+    <div className="pt-3">
       <EingangsrechnungDetailPage key={id} id={id} layout="dicht" />
     </div>
+  ) : null;
+  const ganzeSeite = id ? (
+    <button
+      type="button"
+      onClick={() => navigate(`/rechnungseingang/${id}/vollbild`)}
+      className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1 text-meta font-medium text-label2 hover:text-label"
+    >
+      <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+      Ganze Seite
+    </button>
   ) : null;
 
   const importKnopf = kannErstellen && (
@@ -487,14 +489,14 @@ export function OfficeRechnungseingangPage() {
             felder={felder}
             zustand={zustand}
             variante="office"
-            suchPlatzhalter="Aussteller oder Rechnungsnummer suchen…"
+            suchPlatzhalter="Aussteller oder Nr. suchen…"
             className="mb-4"
           />
         </>
       )}
 
       <div className={`relative ${ziehend ? "min-h-[18rem]" : ""}`}>
-        <ListeMitPanel panelTitel="Eingangsrechnung" panel={panel} onSchliessen={schliessen} liste={liste} />
+        <ListeMitPanel panelTitel="Eingangsrechnung" panel={panel} kopfAktionen={ganzeSeite} onSchliessen={schliessen} liste={liste} />
         {ziehend && (
           <div
             aria-hidden="true"
