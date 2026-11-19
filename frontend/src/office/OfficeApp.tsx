@@ -60,6 +60,7 @@ import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
+import { OfficeTelefonatePage } from "./telefonate/OfficeTelefonatePage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 import { NichtGefunden } from "../components/NichtGefunden";
 
@@ -87,6 +88,7 @@ export function OfficeApp() {
           <Route path="/angebote" element={<OfficeRechnungenPage />} />
           <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
           <Route path="/postfach" element={<OfficePostfachPage />} />
+          <Route path="/telefonate" element={<OfficeTelefonatePage />} />
           <Route path="/kunden" element={<OfficeKundenPage />} />
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />
           <Route path="/partner" element={<OfficePartnerPage />} />
