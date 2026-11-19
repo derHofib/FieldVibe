@@ -68,6 +68,7 @@ from app.api.routes import (
     rechnungen,
     search,
     standorte,
+    telefonate,
     statistik,
     stories,
     stream,
@@ -172,6 +173,8 @@ app.include_router(exporte.router)
 app.include_router(version.router)
 app.include_router(dsgvo.router)
 app.include_router(kunden.router)
+app.include_router(telefonate.kontaktverlauf_router)
+app.include_router(telefonate.router)
 app.include_router(anlagen.router)
 app.include_router(anlagen_feld_definitionen.router)
 app.include_router(standorte.router)

@@ -24,6 +24,9 @@ export function useOutboxSync(): number {
       await syncOutbox();
       await refreshCount();
       queryClient.invalidateQueries({ queryKey: ["vorgang-events"] });
+      queryClient.invalidateQueries({ queryKey: ["telefonate"] });
+      queryClient.invalidateQueries({ queryKey: ["kontaktverlauf"] });
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     };
 

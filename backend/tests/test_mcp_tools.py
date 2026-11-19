@@ -41,6 +41,7 @@ ERWARTETE_TOOLS = {
     "kunde_lesen",
     "anlage_lesen",
     "termine_auflisten",
+    "telefonate_auflisten",
     "pruefungen_faellig",
     "formular_vorlagen",
     "formular_lesen",

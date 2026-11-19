@@ -21,7 +21,7 @@ class VorgangKennzahlen(BaseModel):
     abgeschlossene_vorgaenge_zeitraum: int
 
 
-AggregatBereich = Literal["vorgaenge", "rechnungen"]
+AggregatBereich = Literal["vorgaenge", "rechnungen", "telefonate"]
 AggregatKennzahl = Literal[
     "anzahl_erstellt",
     "anzahl_abgeschlossen",
@@ -30,6 +30,7 @@ AggregatKennzahl = Literal[
     "umsatz_netto",
     "umsatz_brutto",
     "anzahl",
+    "telefonzeit_minuten",
 ]
 AggregatGruppierung = Literal[
     "monat", "woche", "techniker", "kunde", "status", "leistungstyp", "prioritaet", "projekt"

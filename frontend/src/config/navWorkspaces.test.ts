@@ -22,4 +22,11 @@ describe("Workspaces", () => {
     const nurKunden = alle.filter((s) => ["kunden", "feed"].includes(s.key));
     expect(verfuegbareWorkspaces(nurKunden).map((w) => w.key)).toEqual(["sales"]);
   });
+
+  it("Telefonate stehen in Kommunikation sowie in Operativ und Sales", () => {
+    const seite = NAV_SEITEN.find((s) => s.key === "telefonate")!;
+    expect(seite.kategorie).toBe("Kommunikation");
+    const mit = WORKSPACES.filter((w) => w.seiten.includes("telefonate")).map((w) => w.key);
+    expect(mit).toEqual(["operativ", "sales"]);
+  });
 });

@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
-import type { Anlage, FeedCard, Kunde, VorgangEvent } from "../types";
+import type { Anlage, FeedCard, Kunde, TelefonatCreate, VorgangEvent } from "../types";
 
 export interface OutboxItem {
   client_uuid: string;
@@ -9,7 +9,7 @@ export interface OutboxItem {
   // vorgaenge.py::create_vorgang, das denselben client_uuid als
   // Idempotenz-Schluessel nutzt wie VorgangEvent.client_uuid).
   vorgang_id: string | null;
-  kind: "kommentar" | "foto" | "dokument" | "vorgang" | "status";
+  kind: "kommentar" | "foto" | "dokument" | "vorgang" | "status" | "telefonat";
   created_at: string;
   // "kommentar": JSON-Body fuer POST .../events
   body?: string;
@@ -30,6 +30,8 @@ export interface OutboxItem {
   vorgangLeistungstyp?: string;
   // "status": neuer Status fuer einen bestehenden Vorgang
   statusValue?: string;
+  // "telefonat": kompletter POST-Body (client_uuid steckt darin und im Eintrag)
+  telefonat?: TelefonatCreate;
   // Vom Server abgelehnt (z. B. 409 "bereits abgeschlossen") statt eines
   // Netzwerkfehlers -- ein erneuter Versuch wuerde denselben Fehler
   // liefern, darf aber nicht den Rest der Warteschlange blockieren.

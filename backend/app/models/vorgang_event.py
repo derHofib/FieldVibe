@@ -27,6 +27,7 @@ EVENT_TYPEN = (
     "zuordnung_geaendert",
     "eigenstaendig_gesetzt",
     "eigenstaendig_aufgehoben",
+    "telefonat",
 )
 
 

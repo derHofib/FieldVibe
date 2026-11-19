@@ -35,6 +35,7 @@ from app.services.scheduler_service import (
     run_dauerauftraege_scheduler,
     run_prioritaet_scheduler,
     run_pruefzyklen_scheduler,
+    run_rueckruf_scheduler,
     run_wiedervorlage_scheduler,
 )
 from app.services.worker_lock import worker_lock
@@ -61,6 +62,10 @@ async def _email_ingest() -> dict:
     return await run_email_ingest()
 
 
+async def _rueckrufe() -> dict:
+    return await run_rueckruf_scheduler()
+
+
 async def _datenimport_aufraeumen() -> dict:
     return await raeume_datenimport_auf()
 
@@ -73,6 +78,8 @@ async def _fehlerbericht_aufbewahrung() -> dict:
 # UTC-Tag ab scheduler_default_stunde_utc (Aufbewahrung gilt plattformweit).
 SYSTEM_JOBS: dict[str, tuple[SystemJob, str]] = {
     "email_ingest": (_email_ingest, "stuendlich"),
+    # Rueckrufe sind auf die Stunde genau faellig; alle aktiven Mandanten, Einmal-Kennzeichen am Telefonat.
+    "rueckrufe": (_rueckrufe, "stuendlich"),
     # Stuendlich: die Quelldatei eines Imports soll nach 24 Stunden weg sein, nicht erst am naechsten Tag.
     "datenimport_aufraeumen": (_datenimport_aufraeumen, "stuendlich"),
     "fehlerbericht_aufbewahrung": (_fehlerbericht_aufbewahrung, "taeglich"),

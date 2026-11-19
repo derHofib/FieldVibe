@@ -1,8 +1,12 @@
-import { AlertTriangle, Camera, Clock, FileText, Mail, Paperclip, Star } from "lucide-react";
+import { AlertTriangle, Camera, Clock, FileText, Mail, Paperclip, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Star, Timer } from "lucide-react";
 import { EVENT_LABEL } from "./konstanten";
+import { IconBadge } from "../../../components/IconBadge";
 import { MentionText } from "../../../components/MentionText";
+import { StatusBadge } from "../../../components/StatusBadge";
+import { StatusPille } from "../../../components/apple/StatusPille";
 import type { OutboxItem } from "../../../offline/db";
-import type { EmailLog, VorgangEvent } from "../../../types";
+import type { EmailLog, TelefonatErgebnis, TelefonatRichtung, VorgangEvent } from "../../../types";
+import { TELEFONAT_ERGEBNIS_LABEL, TELEFONAT_RICHTUNG_LABEL, formatDauer } from "../../../utils/telefonat";
 
 // Unauffaellige, transparente Pill zur Unterscheidung der Eintragsart im
 // gemeinsamen Verlauf (Kommentar/E-Mail laufen dort jetzt durcheinander) --
@@ -25,13 +29,154 @@ function ViaClaude() {
   return <VerlaufTypTag>via Claude</VerlaufTypTag>;
 }
 
+function formatZeitpunkt(iso: string): string {
+  return new Date(iso).toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatRueckruf(iso: string): string {
+  return new Date(iso).toLocaleString("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const CHIP_KLEIN = "inline-flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-meta font-semibold text-label";
+
+const RICHTUNG_ICON = { ausgehend: PhoneOutgoing, eingehend: PhoneIncoming } as const;
+
+/** Verlaufskarte eines Telefonats (event_type "telefonat"); Daten kommen aus event.payload + body.
+ * Klickbar nur, wenn der Aufrufer onBearbeiten übergibt (Erfasser bzw. Admin). */
+export function TelefonatBubble({
+  event,
+  autorName,
+  onBearbeiten,
+}: {
+  event: VorgangEvent;
+  autorName?: string | null;
+  onBearbeiten?: () => void;
+}) {
+  const p = event.payload as {
+    richtung?: TelefonatRichtung;
+    ergebnis?: TelefonatErgebnis;
+    beginn?: string;
+    dauer_sekunden?: number | null;
+    partner_name?: string;
+    partner_nummer?: string | null;
+    rueckruf_am?: string | null;
+    rueckruf_erledigt_am?: string | null;
+    zeit_gebucht?: boolean;
+    erfasst_von_name?: string;
+  };
+  const richtung: TelefonatRichtung = p.richtung ?? "ausgehend";
+  const ergebnis: TelefonatErgebnis = p.ergebnis ?? "erreicht";
+  const nichtErreicht = ergebnis !== "erreicht";
+  const RichtungIcon = RICHTUNG_ICON[richtung];
+  const dauer = formatDauer(p.dauer_sekunden);
+  const erfasser = autorName ?? p.erfasst_von_name;
+  const rueckrufErledigt = !!p.rueckruf_erledigt_am;
+
+  return (
+    <div
+      className={`mb-3 card-ap p-3 ${onBearbeiten ? "cursor-pointer hover:bg-fill" : ""}`}
+      data-testid="telefonat-bubble"
+      {...(onBearbeiten
+        ? {
+            role: "button",
+            tabIndex: 0,
+            "aria-label": `Telefonat mit ${p.partner_name ?? "Gesprächspartner"} bearbeiten`,
+            onClick: onBearbeiten,
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onBearbeiten();
+              }
+            },
+          }
+        : {})}
+    >
+      <div className="flex items-start gap-3">
+        <IconBadge icon={nichtErreicht ? PhoneMissed : Phone} tone="teal" active={!nichtErreicht} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-fliess font-semibold text-label">
+                <span title={TELEFONAT_RICHTUNG_LABEL[richtung]} aria-label={TELEFONAT_RICHTUNG_LABEL[richtung]} role="img" className="shrink-0 text-label2">
+                  <RichtungIcon size={14} strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span className="truncate">{p.partner_name ?? "Telefonat"}</span>
+                {p.partner_nummer && <span className="font-normal text-label2">· {p.partner_nummer}</span>}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-sekundaer text-label2">
+                <span>
+                  {formatZeitpunkt(p.beginn ?? event.created_at)}
+                  {erfasser && ` · erfasst von ${erfasser}`}
+                </span>
+                {istKiEvent(event) && <ViaClaude />}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {dauer && !nichtErreicht && (
+                <span className={CHIP_KLEIN}>
+                  <Clock size={11} strokeWidth={2} aria-hidden="true" /> {dauer}
+                </span>
+              )}
+              <StatusBadge label={TELEFONAT_ERGEBNIS_LABEL[ergebnis]} tone={nichtErreicht ? "slate" : "emerald"} />
+              {p.zeit_gebucht && (
+                <span className={CHIP_KLEIN}>
+                  <Timer size={11} strokeWidth={2} aria-hidden="true" /> Zeit gebucht
+                </span>
+              )}
+            </div>
+          </div>
+          {event.body && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-fliess text-label">{event.body}</p>
+          )}
+          {p.rueckruf_am && (
+            <div className="mt-2">
+              <StatusPille
+                status={rueckrufErledigt ? "erledigt" : "wartet"}
+                label={rueckrufErledigt ? "Rückruf erledigt" : `Rückruf ${formatRueckruf(p.rueckruf_am)}`}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EventBubble({
   event,
   onHighlight,
+  autorName,
+  onTelefonatBearbeiten,
 }: {
   event: VorgangEvent;
   onHighlight: (eventId: number) => void;
+  /** Name des Erfassers, falls dem Aufrufer bekannt (Telefonat-Karte). */
+  autorName?: string | null;
+  /** Gesetzt nur, wenn der Nutzer das Telefonat bearbeiten darf (Erfasser/Admin). */
+  onTelefonatBearbeiten?: (event: VorgangEvent) => void;
 }) {
+  if (event.event_type === "telefonat") {
+    return (
+      <TelefonatBubble
+        event={event}
+        autorName={autorName}
+        onBearbeiten={onTelefonatBearbeiten ? () => onTelefonatBearbeiten(event) : undefined}
+      />
+    );
+  }
   if (event.is_system || event.event_type === "status_change") {
     const label =
       event.event_type === "status_change"
@@ -183,6 +328,10 @@ export function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard:
       ) : item.kind === "dokument" ? (
         <p className="flex items-center gap-1 text-fliess text-label">
           <FileText size={14} strokeWidth={2} /> {item.dokumentName ?? "Dokument"} wartet auf Synchronisierung
+        </p>
+      ) : item.kind === "telefonat" ? (
+        <p className="flex items-center gap-1 text-fliess text-label">
+          <Phone size={14} strokeWidth={2} /> Telefonat mit {item.telefonat?.partner_name ?? "Gesprächspartner"} wartet auf Senden
         </p>
       ) : item.kind === "status" ? (
         <p className="text-fliess text-label">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>

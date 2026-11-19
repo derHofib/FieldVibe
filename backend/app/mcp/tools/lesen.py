@@ -8,7 +8,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from app.mcp.aufbereitung import bereinigen, seite_aus
+from app.mcp.aufbereitung import SEITENGROESSE, bereinigen, seite_aus
 from app.mcp.protokoll_ansicht import abschnitte_aus
 from app.mcp.protokoll_werte import fehlende_pflichtfelder
 from app.mcp.rest_client import api_get
@@ -136,6 +136,45 @@ def registrieren(mcp: MCPServer) -> None:
                 "formulare": seite_aus(formulare, 1) if isinstance(formulare, list) else formulare,
             }
         )
+
+    @mcp.tool(
+        name="telefonate_auflisten",
+        title="Telefonate auflisten",
+        description=(
+            "Listet erfasste Telefonate (Gesprächspartner, Richtung, Ergebnis, Dauer, Notiz, Rückruf), neueste "
+            "zuerst. Filter nach Kunde, Vorgang oder nur offene Rückrufe (dann nach Rückruf-Termin sortiert). "
+            "Sichtbar ist nur, was der Nutzer in der App sehen darf. Höchstens 100 Einträge je Aufruf."
+        ),
+        annotations=NUR_LESEN,
+    )
+    async def telefonate_auflisten(
+        kunde_id: Annotated[str | None, Field(description="Nur Telefonate dieses Kunden (ID).")] = None,
+        vorgang_id: Annotated[str | None, Field(description="Nur Telefonate zu diesem Vorgang (ID).")] = None,
+        rueckruf_offen: Annotated[bool, Field(description="Nur Telefonate mit offenem Rückruf.")] = False,
+        seite: _Seite = 1,
+    ) -> dict[str, Any]:
+        z = zugriff()
+        liste = _liste(
+            await api_get(
+                z,
+                "/api/telefonate",
+                {
+                    "kunde_id": kunde_id,
+                    "vorgang_id": vorgang_id,
+                    "rueckruf_offen": "true" if rueckruf_offen else None,
+                    "seite": seite,
+                    "limit": SEITENGROESSE,
+                },
+            )
+        )
+        ergebnis: dict[str, Any] = {
+            "eintraege": bereinigen(liste),
+            "seite": seite,
+            "gekuerzt": len(liste) >= SEITENGROESSE,
+        }
+        if ergebnis["gekuerzt"]:
+            ergebnis["hinweis"] = f"Weitere Einträge mit seite={seite + 1} abrufen."
+        return ergebnis
 
     @mcp.tool(
         name="auftraege_auflisten",

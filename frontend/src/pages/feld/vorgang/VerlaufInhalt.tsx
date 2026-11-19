@@ -1,14 +1,19 @@
 import { ApiError } from "../../../api/client";
-import { vorgaengeApi } from "../../../api/endpoints";
+import { telefonateApi, vorgaengeApi } from "../../../api/endpoints";
 import { EmailSection } from "../../../components/EmailSection";
 import { SignaturePad } from "../../../components/SignaturePad";
+import { fehlerText, useToast } from "../../../components/Toast";
+import { useTelefonat } from "../../../components/telefonat/TelefonatProvider";
+import { useAuth } from "../../../context/AuthContext";
 import type { OutboxItem } from "../../../offline/db";
 import { discardOutboxItem } from "../../../offline/outbox";
 import type { Highlight, Kunde, Partner, UserAuswahl, VorgangEvent } from "../../../types";
 import type { VerlaufEintrag } from "./konstanten";
+import { istAdminRolle } from "../../../utils/rollen";
+import { VERLAUF_FILTER_OPTIONEN, type VerlaufFilter } from "./verlaufFilter";
 import { EmailBubble, EventBubble, OutboxBubble } from "./VerlaufBubbles";
 import type { QueryClient, UseMutationResult } from "@tanstack/react-query";
-import { Camera, Eye, EyeOff, Paperclip, PenLine } from "lucide-react";
+import { Camera, Eye, EyeOff, Paperclip, PenLine, Phone } from "lucide-react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Location } from "react-router-dom";
 
@@ -43,14 +48,19 @@ export function VerlaufInhalt({
   commentMutation,
   showUnterschriftPad,
   unterschriftMutation,
+  layout = "kompakt",
+  onTelefonatErfassen,
 }: {
+  /** "dicht" = Office-Panel; dort steht "Telefonat erfassen" als Link neben dem Filter, in der Feld-App als Icon in der Werkzeugleiste. */
+  layout?: "kompakt" | "dicht";
+  onTelefonatErfassen?: () => void;
   id: string | undefined;
   kunde: Kunde | undefined;
   location: Location<any>;
   kundenansicht: boolean;
   setKundenansicht: Dispatch<SetStateAction<boolean>>;
-  setVerlaufFilter: Dispatch<SetStateAction<"alle" | "kommentare" | "system" | "email">>;
-  verlaufFilter: "alle" | "kommentare" | "system" | "email";
+  setVerlaufFilter: Dispatch<SetStateAction<VerlaufFilter>>;
+  verlaufFilter: VerlaufFilter;
   verlaufEintraegeGefiltert: VerlaufEintrag[];
   eigeneOutboxItemsGefiltert: OutboxItem[];
   queryClient: QueryClient;
@@ -75,6 +85,21 @@ export function VerlaufInhalt({
   showUnterschriftPad: boolean;
   unterschriftMutation: UseMutationResult<VorgangEvent, Error, { blob: Blob; unterzeichnerName: string; }, unknown>;
 }) {
+  const { currentUser } = useAuth();
+  const telefonat = useTelefonat();
+  const toast = useToast();
+  const kannTelefonatBearbeiten = (e: VorgangEvent) =>
+    !!currentUser && (e.author_user_id === currentUser.id || istAdminRolle(currentUser));
+  const autorName = (e: VorgangEvent) => users?.find((u) => u.id === e.author_user_id)?.name;
+  async function telefonatBearbeiten(e: VorgangEvent) {
+    if (!e.ref_entity_id) return;
+    try {
+      telefonat.bearbeiten(await telefonateApi.get(e.ref_entity_id));
+    } catch (err) {
+      toast.fehler(fehlerText(err, "Telefonat konnte nicht geladen werden."));
+    }
+  }
+
   return (
     <>
       <EmailSection
@@ -106,14 +131,7 @@ export function VerlaufInhalt({
       </div>
 
       <div className="mt-2 mb-1 flex flex-wrap items-center gap-1.5 text-sekundaer">
-        {(
-          [
-            { wert: "alle", label: "Alle" },
-            { wert: "kommentare", label: "Kommentare" },
-            { wert: "system", label: "System" },
-            { wert: "email", label: "E-Mail" },
-          ] as const
-        ).map((f) => (
+        {VERLAUF_FILTER_OPTIONEN.map((f) => (
           <button
             key={f.wert}
             onClick={() => setVerlaufFilter(f.wert)}
@@ -126,6 +144,15 @@ export function VerlaufInhalt({
             {f.label}
           </button>
         ))}
+        {layout === "dicht" && onTelefonatErfassen && !kundenansicht && (
+          <button
+            type="button"
+            onClick={onTelefonatErfassen}
+            className="btn-touch ml-auto flex items-center gap-1 font-medium text-tint-text hover:underline"
+          >
+            <Phone size={14} strokeWidth={2} aria-hidden="true" /> Telefonat erfassen
+          </button>
+        )}
       </div>
 
       <div>
@@ -156,6 +183,10 @@ export function VerlaufInhalt({
                   key={`event-${eintrag.event.id}`}
                   event={eintrag.event}
                   onHighlight={(eventId) => highlightMutation.mutate(eventId)}
+                  autorName={autorName(eintrag.event)}
+                  onTelefonatBearbeiten={
+                    kannTelefonatBearbeiten(eintrag.event) ? (e) => void telefonatBearbeiten(e) : undefined
+                  }
                 />
               ),
             )}
@@ -226,8 +257,8 @@ export function VerlaufInhalt({
               Auch an Partner {zugewiesenerPartner?.name ?? ""}
             </label>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 onClick={() => setShowMentionPicker((v) => !v)}
                 title="Erwähnen"
@@ -254,6 +285,16 @@ export function VerlaufInhalt({
               >
                 <Paperclip size={16} strokeWidth={2} />
               </button>
+              {layout !== "dicht" && onTelefonatErfassen && (
+                <button
+                  onClick={onTelefonatErfassen}
+                  title="Telefonat erfassen"
+                  aria-label="Telefonat erfassen"
+                  className="btn-touch flex h-9 w-9 items-center justify-center border rounded-[var(--radius-ap-md)] border-sep text-label hover:bg-fill"
+                >
+                  <Phone size={16} strokeWidth={2} />
+                </button>
+              )}
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}
                 title="Unterschrift erfassen"
@@ -281,7 +322,7 @@ export function VerlaufInhalt({
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sekundaer"
+              className="btn-touch btn-ap-primary ml-auto shrink-0 px-4 py-2 text-sekundaer"
             >
               Senden
             </button>

@@ -1,4 +1,4 @@
-import { CalendarClock, ChevronDown, Clock, ExternalLink, Flag, FolderTree, GitBranch, Link2, MoreHorizontal, Pencil, Trash2, User, UserCheck } from "lucide-react";
+import { CalendarClock, ChevronDown, Clock, ExternalLink, Flag, FolderTree, GitBranch, Link2, MoreHorizontal, Pencil, Phone, Trash2, User, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
@@ -97,6 +97,7 @@ export function VorgangKopf({
   onStatusWaehle,
   rechnung,
   onZeitErfassen,
+  onTelefonat,
   onFolgeVorgang,
   onZuordnungAendern,
   onLoeschen,
@@ -134,6 +135,8 @@ export function VorgangKopf({
   rechnung: { onClick: () => void; pending: boolean } | null;
   /** Gesetzt, wenn Zeit erfassbar ist (nicht bei gesperrten Status). */
   onZeitErfassen: (() => void) | null;
+  /** Öffnet das Telefonat-Sheet; ohne Wert (z. B. fehlendes Recht) entfällt der Button. */
+  onTelefonat?: (() => void) | null;
   onFolgeVorgang: () => void;
   onZuordnungAendern: () => void;
   onLoeschen: () => void;
@@ -307,6 +310,11 @@ export function VorgangKopf({
       {!primaerAktionKlebt && vorgang.status === "in_arbeit" && onZeitErfassen && (
         <button type="button" onClick={onZeitErfassen} className="min-h-11 md:min-h-8 btn-ap text-sekundaer whitespace-nowrap px-3">
           <Clock size={14} strokeWidth={2} aria-hidden="true" /> Zeit erfassen
+        </button>
+      )}
+      {onTelefonat && (
+        <button type="button" onClick={onTelefonat} className="min-h-11 md:min-h-8 btn-ap text-sekundaer whitespace-nowrap px-3">
+          <Phone size={14} strokeWidth={2} aria-hidden="true" /> Telefonat
         </button>
       )}
     </VorgangStatusAktionen>

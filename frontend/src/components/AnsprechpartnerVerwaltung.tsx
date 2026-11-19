@@ -6,6 +6,7 @@ import { useBestaetigung } from "./ConfirmDialog";
 import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "./FormularFeld";
 import type { Ansprechpartner, Eskalationsstufe } from "../types";
 import { Select } from "./apple/Select";
+import { AnrufButton, AnrufLink } from "./telefonat/AnrufLink";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -105,10 +106,13 @@ export function AnsprechpartnerVerwaltung({
   liste,
   kannVerwalten,
   onSpeichern,
+  anrufKundeId,
 }: {
   liste: Ansprechpartner[];
   kannVerwalten: boolean;
   onSpeichern: (naechsteListe: Ansprechpartner[]) => Promise<unknown>;
+  /** Nur beim Kunden gesetzt: Nummern werden zu tel:-Links mit Anruf-Uhr (Partner haben keinen Telefonat-Bezug). */
+  anrufKundeId?: string;
 }) {
   const bestaetigen = useBestaetigung();
   const [neuAnlegen, setNeuAnlegen] = useState(false);
@@ -159,12 +163,12 @@ export function AnsprechpartnerVerwaltung({
               key={a.id}
               className="card-ap p-3"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-fliess font-medium text-label">{a.name}</div>
                   {a.position && <div className="text-sekundaer text-label2">{a.position}</div>}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
                   {a.operativ && (
                     <span className="rounded-full bg-tintbg px-2 py-0.5 text-meta font-medium text-tint ">
                       Operativ
@@ -175,11 +179,28 @@ export function AnsprechpartnerVerwaltung({
                       Stufe {a.eskalationsstufe}
                     </span>
                   )}
+                  {anrufKundeId && a.telefon && (
+                    <AnrufButton
+                      nummer={a.telefon}
+                      name={a.name}
+                      kontext={{ kundeId: anrufKundeId, ansprechpartner: liste, partner: { ansprechpartnerId: a.id, name: a.name } }}
+                    />
+                  )}
                 </div>
               </div>
               {(a.telefon || a.email) && (
                 <div className="mt-1 text-sekundaer text-label2">
-                  {[a.telefon, a.email].filter(Boolean).join(" · ")}
+                  {anrufKundeId && a.telefon ? (
+                    <>
+                      <AnrufLink
+                        nummer={a.telefon}
+                        kontext={{ kundeId: anrufKundeId, ansprechpartner: liste, partner: { ansprechpartnerId: a.id, name: a.name } }}
+                      />
+                      {a.email && ` · ${a.email}`}
+                    </>
+                  ) : (
+                    [a.telefon, a.email].filter(Boolean).join(" · ")
+                  )}
                 </div>
               )}
               {a.notiz && <p className="mt-1 text-sekundaer text-label2">{a.notiz}</p>}

@@ -10,6 +10,7 @@ Run with:
 import asyncio
 import os
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -21,6 +22,7 @@ from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.mandant import Mandant
+from app.models.telefonat import Telefonat
 from app.models.projekt import ProjektVorlage, ProjektVorlageAbhaengigkeit, ProjektVorlageElement
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
@@ -327,6 +329,44 @@ MANDANTEN = [
 ]
 
 
+# Ansprechpartner mit Telefonnummern fuer den Demo-Mandanten Mueller (Telefonate-Seed unten). Feste IDs, damit
+# der Seed idempotent bleibt und die Telefonate darauf verweisen koennen.
+def _ap_id(schluessel: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"fieldvibe-seed/ansprechpartner/{schluessel}"))
+
+
+SEED_ANSPRECHPARTNER = {
+    "K-1001": [
+        {"id": _ap_id("rheinblick-brandt"), "name": "Katrin Brandt", "position": "Objektverwalterin",
+         "telefon": "+49 221 5550123", "operativ": True},
+        {"id": _ap_id("rheinblick-vogel"), "name": "Dieter Vogel", "position": "Geschäftsführer",
+         "telefon": "+49 221 5550100", "operativ": False, "eskalationsstufe": 3},
+    ],
+    "K-1002": [
+        {"id": _ap_id("cafe-sonne"), "name": "Lena Sonnenberg", "position": "Inhaberin",
+         "telefon": "+49 221 5550456", "operativ": True},
+    ],
+    "K-1003": [
+        {"id": _ap_id("schneider-thomas"), "name": "Thomas Schneider", "position": None,
+         "telefon": "+49 171 5550789", "operativ": True},
+    ],
+}
+
+# (schluessel, kundennummer, vorgangsnummer | None, ansprechpartner-schluessel | None, name, nummer, richtung,
+#  ergebnis, tage_zurueck, dauer_min, notiz, rueckruf_in_tagen)
+SEED_TELEFONATE = [
+    ("t1", "K-1001", "V-1002", "rheinblick-brandt", "Katrin Brandt", "+49 221 5550123", "ausgehend",
+     "erreicht", 1, 12, "Termin für die DGUV-V3-Prüfung abgestimmt, Zutritt über den Hausmeister. "
+     "Frau Brandt klärt die Schlüsselübergabe und meldet sich.", 2),
+    ("t2", "K-1002", "V-1003", "cafe-sonne", "Lena Sonnenberg", "+49 221 5550456", "ausgehend",
+     "mailbox", 0, None, "Mailbox besprochen: Rückruf wegen Musterleuchten erbeten.", None),
+    ("t3", "K-1001", None, "rheinblick-vogel", "Dieter Vogel", "+49 221 5550100", "eingehend",
+     "erreicht", 3, 25, "Rahmenvertrag Wartung besprochen: Verlängerung um zwei Jahre, Angebot folgt.", None),
+    ("t4", "K-1003", "V-1004", "schneider-thomas", "Thomas Schneider", "+49 171 5550789", "ausgehend",
+     "nicht_erreicht", 2, None, None, None),
+]
+
+
 async def _get_or_none(session, model, **filters):
     result = await session.execute(select(model).filter_by(**filters))
     return result.scalar_one_or_none()
@@ -439,6 +479,8 @@ async def _seed_kunden(session, mandant: Mandant, kunden_data: list[dict]) -> di
             session.add(kunde)
             await session.flush()
             print(f"[seed]   Kunde angelegt: {kunde.name} ({kunde.kundennummer})")
+        if not kunde.ansprechpartner and kunde_data["kundennummer"] in SEED_ANSPRECHPARTNER:
+            kunde.ansprechpartner = SEED_ANSPRECHPARTNER[kunde_data["kundennummer"]]
         kunden_by_nummer[kunde_data["kundennummer"]] = kunde
 
         for anlage_data in kunde_data["anlagen"]:
@@ -690,6 +732,80 @@ async def _seed_projekt_vorlagen(session, mandant: Mandant, admin_user: User) ->
     await session.flush()
 
 
+async def _seed_telefonate(session, mandant: Mandant, erfasser: User | None) -> None:
+    if erfasser is None:
+        return
+    kunden = {
+        k.kundennummer: k
+        for k in (await session.execute(select(Kunde).where(Kunde.mandant_id == mandant.id))).scalars()
+    }
+    vorgaenge = {
+        v.vorgangsnummer: v
+        for v in (await session.execute(select(Vorgang).where(Vorgang.mandant_id == mandant.id))).scalars()
+    }
+    jetzt = datetime.now(timezone.utc)
+    for (schluessel, kundennr, vorgangsnr, ap, name, nummer, richtung, ergebnis, tage_zurueck, dauer_min, notiz,
+         rueckruf_tage) in SEED_TELEFONATE:
+        kunde = kunden.get(kundennr)
+        vorgang = vorgaenge.get(vorgangsnr) if vorgangsnr else None
+        if kunde is None or (vorgangsnr and vorgang is None):
+            continue
+        client_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"fieldvibe-seed/telefonat/{mandant.id}/{schluessel}")
+        if await _get_or_none(session, Telefonat, client_uuid=client_uuid) is not None:
+            continue
+        beginn = (jetzt - timedelta(days=tage_zurueck)).replace(hour=9, minute=30, second=0, microsecond=0)
+        rueckruf_am = (
+            (jetzt + timedelta(days=rueckruf_tage)).replace(hour=9, minute=0, second=0, microsecond=0)
+            if rueckruf_tage
+            else None
+        )
+        t = Telefonat(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            vorgang_id=vorgang.id if vorgang else None,
+            ansprechpartner_id=uuid.UUID(_ap_id(ap)) if ap else None,
+            partner_name=name,
+            partner_nummer=nummer,
+            richtung=richtung,
+            ergebnis=ergebnis,
+            beginn=beginn,
+            dauer_sekunden=dauer_min * 60 if dauer_min else None,
+            notiz=notiz,
+            rueckruf_am=rueckruf_am,
+            erfasst_von=erfasser.id,
+            client_uuid=client_uuid,
+        )
+        session.add(t)
+        await session.flush()
+        if vorgang is not None:
+            session.add(
+                VorgangEvent(
+                    mandant_id=mandant.id,
+                    vorgang_id=vorgang.id,
+                    event_type="telefonat",
+                    author_user_id=erfasser.id,
+                    body=notiz,
+                    payload={
+                        "telefonat_id": str(t.id),
+                        "richtung": richtung,
+                        "ergebnis": ergebnis,
+                        "beginn": beginn.isoformat(),
+                        "dauer_sekunden": t.dauer_sekunden,
+                        "partner_name": name,
+                        "partner_nummer": nummer,
+                        "rueckruf_am": rueckruf_am.isoformat() if rueckruf_am else None,
+                        "rueckruf_erledigt_am": None,
+                        "zeit_gebucht": False,
+                        "erfasst_von_name": erfasser.name,
+                    },
+                    ref_entity_type="telefonat",
+                    ref_entity_id=t.id,
+                )
+            )
+        print(f"[seed]   Telefonat angelegt: {name} ({ergebnis}) bei {kundennr}")
+    await session.flush()
+
+
 async def seed() -> None:
     async with system_session(grund="seed: demo-daten anlegen") as session:
         super_admin = await _get_or_none(session, User, email=SUPER_ADMIN_EMAIL)
@@ -714,6 +830,8 @@ async def seed() -> None:
             await _seed_kunden(session, mandant, mandant_data["kunden"])
             await _seed_zuweisungen(session, mandant, mandant_data.get("zuweisungen", {}))
             await _seed_vorgaenge(session, mandant, mandant_data["vorgaenge"], admin_user)
+            if mandant_data["slug"] == "mueller":
+                await _seed_telefonate(session, mandant, admin_user)
             await _seed_projekt_vorlagen(session, mandant, admin_user)
 
     print("\n[seed] Fertig.")

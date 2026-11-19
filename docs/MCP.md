@@ -46,6 +46,7 @@ Das Frontend braucht die Seite `/ki-verbinden` (Einwilligung).
 | `projekte_auflisten`, `projekt_lesen` | Projekte mit Spalten, Aufgaben, Aufträgen |
 | `kunde_lesen`, `anlage_lesen` | Kunde mit Standorten/Anlagen; Anlage mit Historie und Prüfzyklen |
 | `termine_auflisten` | Dispo-Termine |
+| `telefonate_auflisten` | Telefonate (Filter Kunde, Vorgang, offene Rückrufe) |
 | `pruefungen_faellig` | fällige Prüfzyklen und Prüfmittel (Parameter `tage`, Standard 30) |
 | `formular_vorlagen`, `formular_lesen` | Protokoll-Vorlagen eines Vorgangs, ausgefüllte Protokolle (`formular_lesen` zusätzlich gruppiert nach Abschnitten mit Beschriftung, Grenzwert-Markierung, fehlenden Pflichtfeldern) |
 | `kennzahlen_vorgaenge`, `insights`, `offene_posten` | Auswertungen (Recht Statistik bzw. Abrechnung) |
@@ -74,6 +75,7 @@ Recht `ki_zugriff.bearbeiten` neu (`load_access_token` streicht den Scope bei en
 | --- | --- |
 | `kommentar_anlegen` | interner Kommentar im Vorgangsverlauf, nicht kundensichtbar |
 | `mangel_erfassen` | Mangel im Status „offen“ |
+| `telefonat_erfassen` | Telefonat an Vorgang oder Kunde (`erstellt_via=claude`, „via Claude“), optional Rückruf; ohne Arbeitszeit-Buchung, nicht kundensichtbar |
 | `vorgang_anlegen` | Vorgang im Status „neu“, ohne Zuweisung/Termin; `leistungstyp` Pflicht, `abrechnungsart` Standard `aufwand` |
 | `protokoll_entwurf_anlegen` | Protokoll (Status „offen“) aus einer **veröffentlichten** Vorlage; `werte` per Feld-Key oder Beschriftung, Gruppen als Objekt bzw. Liste |
 | `protokoll_entwurf_ergaenzen` | nur offene Protokolle; Befülltes bleibt (außer `vorhandene_ueberschreiben`), Listeneinträge werden angehängt |

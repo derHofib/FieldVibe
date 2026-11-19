@@ -18,6 +18,7 @@ import {
   Mail,
   Network,
   Package,
+  Phone,
   Plug,
   Receipt,
   Rss,
@@ -315,6 +316,18 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: ({ currentUser }) => istAdminOderCustom(currentUser) && istModulAktiv(currentUser, "postfach"),
   },
   {
+    key: "telefonate",
+    label: "Telefonate",
+    icon: Phone,
+    tone: "teal",
+    route: "/telefonate",
+    kategorie: "Kommunikation",
+    // Tabelle mit Filterzeile: nur am Desktop (in der Feld-App steht das Telefonat am Vorgang/Kunden).
+    // Backend: Lesen mit vorgaenge.sehen (Vorgangsbezug) bzw. kunden.sehen (nur Kunde).
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("vorgaenge", "sehen"),
+  },
+  {
     key: "highlights",
     label: "Highlights",
     icon: Star,
@@ -528,7 +541,7 @@ export const WORKSPACES: Workspace[] = [
     seiten: [
       "dispo", "projekte", "zeitplaene", "auftraege", "meine-aufgaben", "material", "pruefmittel",
       "zeiterfassung", "zeiten_buchen", "team_zeiten", "abwesenheiten", "techniker_zuweisungen",
-      "meldungen", "partner",
+      "meldungen", "partner", "telefonate",
     ],
   },
   {
@@ -536,7 +549,7 @@ export const WORKSPACES: Workspace[] = [
     label: "Sales",
     icon: TrendingUp,
     start: ["anfragen", "kunden"],
-    seiten: ["anfragen", "kunden", "highlights", "leistungsverzeichnis", "kennzahlen"],
+    seiten: ["anfragen", "kunden", "telefonate", "highlights", "leistungsverzeichnis", "kennzahlen"],
   },
   {
     key: "finanzen",

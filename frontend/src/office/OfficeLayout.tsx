@@ -41,6 +41,7 @@ import {
 } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
+import { useAnzahlOffeneRueckrufe } from "../hooks/useTelefonate";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
@@ -135,6 +136,7 @@ export function OfficeLayout() {
   const fehlerbericht = useFehlerbericht();
   const { outboxCount, isOnline } = useAppLiveDaten();
   const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
+  const rueckrufAnzahl = useAnzahlOffeneRueckrufe(hatRecht("vorgaenge", "sehen"));
   // In localStorage gemerkt (nicht im Backend wie office_nav_items) -- ist
   // reine Anzeige-Praeferenz des Geraets, keine Nutzer-Stammdaten.
   const [eingeklappt, setEingeklappt] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1");
@@ -393,7 +395,8 @@ export function OfficeLayout() {
                           className={`shrink-0 ${seite.key === aktiverKey ? "text-tint" : "text-label2"}`}
                         />
                         {!eingeklappt && <span className="truncate">{seite.label}</span>}
-                        {seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl && (
+                        {((seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl) ||
+                          (seite.key === "telefonate" && !!rueckrufAnzahl)) && (
                           <span
                             className={
                               eingeklappt
@@ -401,7 +404,11 @@ export function OfficeLayout() {
                                 : "ml-auto flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-meta font-bold text-white"
                             }
                           >
-                            {!eingeklappt && (vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl)}
+                            {!eingeklappt &&
+                              (() => {
+                                const n = seite.key === "telefonate" ? rueckrufAnzahl! : vorgemerkteAnzahl!;
+                                return n > 9 ? "9+" : n;
+                              })()}
                           </span>
                         )}
                       </Link>

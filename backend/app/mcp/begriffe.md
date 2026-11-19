@@ -15,6 +15,7 @@ Fehlermeldungen. Bezeichner im Code und URLs bleiben unverändert
 | Standort | Site eines Kunden | |
 | Mandant | Tenant (Betrieb, der FieldVibe nutzt) | |
 | Mangel | Defekt, der zu Angebot und Rechnung führt | |
+| Telefonat | Erfasstes Gespräch (Richtung, Partner, Dauer, Ergebnis, Notiz) am Vorgang oder Kunden, optional mit Rückruf | "Anruf", "Telefonnotiz" |
 
 Das Kundenportal spricht Endkunden an und nennt Vorgänge weiterhin
 "Aufträge" (Kundensicht) -- bewusst nicht vereinheitlicht.
