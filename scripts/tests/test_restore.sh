@@ -196,7 +196,7 @@ if gpg_verfuegbar; then
   assert_rc 0 "secrets --von rclone"
   assert_eq "$(cat "$REPO/.env")" "$(cat "$REPO/.env.wiederhergestellt")" "Secrets aus dem Remote-Satz"
   # manipuliert auf dem Ziel
-  printf 'X' | dd of="$T/rclone-root/bucket/g/db-$S.dump.gpg" bs=1 seek=20 conv=notrunc 2>/dev/null
+  byte_kippen "$T/rclone-root/bucket/g/db-$S.dump.gpg" 20
   rm -f "$T/pgrestore-args"
   lauf "$REPO/scripts/restore.sh" db --von rclone:fake:bucket/g --stamp "$S" --ja
   assert_rc 1 "manipulierter Satz auf dem Ziel"

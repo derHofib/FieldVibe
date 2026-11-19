@@ -156,6 +156,16 @@ satz_dummy() { # verz, stamp, [unvollstaendig|alt]
 # FV_GNUPGHOME (mit privatem Schluessel) und FV_GNUPGHOME_NURPUB (nur oeffentlicher
 # Schluessel -- simuliert den Server ohne privaten Schluessel).
 FV_GPG_EMPFAENGER="backup-test@fieldvibe.invalid"
+# Kippt ein Byte statt ein festes Zeichen zu schreiben: bei zufaelligem Inhalt
+# (GPG-Chiffrat) steht an der Stelle sonst in 1 von 256 Laeufen schon "X", die
+# "Manipulation" aendert nichts und der Test schlaegt sporadisch fehl.
+byte_kippen() { # datei, offset
+  local alt neu
+  alt="$(dd if="$1" bs=1 skip="$2" count=1 2>/dev/null | od -An -tu1 | tr -d ' ')"
+  neu=$(( (alt + 1) % 256 ))
+  printf "\\$(printf '%03o' "$neu")" | dd of="$1" bs=1 seek="$2" conv=notrunc 2>/dev/null
+}
+
 gpg_verfuegbar() { command -v gpg >/dev/null 2>&1 && [[ -n "${FV_GNUPGHOME:-}" && -d "$FV_GNUPGHOME" ]]; }
 
 # Wird von run.sh einmal aufgerufen.
