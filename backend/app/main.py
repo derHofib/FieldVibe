@@ -38,6 +38,7 @@ from app.api.routes import (
     insights,
     integrationen,
     inventurzyklen,
+    kennzahlen,
     kunden,
     kundenportal,
     kundenportal_auth,
@@ -194,6 +195,7 @@ app.include_router(boards.router)
 app.include_router(stories.router)
 app.include_router(search.router)
 app.include_router(statistik.router)
+app.include_router(kennzahlen.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
 app.include_router(zeiterfassung.router)
