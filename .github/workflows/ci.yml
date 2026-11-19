@@ -72,6 +72,18 @@ jobs:
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
           -c "CREATE ROLE fieldvibe_test_system LOGIN PASSWORD 'fieldvibe_test_system' NOSUPERUSER BYPASSRLS;"
 
+      # Wegwerf-DB: Durability bringt hier nichts, die Schreib-Syncs (v. a. beim
+      # TRUNCATE je Test) kosten aber Laufzeit. Alle drei sind per Reload aenderbar.
+      - name: Postgres ohne fsync
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c "ALTER SYSTEM SET fsync = off"
+          -c "ALTER SYSTEM SET synchronous_commit = off"
+          -c "ALTER SYSTEM SET full_page_writes = off"
+          -c "SELECT pg_reload_conf()"
+
       # Ohne das Werkzeug werden die Konformitaetstests in `pytest` still
       # uebersprungen (Java ist auf ubuntu-latest vorinstalliert).
       - name: E-Rechnungs-Pruefwerkzeug installieren
@@ -142,6 +154,18 @@ jobs:
         run: >-
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
           -c "CREATE ROLE fieldvibe_test_system LOGIN PASSWORD 'fieldvibe_test_system' NOSUPERUSER BYPASSRLS;"
+
+      # Wegwerf-DB: Durability bringt hier nichts, die Schreib-Syncs (v. a. beim
+      # TRUNCATE je Test) kosten aber Laufzeit. Alle drei sind per Reload aenderbar.
+      - name: Postgres ohne fsync
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c "ALTER SYSTEM SET fsync = off"
+          -c "ALTER SYSTEM SET synchronous_commit = off"
+          -c "ALTER SYSTEM SET full_page_writes = off"
+          -c "SELECT pg_reload_conf()"
 
       - name: Java pruefen
         run: java -version

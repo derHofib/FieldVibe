@@ -67,6 +67,9 @@ from app.core.rate_limit import (
     fehlerbericht_user_limiter,
     fehlerbericht_service_ip_limiter,
 )
+from argon2 import PasswordHasher
+
+from app.core import security as _security
 from app.core.security import hash_password
 from app.db.session import engine, system_engine, system_session
 from app.main import app
@@ -86,6 +89,10 @@ from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.services import storage_service
+
+# Default-Parameter (64 MiB, t=3) kosten pro Hash ~50 ms; die Tests brauchen nur
+# die Hash-/Verify-Semantik, nicht die Brute-Force-Haertung.
+_security._hasher = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
 
 _settings = get_settings()
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -354,25 +361,102 @@ def _reset_rate_limiters():
     yield
 
 
+_TRUNCATE_BASIS = (
+    "audit_log, notifications, tag_assignments, tags, zeiterfassung, "
+    "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
+    "mail_attachments, mail_messages, mail_folders, mail_accounts, "
+    "rechnung_positionen, rechnungen, highlights, "
+    "bestellung_positionen, material_bedarfe, bestellungen, lieferanten, "
+    "material_verwendungen, material, "
+    "kundenportal_zugaenge, kunde_zuweisungen, "
+    "einladungen, partner_zugaenge, partner_nachweise, partner, "
+    "plattform_integrationen, "
+    "vorgang_events, vorgaenge, vertraege, "
+    "anlagen, kunden, mandant_integrationen, users, mandanten"
+)
+
+# Sitzungsweit gecacht: (Kandidatentabellen, SQL der Existenzpruefung, Tabelle -> Sequenzen).
+_aufraeum_plan: tuple[list[str], str, dict[str, list[str]]] | None = None
+
+
+async def _aufraeum_plan_ermitteln(conn) -> tuple[list[str], str, dict[str, list[str]]]:
+    global _aufraeum_plan
+    if _aufraeum_plan is not None:
+        return _aufraeum_plan
+    basis = [t.strip() for t in _TRUNCATE_BASIS.split(",")]
+    # Genau die Menge, die TRUNCATE ... CASCADE trifft: Basisliste plus transitiv
+    # alle per FK darauf verweisenden Tabellen. Von Migrationen befuellte
+    # Stammdaten ausserhalb davon duerfen nie angefasst werden.
+    kandidaten = (
+        await conn.execute(
+            text(
+                """
+                WITH RECURSIVE t(oid) AS (
+                    SELECT c.oid FROM pg_class c
+                    WHERE c.relnamespace = 'public'::regnamespace AND c.relname = ANY(:basis)
+                    UNION
+                    SELECT con.conrelid FROM pg_constraint con JOIN t ON con.confrelid = t.oid
+                    WHERE con.contype = 'f'
+                )
+                SELECT c.relname FROM t JOIN pg_class c ON c.oid = t.oid ORDER BY c.relname
+                """
+            ),
+            {"basis": basis},
+        )
+    ).scalars().all()
+    # Eigene (serial/identity) Sequenzen: RESTART IDENTITY muss auch greifen, wenn
+    # ein Test Zeilen eingefuegt und selbst wieder geloescht hat.
+    seq_zeilen = (
+        await conn.execute(
+            text(
+                """
+                SELECT c.relname, s.relname FROM pg_depend d
+                JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
+                JOIN pg_class c ON c.oid = d.refobjid
+                WHERE d.classid = 'pg_class'::regclass AND d.refclassid = 'pg_class'::regclass
+                  AND d.deptype IN ('a', 'i') AND c.relname = ANY(:kand)
+                  AND c.relnamespace = 'public'::regnamespace
+                """
+            ),
+            {"kand": list(kandidaten)},
+        )
+    ).all()
+    sequenzen: dict[str, list[str]] = {}
+    for tabelle, seq in seq_zeilen:
+        sequenzen.setdefault(tabelle, []).append(seq)
+    exists_sql = " UNION ALL ".join(
+        f"SELECT '{t}' WHERE EXISTS (SELECT 1 FROM public.\"{t}\")" for t in kandidaten
+    )
+    _aufraeum_plan = (list(kandidaten), exists_sql, sequenzen)
+    return _aufraeum_plan
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_tables():
     yield
+    # Die Existenzpruefung laeuft ueber die System-Rolle (BYPASSRLS): die Test-Rolle
+    # sieht unter FORCE RLS ohne Mandanten-Kontext keine Zeilen und wuerde befuellte
+    # Tabellen faelschlich als leer melden. TRUNCATE selbst braucht die Eigentuemerin.
+    async with system_engine.connect() as sconn:
+        kandidaten, exists_sql, sequenzen = await _aufraeum_plan_ermitteln(sconn)
+        alle_seqs = {seq: t for t, seqs in sequenzen.items() for seq in seqs}
+        benutzt = {
+            alle_seqs[seq]
+            for seq in (
+                await sconn.execute(
+                    text("SELECT sequencename FROM pg_sequences WHERE schemaname = 'public' AND last_value IS NOT NULL")
+                )
+            ).scalars()
+            if seq in alle_seqs
+        }
+        mit_zeilen = set((await sconn.execute(text(exists_sql))).scalars().all()) if exists_sql else set()
+        await sconn.rollback()
+    zu_leeren = sorted(mit_zeilen | benutzt)
+    if not zu_leeren:
+        return
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
-                "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
-                "mail_attachments, mail_messages, mail_folders, mail_accounts, "
-                "rechnung_positionen, rechnungen, highlights, "
-                "bestellung_positionen, material_bedarfe, bestellungen, lieferanten, "
-                "material_verwendungen, material, "
-                "kundenportal_zugaenge, kunde_zuweisungen, "
-                "einladungen, partner_zugaenge, partner_nachweise, partner, "
-                "plattform_integrationen, "
-                "vorgang_events, vorgaenge, vertraege, "
-                "anlagen, kunden, mandant_integrationen, users, mandanten "
-                "RESTART IDENTITY CASCADE"
-            )
+            text("TRUNCATE " + ", ".join(f'"{t}"' for t in zu_leeren) + " RESTART IDENTITY CASCADE")
         )
 
 
