@@ -19,6 +19,7 @@ import { Monogramm } from "../apple/Monogramm";
 import { SearchField } from "../apple/SearchField";
 import { Sheet } from "../apple/Sheet";
 import { FehlerMeldung } from "../Hinweiskasten";
+import { SkeletonList } from "../Skeleton";
 
 function HauptStern({ className = "" }: { className?: string }) {
   return <Star size={16} strokeWidth={2} className={`shrink-0 fill-current text-st-arbeit-dot ${className}`} aria-hidden="true" />;
@@ -135,7 +136,7 @@ export function BetreuungSheet({
       <div className="space-y-2 p-4">
         <SearchField value={suche} onChange={setSuche} placeholder="Mitarbeiter suchen" groesse="mobil" ariaLabel="Mitarbeiter suchen" />
         {isLoading ? (
-          <p className="px-4 py-3 text-sekundaer text-label2">Mitarbeiter werden geladen…</p>
+          <SkeletonList count={4} />
         ) : isError ? (
           <FehlerMeldung alsKasten meldung="Mitarbeiterliste konnte nicht geladen werden." />
         ) : (
