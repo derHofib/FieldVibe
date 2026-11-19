@@ -18,6 +18,10 @@ source "$SKRIPT_DIR/pins.sh"
 
 CACHE_DIR="${EN16931_CACHE_DIR:-$REPO_DIR/.cache/e-rechnung}"
 MAVEN="${MAVEN_CENTRAL_URL:-https://repo1.maven.org/maven2}"
+# Einzelne CDN-Knoten von repo1 liefern zeitweise 404 fuer vorhandene Dateien
+# (in CI je Runner reproduzierbar); der Google-Spiegel ist unabhaengig davon.
+# Sicher, weil jede Datei ohnehin gegen die SHA-256 aus pins.sh geprueft wird.
+MAVEN_SPIEGEL="${MAVEN_SPIEGEL_URL:-https://maven-central.storage-download.googleapis.com/maven2}"
 
 fehler() { echo "FEHLER: $*" >&2; }
 
@@ -49,7 +53,15 @@ herunterladen() { # <url> <ziel> <sha256>
     return
   fi
   echo "lade: $url"
-  curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o "$ARBEIT/download" "$url"
+  if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o "$ARBEIT/download" "$url"; then
+    case "$url" in
+      "$MAVEN"/*)
+        echo "lade vom Spiegel: ${MAVEN_SPIEGEL}${url#"$MAVEN"}"
+        curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 -o "$ARBEIT/download" "${MAVEN_SPIEGEL}${url#"$MAVEN"}"
+        ;;
+      *) exit 1 ;;
+    esac
+  fi
   if ! pruefsumme_ok "$ARBEIT/download" "$soll"; then
     fehler "Pruefsumme von $(basename "$ziel") weicht ab (erwartet $soll, erhalten $(sha256_von "$ARBEIT/download")) -- abgebrochen"
     exit 1
