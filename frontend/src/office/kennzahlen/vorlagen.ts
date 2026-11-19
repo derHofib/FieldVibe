@@ -41,11 +41,11 @@ export const VORLAGEN: Vorlage[] = [
   vorlage("ueberblick", "Überblick", "monat", widgets("ueberblick", [
     ["vorgaenge.offen", "zahl", null, "s"],
     ["vorgaenge.ueberfaellig", "zahl", null, "s"],
-    ["finanzen.umsatz_netto", "zahl_verlauf", null, "s"],
+    ["finanzen.umsatz_netto", "zahl", null, "s"],
     ["finanzen.offene_forderungen", "zahl", null, "s"],
     ["vorgaenge.erstellt", "saeulen", "woche", "l"],
-    // Vereinfachung: kein eigener Zeitraum je Widget -- der Umsatzverlauf folgt dem Dashboard-Zeitraum.
-    ["finanzen.umsatz_netto", "saeulen", "monat", "l"],
+    // Umsatz kennt nur Monate als Zeitachse; im Monats-Zeitraum waere das eine einzige Saeule.
+    ["finanzen.umsatz_netto", "balken", "kunde", "l"],
     ["vorgaenge.offen", "ring", "status", "l"],
     ["vorgaenge.abgeschlossen", "balken", "techniker", "l"],
     ["sales.angebotsquote", "zahl", null, "s"],
