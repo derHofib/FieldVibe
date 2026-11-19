@@ -73,6 +73,8 @@ export function abweichung(
   vorLabel: string,
 ): Abweichung | null {
   if (wert === null || vorperiode === null) return null;
+  // 0 gegen 0 ist keine Aussage ("= unverändert" neben einer leeren Kennzahl wäre Rauschen).
+  if (wert === 0 && vorperiode === 0) return null;
   const differenz = wert - vorperiode;
   if (Math.abs(differenz) < 1e-9) return { text: `= unverändert ggü.${NBSP}${vorLabel}`, kurz: "= unverändert", richtung: "gleich", gut: null };
 

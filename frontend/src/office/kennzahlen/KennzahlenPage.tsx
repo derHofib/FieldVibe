@@ -422,7 +422,7 @@ export function KennzahlenPage() {
         <Select
           aria-label="Zeitraum"
           groesse="kompakt"
-          className="w-auto"
+          className="w-[10.5rem]"
           value={zeitraumArt}
           onChange={(e) => artWechseln(e.target.value as DashboardZeitraum)}
         >

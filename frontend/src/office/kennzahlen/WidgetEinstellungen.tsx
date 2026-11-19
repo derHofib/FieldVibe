@@ -73,7 +73,15 @@ export function WidgetEinstellungen({
   const titelId = useId();
   const aufteilenId = useId();
   const erlaubt = def ? erlaubteDarstellungen(def) : [];
-  const gruppierungen = def ? gruppierungenFuer(def, widget.darstellung) : [];
+  const alleGruppierungen = def ? gruppierungenFuer(def, widget.darstellung) : [];
+  // Woche und Monat sind für Nutzer dieselbe Frage ("im Zeitverlauf"); welche Achse passt, richtet sich nach dem Zeitraum.
+  const zeitAchsen = alleGruppierungen.filter((g) => g.zeit);
+  const zeitWert = (zeitAchsen.find((g) => g.schluessel === "monat") ?? zeitAchsen[0])?.schluessel;
+  const gruppierungen = [
+    ...(zeitWert ? [{ schluessel: zeitWert, label: "Zeitverlauf", zeit: true }] : []),
+    ...alleGruppierungen.filter((g) => !g.zeit),
+  ];
+  const gewaehlteGruppierung = zeitAchsen.some((g) => g.schluessel === widget.gruppierung) ? zeitWert : widget.gruppierung;
   const titel = widget.titel || def?.titel || widget.kennzahl;
 
   function darstellungWaehlen(darstellung: Darstellung) {
@@ -128,7 +136,7 @@ export function WidgetEinstellungen({
           <Select
             id={aufteilenId}
             aria-label="Aufteilen nach"
-            value={widget.gruppierung ?? "gesamt"}
+            value={gewaehlteGruppierung ?? "gesamt"}
             disabled={gruppierungen.length === 0}
             onChange={(e) => onAendern({ gruppierung: e.target.value })}
           >

@@ -153,3 +153,16 @@ export function zeitGruppierungFuer(art: DashboardZeitraum, gruppierungen: Kennz
   const wunsch = art === "woche" || art === "monat" ? "woche" : "monat";
   return (zeit.find((g) => g.schluessel === wunsch) ?? zeit[0]).schluessel;
 }
+
+/** Zeit-Aufteilung an den Zeitraum anpassen: "Umsatz nach Monat" im Monatszeitraum wäre nur eine Säule.
+ * Gilt nur für Zeit-Gruppierungen; die Wunsch-Achse (Woche bzw. Monat) greift, wenn die Kennzahl sie anbietet,
+ * sonst bleibt die gewählte. Kategorien (Techniker ...) bleiben unverändert. */
+export function effektiveGruppierung(
+  art: DashboardZeitraum,
+  gruppierungen: KennzahlGruppierung[],
+  gewaehlt: string,
+): string {
+  if (!gruppierungen.some((g) => g.zeit && g.schluessel === gewaehlt)) return gewaehlt;
+  const wunsch = art === "woche" || art === "monat" || art === "quartal" ? "woche" : "monat";
+  return gruppierungen.some((g) => g.zeit && g.schluessel === wunsch) ? wunsch : gewaehlt;
+}

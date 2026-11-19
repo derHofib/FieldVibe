@@ -13,7 +13,7 @@ const PLOT_HOEHE = 200;
 
 /** Senkrechte Säulen je Zeile (Zeit oder Kategorie); die Vorperiode steht als graue Säule links neben der aktuellen.
  * Eigenes HTML statt Diagramm-Bibliothek: Schrift bleibt unverzerrt, Farben kommen direkt aus den Token. */
-export function Saeulen({ daten, groesse, vergleich, statusFarben, titel, vorLabel }: DarstellungProps) {
+export function Saeulen({ daten, groesse, vergleich, statusFarben, titel, vorLabel, zeitraumLabel }: DarstellungProps) {
   const mitVorperiode = hatVorperiode(daten, vergleich);
   const maximum = achsenMaximum(hoechsterWert(daten, mitVorperiode), daten.einheit);
   const abstand = beschriftungsAbstand(daten.zeilen.length, groesse);
@@ -75,7 +75,7 @@ export function Saeulen({ daten, groesse, vergleich, statusFarben, titel, vorLab
       {mitVorperiode && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 pl-12 text-meta text-label2" aria-hidden="true">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--tint)" }} /> Aktuell
+            <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--tint)" }} /> {zeitraumLabel ?? "Aktuell"}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-[2px]" style={{ background: VORPERIODE_FARBE }} /> {vorLabel}

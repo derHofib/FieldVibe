@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { KennzahlGruppierung } from "../../types/kennzahlen";
-import { verschieben, zeitGruppierungFuer, zeitraumBerechnen, zeitraumEnthaeltHeute } from "./zeitraum";
+import { effektiveGruppierung, verschieben, zeitGruppierungFuer, zeitraumBerechnen, zeitraumEnthaeltHeute } from "./zeitraum";
 
 const tag = (iso: string) => new Date(`${iso}T12:00:00`);
 
@@ -140,5 +140,23 @@ describe("zeitGruppierungFuer", () => {
   it("fällt auf die vorhandene Zeitachse zurück und liefert null ohne Zeit-Aufteilung", () => {
     expect(zeitGruppierungFuer("jahr", [woche])).toBe("woche");
     expect(zeitGruppierungFuer("monat", [techniker])).toBeNull();
+  });
+});
+
+describe("effektiveGruppierung", () => {
+  const woche: KennzahlGruppierung = { schluessel: "woche", label: "Woche", zeit: true };
+  const monat: KennzahlGruppierung = { schluessel: "monat", label: "Monat", zeit: true };
+  const techniker: KennzahlGruppierung = { schluessel: "techniker", label: "Techniker", zeit: false };
+  const beide = [monat, woche, techniker];
+
+  it("Woche/Monat/Quartal wochenweise, Jahr/12 Monate monatsweise", () => {
+    for (const art of ["woche", "monat", "quartal"] as const) expect(effektiveGruppierung(art, beide, "monat")).toBe("woche");
+    for (const art of ["jahr", "12_monate"] as const) expect(effektiveGruppierung(art, beide, "woche")).toBe("monat");
+  });
+
+  it("lässt Kategorien und nicht angebotene Achsen unverändert", () => {
+    expect(effektiveGruppierung("monat", beide, "techniker")).toBe("techniker");
+    expect(effektiveGruppierung("monat", [monat, techniker], "monat")).toBe("monat");
+    expect(effektiveGruppierung("jahr", [woche], "woche")).toBe("woche");
   });
 });

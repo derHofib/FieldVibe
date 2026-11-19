@@ -20,7 +20,7 @@ import { Saeulen } from "./darstellungen/Saeulen";
 import { Tabelle } from "./darstellungen/Tabelle";
 import { Zahl } from "./darstellungen/Zahl";
 import { ZahlVerlauf } from "./darstellungen/ZahlVerlauf";
-import { type BerechneterZeitraum, zeitGruppierungFuer } from "./zeitraum";
+import { type BerechneterZeitraum, effektiveGruppierung, zeitGruppierungFuer } from "./zeitraum";
 
 const GROESSEN: WidgetGroesse[] = ["s", "m", "l", "xl"];
 
@@ -73,6 +73,8 @@ export function WidgetKarte({
     gruppierung = zeitGruppe ?? "gesamt";
   } else if (widget.darstellung !== "zahl") {
     gruppierung = widget.gruppierung ?? (def ? passendeGruppierung(def, anzeige, null) : null) ?? "gesamt";
+    // Zeitachse folgt dem Zeitraum (Woche/Monat/Quartal wochenweise, Jahr monatsweise).
+    if (def) gruppierung = effektiveGruppierung(zeitraumArt, def.gruppierungen, gruppierung);
   }
   // Nur senden, was die Kennzahl auswertet: Momentaufnahmen haben weder Zeitraum noch Vorperiode.
   const mitZeitraum = !stand;
@@ -105,7 +107,8 @@ export function WidgetKarte({
       : grundTitel;
 
   const einzeilig = anzeige === "zahl" || anzeige === "zahl_verlauf";
-  const hoehe = einzeilig ? "min-h-[132px]" : "min-h-[300px]";
+  // Zahlen: nur so hoch wie der Inhalt (~130px); Diagramme/Tabellen ~300px Kartenhöhe, damit Reihen gleich wirken.
+  const hoehe = einzeilig ? "" : "min-h-[228px]";
 
   const menue: (AktionsMenueEintrag | "trenner")[] = [
     ...(istDiagramm
@@ -120,7 +123,7 @@ export function WidgetKarte({
 
   return (
     <Karte
-      className={`flex h-full flex-col gap-3 p-4 ${bearbeiten ? "cursor-pointer" : ""}`}
+      className={`flex h-full flex-col gap-3 p-4 ${einzeilig ? "min-h-[130px]" : ""} ${bearbeiten ? "cursor-pointer" : ""}`}
       // Auswahlrand inline: .card-ap setzt den Rand außerhalb der Cascade-Layer, eine Tailwind-Klasse würde ignoriert.
       style={ausgewaehlt ? { borderColor: "var(--tint)", boxShadow: "0 0 0 1px var(--tint)" } : undefined}
     >
@@ -145,7 +148,7 @@ export function WidgetKarte({
             {titel}
           </h2>
         )}
-        {stand && <span className="shrink-0 text-meta text-label2">Stand heute</span>}
+        {stand && !bearbeiten && <span className="shrink-0 text-meta text-label2">Stand heute</span>}
         {bearbeiten ? (
           <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <AktionsMenue
@@ -192,6 +195,8 @@ export function WidgetKarte({
           summierbar={def?.summierbar ?? false}
           titel={titel}
           vorLabel={zeitraum.vorperiodeLabel}
+          zeitraumLabel={stand ? "Stand heute" : zeitraum.label}
+          gruppierungLabel={gruppierungLabel}
           stand={stand}
         />
       </div>
@@ -239,7 +244,7 @@ function Inhalt({
   const keineDaten =
     darstellung === "zahl" || darstellung === "zahl_verlauf"
       ? daten.gesamt === null && daten.zeilen.every((z) => z.wert === null)
-      : daten.zeilen.length === 0 || daten.zeilen.every((z) => z.wert === null);
+      : daten.zeilen.every((z) => !z.wert);
   if (keineDaten) {
     return <EmptyState icon={SearchX} text={stand ? "Keine Daten" : "Im Zeitraum keine Daten"} className="py-3!" />;
   }

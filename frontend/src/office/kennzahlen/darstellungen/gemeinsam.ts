@@ -16,6 +16,10 @@ export interface DarstellungProps {
   titel: string;
   /** Bezeichnung der Vorperiode ("Oktober", "Vorwoche"). */
   vorLabel: string;
+  /** Beschriftung des aktuellen Zeitraums ("November 2026", "Stand heute"); Legende und Tabellenkopf. */
+  zeitraumLabel?: string;
+  /** Name der Aufteilung ("Kunde"); Kopf der ersten Tabellenspalte. */
+  gruppierungLabel?: string;
 }
 
 export const AKZENT = "var(--tint)";

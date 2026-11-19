@@ -124,6 +124,8 @@ describe("Richtung und Formatierung", () => {
     expect(erstellt?.gut).toBeNull();
     expect(abweichung("vorgaenge.erstellt", "anzahl", 5, null, "Oktober")).toBeNull();
     expect(abweichung("vorgaenge.erstellt", "anzahl", 5, 5, "Oktober")?.richtung).toBe("gleich");
+    // 0 gegen 0 sagt nichts aus.
+    expect(abweichung("vorgaenge.erstellt", "anzahl", 0, 0, "Oktober")).toBeNull();
   });
 });
 

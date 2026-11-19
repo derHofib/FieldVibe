@@ -221,6 +221,53 @@ describe("KennzahlenPage", () => {
   });
 });
 
+describe("Darstellung im Raster", () => {
+  it("zeigt bei lauter Nullwerten 'Im Zeitraum keine Daten' statt leerer Achsen", async () => {
+    api.daten.mockImplementation(async (p) => ({
+      ...datenFuer(p),
+      zeilen: [{ schluessel: "a", label: "Alpha", wert: 0, vorperiode: 0 }],
+    }));
+    rendere("/kennzahlen?dashboard=vorgaenge");
+    expect((await screen.findAllByText("Im Zeitraum keine Daten")).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("img", { name: /Balkendiagramm/ })).not.toBeInTheDocument();
+  });
+
+  it("passt die Zeitachse dem Zeitraum an: Monatszeitraum -> nach Woche, Jahr -> nach Monat", async () => {
+    api.dashboards.mockResolvedValue([
+      dashboard({
+        layout: {
+          zeitraum: "monat",
+          widgets: [{ id: "w1", kennzahl: "vorgaenge.erstellt", darstellung: "saeulen", gruppierung: "monat", groesse: "l", titel: null, vergleich: true }],
+        },
+      }),
+    ]);
+    rendere("/kennzahlen?dashboard=d1");
+    expect(await screen.findByText("Vorgänge erstellt nach Woche")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Zeitraum" }), { target: { value: "jahr" } });
+    expect(await screen.findByText("Vorgänge erstellt nach Monat")).toBeInTheDocument();
+    expect(api.daten.mock.calls.some(([p]) => p.gruppierung === "woche")).toBe(true);
+  });
+
+  it("blendet 'Stand heute' im Bearbeiten-Modus aus", async () => {
+    rendere("/kennzahlen?dashboard=vorgaenge");
+    expect((await screen.findAllByText("Stand heute")).length).toBeGreaterThan(0);
+    await anpassen();
+    expect(screen.queryByText("Stand heute")).not.toBeInTheDocument();
+  });
+
+  it("bietet 'Zeitverlauf' statt Monat und Woche an", async () => {
+    rendere("/kennzahlen?dashboard=vorgaenge");
+    await anpassen();
+    fireEvent.click(screen.getAllByRole("button", { name: "Vorgänge erstellt bearbeiten" })[0]);
+    const darstellung = await screen.findByRole("group", { name: "Darstellung" });
+    fireEvent.click(within(darstellung).getByRole("button", { name: /Säulen/ }));
+    const optionen = within(screen.getByRole("combobox", { name: "Aufteilen nach" })).getAllByRole("option").map((o) => o.textContent);
+    expect(optionen).toContain("Zeitverlauf");
+    expect(optionen).not.toContain("Monat");
+    expect(optionen).not.toContain("Woche");
+  });
+});
+
 describe("Anpassen", () => {
   it("Vorlage anpassen und 'Fertig' legt per POST eine Kopie mit Vorlagenschlüssel an", async () => {
     rendere("/kennzahlen?dashboard=vorgaenge");
@@ -279,7 +326,7 @@ describe("Anpassen", () => {
 
     const darstellung = screen.getByRole("group", { name: "Darstellung" });
     fireEvent.click(within(darstellung).getByRole("button", { name: /Säulen/ }));
-    expect(await screen.findByRole("img", { name: /Säulendiagramm: Telefonate nach Monat/ })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /Säulendiagramm: Telefonate nach Woche/ })).toBeInTheDocument();
 
     fireEvent.click(within(darstellung).getByRole("button", { name: /Balken/ }));
     expect(await screen.findByRole("img", { name: /Balkendiagramm: Telefonate nach Techniker/ })).toBeInTheDocument();

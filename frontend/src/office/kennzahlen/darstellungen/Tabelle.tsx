@@ -6,7 +6,7 @@ const KOPF = "px-3.5 py-2 text-meta font-bold tracking-wide text-label2 uppercas
 
 /** Genaue Werte je Zeile; mit Vorperiode kommen zwei Spalten dazu (Vorperiode, Abweichung). Dient zugleich als
  * Text-Alternative zu jedem Diagramm ("Als Tabelle"). */
-export function Tabelle({ daten, vergleich, summierbar, vorLabel, titel }: DarstellungProps) {
+export function Tabelle({ daten, vergleich, summierbar, vorLabel, titel, zeitraumLabel, gruppierungLabel }: DarstellungProps) {
   const mitVorperiode = hatVorperiode(daten, vergleich);
   const zeigeSumme = summierbar && daten.gesamt !== null;
 
@@ -15,8 +15,8 @@ export function Tabelle({ daten, vergleich, summierbar, vorLabel, titel }: Darst
       <table className="w-full border-collapse text-sekundaer" aria-label={titel}>
         <thead>
           <tr className="bg-fill">
-            <th scope="col" className={`${KOPF} text-left`}>Gruppe</th>
-            <th scope="col" className={`${KOPF} text-right`}>Wert</th>
+            <th scope="col" className={`${KOPF} text-left`}>{gruppierungLabel ?? "Gruppe"}</th>
+            <th scope="col" className={`${KOPF} text-right`}>{zeitraumLabel ?? "Wert"}</th>
             {mitVorperiode && <th scope="col" className={`${KOPF} text-right`}>{vorLabel}</th>}
             {mitVorperiode && <th scope="col" className={`${KOPF} text-right`}>Abweichung</th>}
           </tr>

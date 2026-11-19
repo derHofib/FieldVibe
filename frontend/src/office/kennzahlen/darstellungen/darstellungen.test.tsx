@@ -164,10 +164,27 @@ describe("Tabelle", () => {
     expect(screen.getByText("Gesamt")).toBeInTheDocument();
   });
 
+  it("benennt die Spalten nach Aufteilung und Zeitraum", () => {
+    render(<Tabelle {...props({}, { gruppierungLabel: "Kunde", zeitraumLabel: "2026" })} />);
+    expect(screen.getByRole("columnheader", { name: "Kunde" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "2026" })).toBeInTheDocument();
+  });
+
   it("zeigt ohne Vergleich nur Gruppe und Wert", () => {
     render(<Tabelle {...props({}, { vergleich: false })} />);
     expect(screen.queryByRole("columnheader", { name: "Abweichung" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+  });
+});
+
+describe("Legende", () => {
+  it("Säulen und Linie nennen den Zeitraum statt 'Aktuell'", () => {
+    for (const Komponente of [Saeulen, Linie]) {
+      const { unmount } = render(<Komponente {...props({}, { zeitraumLabel: "November 2026" })} />);
+      expect(screen.getByText("November 2026")).toBeInTheDocument();
+      expect(screen.queryByText("Aktuell")).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });
 

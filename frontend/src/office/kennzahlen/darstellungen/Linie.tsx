@@ -7,7 +7,7 @@ const PLOT_HOEHE = 200;
 
 /** Verlaufslinie mit leichter Fläche; die Vorperiode läuft gestrichelt dahinter. Punkte und Wert erscheinen
  * nur unter der Maus -- Tastatur und Screenreader bekommen dieselben Zahlen über "Als Tabelle". */
-export function Linie({ daten, groesse, vergleich, titel, vorLabel }: DarstellungProps) {
+export function Linie({ daten, groesse, vergleich, titel, vorLabel, zeitraumLabel }: DarstellungProps) {
   const [aktiv, setAktiv] = useState<number | null>(null);
   const mitVorperiode = hatVorperiode(daten, vergleich);
   const maximum = achsenMaximum(hoechsterWert(daten, mitVorperiode), daten.einheit);
@@ -104,6 +104,17 @@ export function Linie({ daten, groesse, vergleich, titel, vorLabel }: Darstellun
           ) : null,
         )}
       </div>
+
+      {mitVorperiode && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pl-12 text-meta text-label2" aria-hidden="true">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-0.5 w-3" style={{ background: AKZENT }} /> {zeitraumLabel ?? "Aktuell"}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-0 w-3 border-t-2 border-dashed" style={{ borderColor: "var(--label3)" }} /> {vorLabel}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
