@@ -207,7 +207,7 @@ export function anzeigeUntertitel(hit: SearchHit): string {
   // Die Nummer steht bei Vorgängen/Rechnungen schon im Titel.
   if (hit.nummer && !titel.includes(hit.nummer.toLowerCase())) teile.push(hit.nummer);
   if (hit.kunde_name) teile.push(hit.kunde_name);
-  if (hit.zusatz) teile.push(hit.zusatz);
+  if (hit.zusatz && hit.zusatz !== hit.kunde_name) teile.push(hit.zusatz);
   if (hit.betrag !== null && hit.betrag !== undefined && hit.betrag !== "") teile.push(formatEuro(hit.betrag));
   if (hit.datum) teile.push(formatTag(hit.datum));
   if (teile.length === 0) return hit.subtitel ?? "";

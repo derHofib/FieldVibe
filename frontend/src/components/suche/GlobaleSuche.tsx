@@ -244,7 +244,7 @@ export function GlobaleSuche({ anfang, onSchliessen }: { anfang: string; onSchli
             value={eingabe}
             onChange={(e) => setEingabe(e.target.value)}
             placeholder="Suchen nach Kunde, Vorgang, Anlage, Rechnung, #Tag …"
-            className="min-w-0 flex-1 bg-transparent text-titel-mobil text-label outline-none placeholder:text-label3"
+            className="suche-eingabe min-w-0 flex-1 bg-transparent text-titel-mobil text-label outline-none placeholder:text-label3"
           />
           <Taste>esc</Taste>
         </div>
@@ -316,7 +316,7 @@ export function GlobaleSuche({ anfang, onSchliessen }: { anfang: string; onSchli
           )}
         </div>
 
-        <div className="flex items-center gap-4 border-t-[0.5px] border-sep px-[18px] py-[9px] text-meta text-label2">
+        <div className="suche-fuss flex items-center gap-4 border-t-[0.5px] border-sep px-[18px] py-[9px] text-meta text-label2">
           <span className="flex items-center gap-[5px]">
             <Taste label="Pfeil hoch">
               <ArrowUp size={11} strokeWidth={2.5} />

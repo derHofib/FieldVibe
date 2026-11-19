@@ -3,7 +3,6 @@ import { CalendarDays, Check, ChevronDown, CircleDot, UserCheck } from "lucide-r
 import { datumZuIso } from "../../utils/format";
 import type { SearchKategorie } from "../../types";
 import { PulldownMenu } from "../apple/PulldownMenu";
-import { Select } from "../apple/Select";
 import { formatAnzahl, KATEGORIE_INFO, kategorienLeiste } from "./kategorien";
 import { type GlobaleSuche, type SuchKategorieWahl, ZEITRAUM_OPTIONEN, type Zeitraum } from "./useGlobaleSuche";
 
@@ -16,11 +15,11 @@ const HOEHE: Record<Variante, string> = {
 };
 
 function kategorieKlasse(aktiv: boolean, variante: Variante): string {
-  const basis = `inline-flex shrink-0 items-center gap-[5px] rounded-full px-2.5 text-sekundaer whitespace-nowrap text-label ${HOEHE[variante]}`;
+  const basis = `inline-flex shrink-0 items-center gap-[5px] rounded-full px-2.5 text-sekundaer whitespace-nowrap ${HOEHE[variante]}`;
   if (variante === "feld") {
-    return `${basis} ${aktiv ? "bg-label font-semibold text-gbg" : "bg-card font-medium"}`;
+    return `${basis} ${aktiv ? "bg-label font-semibold text-gbg" : "bg-card font-medium text-label"}`;
   }
-  return `${basis} ${aktiv ? "bg-thumb font-semibold shadow-[0_1px_3px_rgba(0,0,0,.14)] dark:bg-fill2" : "font-medium"}`;
+  return `${basis} text-label ${aktiv ? "bg-thumb font-semibold shadow-[0_1px_3px_rgba(0,0,0,.14)] dark:bg-fill2" : "font-medium"}`;
 }
 
 function pilleKlasse(aktiv: boolean, variante: Variante): string {
@@ -125,25 +124,7 @@ export function SuchFilterLeiste({
   );
 
   const zeitraumAktiv = zeitraum !== "beliebig";
-  const zeitraumWahl = feld ? (
-    <Select
-      aria-label="Zeitraum"
-      className="w-auto"
-      value={zeitraumWert(zeitraum)}
-      onChange={(e) => {
-        const w = e.target.value;
-        setZeitraum(w === "eigener" ? { von: datumZuIso(new Date()) } : (w as Zeitraum));
-      }}
-    >
-      <option value="beliebig">Zeitraum: beliebig</option>
-      {ZEITRAUM_OPTIONEN.slice(1).map((o) => (
-        <option key={o.wert} value={o.wert}>
-          {o.label}
-        </option>
-      ))}
-      <option value="eigener">Eigener Zeitraum …</option>
-    </Select>
-  ) : (
+  const zeitraumWahl = (
     <PulldownMenu
       ariaLabel="Zeitraum"
       items={[
@@ -164,7 +145,7 @@ export function SuchFilterLeiste({
           type="button"
           aria-haspopup="menu"
           aria-expanded={offen}
-          onMouseDown={behalteFokus}
+          onMouseDown={feld ? undefined : behalteFokus}
           onClick={toggeln}
           className={pilleKlasse(zeitraumAktiv, variante)}
         >

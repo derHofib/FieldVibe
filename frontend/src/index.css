@@ -439,21 +439,28 @@ body {
     background: var(--menu);
   }
 }
+/* Chromium blurt am unteren Rand des Fensters kaum (Backdrop wird an der
+   Kante abgeschnitten), dort scheint Seitentext durch. Die Fusszeile bekommt
+   deshalb eine zweite Glas-Lage. */
+.suche-fuss {
+  background: var(--glas);
+}
 /* Scrim als Klasse statt Inline-var(), damit Tailwind --scrim sicher ausgibt. */
 .suche-scrim {
   background: var(--scrim);
 }
 @media (prefers-reduced-motion: no-preference) {
+  /* Nur skalieren, keine Deckkraft: eine Opacity-Animation am Fenster oder
+     am Scrim macht in Chromium das Scrim zur Backdrop-Wurzel, dann bleibt der
+     Blur wirkungslos und der Seitentext scheint durch. */
   .suche-fenster-ein {
     animation: suche-ein 150ms ease-out;
   }
   @keyframes suche-ein {
     from {
-      opacity: 0;
       transform: scale(0.98);
     }
     to {
-      opacity: 1;
       transform: scale(1);
     }
   }
@@ -755,6 +762,9 @@ textarea.field-ap {
   outline: none;
   color: var(--label);
   width: 100%;
+}
+.suche-eingabe:focus-visible {
+  outline: none;
 }
 .search-ap input::placeholder {
   color: var(--label2);
