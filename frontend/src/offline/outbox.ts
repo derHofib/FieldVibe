@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchForm, ApiError } from "../api/client";
-import type { Vorgang, VorgangEvent } from "../types";
+import type { Telefonat, TelefonatCreate, Vorgang, VorgangEvent } from "../types";
 import { getDb, type OutboxItem } from "./db";
 
 type Listener = () => void;
@@ -92,6 +92,23 @@ export async function queueStatusChange(vorgangId: string, status: string): Prom
   return clientUuid;
 }
 
+/** Telefonat offline vormerken; der Server dedupliziert über client_uuid, ein
+ * doppelter Sync legt also keinen zweiten Eintrag an. vorgang_id bleibt für
+ * Telefonate nur am Kunden null (Verlauf zeigt sie dann nicht). */
+export async function queueTelefonat(body: TelefonatCreate): Promise<string> {
+  const clientUuid = body.client_uuid ?? crypto.randomUUID();
+  const db = await getDb();
+  await db.put("outbox", {
+    client_uuid: clientUuid,
+    vorgang_id: body.vorgang_id ?? null,
+    kind: "telefonat",
+    telefonat: { ...body, client_uuid: clientUuid },
+    created_at: new Date().toISOString(),
+  });
+  notify();
+  return clientUuid;
+}
+
 export async function queueVorgang(payload: {
   kunde_id: string;
   anlage_id?: string | null;
@@ -174,7 +191,7 @@ export async function syncOutbox(): Promise<void> {
   }
 }
 
-async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang> {
+async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang | Telefonat> {
   if (item.kind === "vorgang") {
     return apiFetch<Vorgang>("/api/vorgaenge", {
       method: "POST",
@@ -187,6 +204,13 @@ async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang>
         leistungstyp: item.vorgangLeistungstyp,
         client_uuid: item.client_uuid,
       }),
+    });
+  }
+
+  if (item.kind === "telefonat") {
+    return apiFetch<Telefonat>("/api/telefonate", {
+      method: "POST",
+      body: JSON.stringify({ ...item.telefonat, client_uuid: item.client_uuid }),
     });
   }
 

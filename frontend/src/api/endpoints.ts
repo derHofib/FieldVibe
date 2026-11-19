@@ -209,6 +209,11 @@ import type {
   VorgangEvent,
   VorgangEventType,
   VorgangKennzahlen,
+  KontaktverlaufEintrag,
+  Telefonat,
+  TelefonatCreate,
+  TelefonatFilter,
+  TelefonatUpdate,
   VorgangPartnerZuweisungResponse,
   Zeiterfassung,
   ArbeitszeitSoll,
@@ -618,6 +623,8 @@ export const kundenApi = {
   logoRemove: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}/logo`, { method: "DELETE" }),
   logoUrl: (id: string) => apiFetch<KundeLogoUrl>(`/api/kunden/${id}/logo-url`),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/kunden/${id}/emails`),
+  kontaktverlauf: (id: string, limit = 50) =>
+    apiFetch<KontaktverlaufEintrag[]>(`/api/kunden/${id}/kontaktverlauf?limit=${limit}`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/kunden/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
   // Auskunftsersuchen/Datenuebertragbarkeit (Art. 15/20 DSGVO) -- liefert
@@ -1032,6 +1039,24 @@ export const vorgangEventsApi = {
     formData.append("kundensichtbar", String(kundensichtbar));
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/unterschrift`, formData);
   },
+};
+
+export const telefonateApi = {
+  list: (filter: TelefonatFilter = {}) => {
+    const qs = new URLSearchParams();
+    for (const [schluessel, wert] of Object.entries(filter)) {
+      if (wert !== undefined) qs.set(schluessel, String(wert));
+    }
+    const query = qs.toString();
+    return apiFetch<Telefonat[]>(`/api/telefonate${query ? `?${query}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Telefonat>(`/api/telefonate/${id}`),
+  create: (body: TelefonatCreate) =>
+    apiFetch<Telefonat>("/api/telefonate", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: TelefonatUpdate) =>
+    apiFetch<Telefonat>(`/api/telefonate/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/telefonate/${id}`, { method: "DELETE" }),
+  anzahlOffeneRueckrufe: () => apiFetch<{ anzahl: number }>("/api/telefonate/anzahl-offene-rueckrufe"),
 };
 
 export const formModulApi = {

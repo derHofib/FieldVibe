@@ -9,6 +9,7 @@ import { authStore } from "./api/authStore";
 import { initFehlerbericht } from "./bugreport";
 import { installFehlerweiterleitung } from "./bugreport/fehlerweiterleitung";
 import { BestaetigungProvider } from "./components/ConfirmDialog";
+import { TelefonatProvider } from "./components/telefonat/TelefonatProvider";
 import { mutationToasts, ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -96,7 +97,9 @@ if (!wirdUmgeleitet) {
             <ToastProvider>
               <BestaetigungProvider>
                 <AuthProvider>
-                  <App istOffice={istOffice} />
+                  <TelefonatProvider>
+                    <App istOffice={istOffice} />
+                  </TelefonatProvider>
                 </AuthProvider>
               </BestaetigungProvider>
             </ToastProvider>
