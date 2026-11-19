@@ -30,6 +30,7 @@ from tests.mcp_helfer import (
 ALLE_SCHREIB_TOOLS = {
     "kommentar_anlegen",
     "mangel_erfassen",
+    "telefonat_erfassen",
     "vorgang_anlegen",
     "protokoll_entwurf_anlegen",
     "protokoll_entwurf_ergaenzen",

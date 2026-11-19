@@ -2,10 +2,11 @@
 Entwurf. Kommentar, Mangel und neuer Vorgang (Status "neu", ohne Zuweisung -- die Disposition bleibt
 beim Buero). Alles laeuft ueber die bestehenden Routen und ist dadurch im Verlauf mit "via Claude"
 und im Audit-Log mit quelle=ki gekennzeichnet."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
 from app.mcp.aufbereitung import bereinigen
@@ -14,7 +15,7 @@ from app.mcp.tools._basis import NUR_ADDITIV, zugriff
 from app.mcp.zugang import SCOPE_SCHREIBEN
 
 # Nur mit Schreib-Scope sichtbar (server.py filtert die Tool-Liste, die Pruefung je Aufruf bleibt).
-SCHREIB_TOOLS = frozenset({"kommentar_anlegen", "mangel_erfassen", "vorgang_anlegen"})
+SCHREIB_TOOLS = frozenset({"kommentar_anlegen", "mangel_erfassen", "telefonat_erfassen", "vorgang_anlegen"})
 
 _Id = Annotated[str, Field(description="ID (UUID), z. B. aus der Suche oder einer Liste.")]
 _NUR_SCHREIBZUGRIFF = " (nur mit Schreibzugriff)"
@@ -81,6 +82,64 @@ def registrieren(mcp: MCPServer) -> None:
         return {
             **bereinigen({k: mangel[k] for k in ("id", "vorgang_id", "anlage_id", "schweregrad", "status")}),
             "hinweis": "Mangel erfasst (im Verlauf als „via Claude“ gekennzeichnet).",
+        }
+
+    @mcp.tool(
+        name="telefonat_erfassen",
+        title="Telefonat erfassen",
+        description=(
+            "Erfasst ein Telefonat zu einem Vorgang oder direkt zu einem Kunden (z. B. nach einer Sprachnotiz "
+            "oder Zusammenfassung). Es erscheint am Vorgang im Verlauf bzw. im Kontaktverlauf des Kunden mit "
+            "dem Hinweis „via Claude“ und ist nie für den Kunden sichtbar. Bei Ergebnis „erreicht“ ist eine "
+            "Notiz Pflicht. Optional ein Rückruf-Termin (der Erfasser wird dann erinnert). Arbeitszeit buchen "
+            "und Telefonate ändern oder löschen bleibt beim Menschen in der App." + _NUR_SCHREIBZUGRIFF
+        ),
+        annotations=NUR_ADDITIV,
+    )
+    async def telefonat_erfassen(
+        partner_name: Annotated[str, Field(min_length=1, max_length=200, description="Name des Gesprächspartners.")],
+        richtung: Annotated[Literal["ausgehend", "eingehend"], Field(description="Wer hat angerufen?")],
+        ergebnis: Annotated[
+            Literal["erreicht", "nicht_erreicht", "mailbox"], Field(description="Ausgang des Anrufs.")
+        ],
+        vorgang_id: Annotated[str | None, Field(description="Vorgang (ID), zu dem das Telefonat gehört.")] = None,
+        kunde_id: Annotated[
+            str | None, Field(description="Kunde (ID); Pflicht, wenn kein Vorgang angegeben ist.")
+        ] = None,
+        partner_nummer: Annotated[str | None, Field(max_length=50, description="Telefonnummer des Partners.")] = None,
+        beginn: Annotated[datetime | None, Field(description="Beginn des Gesprächs (ISO 8601); Standard: jetzt.")] = None,
+        dauer_minuten: Annotated[
+            int | None, Field(ge=0, le=1440, description="Gesprächsdauer in Minuten (nur bei „erreicht“).")
+        ] = None,
+        notiz: Annotated[
+            str | None, Field(max_length=10000, description="Gesprächsnotiz; Pflicht bei Ergebnis „erreicht“.")
+        ] = None,
+        rueckruf_am: Annotated[
+            datetime | None, Field(description="Rückruf-Termin (ISO 8601); der Erfasser wird dann erinnert.")
+        ] = None,
+    ) -> dict[str, Any]:
+        z = zugriff(SCOPE_SCHREIBEN)
+        if not vorgang_id and not kunde_id:
+            raise ToolError("Bitte vorgang_id oder kunde_id angeben.")
+        telefonat = await api_post(
+            z,
+            "/api/telefonate",
+            {
+                "vorgang_id": vorgang_id or None,
+                "kunde_id": kunde_id or None,
+                "partner_name": partner_name,
+                "partner_nummer": partner_nummer,
+                "richtung": richtung,
+                "ergebnis": ergebnis,
+                "beginn": (beginn or datetime.now(timezone.utc)).isoformat(),
+                "dauer_sekunden": dauer_minuten * 60 if dauer_minuten is not None else None,
+                "notiz": notiz,
+                "rueckruf_am": rueckruf_am.isoformat() if rueckruf_am else None,
+            },
+        )
+        return {
+            **bereinigen({k: telefonat[k] for k in ("id", "vorgang_id", "kunde_id", "ergebnis", "rueckruf_am")}),
+            "hinweis": "Telefonat erfasst (als „via Claude“ gekennzeichnet).",
         }
 
     @mcp.tool(

@@ -85,6 +85,7 @@ SCHREIB_ALLOWLIST: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
         ("POST", r"/api/vorgaenge"),
         ("POST", rf"/api/vorgaenge/{_UUID}/events"),
         ("POST", r"/api/maengel"),
+        ("POST", r"/api/telefonate"),
         ("POST", r"/api/form-submissions"),
         ("PATCH", rf"/api/form-submissions/{_UUID}"),
         ("POST", r"/api/form-schemas"),

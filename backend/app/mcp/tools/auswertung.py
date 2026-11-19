@@ -84,13 +84,13 @@ def registrieren(mcp: MCPServer) -> None:
             f"Gültige Kombinationen: {kombinationen}. Der Zeitraum (von/bis, höchstens 3 Jahre) bezieht sich je "
             "Kennzahl auf ein anderes Datum (Erstellung, Abschluss, Arbeitstag, Rechnungsdatum), die Antwort nennt "
             "es im Feld datumsbezug. Filter: techniker_id, kunde_id, projekt_id, status (nur Bereich vorgaenge). "
-            "Bereich rechnungen braucht Modul Abrechnung und das Recht Angebote & Rechnungen; Arbeitszeit nur "
-            "für Mitarbeiter, die der Nutzer einsehen darf. Braucht das Statistik-Modul."
+            "Bereich rechnungen braucht Modul Abrechnung und das Recht Angebote & Rechnungen; Arbeitszeit und "
+            "Telefonate nur für Mitarbeiter, die der Nutzer einsehen darf (Telefonzeit in Minuten). Braucht das Statistik-Modul."
         ),
         annotations=NUR_LESEN,
     )
     async def auswertung(
-        bereich: Annotated[AggregatBereich, Field(description="vorgaenge oder rechnungen.")],
+        bereich: Annotated[AggregatBereich, Field(description="vorgaenge, rechnungen oder telefonate.")],
         kennzahl: AggregatKennzahl,
         gruppierung: AggregatGruppierung,
         von: Annotated[date, Field(description="Beginn (JJJJ-MM-TT).")],
