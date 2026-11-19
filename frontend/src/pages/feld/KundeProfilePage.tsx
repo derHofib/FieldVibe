@@ -14,6 +14,7 @@ import { downloadBlob } from "../../utils/download";
 import type { Anlage } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { useZuletztGeoeffnetMerken } from "../../components/suche/zuletztGeoeffnet";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { KundeUebersichtTab } from "./kunde/KundeUebersichtTab";
 import { KundeKommunikationTab } from "./kunde/KundeKommunikationTab";
@@ -56,6 +57,17 @@ export function KundeProfilePage({
     queryFn: () => kundenApi.get(id!),
     enabled: !!id && !kundenverwaltungAktiv,
   });
+  const kundeFuerVerlauf = profil ?? kunde;
+  useZuletztGeoeffnetMerken(
+    kundeFuerVerlauf
+      ? {
+          kategorie: "kunde",
+          id: kundeFuerVerlauf.id,
+          titel: kundeFuerVerlauf.name,
+          untertitel: kundeFuerVerlauf.kundennummer,
+        }
+      : null,
+  );
 
   const { data: standorteFuerAnlagen } = useQuery({
     queryKey: ["standorte", id],

@@ -1,5 +1,7 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Outlet, Route, Routes, useSearchParams } from "react-router-dom";
 
+import { useGlobaleSucheFenster } from "../components/suche/GlobaleSucheProvider";
 import { useAuth } from "../context/AuthContext";
 import { AccountTypenPage } from "../pages/AccountTypenPage";
 import { UsersPage } from "../pages/UsersPage";
@@ -31,7 +33,6 @@ import { ProfilePage } from "../pages/feld/ProfilePage";
 import { OfficePruefmittelPage } from "./pruefmittel/OfficePruefmittelPage";
 import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
 import { RechnungseingangPage } from "../pages/feld/RechnungseingangPage";
-import { SearchPage } from "../pages/feld/SearchPage";
 import { SettingsPage } from "../pages/feld/SettingsPage";
 import { StandortDetailPage } from "../pages/feld/StandortDetailPage";
 import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
@@ -63,6 +64,17 @@ import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeTelefonatePage } from "./telefonate/OfficeTelefonatePage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 import { NichtGefunden } from "../components/NichtGefunden";
+
+/** `/suche?q=…` bleibt als Deep-Link: das Fenster öffnet sich über der Startseite, die Adresse wird ersetzt. */
+function SucheDeepLink({ startseite }: { startseite: string }) {
+  const [params] = useSearchParams();
+  const { oeffnen } = useGlobaleSucheFenster();
+  const q = params.get("q") ?? "";
+  useEffect(() => {
+    oeffnen(q);
+  }, [oeffnen, q]);
+  return <Navigate to={startseite} replace />;
+}
 
 /** Router der Desktop-Oberflaeche. Die drei ausgebauten Bereiche (Vorgaenge,
  * Rechnungen/Angebote, Dispo/Buchhaltung) haben eigene, auf die Breite
@@ -200,7 +212,7 @@ export function OfficeApp() {
           <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
           <Route path="/ki-verbinden" element={<KiVerbindenPage layout="office" />} />
           <Route path="/neu" element={<NewVorgangPage />} />
-          <Route path="/suche" element={<SearchPage />} />
+          <Route path="/suche" element={<SucheDeepLink startseite={startseite} />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />

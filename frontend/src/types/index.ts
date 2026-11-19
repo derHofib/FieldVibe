@@ -805,17 +805,35 @@ export interface StoriesResponse {
   wartet_kunde: StoryItem[];
 }
 
-export type SearchKategorie = "kunde" | "anlage" | "vorgang" | "rechnung" | "tag";
+export type SearchKategorie =
+  | "kunde"
+  | "anlage"
+  | "vorgang"
+  | "rechnung"
+  | "angebot"
+  | "auftrag"
+  | "projekt"
+  | "telefonat"
+  | "tag";
 
 export interface SearchHit {
   kategorie: SearchKategorie;
   id: string;
   titel: string;
   subtitel: string | null;
+  nummer?: string | null;
+  status?: string | null;
+  kunde_name?: string | null;
+  // Decimal kommt als String
+  betrag?: string | number | null;
+  datum?: string | null;
+  zusatz?: string | null;
 }
 
 export interface SearchResponse {
   treffer: SearchHit[];
+  // Je Kategorie gedeckelt bei 100; Kategorien ohne Recht fehlen komplett.
+  anzahl?: Partial<Record<SearchKategorie, number>>;
 }
 
 export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar" | "zeitplan_antrag";

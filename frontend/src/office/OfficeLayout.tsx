@@ -31,6 +31,7 @@ import { Monogramm } from "../components/apple/Monogramm";
 import { Logo } from "../components/brand/Logo";
 import { AktionsMenue, type AktionsMenueEintrag } from "../components/AktionsMenue";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { GlobaleSucheProvider, useGlobaleSucheFenster } from "../components/suche/GlobaleSucheProvider";
 import {
   effektiveNavGruppen,
   seiteInWorkspace,
@@ -130,8 +131,17 @@ function SchnellfilterKachel({
 }
 
 export function OfficeLayout() {
+  return (
+    <GlobaleSucheProvider>
+      <OfficeLayoutInhalt />
+    </GlobaleSucheProvider>
+  );
+}
+
+function OfficeLayoutInhalt() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
+  const suchfenster = useGlobaleSucheFenster();
   const { pathname } = useLocation();
   const fehlerbericht = useFehlerbericht();
   const { outboxCount, isOnline } = useAppLiveDaten();
@@ -272,7 +282,7 @@ export function OfficeLayout() {
     { label: "Abmelden", icon: LogOut, onClick: logout, destruktiv: true },
   ];
 
-  // "/" und Strg/Cmd+K öffnen die Suche -- "/" nur außerhalb von Eingabefeldern
+  // "/" und Strg/Cmd+K öffnen das Suchfenster -- "/" nur außerhalb von Eingabefeldern, Strg+K schließt es wieder
   useEffect(() => {
     const beiTaste = (e: KeyboardEvent) => {
       const ziel = e.target as HTMLElement | null;
@@ -281,11 +291,12 @@ export function OfficeLayout() {
       const schraeg = e.key === "/" && !tippt && !e.ctrlKey && !e.metaKey && !e.altKey;
       if (!strgK && !schraeg) return;
       e.preventDefault();
-      navigate("/suche");
+      if (strgK) suchfenster.umschalten();
+      else suchfenster.oeffnen();
     };
     document.addEventListener("keydown", beiTaste);
     return () => document.removeEventListener("keydown", beiTaste);
-  }, [navigate]);
+  }, [suchfenster]);
 
   return (
     <div className="office-flaechen min-h-screen bg-gbg text-label" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
@@ -477,7 +488,7 @@ export function OfficeLayout() {
               </span>
             )}
             <button
-              onClick={() => navigate("/suche")}
+              onClick={() => suchfenster.oeffnen()}
               aria-label="Suche"
               title="Suche (/ oder Strg+K)"
               className="btn-ap-toolbar"

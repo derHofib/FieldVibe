@@ -176,6 +176,7 @@ import type {
   AbrechenbarerVorgang,
   RechnungZahlungCreate,
   RechteMatrixEintrag,
+  SearchKategorie,
   SearchResponse,
   Standort,
   StandortProfil,
@@ -566,8 +567,27 @@ export const storiesApi = {
   get: () => apiFetch<StoriesResponse>("/api/stories"),
 };
 
+export interface SearchOptionen {
+  kategorie?: SearchKategorie;
+  nurOffen?: boolean;
+  /** YYYY-MM-DD: zuletzt geändert ab */
+  seit?: string;
+  mirZugewiesen?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
 export const searchApi = {
-  search: (q: string) => apiFetch<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}`),
+  search: (q: string, optionen: SearchOptionen = {}) => {
+    const params = new URLSearchParams({ q });
+    if (optionen.kategorie) params.set("kategorie", optionen.kategorie);
+    if (optionen.nurOffen) params.set("nur_offen", "true");
+    if (optionen.seit) params.set("seit", optionen.seit);
+    if (optionen.mirZugewiesen) params.set("mir_zugewiesen", "true");
+    if (optionen.limit !== undefined) params.set("limit", String(optionen.limit));
+    if (optionen.offset) params.set("offset", String(optionen.offset));
+    return apiFetch<SearchResponse>(`/api/search?${params.toString()}`);
+  },
 };
 
 export const notificationsApi = {
