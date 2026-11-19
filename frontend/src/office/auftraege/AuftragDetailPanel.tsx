@@ -14,6 +14,7 @@ import { useBestaetigung } from "../../components/ConfirmDialog";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { VorgangStatusPille } from "../../components/VorgangStatusPille";
+import { BezugAufgabenAbschnitt } from "../../pages/feld/aufgaben/BezugAufgabenAbschnitt";
 import { ABSCHNITT_AKTION, Abschnitt } from "../../pages/feld/vorgang/Abschnitt";
 import { CHIP_BUTTON, CHIP_NEUTRAL, ChipPopover } from "../../pages/feld/vorgang/VorgangKopf";
 import type { Auftrag, AuftragStatus } from "../../types";
@@ -268,6 +269,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
             </ul>
           )}
         </Abschnitt>
+
+        <BezugAufgabenAbschnitt auftragId={auftrag.id} />
 
         <Abschnitt
           titel="Beschreibung"
