@@ -849,7 +849,8 @@ export type GespeicherterFilterEntitaet =
   | "anlagen"
   | "kunden"
   | "standorte"
-  | "rechnungen";
+  | "rechnungen"
+  | "aufgaben";
 
 export interface GespeicherterFilter {
   id: string;
@@ -2733,6 +2734,8 @@ export interface ProjektAufgabe {
   zugewiesen_an: string | null;
   erledigt_am: string | null;
   vorgang_id: string | null;
+  // Nur ohne vorgang_id gesetzt (das Backend leert es, sobald ein Vorgang gewaehlt wird).
+  auftrag_id: string | null;
   anlage_id: string | null;
   kunde_id: string | null;
   standort_id: string | null;
@@ -2751,6 +2754,18 @@ export interface ProjektAufgabe {
   standort_name?: string | null;
   unteraufgaben_gesamt?: number;
   unteraufgaben_erledigt?: number;
+  projekt_name?: string | null;
+  spalte_name?: string | null;
+  vorgang_titel?: string | null;
+  vorgang_status?: VorgangStatus | null;
+  auftrag_titel?: string | null;
+  auftrag_status?: AuftragStatus | null;
+  // Abgeleiteter Pfad "Projekt > Auftrag > Vorgang": der genaueste Bezug gewinnt (Konzept Meine Aufgaben, 3).
+  pfad_auftrag_id?: string | null;
+  pfad_projekt_id?: string | null;
+  pfad_projekt_name?: string | null;
+  // Gesetzt, wenn das Projekt des verknuepften Vorgangs vom Kanban-Projekt der Karte abweicht.
+  pfad_abweichung_projekt_name?: string | null;
 }
 
 // --- Partnerportal (eigener Token-Typ, siehe api/partnerAuthStore.ts) -------
