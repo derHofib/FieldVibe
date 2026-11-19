@@ -10,6 +10,7 @@ from app.core.zeit import tagesbeginn_utc, tagesende_utc
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt
 from app.models.rechnung import Rechnung
+from app.models.telefonat import Telefonat
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
@@ -27,10 +28,12 @@ MAX_ZEILEN = 500
 KENNZAHLEN: dict[str, tuple[str, ...]] = {
     "vorgaenge": ("anzahl_erstellt", "anzahl_abgeschlossen", "durchlaufzeit_tage", "arbeitszeit_stunden"),
     "rechnungen": ("umsatz_netto", "umsatz_brutto", "anzahl"),
+    "telefonate": ("anzahl", "telefonzeit_minuten"),
 }
 GRUPPIERUNGEN: dict[str, tuple[str, ...]] = {
     "vorgaenge": ("monat", "woche", "techniker", "kunde", "status", "leistungstyp", "prioritaet", "projekt"),
     "rechnungen": ("monat", "kunde", "status"),
+    "telefonate": ("monat", "woche", "techniker", "kunde"),
 }
 
 _ZEIT_GRUPPIERUNGEN = ("monat", "woche")
@@ -203,6 +206,33 @@ def _rechnung_abfrage(kennzahl: str, kunde_id: UUID | None) -> _Abfrage:
     )
 
 
+def _telefonat_abfrage(
+    kennzahl: str, techniker_id: UUID | None, kunde_id: UUID | None,
+    erlaubte_kunden: set[UUID] | None, erlaubte_techniker: set[UUID] | None,
+) -> _Abfrage:
+    bedingungen = [Telefonat.geloescht_am.is_(None)]
+    if kunde_id:
+        bedingungen.append(Telefonat.kunde_id == kunde_id)
+    if techniker_id:
+        bedingungen.append(Telefonat.erfasst_von == techniker_id)
+    if erlaubte_kunden is not None:
+        bedingungen.append(Telefonat.kunde_id.in_(erlaubte_kunden))
+    # Telefonzeit je Person ist wie die Arbeitszeit personenbezogen: nur Erfasser im Scope von mitarbeiterverwaltung.
+    if erlaubte_techniker is not None:
+        bedingungen.append(Telefonat.erfasst_von.in_(erlaubte_techniker))
+    wert = func.count() if kennzahl == "anzahl" else func.coalesce(func.sum(Telefonat.dauer_sekunden), 0) / 60.0
+    return _Abfrage(
+        bezug_name="beginn",
+        bezug_spalte=Telefonat.beginn,
+        wert=wert,
+        from_=Telefonat.__table__,
+        bedingungen=bedingungen,
+        techniker_spalte=Telefonat.erfasst_von,
+        kunde_spalte=Telefonat.kunde_id,
+        status_spalte=None,
+    )
+
+
 def _label_zeit(gruppierung: str, schluessel: str) -> str:
     if gruppierung == "woche":
         jahr, _, woche = schluessel.partition("-W")
@@ -231,6 +261,11 @@ async def aggregat_berechnen(
             raise UngueltigeAbfrage("Für den Bereich 'rechnungen' ist nur der Filter 'kunde_id' möglich")
         abfrage = _rechnung_abfrage(kennzahl, kunde_id)
         wertbar_status = _RECHNUNG_STATUS_LABEL
+    elif bereich == "telefonate":
+        if projekt_id or status:
+            raise UngueltigeAbfrage("Für den Bereich 'telefonate' sind nur die Filter 'kunde_id' und 'techniker_id' möglich")
+        abfrage = _telefonat_abfrage(kennzahl, techniker_id, kunde_id, erlaubte_kunden, erlaubte_techniker)
+        wertbar_status = {}
     else:
         abfrage = _vorgang_abfrage(
             kennzahl, techniker_id, kunde_id, projekt_id, status, erlaubte_kunden, erlaubte_techniker

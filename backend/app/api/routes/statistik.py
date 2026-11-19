@@ -164,7 +164,7 @@ async def aggregat(
     erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
     erlaubte_techniker = (
         await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", "bearbeiten")
-        if kennzahl == "arbeitszeit_stunden"
+        if kennzahl == "arbeitszeit_stunden" or bereich == "telefonate"
         else None
     )
     try:
