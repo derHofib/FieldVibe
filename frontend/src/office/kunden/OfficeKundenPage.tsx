@@ -212,7 +212,7 @@ export function OfficeKundenPage() {
             <SortierbareTabelle
               zeilen={gefiltert}
               // Bei offenem Panel ist die Tabelle schmal -- Nebenspalte weglassen statt abschneiden
-              spalten={id ? SPALTEN.filter((sp) => sp.key !== "kontakt" && sp.key !== "typ") : SPALTEN}
+              spalten={id ? SPALTEN.filter((sp) => sp.key !== "kontakt" && sp.key !== "typ" && sp.key !== "ort") : SPALTEN}
               zeilenKey={(k) => k.id}
               gewaehlt={id}
               onWaehlen={waehlen}
