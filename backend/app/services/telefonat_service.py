@@ -296,6 +296,9 @@ async def anlegen(
 
     if t.vorgang_id is not None:
         payload = _event_felder(t, zeit_gebucht=t.zeiterfassung_id is not None)
+        # Techniker haben keine Nutzerliste im Frontend, daher den Namen im Event mitgeben.
+        erfasser = await session.get(User, t.erfasst_von)
+        payload["erfasst_von_name"] = erfasser.name if erfasser else None
         if t.erstellt_via == "claude":
             payload["via"] = "claude"
             if auth.ki_verbindung_id is not None:

@@ -796,6 +796,7 @@ async def _seed_telefonate(session, mandant: Mandant, erfasser: User | None) -> 
                         "rueckruf_am": rueckruf_am.isoformat() if rueckruf_am else None,
                         "rueckruf_erledigt_am": None,
                         "zeit_gebucht": False,
+                        "erfasst_von_name": erfasser.name,
                     },
                     ref_entity_type="telefonat",
                     ref_entity_id=t.id,

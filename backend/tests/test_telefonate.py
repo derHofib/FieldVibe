@@ -86,6 +86,7 @@ async def test_anlegen_am_vorgang_erzeugt_verlauf_event(client, szenario):
     assert p["dauer_sekunden"] == 600 and p["partner_name"] == "Frau Brandt" and p["partner_nummer"] == "+49 221 5550123"
     assert p["rueckruf_am"].startswith("2030-01-01") and p["rueckruf_erledigt_am"] is None
     assert p["zeit_gebucht"] is False and "via" not in p
+    assert p["erfasst_von_name"] == "Sabine Admin"
 
     verlauf = (await client.get(f"/api/vorgaenge/{s['vorgang'].id}/events", headers=s["h"])).json()
     assert [e["event_type"] for e in verlauf if e["event_type"] == "telefonat"] == ["telefonat"]
