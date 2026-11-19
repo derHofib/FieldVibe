@@ -59,6 +59,7 @@ export function MeineAufgabenPage() {
         zustand={z.zustand}
         suchPlatzhalter="Suchen"
         ansichten="aufgaben"
+        ansichtenZusatz={z.ansichtenZusatz}
         variante="feld"
         hinten={
           <GruppierenMenue

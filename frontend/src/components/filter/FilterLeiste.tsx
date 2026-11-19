@@ -12,7 +12,7 @@ import { Kopf, Liste, type Variante } from "./FilterListe";
 import { FilterPopover, PopoverRahmen } from "./FilterPopover";
 import { OperatorSchritt, SpaltenSchritt, WertSchritt } from "./FilterSchritte";
 import { OPERATOR_LABEL, type FilterBedingung, type FilterFeld } from "./typen";
-import { useAnsichten } from "./useAnsichten";
+import { useAnsichten, type AnsichtenZusatz } from "./useAnsichten";
 import { useFilterEntwurf } from "./useFilterEntwurf";
 import type { FilterZustand } from "./useFilterZustand";
 
@@ -25,6 +25,8 @@ export interface FilterLeisteProps<T> {
   suchPlatzhalter?: string;
   ansichten?: GespeicherterFilterEntitaet;
   alteVorlageUmrechnen?: (alt: Record<string, string>) => FilterBedingung[];
+  /** Seitenzustand neben den Filtern (Gruppierung, Sortierung), der mit in Ansichten gespeichert wird. */
+  ansichtenZusatz?: AnsichtenZusatz;
   variante?: Variante;
   ohneSuche?: boolean;
   className?: string;
@@ -46,7 +48,7 @@ export function FilterLeiste<T>(props: FilterLeisteProps<T>) {
   const { felder, zustand, suchPlatzhalter = "Suchen…", ansichten, alteVorlageUmrechnen, ohneSuche = false, className = "" } = props;
   const variante: Variante = props.variante ?? (istOfficeHost() ? "office" : "feld");
   const e = useFilterEntwurf(felder, zustand);
-  const a = useAnsichten({ entitaet: ansichten, zustand, felder, alteVorlageUmrechnen });
+  const a = useAnsichten({ entitaet: ansichten, zustand, felder, alteVorlageUmrechnen, zusatz: props.ansichtenZusatz });
   const [anker, setAnker] = useState<HTMLElement | null>(null);
 
   const eintraege: PillenEintrag[] = useMemo(

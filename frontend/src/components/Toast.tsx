@@ -9,10 +9,17 @@ interface ToastEintrag {
   id: number;
   art: ToastArt;
   text: string;
+  aktion?: ToastAktion;
+}
+
+export interface ToastAktion {
+  label: string;
+  onClick: () => void;
 }
 
 interface ToastApi {
-  erfolg: (text: string) => void;
+  /** Mit `aktion` (z. B. "Rückgängig") bleibt der Toast länger stehen, damit man sie erreichen kann. */
+  erfolg: (text: string, aktion?: ToastAktion) => void;
   fehler: (text: string) => void;
   info: (text: string) => void;
 }
@@ -22,6 +29,7 @@ const KEIN_TOAST: ToastApi = { erfolg: () => {}, fehler: () => {}, info: () => {
 
 // Fehler bleiben länger stehen: man muss sie lesen können, bevor sie verschwinden.
 const DAUER_MS: Record<ToastArt, number> = { erfolg: 4000, info: 4000, fehler: 8000 };
+const DAUER_MIT_AKTION_MS = 6000;
 
 const STIL: Record<ToastArt, string> = {
   erfolg: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
@@ -60,17 +68,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const zeige = useCallback(
-    (art: ToastArt, text: string) => {
+    (art: ToastArt, text: string, aktion?: ToastAktion) => {
       const id = naechsteId.current++;
-      setToasts((alt) => [...alt.slice(-3), { id, art, text }]);
-      window.setTimeout(() => entfernen(id), DAUER_MS[art]);
+      setToasts((alt) => [...alt.slice(-3), { id, art, text, aktion }]);
+      window.setTimeout(() => entfernen(id), aktion ? DAUER_MIT_AKTION_MS : DAUER_MS[art]);
     },
     [entfernen],
   );
 
   const api = useMemo<ToastApi>(
     () => ({
-      erfolg: (text) => zeige("erfolg", text),
+      erfolg: (text, aktion) => zeige("erfolg", text, aktion),
       fehler: (text) => zeige("fehler", text),
       info: (text) => zeige("info", text),
     }),
@@ -100,6 +108,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <Icon size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1">{t.text}</span>
+              {t.aktion && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    t.aktion!.onClick();
+                    entfernen(t.id);
+                  }}
+                  className="shrink-0 rounded px-1 font-semibold underline underline-offset-2"
+                >
+                  {t.aktion.label}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => entfernen(t.id)}

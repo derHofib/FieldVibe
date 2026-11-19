@@ -353,6 +353,7 @@ export function MeineAufgabenOffice() {
         zustand={z.zustand}
         suchPlatzhalter="Aufgabe, Projekt, Kunde…"
         ansichten="aufgaben"
+        ansichtenZusatz={z.ansichtenZusatz}
         variante="office"
         className="mb-4"
         hinten={

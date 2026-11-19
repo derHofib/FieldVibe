@@ -37,9 +37,10 @@ export function BezugAufgabenAbschnitt({ vorgangId, auftragId }: { vorgangId?: s
   });
 
   const umschalten = useMutation({
-    mutationFn: (a: ProjektAufgabe) => projektAufgabenApi.update(a.id, { erledigt: !a.erledigt_am }),
+    mutationFn: (a: Pick<ProjektAufgabe, "id" | "erledigt_am">) => projektAufgabenApi.update(a.id, { erledigt: !a.erledigt_am }),
     onSuccess: (_, a) => {
-      toast.erfolg(a.erledigt_am ? "Aufgabe wieder offen" : "Aufgabe erledigt");
+      if (a.erledigt_am) toast.erfolg("Aufgabe wieder offen");
+      else toast.erfolg("Aufgabe erledigt", { label: "Rückgängig", onClick: () => umschalten.mutate({ id: a.id, erledigt_am: "x" }) });
       void queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
     },
   });

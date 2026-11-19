@@ -98,14 +98,28 @@ export function useMeineAufgaben() {
 
   const invalidieren = () => queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
   const umschalten = useMutation({
-    mutationFn: ({ id, erledigt }: { id: string; erledigt: boolean }) => projektAufgabenApi.update(id, { erledigt }),
+    mutationFn: ({ id, erledigt }: { id: string; erledigt: boolean; still?: boolean }) => projektAufgabenApi.update(id, { erledigt }),
     onSuccess: (_, v) => {
-      toast.erfolg(v.erledigt ? "Aufgabe erledigt" : "Aufgabe wieder offen");
+      if (v.erledigt) {
+        toast.erfolg("Aufgabe erledigt", { label: "Rückgängig", onClick: () => umschalten.mutate({ id: v.id, erledigt: false, still: true }) });
+      } else if (!v.still) {
+        toast.erfolg("Aufgabe wieder offen");
+      }
       void invalidieren();
     },
   });
 
+  // Gruppierung und Sortierung gehören zur Ansicht ("Kita diese Woche, nach Projekt"), nicht nur zum Filter.
+  const ansichtenZusatz = {
+    lesen: () => ({ gruppe: gruppierung, sort: sortierung }),
+    anwenden: (zusatz: Record<string, unknown>) => {
+      setGruppierung(gruppierungAusUrl(typeof zusatz.gruppe === "string" ? zusatz.gruppe : null));
+      setSortierung(sortierungAusUrl(typeof zusatz.sort === "string" ? zusatz.sort : null));
+    },
+  };
+
   return {
+    ansichtenZusatz,
     segment,
     setSegment,
     gruppierung,

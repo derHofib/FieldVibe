@@ -45,4 +45,27 @@ describe("Toast", () => {
     });
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("Toast mit Aktion: Button löst aus, schließt den Toast und bleibt 6 s", () => {
+    vi.useFakeTimers();
+    const rueckgaengig = vi.fn();
+    function Mit() {
+      const toast = useToast();
+      return <button onClick={() => toast.erfolg("Erledigt", { label: "Rückgängig", onClick: rueckgaengig })}>an</button>;
+    }
+    render(
+      <ToastProvider>
+        <Mit />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByText("an"));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(screen.getByRole("status")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Rückgängig" }));
+    expect(rueckgaengig).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.click(screen.getByText("an"));
+    act(() => vi.advanceTimersByTime(6100));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 });

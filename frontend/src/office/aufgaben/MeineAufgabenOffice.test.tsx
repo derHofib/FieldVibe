@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ProjektAufgabe } from "../../types";
 import { heuteIso } from "../../utils/format";
+import { ToastProvider } from "../../components/Toast";
 import { MeineAufgabenOffice } from "./MeineAufgabenOffice";
 
 const mocks = vi.hoisted(() => ({
@@ -64,11 +65,13 @@ function aufgabe(teil: Partial<ProjektAufgabe> & { id: string; titel: string }):
 function rendere(pfad = "/meine-aufgaben") {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={[pfad]}>
-        <Routes>
-          <Route path="/*" element={<MeineAufgabenOffice />} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[pfad]}>
+          <Routes>
+            <Route path="/*" element={<MeineAufgabenOffice />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -111,6 +114,14 @@ describe("MeineAufgabenOffice", () => {
     await screen.findByText("Heutige Sache");
     fireEvent.click(screen.getByRole("checkbox", { name: "„Heutige Sache“ als erledigt markieren" }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalledWith("2", { erledigt: true }));
+  });
+
+  it("Abhaken zeigt Toast mit Rückgängig, das erledigt=false sendet", async () => {
+    rendere();
+    await screen.findByText("Heutige Sache");
+    fireEvent.click(screen.getByRole("checkbox", { name: "„Heutige Sache“ als erledigt markieren" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Rückgängig" }));
+    await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith("2", { erledigt: false }));
   });
 
   it("Suche ohne Treffer zeigt eigenen Text", async () => {
