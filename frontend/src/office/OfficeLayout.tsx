@@ -45,7 +45,7 @@ import { useAnzahlOffeneRueckrufe } from "../hooks/useTelefonate";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
-import { aktiverNavKey, fuerOffice, workspaceFuerRoute } from "./navAktiv";
+import { WORKSPACE_STORAGE_KEY, aktiverNavKey, fuerOffice, workspaceFuerRoute } from "./navAktiv";
 import { SeitenGrenze } from "../components/ErrorBoundary";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
@@ -54,7 +54,6 @@ import { SeitenGrenze } from "../components/ErrorBoundary";
  * anderen fehlen, und die sichtbar()-Praedikate (Rechte + aktive Module)
  * gelten hier automatisch mit. */
 const SIDEBAR_STORAGE_KEY = "fieldvibe-office-sidebar-eingeklappt";
-const WORKSPACE_STORAGE_KEY = "fieldvibe-office-workspace";
 const KATEGORIEN_STORAGE_KEY = "fieldvibe-office-sidebar-kategorien-eingeklappt";
 
 function geladeneEingeklappteKategorien(): Record<string, boolean> {
