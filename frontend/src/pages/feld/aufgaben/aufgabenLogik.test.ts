@@ -7,6 +7,7 @@ import {
   aufgabenFilterFelder,
   eingeklapptLesen,
   eingeklapptSchreiben,
+  faelligText,
   gruppiereAufgaben,
   gruppierungAusUrl,
   kennzahlen,
@@ -162,5 +163,16 @@ describe("eingeklappte Gruppen", () => {
   it("übersteht kaputte Werte", () => {
     localStorage.setItem("fieldvibe-aufgaben-eingeklappt-projekt", "{kaputt");
     expect(eingeklapptLesen("projekt")).toEqual([]);
+  });
+});
+
+describe("faelligText", () => {
+  it("formatiert relativ, mit Wochentag und als Datum", () => {
+    expect(faelligText(null, HEUTE)).toBeNull();
+    expect(faelligText("2026-11-17", HEUTE)).toEqual({ text: "vor 2 Tagen", ueberfaellig: true });
+    expect(faelligText("2026-11-18", HEUTE)).toEqual({ text: "vor 1 Tag", ueberfaellig: true });
+    expect(faelligText(HEUTE, HEUTE)).toEqual({ text: "Heute", ueberfaellig: false });
+    expect(faelligText("2026-11-20", HEUTE)?.text).toBe("Fr 20.11.");
+    expect(faelligText("2027-03-03", HEUTE)?.text).toBe("03.03.2027");
   });
 });

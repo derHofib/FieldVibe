@@ -102,11 +102,11 @@ function FeldVariante<T extends string>({
         aria-label="Gruppieren"
         title="Gruppieren"
         // Aktiv in Tint, solange gruppiert wird -- wie der Filter-Knopf daneben.
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-ap-md)] ${
+        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full ${
           gruppiert ? "bg-tintbg text-tint-text" : "bg-card text-label2"
         }`}
       >
-        <Rows3 size={20} strokeWidth={2} aria-hidden="true" />
+        <Rows3 size={17} strokeWidth={2} aria-hidden="true" />
       </button>
       <Sheet
         offen={offen}

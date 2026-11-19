@@ -1,5 +1,6 @@
 import { Building2, CalendarClock, CircleDot, Flag, Folder, Layers, Lock, Rss, Users, Columns3, type LucideIcon } from "lucide-react";
 
+import { tageZwischen } from "../../../utils/format";
 import { isoDatum, normalisiere } from "../../../components/filter/auswerten";
 import type { FilterFeld, FilterOption } from "../../../components/filter/typen";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../../types";
@@ -348,4 +349,19 @@ export function eingeklapptSchreiben(gruppierung: Gruppierung, keys: string[]): 
   } catch {
     // privater Modus -- eingeklappt gilt dann nur für diese Sitzung
   }
+}
+
+const WOCHENTAG = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+/** Fälligkeit für Zeilen und Karten: überfällig relativ ("vor 2 Tagen"), sonst Heute, in der Woche mit Wochentag
+ * ("Fr 21.11."), weiter weg als Datum. */
+export function faelligText(iso: string | null, heute: string): { text: string; ueberfaellig: boolean } | null {
+  if (!iso) return null;
+  const diff = tageZwischen(heute, iso);
+  const [j, m, t] = iso.split("-").map(Number);
+  if (diff < 0) return { text: diff === -1 ? "vor 1 Tag" : `vor ${-diff} Tagen`, ueberfaellig: true };
+  if (diff === 0) return { text: "Heute", ueberfaellig: false };
+  const tm = `${String(t).padStart(2, "0")}.${String(m).padStart(2, "0")}.`;
+  if (diff <= 6) return { text: `${WOCHENTAG[new Date(j, m - 1, t).getDay()]} ${tm}`, ueberfaellig: false };
+  return { text: `${tm}${j}`, ueberfaellig: false };
 }

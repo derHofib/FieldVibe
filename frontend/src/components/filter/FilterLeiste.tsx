@@ -30,7 +30,7 @@ export interface FilterLeisteProps<T> {
   className?: string;
   /** Office: Platz links vor der Suche (z. B. Umschalter Vorlagen | Ausgefüllt). */
   vorne?: React.ReactNode;
-  /** Office: Platz rechts außen (z. B. Trefferzahl). */
+  /** Office: Platz rechts außen (z. B. Trefferzahl). Feld: Knöpfe neben dem Filter-Knopf (z. B. Gruppieren). */
   hinten?: React.ReactNode;
 }
 
@@ -69,6 +69,7 @@ export function FilterLeiste<T>(props: FilterLeisteProps<T>) {
     return (
       <FeldLeiste
         {...{ felder, zustand, suchPlatzhalter, ansichten, ohneSuche, className, e, a, eintraege }}
+        hinten={props.hinten}
         live={live}
       />
     );
@@ -354,7 +355,19 @@ function OfficeLeiste<T>({
 
 function noop() {}
 
-function FeldLeiste<T>({ felder, zustand, suchPlatzhalter, ansichten, ohneSuche, className, e, a, eintraege, live }: Gemeinsam<T>) {
+function FeldLeiste<T>({
+  felder,
+  zustand,
+  suchPlatzhalter,
+  ansichten,
+  ohneSuche,
+  className,
+  e,
+  a,
+  eintraege,
+  live,
+  hinten,
+}: Gemeinsam<T> & { hinten?: React.ReactNode }) {
   const n = eintraege.length;
   const [ansichtenSeite, setAnsichtenSeite] = useState(false);
   const offen = e.entwurf !== null;
@@ -389,6 +402,7 @@ function FeldLeiste<T>({ felder, zustand, suchPlatzhalter, ansichten, ohneSuche,
           <Funnel size={16} strokeWidth={2} aria-hidden="true" />
           Filter
         </button>
+        {hinten}
         {eintraege.map((x) => (
           <FilterPille
             key={`${x.index}-${x.teile.spalte}`}
