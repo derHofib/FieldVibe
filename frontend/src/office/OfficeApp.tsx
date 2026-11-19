@@ -30,7 +30,6 @@ import { KiVerbindenPage } from "../pages/KiVerbindenPage";
 import { ProfilePage } from "../pages/feld/ProfilePage";
 import { OfficePruefmittelPage } from "./pruefmittel/OfficePruefmittelPage";
 import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
-import { RechnungseingangPage } from "../pages/feld/RechnungseingangPage";
 import { SearchPage } from "../pages/feld/SearchPage";
 import { SettingsPage } from "../pages/feld/SettingsPage";
 import { StandortDetailPage } from "../pages/feld/StandortDetailPage";
@@ -60,6 +59,7 @@ import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
+import { OfficeRechnungseingangPage } from "./rechnungseingang/OfficeRechnungseingangPage";
 import { OfficeTelefonatePage } from "./telefonate/OfficeTelefonatePage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 import { NichtGefunden } from "../components/NichtGefunden";
@@ -106,6 +106,19 @@ export function OfficeApp() {
           <Route path="/protokoll" element={<OfficeProtokollPage />} />
           <Route path="/einstellungen/export" element={<OfficeExportPage />} />
           <Route path="/organigramm" element={<OrganigrammPage />} />
+          {/* Tabelle mit Detailpanel in voller Breite; "Ganze Seite" haengt den Beleg
+              neben die Daten (1400px wie Vorgang-Vollbild), deshalb ausserhalb von
+              <SchmaleSpalte>. */}
+          <Route path="/rechnungseingang" element={<OfficeRechnungseingangPage />} />
+          <Route path="/rechnungseingang/:id" element={<OfficeRechnungseingangPage />} />
+          <Route
+            path="/rechnungseingang/:id/vollbild"
+            element={
+              <div className="max-w-[1400px]">
+                <EingangsrechnungDetailPage layout="vollbild" />
+              </div>
+            }
+          />
           <Route path="/fehlerberichte" element={<OfficeFehlerberichtePage />} />
           <Route path="/fehlerberichte/:id" element={<OfficeFehlerberichtDetailPage />} />
           {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
@@ -212,8 +225,6 @@ export function OfficeApp() {
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
-          <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
-          <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />

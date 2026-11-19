@@ -101,6 +101,7 @@ export function KennzahlKarte({
   ton = "neutral",
   icon: Icon,
   wertKlasse = "text-label",
+  onClick,
 }: {
   label: string;
   wert: string;
@@ -108,6 +109,8 @@ export function KennzahlKarte({
   ton?: "neutral" | "warnung" | "gut";
   icon?: LucideIcon;
   wertKlasse?: string;
+  /** Macht die Kachel zum Button (z. B. um einen Filter zu setzen). */
+  onClick?: () => void;
 }) {
   const zusatzKlasse =
     ton === "warnung"
@@ -116,16 +119,25 @@ export function KennzahlKarte({
         ? "text-st-erledigt font-semibold"
         : "text-label2";
 
-  return (
-    <Karte className="p-4">
+  const inhalt = (
+    <>
       <p className="mb-2 flex items-center gap-1.5 text-sekundaer font-semibold text-label2">
         {Icon && <Icon size={13} strokeWidth={2} aria-hidden="true" />}
         {label}
       </p>
       <p className={`ap-heading text-titel-mobil font-semibold tabular-nums ${wertKlasse}`}>{wert}</p>
       {zusatz && <p className={`mt-1 text-sekundaer ${zusatzKlasse}`}>{zusatz}</p>}
-    </Karte>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="card-ap block w-full p-4 text-left hover:bg-fill">
+        {inhalt}
+      </button>
+    );
+  }
+  return <Karte className="p-4">{inhalt}</Karte>;
 }
 
 /** Waagerecht scrollbarer Rahmen fuer Tabellen -- ohne ihn schiebt eine breite
