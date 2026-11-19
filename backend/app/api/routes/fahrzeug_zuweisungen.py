@@ -12,6 +12,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.rollen import MITARBEITER_ROLLEN
 from app.models.anlage import Anlage
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.user import User
@@ -20,7 +21,7 @@ from app.schemas.anlage import AnlageRead
 from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuweisungUebersicht
 from app.schemas.user import UserRead
 from app.services import papierkorb_service
-from app.services.zuweisung_service import technik_user_ids, zuweisbare_user_ids
+from app.services.zuweisung_service import betreuer_user_ids, zuweisbare_user_ids
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -57,7 +58,7 @@ async def uebersicht(
 ) -> list[FahrzeugZuweisungUebersicht]:
     """Fuer den Disponent: welcher Techniker faehrt welches Fahrzeug.
     Zeigt auch Techniker ohne Zuweisung (fahrzeug=None)."""
-    techniker_ids = await technik_user_ids(session, auth.mandant_id)
+    techniker_ids = await betreuer_user_ids(session, auth.mandant_id)
     techniker_result = await session.execute(
         select(User).where(User.id.in_(techniker_ids), nicht_anonymisiert()).order_by(User.name)
     )
@@ -110,7 +111,11 @@ async def zuweisung_setzen(
     session: AsyncSession = Depends(get_db),
 ) -> Anlage | None:
     techniker = await session.get(User, user_id)
-    if techniker is None or user_id not in await technik_user_ids(session, auth.mandant_id):
+    # Entfernen darf auch einen inzwischen deaktivierten Mitarbeiter treffen.
+    entfernen_inaktiv = body.anlage_id is None and techniker is not None and techniker.role in MITARBEITER_ROLLEN
+    if techniker is None or (
+        user_id not in await betreuer_user_ids(session, auth.mandant_id) and not entfernen_inaktiv
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Techniker nicht gefunden"
         )
