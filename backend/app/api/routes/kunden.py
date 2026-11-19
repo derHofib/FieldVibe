@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,7 @@ from app.schemas.einladung import EinladungRead, KundeEinladungCreate
 from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.kunde import KundeCreate, KundeListeEintrag, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import (
+    BetreuerKandidat,
     BetreuerRead,
     BetreuungKurz,
     KundeBetreuungSammel,
@@ -118,6 +119,52 @@ async def list_kunden(
     return [
         KundeListeEintrag(**KundeRead.model_validate(k).model_dump(), betreuung=betreuung.get(k.id, []))
         for k in kunden
+    ]
+
+
+@router.get(
+    "/betreuer-auswahl",
+    response_model=list[BetreuerKandidat],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_module("kundenverwaltung")),
+    ],
+)
+async def betreuer_auswahl(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> list[BetreuerKandidat]:
+    """Auswahlliste fuer die Betreuungspflege. Eigener Endpoint, weil die
+    allgemeine Nutzer-Auswahl mitarbeiterverwaltung.sehen verlangt. Inaktive
+    Nutzer erscheinen nur, solange sie noch Betreuer sind (zum Entfernen)."""
+    anzahl = {
+        user_id: n
+        for user_id, n in (
+            await session.execute(
+                select(KundeZuweisung.user_id, func.count()).group_by(KundeZuweisung.user_id)
+            )
+        ).all()
+    }
+    kandidaten = await betreuer_user_ids(session, auth.mandant_id)
+    zeilen = await session.execute(
+        select(User, AccountTyp.name)
+        .outerjoin(AccountTyp, AccountTyp.id == User.account_typ_id)
+        .where(User.mandant_id == auth.mandant_id, User.id.in_(kandidaten | set(anzahl)))
+        .order_by(User.name)
+    )
+    return [
+        BetreuerKandidat(
+            user_id=user.id,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            aktiv=user.aktiv,
+            nur_betreute_kunden=await berechtigung_service.ist_auf_zugewiesene_kunden_beschraenkt(
+                session, user_id=user.id, rolle=user.role
+            ),
+            account_typ_name=typ_name,
+            anzahl_kunden=anzahl.get(user.id, 0),
+        )
+        for user, typ_name in zeilen.all()
     ]
 
 

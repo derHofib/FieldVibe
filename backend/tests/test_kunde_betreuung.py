@@ -421,3 +421,33 @@ async def test_portal_anfrage_annehmen_weist_hauptbetreuer_zu(client, make_manda
     assert resp.status_code == 200
     vorgang = await client.get(f"/api/vorgaenge/{resp.json()['vorgang_id']}", headers=auth_headers(token))
     assert vorgang.json()["zugewiesener_user_id"] == str(haupt.id)
+
+
+@pytest.mark.asyncio
+async def test_betreuer_auswahl_ohne_mitarbeiterverwaltung(client, make_mandant, make_user, make_kunde):
+    mandant, admin = await _admin(make_mandant, make_user)
+    pfleger = await custom_nutzer(mandant, "Pfleger", {"kunden": ("sehen", "bearbeiten")})
+    aktiv = await make_user(mandant=mandant, role="techniker", name="Aktiv")
+    inaktiv_betreuer = await make_user(mandant=mandant, role="techniker", name="Inaktiv Betreuer")
+    inaktiv_frei = await make_user(mandant=mandant, role="techniker", name="Inaktiv Frei")
+    fremd = await make_user(mandant=await make_mandant(name="Fremdbetrieb"), role="techniker", name="Fremd")
+    kunde = await make_kunde(mandant=mandant)
+    admin_token = await login(client, admin.email, PW)
+    await _put(client, admin_token, kunde, [aktiv, inaktiv_betreuer], haupt=aktiv)
+    async with system_session(grund="test") as session:
+        for u in (inaktiv_betreuer, inaktiv_frei):
+            (await session.get(type(u), u.id)).aktiv = False
+
+    token = await login(client, pfleger.email, PASSWORT)
+    resp = await client.get("/api/kunden/betreuer-auswahl", headers=auth_headers(token))
+    assert resp.status_code == 200, resp.text
+    je_name = {r["name"]: r for r in resp.json()}
+    assert "Inaktiv Frei" not in je_name and "Fremd" not in je_name
+    assert je_name["Aktiv"]["anzahl_kunden"] == 1 and je_name["Aktiv"]["nur_betreute_kunden"] is True
+    assert je_name["Inaktiv Betreuer"]["aktiv"] is False
+    assert je_name["Pfleger"]["anzahl_kunden"] == 0
+    assert [r["name"] for r in resp.json()] == sorted(je_name)
+
+    ohne_recht = await custom_nutzer(mandant, "Leser", {"kunden": ("sehen",)})
+    t2 = await login(client, ohne_recht.email, PASSWORT)
+    assert (await client.get("/api/kunden/betreuer-auswahl", headers=auth_headers(t2))).status_code == 403

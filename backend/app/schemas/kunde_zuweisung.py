@@ -31,6 +31,16 @@ class BetreuerRead(BaseModel):
     account_typ_name: str | None = None
 
 
+class BetreuerKandidat(BaseModel):
+    user_id: UUID
+    name: str
+    avatar_url: str | None = None
+    aktiv: bool
+    nur_betreute_kunden: bool
+    account_typ_name: str | None = None
+    anzahl_kunden: int
+
+
 class KundeBetreuungUpdate(BaseModel):
     """Ersetzt die Betreuung eines Kunden vollstaendig."""
 
