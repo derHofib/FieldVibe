@@ -43,7 +43,7 @@ def _ist_admin(auth: AuthContext) -> bool:
     return auth.role in ("mandant_admin", "loesch_operativ")
 
 
-async def _sichtbar_query(session: AsyncSession, auth: AuthContext) -> Select:
+async def sichtbar_query(session: AsyncSession, auth: AuthContext) -> Select:
     """select(Telefonat) mit Vorgang-/Kunden-Join, nur fuer den Nutzer sichtbare, nicht geloeschte Eintraege."""
     darf_vorgaenge = await berechtigung_service.hat_recht(session, auth, "vorgaenge", "sehen")
     darf_kunden = await berechtigung_service.hat_recht(session, auth, "kunden", "sehen")
@@ -116,7 +116,7 @@ async def _lesemodelle(session: AsyncSession, telefonate: list[Telefonat]) -> li
 
 async def lesen(session: AsyncSession, auth: AuthContext, telefonat_id: UUID) -> Telefonat:
     t = (
-        await session.execute((await _sichtbar_query(session, auth)).where(Telefonat.id == telefonat_id))
+        await session.execute((await sichtbar_query(session, auth)).where(Telefonat.id == telefonat_id))
     ).scalar_one_or_none()
     if t is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Telefonat nicht gefunden")
@@ -139,7 +139,7 @@ async def liste(
     seite: int,
     limit: int,
 ) -> list[TelefonatRead]:
-    stmt = await _sichtbar_query(session, auth)
+    stmt = await sichtbar_query(session, auth)
     if kunde_id is not None:
         stmt = stmt.where(Telefonat.kunde_id == kunde_id)
     if vorgang_id is not None:
@@ -159,7 +159,7 @@ async def liste(
 
 
 async def anzahl_offene_rueckrufe(session: AsyncSession, auth: AuthContext) -> int:
-    sub = (await _sichtbar_query(session, auth)).where(
+    sub = (await sichtbar_query(session, auth)).where(
         Telefonat.erfasst_von == auth.user_id,
         Telefonat.rueckruf_am.is_not(None),
         Telefonat.rueckruf_erledigt_am.is_(None),
@@ -479,7 +479,7 @@ async def kontaktverlauf(
         list(
             (
                 await session.execute(
-                    (await _sichtbar_query(session, auth))
+                    (await sichtbar_query(session, auth))
                     .where(Telefonat.kunde_id == kunde_id)
                     .order_by(Telefonat.beginn.desc(), Telefonat.id)
                     .limit(limit)
