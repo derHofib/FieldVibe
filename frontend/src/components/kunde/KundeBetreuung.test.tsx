@@ -63,7 +63,8 @@ describe("KundeBetreuung", () => {
   it("zeigt Hauptbetreuer/Vertretung, deaktivierte und den Vorbelegungs-Hinweis", () => {
     rendern([betreuer("u1", "Jonas Weber", { hauptbetreuer: true }), betreuer("u9", "Alt Nutzer", { aktiv: false })]);
     expect(screen.getByText("Hauptbetreuer")).toBeInTheDocument();
-    expect(screen.getByText(/Vertretung · deaktiviert/)).toBeInTheDocument();
+    expect(screen.getByText("Vertretung")).toBeInTheDocument();
+    expect(screen.getByText(/sieht alle Kunden · deaktiviert/)).toBeInTheDocument();
     expect(screen.getByText("Neue Vorgänge für diesen Kunden werden automatisch Jonas Weber zugewiesen.")).toBeInTheDocument();
   });
 

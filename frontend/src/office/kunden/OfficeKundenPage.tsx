@@ -58,13 +58,13 @@ const SPALTEN: Spalte<Kunde>[] = [
       const erster = k.betreuung?.[0];
       if (!erster) return <span className="whitespace-nowrap text-label3">Ohne Betreuung</span>;
       return (
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <span className="flex min-w-[9rem] items-center gap-1.5">
           <Monogramm name={erster.name} groesse={22} />
-          {erster.name}
+          <span className="min-w-0 truncate">{erster.name}</span>
           {erster.hauptbetreuer && (
-            <Star size={12} strokeWidth={2} className="fill-current text-st-arbeit-dot" aria-label="Hauptbetreuer" />
+            <Star size={12} strokeWidth={2} className="shrink-0 fill-current text-st-arbeit-dot" aria-label="Hauptbetreuer" />
           )}
-          {k.betreuung!.length > 1 && <span className="text-label2">+{k.betreuung!.length - 1}</span>}
+          {k.betreuung!.length > 1 && <span className="shrink-0 text-label2">+{k.betreuung!.length - 1}</span>}
         </span>
       );
     },

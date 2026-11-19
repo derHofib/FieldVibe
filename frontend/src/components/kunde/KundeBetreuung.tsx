@@ -8,12 +8,12 @@ import type { Betreuer } from "../../types";
 import {
   auswahlAusBetreuung,
   betreuerUmschalten,
-  betreuungUnterzeile,
+  betreuerUnterzeile,
   hauptbetreuerUmschalten,
   kandidatenBilden,
   sichtverlust,
 } from "../../utils/betreuung";
-import { AbschnittsFusszeile, AbschnittskopfB } from "../apple/AbschnittsKopf";
+import { AbschnittsFusszeile } from "../apple/AbschnittsKopf";
 import { GroupedList, GroupedListRow } from "../apple/GroupedList";
 import { Monogramm } from "../apple/Monogramm";
 import { SearchField } from "../apple/SearchField";
@@ -42,7 +42,7 @@ export function KundeBetreuung({
 
   return (
     <section aria-label="Betreuung">
-      <AbschnittskopfB titel="Betreuung" />
+      <h2 className="mb-2 text-fliess font-semibold text-label2">Betreuung</h2>
       <GroupedList>
         {betreuung.length === 0 && (
           <GroupedListRow last={!kannVerwalten}>
@@ -56,12 +56,12 @@ export function KundeBetreuung({
             </span>
             <div className="min-w-0 flex-1">
               <p className={`truncate text-zeile ${b.aktiv ? "text-label" : "text-label3"}`}>{b.name}</p>
-              <p className="truncate text-sekundaer text-label2">
-                {betreuungUnterzeile(b)}
-                {!b.aktiv && " · deaktiviert"}
-              </p>
+              <p className="line-clamp-2 text-sekundaer text-label2">{betreuerUnterzeile(b)}</p>
             </div>
-            {b.hauptbetreuer && <HauptStern />}
+            <span className="flex shrink-0 items-center gap-1 text-meta text-label2">
+              {b.hauptbetreuer && <HauptStern />}
+              {b.hauptbetreuer ? "Hauptbetreuer" : "Vertretung"}
+            </span>
           </GroupedListRow>
         ))}
         {kannVerwalten && (
@@ -71,7 +71,7 @@ export function KundeBetreuung({
         )}
       </GroupedList>
       {haupt && (
-        <div className="mx-4 mt-2 flex items-start gap-2 rounded-[var(--radius-ap-md)] bg-tintbg px-3 py-2 text-sekundaer text-label">
+        <div className="mt-2 flex items-start gap-2 rounded-[var(--radius-ap-md)] bg-tintbg px-3 py-2 text-sekundaer text-label">
           <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-tint" aria-hidden="true" />
           <p>Neue Vorgänge für diesen Kunden werden automatisch {haupt.name} zugewiesen.</p>
         </div>
@@ -163,11 +163,7 @@ export function BetreuungSheet({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-zeile ${k.aktiv ? "text-label" : "text-label3"}`}>{k.name}</span>
-                      <span className="block truncate text-sekundaer text-label2">
-                        {[k.account_typ_name, k.nur_betreute_kunden ? "sieht nur betreute Kunden" : null, k.aktiv ? null : "deaktiviert"]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                      <span className="line-clamp-2 block text-sekundaer text-label2">{betreuerUnterzeile(k)}</span>
                     </span>
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center" aria-hidden="true">
                       {gewaehlt && <Check size={18} strokeWidth={2.5} className="text-tint" />}

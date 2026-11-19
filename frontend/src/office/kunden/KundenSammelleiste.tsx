@@ -6,6 +6,7 @@ import { kundenApi } from "../../api/endpoints";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { SearchField } from "../../components/apple/SearchField";
 import { useToast } from "../../components/Toast";
+import { betreuerUnterzeile } from "../../utils/betreuung";
 import type { BetreuerKandidat, Kunde, KundeBetreuungSammelAktion } from "../../types";
 import { Karte } from "../OfficeUi";
 
@@ -70,9 +71,7 @@ export function KundenSammelleiste({
     const info = (k: BetreuerKandidat): Person => ({
       id: k.user_id,
       name: k.name,
-      untertitel: [k.account_typ_name, k.nur_betreute_kunden ? "sieht nur betreute Kunden" : "sieht alle Kunden"]
-        .filter(Boolean)
-        .join(" · "),
+      untertitel: betreuerUnterzeile(k),
       nurBetreuteKunden: k.nur_betreute_kunden,
       anzahl: k.anzahl_kunden,
     });
@@ -82,7 +81,7 @@ export function KundenSammelleiste({
     for (const k of ausgewaehlt) for (const b of k.betreuung ?? []) imAuswahl.set(b.user_id, b.name);
     return [...imAuswahl.entries()].map(([id, name]) => {
       const k = (kandidaten ?? []).find((x) => x.user_id === id);
-      return k ? info(k) : { id, name, untertitel: "", nurBetreuteKunden: false, anzahl: 0 };
+      return k ? info(k) : { id, name, untertitel: betreuerUnterzeile({ account_typ_name: null, nur_betreute_kunden: false }), nurBetreuteKunden: false, anzahl: 0 };
     });
   }, [kandidaten, modus, ausgewaehlt]);
 
@@ -166,8 +165,14 @@ export function KundenSammelleiste({
                 schliessen();
               }
             }}
-            className="absolute top-full left-0 z-30 mt-2 w-[380px] max-w-full rounded-[var(--radius-ap-md)] border-[0.5px] border-sepstrong p-1.5"
-            style={{ backgroundColor: "var(--menu)", boxShadow: "0 10px 30px rgba(0,0,0,.22)" }}
+            className="absolute top-full left-0 z-30 mt-2 w-[380px] max-w-full rounded-[10px] border-[0.5px] p-1.5"
+            style={{
+              backgroundColor: "var(--menu)",
+              backdropFilter: "blur(30px)",
+              WebkitBackdropFilter: "blur(30px)",
+              borderColor: "var(--sepstrong)",
+              boxShadow: "0 10px 30px rgba(0,0,0,.22)",
+            }}
           >
             <SearchField value={suche} onChange={setSuche} placeholder="Mitarbeiter suchen…" ariaLabel="Mitarbeiter suchen" autoFocus />
             <ul className="mt-1 max-h-72 overflow-y-auto">

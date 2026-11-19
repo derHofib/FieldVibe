@@ -49,8 +49,13 @@ export function kandidatenBilden(alle: BetreuerKandidat[] | undefined, bisher: B
   return liste.sort((x, y) => x.name.localeCompare(y.name, "de"));
 }
 
-export function betreuungUnterzeile(b: Betreuer): string {
-  return [b.hauptbetreuer ? "Hauptbetreuer" : "Vertretung", b.account_typ_name, b.nur_betreute_kunden ? "sieht nur betreute Kunden" : null]
+/** Gemeinsame Unterzeile für Sheet, Abschnitt und Sammel-Menü: Rolle bzw. Account-Typ, Sichtbereich, ggf. "deaktiviert". */
+export function betreuerUnterzeile(p: { account_typ_name: string | null; nur_betreute_kunden: boolean; aktiv?: boolean }): string {
+  return [
+    p.account_typ_name ?? "Administrator",
+    p.nur_betreute_kunden ? "sieht nur betreute Kunden" : "sieht alle Kunden",
+    p.aktiv === false ? "deaktiviert" : null,
+  ]
     .filter(Boolean)
     .join(" · ");
 }

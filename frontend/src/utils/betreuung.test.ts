@@ -8,7 +8,7 @@ import {
   betreuerUmschalten,
   betreuungFilterOptionen,
   betreuungSuchtext,
-  betreuungUnterzeile,
+  betreuerUnterzeile,
   hauptbetreuerUmschalten,
   kandidatenBilden,
   sichtverlust,
@@ -89,9 +89,10 @@ describe("Betreuungs-Auswahl", () => {
     expect(r.find((x) => x.user_id === "x")).toBeUndefined();
   });
   it("Unterzeile", () => {
-    expect(betreuungUnterzeile(betreuer("a", { hauptbetreuer: true, account_typ_name: "Techniker", nur_betreute_kunden: true }))).toBe(
-      "Hauptbetreuer · Techniker · sieht nur betreute Kunden",
+    expect(betreuerUnterzeile(betreuer("a", { account_typ_name: "Techniker", nur_betreute_kunden: true }))).toBe(
+      "Techniker · sieht nur betreute Kunden",
     );
-    expect(betreuungUnterzeile(betreuer("b"))).toBe("Vertretung");
+    expect(betreuerUnterzeile(betreuer("b"))).toBe("Administrator · sieht alle Kunden");
+    expect(betreuerUnterzeile(betreuer("c", { aktiv: false }))).toBe("Administrator · sieht alle Kunden · deaktiviert");
   });
 });
