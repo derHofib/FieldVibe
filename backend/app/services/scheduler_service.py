@@ -17,6 +17,7 @@ from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
+from app.models.telefonat import Telefonat
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -507,6 +508,60 @@ async def _wiedervorlage_fuer_mandant(session: AsyncSession, mandant_id: UUID) -
 
 async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
     return await je_mandant(mandant_ids, _wiedervorlage_fuer_mandant)
+
+
+RUECKRUF_SCHEDULER_AKTION = "rueckruf_scheduler_run"
+
+
+async def _rueckrufe_fuer_mandant(session: AsyncSession, mandant_id: UUID) -> dict:
+    """Benachrichtigt den Erfasser eines Telefonats, sobald dessen Rueckruf faellig ist (rueckruf_am <= jetzt,
+    nicht erledigt). Einmal-Kennzeichen ist rueckruf_benachrichtigt_am; bewusst nicht Vorgang.wiedervorlage_am,
+    das gehoert zum Status "wartet_kunde"."""
+    jetzt = datetime.now(timezone.utc)
+    stmt = select(Telefonat).where(
+        Telefonat.rueckruf_am.is_not(None),
+        Telefonat.rueckruf_am <= jetzt,
+        Telefonat.rueckruf_erledigt_am.is_(None),
+        Telefonat.rueckruf_benachrichtigt_am.is_(None),
+        Telefonat.geloescht_am.is_(None),
+    )
+    faellige = (await session.execute(stmt.with_for_update(skip_locked=True))).scalars().all()
+
+    for t in faellige:
+        session.add(
+            Notification(
+                mandant_id=t.mandant_id,
+                user_id=t.erfasst_von,
+                typ="rueckruf",
+                titel=f"Rückruf: {t.partner_name}",
+                ref_entity_type="vorgang" if t.vorgang_id else "kunde",
+                ref_entity_id=t.vorgang_id or t.kunde_id,
+            )
+        )
+        t.rueckruf_benachrichtigt_am = jetzt
+        await event_bus.publish(
+            t.mandant_id,
+            "notification",
+            {"typ": "rueckruf", "user_id": str(t.erfasst_von), "telefonat_id": str(t.id)},
+        )
+
+    ergebnis = {"rueckrufe_benachrichtigt": len(faellige)}
+    session.add(
+        AuditLog(
+            mandant_id=mandant_id,
+            actor_user_id=None,
+            aktion=RUECKRUF_SCHEDULER_AKTION,
+            entity_type="scheduler",
+            payload=ergebnis,
+        )
+    )
+    await session.flush()
+
+    return ergebnis
+
+
+async def run_rueckruf_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    return await je_mandant(mandant_ids, _rueckrufe_fuer_mandant)
 
 
 ANGEBOT_NACHFASSEN_SCHEDULER_AKTION = "angebot_nachfassen_scheduler_run"

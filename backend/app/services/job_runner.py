@@ -35,6 +35,7 @@ from app.services.scheduler_service import (
     run_dauerauftraege_scheduler,
     run_prioritaet_scheduler,
     run_pruefzyklen_scheduler,
+    run_rueckruf_scheduler,
     run_wiedervorlage_scheduler,
 )
 from app.services.worker_lock import worker_lock
@@ -51,6 +52,7 @@ TAEGLICHE_JOBS: dict[str, MandantenJob] = {
     "dauerauftraege": run_dauerauftraege_scheduler,
     "prioritaet": run_prioritaet_scheduler,
     "wiedervorlage": run_wiedervorlage_scheduler,
+    "rueckrufe": run_rueckruf_scheduler,
     "angebot_nachfassen": run_angebot_nachfassen,
     "mahnwesen": run_mahnwesen_eskalation,
     "kreditoren": run_kreditoren_faelligkeits_check,
