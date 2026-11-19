@@ -227,6 +227,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
             <Route path="/partner" element={<PartnerPage />} />
             <Route path="/material" element={<MaterialPage />} />
             <Route path="/anfragen" element={<AnfragenPage />} />
+            <Route path="/anfragen/:id" element={<AnfragenPage />} />
             <Route path="/angebote/:id" element={<AngebotDetailPage />} />
             <Route path="/rechnungen" element={<RechnungenPage />} />
             <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />

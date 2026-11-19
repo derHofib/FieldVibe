@@ -563,6 +563,14 @@ export interface VorgangAnfrage {
   bearbeitet_am: string | null;
   created_at: string;
   updated_at: string;
+  // Reine Lesefelder, die die Liste per Join mitliefert.
+  kunde_name?: string | null;
+  standort_bezeichnung?: string | null;
+  anlage_bezeichnung?: string | null;
+  gestellt_von_name?: string | null;
+  gestellt_von_email?: string | null;
+  vorgang_nummer?: string | null;
+  bearbeitet_von_name?: string | null;
 }
 
 export type VorgangEventType =
