@@ -3,6 +3,8 @@ import { Info, ScanLine } from "lucide-react";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { hauptbetreuerVon } from "../../utils/betreuung";
+
 import {
   anlagenApi,
   auftraegeApi,
@@ -115,6 +117,7 @@ export function NewVorgangPage() {
   // Backend: /api/projekte und /api/auftraege verlangen projekte.sehen.
   const darfProjekte = hatRecht("projekte", "sehen");
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
+  const hauptbetreuer = hauptbetreuerVon(kunden?.find((k) => k.id === kundeId)?.betreuung);
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfProjekte });
   const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfProjekte });
   const { data: anlagenListe } = useQuery({
@@ -377,6 +380,9 @@ export function NewVorgangPage() {
             <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-sekundaer text-st-fehlt">
               {feldFehler.kunde}
             </p>
+          )}
+          {hauptbetreuer && (
+            <p className="mt-1 text-sekundaer text-label2">Wird {hauptbetreuer.name} zugewiesen (Hauptbetreuer)</p>
           )}
           {!showNewKunde && (
             <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-sekundaer font-medium text-tint">
