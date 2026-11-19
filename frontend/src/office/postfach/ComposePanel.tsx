@@ -7,7 +7,7 @@ import { useEscapeSchliesst } from "../../hooks/useEscapeSchliesst";
 
 export type ComposeModus =
   | { art: "neu"; accountId: string }
-  | { art: "antworten"; messageId: string; an: string[]; betreff: string }
+  | { art: "antworten"; messageId: string; an: string[]; cc?: string[]; betreff: string }
   | { art: "weiterleiten"; messageId: string; betreff: string };
 
 interface Props {
@@ -30,7 +30,7 @@ function parseAdressen(wert: string): string[] {
 export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   const queryClient = useQueryClient();
   const [an, setAn] = useState(modus.art === "antworten" ? modus.an.join(", ") : "");
-  const [cc, setCc] = useState("");
+  const [cc, setCc] = useState(modus.art === "antworten" ? (modus.cc ?? []).join(", ") : "");
   const [bcc, setBcc] = useState("");
   const [betreff, setBetreff] = useState(modus.art !== "neu" ? modus.betreff : "");
   const [text, setText] = useState("");
