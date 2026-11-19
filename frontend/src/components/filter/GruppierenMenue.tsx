@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Rows3 } from "lucide-react";
+import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Rows3, X } from "lucide-react";
 import { useState } from "react";
 
 import { GroupedList, GroupedListRow } from "../apple/GroupedList";
@@ -40,7 +40,7 @@ export function GruppierenMenue<T extends string>(props: Props<T>) {
     aktiv: o.wert === wert,
     onSelect: () => onWechsel(o.wert),
   }));
-  items.push("trenner", { label: "Nicht gruppieren", aktiv: wert === keinWert, onSelect: () => onWechsel(keinWert) });
+  items.push("trenner", { label: "Nicht gruppieren", icon: X, aktiv: wert === keinWert, onSelect: () => onWechsel(keinWert) });
   if (gruppiert && onAlleEinklappen && onAlleAusklappen) {
     items.push("trenner", {
       label: alleEingeklappt ? "Alle Gruppen ausklappen" : "Alle Gruppen einklappen",
@@ -89,7 +89,7 @@ function FeldVariante<T extends string>({
   };
   const zeilen: { key: string; label: string; icon?: LucideIcon; aktiv?: boolean; onClick: () => void }[] = [
     ...optionen.map((o) => ({ key: o.wert, label: o.label, icon: o.icon, aktiv: o.wert === wert, onClick: () => waehle(o.wert) })),
-    { key: "keine", label: "Nicht gruppieren", aktiv: wert === keinWert, onClick: () => waehle(keinWert) },
+    { key: "keine", label: "Nicht gruppieren", icon: X, aktiv: wert === keinWert, onClick: () => waehle(keinWert) },
   ];
   const einklappen = gruppiert && onAlleEinklappen && onAlleAusklappen;
 

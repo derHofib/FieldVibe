@@ -43,14 +43,20 @@ export function AufgabePfad({
 }) {
   const glieder = pfadGlieder(aufgabe, linksAktiv);
   if (glieder.length === 0) return <span className={`text-label3 ${className}`}>–</span>;
-  const textKlasse = kurz ? "max-w-[9rem] truncate" : "max-w-[16rem] truncate";
+  const textKlasse = kurz ? "min-w-0 truncate" : "max-w-[16rem] truncate";
 
   return (
-    <nav aria-label="Gehört zu" className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-sekundaer ${className}`}>
+    <nav aria-label="Gehört zu" className={`flex min-w-0 items-center gap-x-1 gap-y-0.5 text-sekundaer ${
+        kurz ? "flex-nowrap overflow-hidden whitespace-nowrap" : "flex-wrap"
+      } ${className}`}>
       {glieder.map((g, i) => {
         const Icon = g.icon;
         return (
-          <span key={g.key} className="inline-flex min-w-0 items-center gap-1">
+          <span
+            key={g.key}
+            // Kurzform einzeilig: Projekt und Auftrag werden mit Ellipse gekürzt, der Vorgang (Nummer) nie.
+            className={`inline-flex items-center gap-1 ${kurz && g.key === "vorgang" ? "shrink-0" : "min-w-0"}`}
+          >
             {i > 0 && <ChevronRight size={12} strokeWidth={2} className="shrink-0 text-label3" aria-hidden="true" />}
             <Icon size={13} strokeWidth={1.5} className={`shrink-0 ${g.ziel ? "text-tint-text" : "text-label2"}`} aria-hidden="true" />
             {g.ziel ? (
@@ -61,12 +67,15 @@ export function AufgabePfad({
                   e.stopPropagation();
                   navigate(g.ziel!);
                 }}
+                title={g.text}
                 className={`${textKlasse} text-tint-text underline-offset-2 hover:underline`}
               >
                 {g.text}
               </button>
             ) : (
-              <span className={`${textKlasse} text-label2`}>{g.text}</span>
+              <span title={g.text} className={`${textKlasse} text-label2`}>
+                {g.text}
+              </span>
             )}
           </span>
         );
