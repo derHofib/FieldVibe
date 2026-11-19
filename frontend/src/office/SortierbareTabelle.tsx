@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { AbhakKreis } from "../components/apple/AbhakKreis";
 import { TabellenRahmen } from "./OfficeUi";
 
 export interface Spalte<T> {
@@ -33,6 +34,9 @@ export function SortierbareTabelle<T>({
   startSortierung,
   zeilenAktionen,
   hervorgehoben,
+  auswahl,
+  onAuswahl,
+  auswahlLabel,
 }: {
   zeilen: T[];
   spalten: Spalte<T>[];
@@ -44,6 +48,11 @@ export function SortierbareTabelle<T>({
   zeilenAktionen?: (zeile: T) => ReactNode;
   /** Spalten-Keys, auf die gerade eine Filterbedingung wirkt (Kopf in Akzentfarbe). */
   hervorgehoben?: string[];
+  /** Mehrfachauswahl (optional): Zeilen-Keys und Handler -- mit `onAuswahl` erscheint die Kreis-Spalte,
+   * der Kopf-Kreis wählt alle angezeigten Zeilen. */
+  auswahl?: ReadonlySet<string>;
+  onAuswahl?: (keys: string[], an: boolean) => void;
+  auswahlLabel?: (zeile: T) => string;
 }) {
   const [sortierung, setSortierung] = useState(startSortierung ?? null);
 
@@ -60,11 +69,22 @@ export function SortierbareTabelle<T>({
       alt?.key === key ? { key, absteigend: !alt.absteigend } : { key, absteigend: false },
     );
 
+  const alleGewaehlt = !!auswahl && sortiert.length > 0 && sortiert.every((z) => auswahl.has(zeilenKey(z)));
+
   return (
     <TabellenRahmen>
       <table className="w-full border-collapse text-fliess">
         <thead className="border-b border-sepstrong text-sekundaer text-label2">
           <tr>
+            {onAuswahl && (
+              <th scope="col" className="w-10 py-2 pr-0 pl-3">
+                <AbhakKreis
+                  checked={alleGewaehlt}
+                  onChange={(an) => onAuswahl(sortiert.map(zeilenKey), an)}
+                  ariaLabel="Alle angezeigten Zeilen auswählen"
+                />
+              </th>
+            )}
             {spalten.map((spalte) => {
               const aktiv = sortierung?.key === spalte.key;
               const gefiltert = hervorgehoben?.includes(spalte.key) ?? false;
@@ -112,15 +132,21 @@ export function SortierbareTabelle<T>({
           {sortiert.map((zeile) => {
             const key = zeilenKey(zeile);
             const ausgewaehlt = key === gewaehlt;
+            const angehakt = auswahl?.has(key) ?? false;
             return (
               <tr
                 key={key}
                 onClick={() => onWaehlen(zeile)}
                 aria-selected={ausgewaehlt}
                 className={`cursor-pointer border-b border-sep last:border-b-0 ${
-                  ausgewaehlt ? "bg-tintbg" : "hover:bg-fill"
+                  ausgewaehlt || angehakt ? "bg-tintbg" : "hover:bg-fill"
                 }`}
               >
+                {onAuswahl && (
+                  <td className="w-10 py-2 pr-0 pl-3" onClick={(e) => e.stopPropagation()}>
+                    <AbhakKreis checked={angehakt} onChange={(an) => onAuswahl([key], an)} ariaLabel={auswahlLabel?.(zeile) ?? "Zeile auswählen"} />
+                  </td>
+                )}
                 {spalten.map((spalte) => (
                   <td
                     key={spalte.key}
