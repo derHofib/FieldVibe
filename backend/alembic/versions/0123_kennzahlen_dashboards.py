@@ -7,7 +7,7 @@ Schluessel der Systemvorlage, aus der kopiert wurde.
 - kennzahlen_dashboards: RLS-Policy + FORCE + updated_at-Trigger nach Repo-Konvention.
 - user_id mit ON DELETE CASCADE: Dashboards gehoeren der Person, nicht dem Mandanten.
 
-Revision ID: 0122
+Revision ID: 0123
 Revises: 0121
 Create Date: 2026-11-19
 """
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0122"
+revision: str = "0123"
 down_revision: Union[str, None] = "0121"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
