@@ -50,6 +50,7 @@ import type {
   AngebotPositionUpdate,
   Anlage,
   Betreuer,
+  BetreuerKandidat,
   KundeBetreuungSammelBody,
   AnlagenFeldDefinition,
   AnlagenFeldTyp,
@@ -610,6 +611,7 @@ export const kundenApi = {
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/kunden/${id}`, { method: "DELETE" }),
+  betreuerAuswahl: () => apiFetch<BetreuerKandidat[]>("/api/kunden/betreuer-auswahl"),
   betreuung: (id: string) => apiFetch<Betreuer[]>(`/api/kunden/${id}/betreuung`),
   betreuungSetzen: (id: string, body: { user_ids: string[]; hauptbetreuer_id: string | null }) =>
     apiFetch<Betreuer[]>(`/api/kunden/${id}/betreuung`, { method: "PUT", body: JSON.stringify(body) }),

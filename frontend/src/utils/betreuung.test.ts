@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { betreuungFilterFelder } from "../components/kunde/useBetreuungFilter";
 import { filterAnwenden, sucheAnwenden } from "../components/filter/auswerten";
-import type { Betreuer, Kunde, UserAuswahl } from "../types";
+import type { Betreuer, BetreuerKandidat, Kunde } from "../types";
 import {
   auswahlAusBetreuung,
   betreuerUmschalten,
@@ -79,15 +79,14 @@ describe("Betreuungs-Auswahl", () => {
     const v = sichtverlust(bisher, { userIds: ["b"], hauptId: null });
     expect(v.map((x) => x.user_id)).toEqual(["a"]);
   });
-  it("Kandidaten: aktive Mitarbeiter plus deaktivierte bisherige Betreuer", () => {
-    const alle = [
-      { id: "a", name: "Anna", role: "custom", aktiv: true, nur_zugewiesene_kunden: false, account_typ_name: "Büro" },
-      { id: "x", name: "Inaktiv", role: "custom", aktiv: false, nur_zugewiesene_kunden: false, account_typ_name: null },
-      { id: "p", name: "Portal", role: "loesch_ansicht", aktiv: true, nur_zugewiesene_kunden: false, account_typ_name: null },
-    ] as UserAuswahl[];
-    const k = kandidatenBilden(alle, [betreuer("alt", { name: "Alt", aktiv: false })]);
-    expect(k.map((x) => x.id)).toEqual(["alt", "a"]);
-    expect(k[0].aktiv).toBe(false);
+  it("Kandidaten: aktive plus deaktivierte nur, wenn sie schon Betreuer sind", () => {
+    const k = (user_id: string, name: string, aktiv: boolean): BetreuerKandidat => ({
+      user_id, name, avatar_url: null, aktiv, nur_betreute_kunden: false, account_typ_name: null, anzahl_kunden: 0,
+    });
+    const alle = [k("a", "Anna", true), k("x", "Inaktiv", false), k("i2", "Alt Inaktiv", false)];
+    const r = kandidatenBilden(alle, [betreuer("i2", { name: "Alt Inaktiv", aktiv: false }), betreuer("gone", { name: "Weg", aktiv: false })]);
+    expect(r.map((x) => x.user_id)).toEqual(["i2", "a", "gone"]);
+    expect(r.find((x) => x.user_id === "x")).toBeUndefined();
   });
   it("Unterzeile", () => {
     expect(betreuungUnterzeile(betreuer("a", { hauptbetreuer: true, account_typ_name: "Techniker", nur_betreute_kunden: true }))).toBe(

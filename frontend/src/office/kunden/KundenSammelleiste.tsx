@@ -6,7 +6,7 @@ import { kundenApi } from "../../api/endpoints";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { SearchField } from "../../components/apple/SearchField";
 import { useToast } from "../../components/Toast";
-import type { Kunde, KundeBetreuungSammelAktion, UserAuswahl } from "../../types";
+import type { BetreuerKandidat, Kunde, KundeBetreuungSammelAktion } from "../../types";
 import { Karte } from "../OfficeUi";
 
 type Modus = KundeBetreuungSammelAktion;
@@ -51,14 +51,11 @@ function toastText(modus: Modus, name: string, n: number): string {
 /** Aktionsleiste der Mehrfachauswahl; ersetzt die Filterzeile, solange Kunden gewählt sind. */
 export function KundenSammelleiste({
   ausgewaehlt,
-  alle,
-  mitarbeiter,
+  kandidaten,
   onLeeren,
 }: {
   ausgewaehlt: Kunde[];
-  /** Komplette geladene Kundenliste -- Grundlage der Betreuungs-Anzahl je Person. */
-  alle: Kunde[];
-  mitarbeiter: UserAuswahl[] | undefined;
+  kandidaten: BetreuerKandidat[] | undefined;
   onLeeren: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -69,32 +66,25 @@ export function KundenSammelleiste({
   const [auchHaupt, setAuchHaupt] = useState(true);
   const wurzel = useRef<HTMLDivElement>(null);
 
-  const anzahlJeUser = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const k of alle) for (const b of k.betreuung ?? []) m.set(b.user_id, (m.get(b.user_id) ?? 0) + 1);
-    return m;
-  }, [alle]);
-
   const personen: Person[] = useMemo(() => {
-    const aktive = (mitarbeiter ?? []).filter((u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"));
-    const info = (u: UserAuswahl): Person => ({
-      id: u.id,
-      name: u.name,
-      untertitel: [u.account_typ_name, u.nur_zugewiesene_kunden ? "sieht nur betreute Kunden" : "sieht alle Kunden"]
+    const info = (k: BetreuerKandidat): Person => ({
+      id: k.user_id,
+      name: k.name,
+      untertitel: [k.account_typ_name, k.nur_betreute_kunden ? "sieht nur betreute Kunden" : "sieht alle Kunden"]
         .filter(Boolean)
         .join(" · "),
-      nurBetreuteKunden: u.nur_zugewiesene_kunden,
-      anzahl: anzahlJeUser.get(u.id) ?? 0,
+      nurBetreuteKunden: k.nur_betreute_kunden,
+      anzahl: k.anzahl_kunden,
     });
-    if (modus !== "entfernen") return aktive.map(info);
+    if (modus !== "entfernen") return (kandidaten ?? []).filter((k) => k.aktiv).map(info);
     // Entfernen: nur, wer bei mindestens einem gewählten Kunden Betreuer ist (auch Deaktivierte).
     const imAuswahl = new Map<string, string>();
     for (const k of ausgewaehlt) for (const b of k.betreuung ?? []) imAuswahl.set(b.user_id, b.name);
     return [...imAuswahl.entries()].map(([id, name]) => {
-      const u = (mitarbeiter ?? []).find((x) => x.id === id);
-      return u ? info(u) : { id, name, untertitel: "", nurBetreuteKunden: false, anzahl: anzahlJeUser.get(id) ?? 0 };
+      const k = (kandidaten ?? []).find((x) => x.user_id === id);
+      return k ? info(k) : { id, name, untertitel: "", nurBetreuteKunden: false, anzahl: 0 };
     });
-  }, [mitarbeiter, modus, ausgewaehlt, anzahlJeUser]);
+  }, [kandidaten, modus, ausgewaehlt]);
 
   const sichtbar = personen
     .filter((p) => p.name.toLowerCase().includes(suche.trim().toLowerCase()))

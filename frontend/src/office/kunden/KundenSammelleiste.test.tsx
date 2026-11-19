@@ -6,21 +6,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { kundenApi } from "../../api/endpoints";
 import { ToastProvider } from "../../components/Toast";
-import type { Kunde, UserAuswahl } from "../../types";
+import type { BetreuerKandidat, Kunde } from "../../types";
 import { KundenSammelleiste } from "./KundenSammelleiste";
 
 vi.mock("../../api/endpoints", () => ({ kundenApi: { betreuungSammel: vi.fn() } }));
 
 const kunde = (id: string, betreuung: Kunde["betreuung"] = []) => ({ id, name: `Kunde ${id}`, betreuung }) as Kunde;
-const mitarbeiter = (id: string, name: string, nur = false) =>
-  ({ id, name, role: "custom", aktiv: true, nur_zugewiesene_kunden: nur, account_typ_name: "Techniker" }) as UserAuswahl;
+const kandidat = (user_id: string, name: string, nur: boolean, anzahl: number): BetreuerKandidat => ({
+  user_id,
+  name,
+  avatar_url: null,
+  aktiv: true,
+  nur_betreute_kunden: nur,
+  account_typ_name: "Techniker",
+  anzahl_kunden: anzahl,
+});
 
 const alle = [
   kunde("1", [{ user_id: "u1", name: "Jonas Weber", hauptbetreuer: true }]),
   kunde("2"),
   kunde("3", [{ user_id: "u1", name: "Jonas Weber", hauptbetreuer: true }]),
 ];
-const personen = [mitarbeiter("u1", "Jonas Weber", true), mitarbeiter("u2", "Lena Schulz")];
+const personen = [kandidat("u1", "Jonas Weber", true, 12), kandidat("u2", "Lena Schulz", false, 3)];
 
 function rendern(onLeeren = vi.fn()) {
   vi.mocked(kundenApi.betreuungSammel).mockResolvedValue({ geaendert: 2 });
@@ -28,7 +35,7 @@ function rendern(onLeeren = vi.fn()) {
   render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <KundenSammelleiste ausgewaehlt={[alle[0], alle[1]]} alle={alle} mitarbeiter={personen} onLeeren={onLeeren} />
+        <KundenSammelleiste ausgewaehlt={[alle[0], alle[1]]} kandidaten={personen} onLeeren={onLeeren} />
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -47,6 +54,13 @@ describe("KundenSammelleiste", () => {
     for (const n of ["Betreuer hinzufügen", "Hauptbetreuer setzen", "Betreuer entfernen", "Auswahl aufheben"]) {
       expect(screen.getByRole("button", { name: new RegExp(n) })).toBeInTheDocument();
     }
+  });
+
+  it("zeigt die Anzahl betreuter Kunden aus anzahl_kunden", () => {
+    rendern();
+    fireEvent.click(screen.getByRole("button", { name: /Betreuer hinzufügen/ }));
+    expect(screen.getByText("12 Kunden")).toBeInTheDocument();
+    expect(screen.getByText("3 Kunden")).toBeInTheDocument();
   });
 
   it("hinzufügen: Person wählen ruft die Sammel-API mit auch_hauptbetreuer (Standard an) und leert die Auswahl", async () => {

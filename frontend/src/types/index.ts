@@ -384,6 +384,17 @@ export interface Betreuer {
   account_typ_name: string | null;
 }
 
+/** Zeile aus GET /api/kunden/betreuer-auswahl (Recht kunden.bearbeiten). */
+export interface BetreuerKandidat {
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  aktiv: boolean;
+  nur_betreute_kunden: boolean;
+  account_typ_name: string | null;
+  anzahl_kunden: number;
+}
+
 export type KundeBetreuungSammelAktion = "hinzufuegen" | "entfernen" | "hauptbetreuer";
 
 export interface KundeBetreuungSammelBody {

@@ -3,7 +3,7 @@ import { Check, Info, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, usersApi } from "../../api/endpoints";
+import { kundenApi } from "../../api/endpoints";
 import type { Betreuer } from "../../types";
 import {
   auswahlAusBetreuung,
@@ -94,8 +94,8 @@ export function BetreuungSheet({
   const [suche, setSuche] = useState("");
 
   const { data: alle, isLoading, isError } = useQuery({
-    queryKey: ["users", "auswahl"],
-    queryFn: usersApi.auswahl,
+    queryKey: ["kunden", "betreuer-auswahl"],
+    queryFn: kundenApi.betreuerAuswahl,
   });
   const kandidaten = useMemo(() => kandidatenBilden(alle, bisher), [alle, bisher]);
   const sichtbar = kandidaten.filter((k) => k.name.toLowerCase().includes(suche.trim().toLowerCase()));
@@ -146,15 +146,15 @@ export function BetreuungSheet({
               </GroupedListRow>
             )}
             {sichtbar.map((k, i) => {
-              const gewaehlt = auswahl.userIds.includes(k.id);
-              const istHaupt = auswahl.hauptId === k.id;
+              const gewaehlt = auswahl.userIds.includes(k.user_id);
+              const istHaupt = auswahl.hauptId === k.user_id;
               return (
-                <div key={k.id} className="relative flex items-center pr-2">
+                <div key={k.user_id} className="relative flex items-center pr-2">
                   <button
                     type="button"
                     role="checkbox"
                     aria-checked={gewaehlt}
-                    onClick={() => setAuswahl((a) => betreuerUmschalten(a, k.id))}
+                    onClick={() => setAuswahl((a) => betreuerUmschalten(a, k.user_id))}
                     className="flex min-h-12 min-w-0 flex-1 items-center gap-3 py-2 pl-4 text-left"
                   >
                     <span className={k.aktiv ? "" : "opacity-50"}>
@@ -163,7 +163,7 @@ export function BetreuungSheet({
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-zeile ${k.aktiv ? "text-label" : "text-label3"}`}>{k.name}</span>
                       <span className="block truncate text-sekundaer text-label2">
-                        {[k.accountTyp, k.nurBetreuteKunden ? "sieht nur betreute Kunden" : null, k.aktiv ? null : "deaktiviert"]
+                        {[k.account_typ_name, k.nur_betreute_kunden ? "sieht nur betreute Kunden" : null, k.aktiv ? null : "deaktiviert"]
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
@@ -178,7 +178,7 @@ export function BetreuungSheet({
                     aria-pressed={istHaupt}
                     // Deaktivierte lassen sich nicht neu wählen -- nur ein bereits gesetzter Stern darf weg.
                     disabled={!k.aktiv && !gewaehlt}
-                    onClick={() => setAuswahl((a) => hauptbetreuerUmschalten(a, k.id))}
+                    onClick={() => setAuswahl((a) => hauptbetreuerUmschalten(a, k.user_id))}
                     className="btn-touch flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-40"
                   >
                     <Star

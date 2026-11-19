@@ -4,13 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { kundenApi, usersApi } from "../../api/endpoints";
-import type { Betreuer, UserAuswahl } from "../../types";
+import { kundenApi } from "../../api/endpoints";
+import type { Betreuer, BetreuerKandidat } from "../../types";
 import { KundeBetreuung } from "./KundeBetreuung";
 
 vi.mock("../../api/endpoints", () => ({
-  kundenApi: { betreuungSetzen: vi.fn() },
-  usersApi: { auswahl: vi.fn() },
+  kundenApi: { betreuungSetzen: vi.fn(), betreuerAuswahl: vi.fn() },
 }));
 
 const betreuer = (user_id: string, name: string, extra: Partial<Betreuer> = {}): Betreuer => ({
@@ -23,14 +22,22 @@ const betreuer = (user_id: string, name: string, extra: Partial<Betreuer> = {}):
   account_typ_name: null,
   ...extra,
 });
-const mitarbeiter = (id: string, name: string, extra: Partial<UserAuswahl> = {}) =>
-  ({ id, name, role: "custom", aktiv: true, nur_zugewiesene_kunden: false, account_typ_name: null, avatar_url: null, account_typ_id: null, ...extra }) as UserAuswahl;
+const kandidat = (user_id: string, name: string, extra: Partial<BetreuerKandidat> = {}): BetreuerKandidat => ({
+  user_id,
+  name,
+  avatar_url: null,
+  aktiv: true,
+  nur_betreute_kunden: false,
+  account_typ_name: null,
+  anzahl_kunden: 0,
+  ...extra,
+});
 
 function rendern(bisher: Betreuer[], kannVerwalten = true) {
-  vi.mocked(usersApi.auswahl).mockResolvedValue([
-    mitarbeiter("u1", "Jonas Weber", { nur_zugewiesene_kunden: true }),
-    mitarbeiter("u2", "Lena Schulz"),
-    mitarbeiter("u3", "Murat Aydin"),
+  vi.mocked(kundenApi.betreuerAuswahl).mockResolvedValue([
+    kandidat("u1", "Jonas Weber", { nur_betreute_kunden: true }),
+    kandidat("u2", "Lena Schulz"),
+    kandidat("u3", "Murat Aydin"),
   ]);
   vi.mocked(kundenApi.betreuungSetzen).mockResolvedValue([]);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });

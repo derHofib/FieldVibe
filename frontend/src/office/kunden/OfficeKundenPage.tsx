@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, usersApi } from "../../api/endpoints";
+import { kundenApi } from "../../api/endpoints";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { useBetreuungFilterFelder } from "../../components/kunde/useBetreuungFilter";
 import { betreuungSuchtext } from "../../utils/betreuung";
@@ -111,10 +111,10 @@ export function OfficeKundenPage() {
   const zustand = useFilterZustand({ felder: FELDER });
 
   const kannBetreuen = hatRecht("kunden", "bearbeiten");
-  const { data: mitarbeiter } = useQuery({
-    queryKey: ["users", "auswahl"],
-    queryFn: usersApi.auswahl,
-    enabled: kannBetreuen && hatRecht("mitarbeiterverwaltung", "sehen"),
+  const { data: kandidaten } = useQuery({
+    queryKey: ["kunden", "betreuer-auswahl"],
+    queryFn: kundenApi.betreuerAuswahl,
+    enabled: kannBetreuen,
   });
   const [gewaehlteIds, setGewaehlteIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -162,8 +162,7 @@ export function OfficeKundenPage() {
       {kannBetreuen && ausgewaehlt.length > 0 ? (
         <KundenSammelleiste
           ausgewaehlt={ausgewaehlt}
-          alle={data ?? []}
-          mitarbeiter={mitarbeiter}
+          kandidaten={kandidaten}
           onLeeren={() => setGewaehlteIds(new Set())}
         />
       ) : (

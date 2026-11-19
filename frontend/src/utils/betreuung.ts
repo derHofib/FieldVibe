@@ -1,18 +1,8 @@
-import type { Betreuer, KundeBetreuungKurz, UserAuswahl } from "../types";
+import type { Betreuer, BetreuerKandidat, KundeBetreuungKurz } from "../types";
 
 export interface BetreuungAuswahl {
   userIds: string[];
   hauptId: string | null;
-}
-
-/** Zeile im Auswahl-Sheet; bisherige Betreuer, die nicht mehr in der Mitarbeiterliste stehen
- * (deaktiviert), bleiben als abwählbare Zeile erhalten. */
-export interface BetreuerKandidat {
-  id: string;
-  name: string;
-  aktiv: boolean;
-  nurBetreuteKunden: boolean;
-  accountTyp: string | null;
 }
 
 export function auswahlAusBetreuung(betreuung: Betreuer[]): BetreuungAuswahl {
@@ -40,25 +30,20 @@ export function sichtverlust(bisher: Betreuer[], a: BetreuungAuswahl): Betreuer[
   return bisher.filter((b) => b.nur_betreute_kunden && !a.userIds.includes(b.user_id));
 }
 
-export function kandidatenBilden(alle: UserAuswahl[] | undefined, bisher: Betreuer[]): BetreuerKandidat[] {
-  const liste: BetreuerKandidat[] = (alle ?? [])
-    .filter((u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"))
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      aktiv: true,
-      nurBetreuteKunden: u.nur_zugewiesene_kunden,
-      accountTyp: u.account_typ_name,
-    }));
+/** Zeilen des Auswahl-Sheets: aktive Kandidaten plus bisherige Betreuer (auch deaktivierte, damit sie abwählbar bleiben). */
+export function kandidatenBilden(alle: BetreuerKandidat[] | undefined, bisher: Betreuer[]): BetreuerKandidat[] {
+  const bisherIds = new Set(bisher.map((b) => b.user_id));
+  const liste = (alle ?? []).filter((k) => k.aktiv || bisherIds.has(k.user_id));
   for (const b of bisher) {
-    const vorhanden = liste.find((k) => k.id === b.user_id);
-    if (vorhanden) continue;
+    if (liste.some((k) => k.user_id === b.user_id)) continue;
     liste.push({
-      id: b.user_id,
+      user_id: b.user_id,
       name: b.name,
+      avatar_url: b.avatar_url,
       aktiv: b.aktiv,
-      nurBetreuteKunden: b.nur_betreute_kunden,
-      accountTyp: b.account_typ_name,
+      nur_betreute_kunden: b.nur_betreute_kunden,
+      account_typ_name: b.account_typ_name,
+      anzahl_kunden: 0,
     });
   }
   return liste.sort((x, y) => x.name.localeCompare(y.name, "de"));
