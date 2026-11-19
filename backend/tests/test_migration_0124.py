@@ -1,4 +1,4 @@
-"""Migration 0122 (kunde_betreuung): Spalte, partieller Unique-Index, Backfill, Downgrade."""
+"""Migration 0124 (kunde_betreuung): Spalte, partieller Unique-Index, Backfill, Downgrade."""
 import asyncio
 import os
 
@@ -24,7 +24,7 @@ async def _migrieren(richtung: str, ziel: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_migration_0122_backfill_index_und_downgrade():
+async def test_migration_0124_backfill_index_und_downgrade():
     engine = sync_system_engine()
     try:
         await _migrieren("downgrade", "0121")
@@ -33,7 +33,7 @@ async def test_migration_0122_backfill_index_und_downgrade():
             assert "hauptbetreuer" not in spalten
 
             mandant = conn.execute(
-                text("INSERT INTO mandanten (name, slug, status) VALUES ('M', 'm-0122-' || gen_random_uuid(), 'aktiv') RETURNING id")
+                text("INSERT INTO mandanten (name, slug, status) VALUES ('M', 'm-0124-' || gen_random_uuid(), 'aktiv') RETURNING id")
             ).scalar_one()
             users = [
                 conn.execute(
@@ -59,7 +59,7 @@ async def test_migration_0122_backfill_index_und_downgrade():
                 )
             conn.commit()
 
-        await _migrieren("upgrade", "0122")
+        await _migrieren("upgrade", "0124")
         with engine.connect() as conn:
             rows = conn.execute(
                 text("SELECT kunde_id, user_id, hauptbetreuer FROM kunde_zuweisungen WHERE mandant_id = :m"),
