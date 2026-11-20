@@ -8,6 +8,7 @@ import {
   Phone,
   Receipt,
   Rss,
+  UserRound,
   Users,
   Wrench,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export const KATEGORIE_REIHENFOLGE: SearchKategorie[] = [
   "auftrag",
   "projekt",
   "telefonat",
+  "vor_ort_kontakt",
   "tag",
 ];
 
@@ -54,6 +56,7 @@ export const KATEGORIE_INFO: Record<EintragKategorie, KategorieInfo> = {
   auftrag: { plural: "Aufträge", singular: "Auftrag", icon: Layers, farbe: "indigo" },
   projekt: { plural: "Projekte", singular: "Projekt", icon: KanbanSquare, farbe: "indigo" },
   telefonat: { plural: "Telefonate", singular: "Telefonat", icon: Phone, farbe: "gray" },
+  vor_ort_kontakt: { plural: "Kontakte vor Ort", singular: "Kontakt vor Ort", icon: UserRound, farbe: "orange" },
   tag: { plural: "Tags", singular: "Tag", icon: Hash, farbe: "gray" },
   seite: { plural: "Seiten", singular: "Seite", icon: ArrowRight, farbe: "gray" },
 };
@@ -72,6 +75,7 @@ export function zielPfad(
   id: string,
   titel: string,
   oberflaeche: SucheOberflaeche,
+  kundeId?: string | null,
 ): string | null {
   if (!kategorieErreichbar(kategorie, oberflaeche)) return null;
   switch (kategorie) {
@@ -92,6 +96,9 @@ export function zielPfad(
     // Die Telefonate-Liste kennt keinen Öffnen-Parameter, nur die Suche über `q`.
     case "telefonat":
       return `/telefonate?q=${encodeURIComponent(titel)}`;
+    // Kontakte haben keine eigene Seite: Treffer führt auf den Reiter "Vor Ort" des Kunden.
+    case "vor_ort_kontakt":
+      return kundeId ? `/kunden/${kundeId}?tab=vorort` : null;
     case "tag":
       return null;
   }
@@ -240,7 +247,7 @@ export function trefferZuEintrag(hit: SearchHit, oberflaeche: SucheOberflaeche):
       ziel: { tag: hit.titel.replace(/^#/, "") },
     };
   }
-  const pfad = zielPfad(hit.kategorie, hit.id, hit.titel, oberflaeche);
+  const pfad = zielPfad(hit.kategorie, hit.id, hit.titel, oberflaeche, hit.kunde_id);
   if (!pfad) return null;
   return {
     key: `${hit.kategorie}-${hit.id}`,
@@ -296,6 +303,7 @@ const NAV_KEY: Partial<Record<SearchKategorie, string>> = {
   auftrag: "auftraege",
   projekt: "projekte",
   telefonat: "telefonate",
+  vor_ort_kontakt: "kunden",
 };
 
 /** Ohne Suchbegriff liefert das Backend keine Zahlen -- dann entscheiden dieselben Rechte wie bei der Navigation. */

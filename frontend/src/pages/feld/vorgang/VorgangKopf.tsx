@@ -5,6 +5,7 @@ import { PulldownMenu, type PulldownItem } from "../../../components/apple/Pulld
 import { VorgangStatusPille } from "../../../components/VorgangStatusPille";
 import type { Adresse, Anlage, CurrentUser, Kunde, Standort, UserAuswahl, Vorgang, VorgangStatus } from "../../../types";
 import { heuteIso } from "../../../utils/format";
+import { kopfOrtTeile } from "../../../utils/vorOrt";
 import { PRIORITAET_OPTIONEN, VORGANG_STATUS_GESCHLOSSEN, adresseAlsZeile } from "./konstanten";
 import { VerknuepfungPfad } from "./VerknuepfungPfad";
 import { VorgangStatusAktionen } from "./VorgangStatusAktionen";
@@ -374,26 +375,21 @@ export function VorgangKopf({
               {kunde.name}
             </button>
           )}
-          {anlage ? (
+          {anlage && (
             <>
               <span className="text-label2">·</span>
               <button onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-tint-text underline-offset-2 hover:underline">
                 {anlage.bezeichnung}
               </button>
             </>
-          ) : (
-            standort && (
-              <>
-                <span className="text-label2">·</span>
-                <span className="text-label">{standort.bezeichnung}</span>
-              </>
-            )
           )}
-          {adresseText && (
-            <>
-              <span className="text-label2">·</span>
-              <span className="text-label2">{adresseText}</span>
-            </>
+          {(anlage ? [adresseText, vorgang.einheit?.trim() ?? ""].filter(Boolean) : kopfOrtTeile(standort?.bezeichnung, adresseText, vorgang.einheit)).map(
+            (teil) => (
+              <span key={teil} className="contents">
+                <span className="text-label2">·</span>
+                <span className="text-label2">{teil}</span>
+              </span>
+            ),
           )}
         </div>
       </div>

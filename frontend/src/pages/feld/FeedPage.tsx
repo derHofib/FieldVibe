@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso, statusMetaZeile } from "../../utils/format";
-import { Bell, CheckCircle2, Clock, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Inbox, MapPin, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users } from "lucide-react";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,8 +23,10 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { useVorgaengeFilter } from "../../hooks/useVorgaengeFilter";
 import { istModulAktiv } from "../../utils/module";
+import { feedOrtZeile } from "../../utils/vorOrt";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { HauptkontaktZeile } from "./vorOrt/HauptkontaktZeile";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -143,12 +145,13 @@ function FeedCardView({ card }: { card: FeedCard }) {
             <div className="text-meta tracking-wide text-label2">{card.vorgangsnummer}</div>
             <div className="mt-0.5 font-semibold text-label">{card.titel}</div>
             <div className="text-meta text-label2">{card.kunde_name}</div>
-            {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-              <div className="text-meta text-label2">
-                {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
+            {card.anlage_bezeichnung && <div className="text-meta text-label2">{card.anlage_bezeichnung}</div>}
+            {feedOrtZeile(card) && (
+              <div className="flex items-start gap-1 text-sekundaer text-label2">
+                <MapPin size={13} strokeWidth={1.5} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <span>{feedOrtZeile(card)}</span>
               </div>
             )}
-            {card.anlage_kurzadresse && <div className="text-sekundaer text-label2">{card.anlage_kurzadresse}</div>}
             {card.ersteller_name && <div className="text-sekundaer text-label2">von {card.ersteller_name}</div>}
             {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
               <div className="text-sekundaer text-label2">
@@ -209,6 +212,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
           </div>
         )}
       </button>
+      <HauptkontaktZeile kontakt={card.hauptkontakt_vor_ort} />
       {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
         <div className="flex items-center justify-end gap-1.5 border-t-[0.5px] border-sep px-3 py-2">
           {aktionFehlerText && <span className="mr-auto text-sekundaer text-st-fehlt">{aktionFehlerText}</span>}

@@ -18,6 +18,7 @@ import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
 import { GutschriftSheet } from "../../components/rechnung/GutschriftSheet";
 import { RechnungSummen } from "../../components/rechnung/RechnungSummen";
 import { SteuerAuswahl } from "../../components/rechnung/SteuerAuswahl";
+import { ZeichenLeistungsort } from "../../components/rechnung/ZeichenLeistungsort";
 import { VorgangHinzufuegen } from "../../components/rechnung/VorgangHinzufuegen";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -353,6 +354,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: () => {
       setSteuerBearbeitung(null);
       queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
+    },
+  });
+
+  const kopfMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    mutationFn: (body: Parameters<typeof rechnungenApi.updateKopf>[1]) => rechnungenApi.updateKopf(id!, body),
+    onSuccess: (aktualisiert) => {
+      queryClient.setQueryData(["rechnung", id], aktualisiert);
+      queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
     },
   });
 
@@ -702,6 +712,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           )}
         </div>
       </div>
+
+      <ZeichenLeistungsort
+        beleg="Rechnung"
+        empfaengerName={kunde?.name}
+        verwaltetVonName={kunde?.verwaltet_von?.name}
+        kundenReferenz={rechnung.kunden_referenz}
+        leistungsort={rechnung.leistungsort}
+        aenderbar={rechnung.status === "entwurf"}
+        speichern={(body) => kopfMutation.mutateAsync(body)}
+        fehler={kopfMutation.error instanceof ApiError ? kopfMutation.error.message : kopfMutation.isError ? "Speichern fehlgeschlagen" : null}
+      />
 
       {art === "schluss" && (rechnung.angerechnete_abschlaege ?? []).length > 0 && (
         <div className="card-ap p-4">

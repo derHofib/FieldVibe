@@ -20,6 +20,8 @@ class TelefonatCreate(BaseModel):
     vorgang_id: UUID | None = None
     kunde_id: UUID | None = None
     ansprechpartner_id: UUID | None = None
+    # Kontakt vor Ort (Mieter, Hausmeister ...) statt Ansprechpartner; muss zum Kunden des Telefonats gehoeren.
+    vor_ort_kontakt_id: UUID | None = None
     partner_name: str = Field(min_length=1, max_length=200)
     partner_nummer: str | None = Field(default=None, max_length=50)
     richtung: TelefonatRichtung
@@ -45,6 +47,8 @@ class TelefonatCreate(BaseModel):
     def _regeln(self) -> "TelefonatCreate":
         if self.vorgang_id is None and self.kunde_id is None:
             raise ValueError("Ein Telefonat braucht einen Vorgang oder einen Kunden")
+        if self.ansprechpartner_id is not None and self.vor_ort_kontakt_id is not None:
+            raise ValueError("Entweder Ansprechpartner oder Kontakt vor Ort angeben")
         if self.ergebnis == "erreicht" and not (self.notiz or "").strip():
             raise ValueError("Bei einem erreichten Gespräch ist eine Notiz Pflicht")
         if self.als_arbeitszeit_buchen:
@@ -61,6 +65,7 @@ class TelefonatUpdate(BaseModel):
     partner_name: str | None = Field(default=None, min_length=1, max_length=200)
     partner_nummer: str | None = Field(default=None, max_length=50)
     ansprechpartner_id: UUID | None = None
+    vor_ort_kontakt_id: UUID | None = None
     richtung: TelefonatRichtung | None = None
     ergebnis: TelefonatErgebnis | None = None
     beginn: datetime | None = None
@@ -80,6 +85,30 @@ class TelefonatUpdate(BaseModel):
         return self
 
 
+class TelefonatVorOrtKontakt(BaseModel):
+    id: UUID
+    name: str | None
+    rolle: str
+
+
+class NummerOffenerVorgang(BaseModel):
+    id: UUID
+    vorgangsnummer: str
+    titel: str
+
+
+class NummerZuordnung(BaseModel):
+    """Treffer der Rufnummer-Erkennung (ziffernnormalisiert, nur nicht anonymisierte Kontakte)."""
+
+    kunde_id: UUID
+    kunde_name: str
+    ansprechpartner_id: UUID | None = None
+    vor_ort_kontakt_id: UUID | None = None
+    # Name des erkannten Ansprechpartners bzw. Kontakts (fuer partner_name im Formular).
+    partner_name: str | None = None
+    offene_vorgaenge: list[NummerOffenerVorgang] = Field(default_factory=list)
+
+
 class TelefonatRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -90,6 +119,9 @@ class TelefonatRead(BaseModel):
     vorgang_nummer: str | None = None
     vorgang_titel: str | None = None
     ansprechpartner_id: UUID | None
+    vor_ort_kontakt_id: UUID | None = None
+    # Nicht persistiert: Name ist None, wenn der Kontakt anonymisiert wurde.
+    vor_ort_kontakt: TelefonatVorOrtKontakt | None = None
     partner_name: str
     partner_nummer: str | None
     richtung: TelefonatRichtung

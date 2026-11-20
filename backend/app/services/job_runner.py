@@ -38,6 +38,7 @@ from app.services.scheduler_service import (
     run_rueckruf_scheduler,
     run_wiedervorlage_scheduler,
 )
+from app.services.vor_ort_kontakt_service import run_vor_ort_kontakte_anonymisierung
 from app.services.worker_lock import worker_lock
 from app.services.worker_system import aktive_mandanten_mit_stunde
 
@@ -66,6 +67,10 @@ async def _rueckrufe() -> dict:
     return await run_rueckruf_scheduler()
 
 
+async def _vor_ort_kontakte_anonymisieren() -> dict:
+    return await run_vor_ort_kontakte_anonymisierung()
+
+
 async def _datenimport_aufraeumen() -> dict:
     return await raeume_datenimport_auf()
 
@@ -83,6 +88,8 @@ SYSTEM_JOBS: dict[str, tuple[SystemJob, str]] = {
     # Stuendlich: die Quelldatei eines Imports soll nach 24 Stunden weg sein, nicht erst am naechsten Tag.
     "datenimport_aufraeumen": (_datenimport_aufraeumen, "stuendlich"),
     "fehlerbericht_aufbewahrung": (_fehlerbericht_aufbewahrung, "taeglich"),
+    # Speicherbegrenzung (Art. 5 DSGVO): Frist je Mandant (mandanten.vor_ort_kontakte_anonymisieren_monate).
+    "vor_ort_kontakte_anonymisieren": (_vor_ort_kontakte_anonymisieren, "taeglich"),
 }
 
 

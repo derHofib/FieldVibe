@@ -56,6 +56,7 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
         fahrzeit_satz_netto=mandant.fahrzeit_satz_netto,
         fahrzeit_abrechnung=mandant.fahrzeit_abrechnung,
         bundesland=mandant.bundesland,
+        vor_ort_kontakte_anonymisieren_monate=mandant.vor_ort_kontakte_anonymisieren_monate,
     )
 
 
@@ -129,6 +130,8 @@ async def update_einstellungen(
         mandant.fahrzeit_abrechnung = updates["fahrzeit_abrechnung"]
     if "bundesland" in updates:
         mandant.bundesland = updates["bundesland"]
+    if updates.get("vor_ort_kontakte_anonymisieren_monate") is not None:
+        mandant.vor_ort_kontakte_anonymisieren_monate = updates["vor_ort_kontakte_anonymisieren_monate"]
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

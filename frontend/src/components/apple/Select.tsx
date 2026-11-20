@@ -6,19 +6,21 @@ type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> & 
   className?: string;
   /** "kompakt" für Filterleisten/Tabellenzeilen (ab md 32px/13px). */
   groesse?: "normal" | "kompakt";
+  /** "transparent" für Felder auf einer Füllfläche (bg-fill), damit sie wie die übrigen Felder dort aussehen. */
+  flaeche?: "card" | "transparent";
 };
 
 /** Nativer Select im Stil von .field-ap mit eigenem Chevron. Der native
  * Picker bleibt erhalten (Mobil-Wheel, Tastatur, Screenreader). */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { className = "w-full", groesse = "normal", children, ...rest },
+  { className = "w-full", groesse = "normal", flaeche = "card", children, ...rest },
   ref,
 ) {
   return (
     <span className={`relative inline-block ${className}`}>
       <select
         ref={ref}
-        className={`select-ap ${groesse === "kompakt" ? "select-ap-kompakt" : ""}`}
+        className={`select-ap ${groesse === "kompakt" ? "select-ap-kompakt" : ""} ${flaeche === "transparent" ? "select-ap-transparent" : ""}`}
         {...rest}
       >
         {children}

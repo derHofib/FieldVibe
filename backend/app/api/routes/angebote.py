@@ -42,7 +42,8 @@ from app.schemas.angebot import (
     AngebotUpdate,
 )
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
-from app.services import papierkorb_service
+from app.schemas.leistungsort import kunden_referenz_bereinigen
+from app.services import leistungsort_service, papierkorb_service
 from app.services.angebot_service import (
     apply_status_transition,
     effektiver_mwst_satz,
@@ -160,10 +161,23 @@ async def _validate_kunde_vorgang(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
-        if vorgang.kunde_id != kunde_id:
+        if vorgang.kunde_id != kunde_id and await leistungsort_service.rechnungsempfaenger_id(session, vorgang) != kunde_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
+
+
+async def _referenz_und_leistungsort(
+    session: AsyncSession, kunde_id: UUID | None, vorgang_id: UUID | None
+) -> tuple[str | None, dict | None]:
+    """"Ihr Zeichen" und Leistungsort aus dem Vorgang vorbelegen, gemessen an der Adresse des Empfaengers."""
+    if vorgang_id is None or kunde_id is None:
+        return None, None
+    vorgang = await session.get(Vorgang, vorgang_id)
+    empfaenger = await session.get(Kunde, kunde_id)
+    if vorgang is None or empfaenger is None:
+        return None, None
+    return await leistungsort_service.kunden_referenz_und_leistungsort(session, vorgang, empfaenger)
 
 
 async def _standard_mwst_satz(session: AsyncSession, auth: AuthContext) -> Decimal:
@@ -208,11 +222,21 @@ async def create_angebot(
     await _validate_kunde_vorgang(session, auth, body.kunde_id, body.vorgang_id)
     mandant = await session.get(Mandant, auth.mandant_id)
 
+    kunden_referenz, leistungsort = await _referenz_und_leistungsort(session, body.kunde_id, body.vorgang_id)
+    if "kunden_referenz" in body.model_fields_set:
+        kunden_referenz = kunden_referenz_bereinigen(body.kunden_referenz)
+    if "leistungsort" in body.model_fields_set:
+        leistungsort = leistungsort_service.leistungsort_bereinigen(
+            body.leistungsort.model_dump() if body.leistungsort else None
+        )
+
     angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
     angebot = Angebot(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
         vorgang_id=body.vorgang_id,
+        kunden_referenz=kunden_referenz,
+        leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
@@ -276,10 +300,16 @@ async def create_angebot_from_maengel(
     gemeinsamer_vorgang_id = next(iter(vorgang_ids)) if len(vorgang_ids) == 1 else None
 
     angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
+    angebot_kunde_id = kunde_id
+    if gemeinsamer_vorgang_id is not None:
+        angebot_kunde_id = await leistungsort_service.rechnungsempfaenger_id(session, vorgaenge[gemeinsamer_vorgang_id])
+    kunden_referenz, leistungsort = await _referenz_und_leistungsort(session, angebot_kunde_id, gemeinsamer_vorgang_id)
     angebot = Angebot(
         mandant_id=auth.mandant_id,
-        kunde_id=kunde_id,
+        kunde_id=angebot_kunde_id,
         vorgang_id=gemeinsamer_vorgang_id,
+        kunden_referenz=kunden_referenz,
+        leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
@@ -360,10 +390,16 @@ async def _angebot_aus_bedarfen(
     }
 
     angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
+    angebot_kunde_id = kunde_id
+    if gemeinsamer_vorgang_id is not None:
+        angebot_kunde_id = await leistungsort_service.rechnungsempfaenger_id(session, vorgaenge[gemeinsamer_vorgang_id])
+    kunden_referenz, leistungsort = await _referenz_und_leistungsort(session, angebot_kunde_id, gemeinsamer_vorgang_id)
     angebot = Angebot(
         mandant_id=auth.mandant_id,
-        kunde_id=kunde_id,
+        kunde_id=angebot_kunde_id,
         vorgang_id=gemeinsamer_vorgang_id,
+        kunden_referenz=kunden_referenz,
+        leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=gueltig_bis,
@@ -486,10 +522,14 @@ async def create_angebot_from_vorgang(
 
     if not bedarfe:
         angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
+        empfaenger_id = await leistungsort_service.rechnungsempfaenger_id(session, vorgang)
+        kunden_referenz, leistungsort = await _referenz_und_leistungsort(session, empfaenger_id, vorgang.id)
         angebot = Angebot(
             mandant_id=auth.mandant_id,
-            kunde_id=vorgang.kunde_id,
+            kunde_id=empfaenger_id,
             vorgang_id=vorgang.id,
+            kunden_referenz=kunden_referenz,
+            leistungsort=leistungsort,
             angebotsnummer=angebotsnummer,
             erstellt_von=auth.user_id,
             gueltig_bis=body.gueltig_bis,
@@ -827,6 +867,20 @@ async def update_angebot(
         if neuer_satz != angebot.mwst_satz:
             _nur_im_entwurf(angebot)
             angebot.mwst_satz = neuer_satz
+
+    geaendert = body.model_fields_set & {"kunden_referenz", "leistungsort"}
+    if geaendert:
+        if angebot.status != "entwurf":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ihr Zeichen und Leistungsort können nur im Entwurf geändert werden",
+            )
+        if "kunden_referenz" in geaendert:
+            angebot.kunden_referenz = kunden_referenz_bereinigen(body.kunden_referenz)
+        if "leistungsort" in geaendert:
+            angebot.leistungsort = leistungsort_service.leistungsort_bereinigen(
+                body.leistungsort.model_dump() if body.leistungsort else None
+            )
 
     if body.status is not None:
         await apply_status_transition(

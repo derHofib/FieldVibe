@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.vor_ort_kontakt import VorOrtHauptkontaktKurz
+
 
 class FeedCard(BaseModel):
     id: UUID
@@ -12,6 +14,9 @@ class FeedCard(BaseModel):
     anlage_kurzadresse: str | None
     anlage_bezeichnung: str | None = None
     standort_bezeichnung: str | None = None
+    einheit: str | None = None
+    # Hauptkontakt vor Ort (naechste Ebene Vorgang > Auftrag > Projekt), None ohne Kontakt.
+    hauptkontakt_vor_ort: VorOrtHauptkontaktKurz | None = None
     ersteller_name: str | None = None
     status: str
     leistungstyp: str

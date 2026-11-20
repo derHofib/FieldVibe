@@ -65,6 +65,10 @@ class Mandant(TimestampMixin, Base):
             name="ck_mandanten_wiedervorlage_standard_tage_valid",
         ),
         CheckConstraint(
+            "vor_ort_kontakte_anonymisieren_monate BETWEEN 3 AND 60",
+            name="vor_ort_anonymisieren_monate_valid",
+        ),
+        CheckConstraint(
             "km_satz_netto IS NULL OR km_satz_netto >= 0", name="ck_mandanten_km_satz_netto_nicht_negativ"
         ),
         CheckConstraint(
@@ -100,6 +104,10 @@ class Mandant(TimestampMixin, Base):
     # scheduler_stunde_utc oben.
     wiedervorlage_standard_tage: Mapped[int | None] = mapped_column(
         SmallInteger, nullable=True
+    )
+    # Monate nach dem letzten Einsatz, ab denen der Worker Kontakte vor Ort anonymisiert (3..60).
+    vor_ort_kontakte_anonymisieren_monate: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=12, server_default="12"
     )
     # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
     # Ausnahmen "karten" und "ki_zugriff": anders als alle anderen Module bewusst

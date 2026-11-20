@@ -416,6 +416,54 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   );
 }
 
+function VorOrtAnonymisierungSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
+  const queryClient = useQueryClient();
+  const [monate, setMonate] = useState((einstellungen.vor_ort_kontakte_anonymisieren_monate ?? 12).toString());
+  const zahl = Number(monate);
+  const gueltig = Number.isInteger(zahl) && zahl >= 3 && zahl <= 60;
+
+  const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    mutationFn: () => mandantEinstellungenApi.update({ vor_ort_kontakte_anonymisieren_monate: zahl }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
+  });
+
+  return (
+    <div className="card-ap p-4">
+      <h2 className="mb-1 text-fliess font-semibold text-label">Kontakte vor Ort anonymisieren nach</h2>
+      <p className="mb-2 text-sekundaer text-label2">
+        Monate nach dem letzten Einsatz, nach denen Name, Telefon, E-Mail und Hinweis eines Kontakts vor Ort gelöscht werden
+        (3 bis 60). Kontakte an offenen Aufträgen bleiben erhalten.
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={3}
+          max={60}
+          aria-label="Monate bis zur Anonymisierung"
+          aria-invalid={!gueltig}
+          value={monate}
+          onChange={(e) => setMonate(e.target.value)}
+          className="btn-touch w-24 border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
+        />
+        <span className="text-sekundaer text-label2">Monate</span>
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={!gueltig || speichernMutation.isPending}
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
+        >
+          Speichern
+        </button>
+      </div>
+      {!gueltig && (
+        <p role="alert" className="mt-1 text-sekundaer text-st-fehlt">
+          Bitte eine ganze Zahl zwischen 3 und 60 eingeben.
+        </p>
+      )}
+    </div>
+  );
+}
+
 const FAHRZEIT_ABRECHNUNG_LABEL: Record<MandantEinstellungen["fahrzeit_abrechnung"], string> = {
   keine: "Nicht abrechnen",
   zeit: "Nach Zeit (Std.)",
@@ -856,6 +904,7 @@ export function IntegrationenPage() {
       )}
 
       {einstellungen && <WiedervorlageSection einstellungen={einstellungen} />}
+      {einstellungen && <VorOrtAnonymisierungSection einstellungen={einstellungen} />}
       {einstellungen && <FahrzeitAbrechnungSection einstellungen={einstellungen} />}
 
       <p className="text-sekundaer text-label2">

@@ -116,6 +116,8 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     verknuepfung_eigenstaendig_von: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    # Lage innerhalb des Standorts ("Whg. 3, 2. OG links"); beim Anlegen im Auftrag daraus vorbelegt.
+    einheit: Mapped[str | None] = mapped_column(Text, nullable=True)
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)
     abrechnungsart: Mapped[str] = mapped_column(Text, nullable=False)

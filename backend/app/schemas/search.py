@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 SearchKategorie = Literal[
-    "kunde", "anlage", "vorgang", "rechnung", "angebot", "auftrag", "projekt", "telefonat", "tag"
+    "kunde", "anlage", "vorgang", "rechnung", "angebot", "auftrag", "projekt", "telefonat", "vor_ort_kontakt", "tag"
 ]
 
 
@@ -18,6 +18,8 @@ class SearchHit(BaseModel):
     nummer: str | None = None
     status: str | None = None
     kunde_name: str | None = None
+    # Ziel der Navigation bei Kontakten vor Ort: der Auftraggeber (id ist die Kontakt-Id).
+    kunde_id: UUID | None = None
     betrag: Decimal | None = None
     datum: date | None = None
     zusatz: str | None = None

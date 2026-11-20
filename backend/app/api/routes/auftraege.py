@@ -8,9 +8,10 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_recht, r
 from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt
+from app.models.standort import Standort
 from app.models.vorgang import Vorgang
-from app.schemas.auftrag import AuftragCreate, AuftragRead, AuftragUpdate
-from app.services import papierkorb_service, vorgang_verknuepfung_service
+from app.schemas.auftrag import AuftragCreate, AuftragRead, AuftragStandortKurz, AuftragUpdate
+from app.services import leistungsort_service, papierkorb_service, vor_ort_kontakt_service, vorgang_verknuepfung_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
 
@@ -40,17 +41,54 @@ async def _require_auftrag(session: AsyncSession, auth: AuthContext, auftrag_id:
     return auftrag
 
 
+def _ansprechpartner_liste(kunde: Kunde) -> list[dict]:
+    return [a for a in (kunde.ansprechpartner or []) if isinstance(a, dict)]
+
+
+async def _pruefe_leistungsort(
+    session: AsyncSession, kunde_id: UUID | None, standort_id: UUID | None, ansprechpartner_id: UUID | None
+) -> None:
+    """Standort und Sachbearbeitung gehoeren zum Auftraggeber. Bei einem Kundenwechsel wird nichts still
+    geleert, sondern abgelehnt (422): der Nutzer soll bewusst neu waehlen."""
+    if standort_id is None and ansprechpartner_id is None:
+        return
+    if kunde_id is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Erst einen Auftraggeber setzen")
+    if standort_id is not None:
+        await vor_ort_kontakt_service.standort_pruefen(session, standort_id, kunde_id)
+    if ansprechpartner_id is not None:
+        kunde = await session.get(Kunde, kunde_id)
+        if kunde is None or str(ansprechpartner_id) not in {str(a.get("id")) for a in _ansprechpartner_liste(kunde)}:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Ansprechpartner gehört nicht zum Auftraggeber",
+            )
+
+
 async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[AuftragRead]:
     """Kunde-Name + Vorgaenge-Anzahl transient anreichern (gleiches Muster
     wie VorgangRead.zugewiesener_name) -- erspart dem Frontend zusaetzliche
     Abfragen fuer die Tabellen-Ansicht."""
     if not auftraege:
         return []
+    rechnung_an = await leistungsort_service.kunden_kurz(
+        session, {a.rechnung_an_kunde_id for a in auftraege if a.rechnung_an_kunde_id is not None}
+    )
     kunde_ids = {a.kunde_id for a in auftraege if a.kunde_id is not None}
     kunden_namen: dict[UUID, str] = {}
+    kunden_ansprechpartner: dict[UUID, list] = {}
     if kunde_ids:
-        result = await session.execute(select(Kunde.id, Kunde.name).where(Kunde.id.in_(kunde_ids)))
-        kunden_namen = {row.id: row.name for row in result}
+        result = await session.execute(select(Kunde.id, Kunde.name, Kunde.ansprechpartner).where(Kunde.id.in_(kunde_ids)))
+        zeilen = result.all()
+        kunden_namen = {row.id: row.name for row in zeilen}
+        kunden_ansprechpartner = {row.id: row.ansprechpartner or [] for row in zeilen}
+
+    standort_ids = {a.standort_id for a in auftraege if a.standort_id is not None}
+    standorte: dict[UUID, Standort] = {}
+    if standort_ids:
+        standorte = {
+            s.id: s for s in (await session.execute(select(Standort).where(Standort.id.in_(standort_ids)))).scalars()
+        }
 
     vorgaenge_counts: dict[UUID, int] = {}
     auftrag_ids = [a.id for a in auftraege]
@@ -82,6 +120,15 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
         read = AuftragRead.model_validate(auftrag)
         if auftrag.kunde_id is not None:
             read.kunde_name = kunden_namen.get(auftrag.kunde_id)
+        standort = standorte.get(auftrag.standort_id) if auftrag.standort_id else None
+        if standort is not None:
+            read.standort = AuftragStandortKurz(id=standort.id, bezeichnung=standort.bezeichnung, adresse=standort.adresse)
+        if auftrag.kunde_id is not None:
+            read.ansprechpartner = vor_ort_kontakt_service.ansprechpartner_aufloesen(
+                kunden_ansprechpartner.get(auftrag.kunde_id), auftrag.ansprechpartner_id
+            )
+        if auftrag.rechnung_an_kunde_id is not None:
+            read.rechnung_an = rechnung_an.get(auftrag.rechnung_an_kunde_id)
         read.vorgaenge_gesamt = vorgaenge_counts.get(auftrag.id, 0)
         read.vorgaenge_erledigt = vorgaenge_erledigt.get(auftrag.id, 0)
         if auftrag.projekt_id is not None:
@@ -135,10 +182,19 @@ async def create_auftrag(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
+    await _pruefe_leistungsort(session, body.kunde_id, body.standort_id, body.ansprechpartner_id)
+    rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+        session, body.rechnung_an_kunde_id, body.kunde_id
+    )
     auftrag = Auftrag(
         mandant_id=auth.mandant_id,
         projekt_id=body.projekt_id,
         kunde_id=body.kunde_id,
+        standort_id=body.standort_id,
+        einheit=body.einheit,
+        ansprechpartner_id=body.ansprechpartner_id,
+        kunden_referenz=body.kunden_referenz,
+        rechnung_an_kunde_id=rechnung_an_kunde_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         erstellt_von=auth.user_id,
@@ -186,9 +242,23 @@ async def update_auftrag(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
+    if changes.keys() & {"kunde_id", "standort_id", "ansprechpartner_id"}:
+        kunde_neu = changes.get("kunde_id", auftrag.kunde_id)
+        await _pruefe_leistungsort(
+            session,
+            kunde_neu,
+            changes.get("standort_id", auftrag.standort_id),
+            changes.get("ansprechpartner_id", auftrag.ansprechpartner_id),
+        )
+        if "kunde_id" in changes and kunde_neu != auftrag.kunde_id:
+            await vor_ort_kontakt_service.kundenwechsel_pruefen(session, "auftrag_id", auftrag.id, kunde_neu)
     altes_projekt_id = auftrag.projekt_id
     for feld, wert in changes.items():
         setattr(auftrag, feld, wert)
+    if changes.keys() & {"kunde_id", "rechnung_an_kunde_id"}:
+        auftrag.rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+            session, auftrag.rechnung_an_kunde_id, auftrag.kunde_id
+        )
     if "projekt_id" in changes and changes["projekt_id"] != altes_projekt_id:
         await vorgang_verknuepfung_service.vorgaenge_des_auftrags_mitziehen(
             session, auftrag, changes["projekt_id"], author_user_id=auth.user_id

@@ -289,6 +289,19 @@ def baue_cii_dokument(
     if ist_xrechnung:
         _xrechnung_angaben(doc, mandant, leitweg)
 
+    if rechnung.kunden_referenz:
+        # BT-13 (nicht BT-10: das bleibt der Leitweg, damit BR-DE-15 unveraendert greift).
+        doc.trade.agreement.buyer_order.issuer_assigned_id = rechnung.kunden_referenz
+    ort = rechnung.leistungsort or {}
+    if ort:
+        # BG-13 Lieferinformationen: BT-70 Name, BG-15 Adresse (BT-75/78/77/80).
+        ship_to = doc.trade.delivery.ship_to
+        ship_to.name = ort.get("bezeichnung") or ort.get("strasse") or ort.get("ort")
+        ship_to.address.line_one = ort.get("strasse")
+        ship_to.address.postcode = ort.get("plz")
+        ship_to.address.city_name = ort.get("ort")
+        ship_to.address.country_id = ort.get("land") or "DE"
+
     if rechnung.leistungsdatum:
         doc.trade.delivery.event.occurrence = rechnung.leistungsdatum
 

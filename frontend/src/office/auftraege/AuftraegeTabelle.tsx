@@ -39,7 +39,21 @@ function baueSpalten(projektNamen: Map<string, string> | undefined) {
   const projektName = (a: Auftrag) => a.projekt_name ?? (a.projekt_id ? projektNamen?.get(a.projekt_id) : undefined) ?? null;
   return [
     spalten.accessor("titel", { header: "Titel" }),
-    spalten.accessor((a) => a.kunde_name ?? "—", { id: "kunde", header: "Kunde" }),
+    spalten.accessor((a) => a.kunde_name ?? "—", {
+      id: "kunde",
+      header: "Kunde",
+      cell: (info) => {
+        const a = info.row.original;
+        // Leistungsort unter dem Auftraggeber, damit sich viele Aufträge eines Kunden unterscheiden lassen.
+        const ort = [a.standort?.bezeichnung, a.einheit].filter(Boolean).join(" · ");
+        return (
+          <>
+            {info.getValue()}
+            {ort && <span className="block text-sekundaer text-label2">{ort}</span>}
+          </>
+        );
+      },
+    }),
     spalten.accessor((a) => projektName(a) ?? "", {
       id: "projekt",
       header: "Projekt",

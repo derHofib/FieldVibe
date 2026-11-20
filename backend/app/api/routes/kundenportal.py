@@ -34,6 +34,7 @@ from app.schemas.kundenportal import (
     VorgangAnfragePortalRead,
     VorgangEventPortalRead,
     VorgangPortalRead,
+    VorOrtKontaktPortalRead,
 )
 from app.schemas.vorgang_anfrage import VorgangAnfrageCreate
 from app.services import angebot_annahme_service as annahme_service
@@ -54,6 +55,7 @@ from app.services.rechnung_service import (
     to_read_model as rechnung_to_read_model,
 )
 from app.services.storage_service import download_bytes
+from app.services.vor_ort_kontakt_service import kontakte_fuer_ziel
 from app.services.vorgang_anfrage_service import notify_neue_anfrage
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
 
@@ -126,8 +128,19 @@ async def get_eigener_vorgang(
     vorgang_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> Vorgang:
-    return await _require_own_vorgang(session, auth, vorgang_id)
+) -> VorgangPortalRead:
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    kontakte = await kontakte_fuer_ziel(session, vorgang=vorgang)
+    return VorgangPortalRead.model_validate(vorgang).model_copy(
+        update={
+            "vor_ort_kontakte": [
+                VorOrtKontaktPortalRead.model_validate(z.kontakt, from_attributes=True)
+                # Nur Kontakte des eigenen Kunden: ein Projekt kann einem anderen Kunden gehoeren.
+                for z in kontakte
+                if z.kontakt.kunde_id == auth.kunde_id and z.kontakt.anonymisiert_am is None
+            ]
+        }
+    )
 
 
 @router.get("/vorgaenge/{vorgang_id}/events", response_model=list[VorgangEventPortalRead])
@@ -618,6 +631,9 @@ async def create_eigene_anfrage(
         titel=body.titel,
         beschreibung=body.beschreibung,
         leistungstyp=body.leistungstyp,
+        einheit=body.einheit,
+        kunden_referenz=body.kunden_referenz,
+        vor_ort_kontakte=[k.model_dump(mode="json") for k in body.vor_ort_kontakte],
     )
     session.add(anfrage)
     await session.flush()

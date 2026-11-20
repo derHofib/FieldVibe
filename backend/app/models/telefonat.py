@@ -47,6 +47,10 @@ class Telefonat(TimestampMixin, SoftDeleteMixin, Base):
     # Id aus der JSONB-Liste kunden.ansprechpartner, kein FK; Name/Nummer sind eine Kopie, damit der
     # Eintrag auch nach Aenderung oder Loeschen des Ansprechpartners stimmt.
     ansprechpartner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Kontakt vor Ort (Mieter, Hausmeister ...), von dem der Anruf kam bzw. an den er ging.
+    vor_ort_kontakt_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vor_ort_kontakte.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     partner_name: Mapped[str] = mapped_column(Text, nullable=False)
     partner_nummer: Mapped[str | None] = mapped_column(Text)
     richtung: Mapped[str] = mapped_column(Text, nullable=False)

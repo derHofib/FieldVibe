@@ -9,6 +9,7 @@ import { AngebotAbrechnung } from "../../components/angebot/AngebotAbrechnung";
 import { AngebotLvUebernahme } from "../../components/angebot/AngebotLvUebernahme";
 import { AngebotNachweis } from "../../components/angebot/AngebotNachweis";
 import { AngebotPositionSheet } from "../../components/angebot/AngebotPositionSheet";
+import { ZeichenLeistungsort } from "../../components/rechnung/ZeichenLeistungsort";
 import { GueltigkeitSheet } from "../../components/angebot/GueltigkeitSheet";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
@@ -27,7 +28,7 @@ import {
 } from "../../utils/angebot";
 import { formatIsoTag, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
-import type { AngebotMwstSatz, AngebotPosition, AngebotPositionstyp } from "../../types";
+import type { AngebotMwstSatz, Leistungsort, AngebotPosition, AngebotPositionstyp } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { AktionsMenue } from "../../components/AktionsMenue";
@@ -192,6 +193,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: aktualisiert,
   });
 
+  const kopfMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    mutationFn: (body: { kunden_referenz: string | null; leistungsort: Leistungsort | null }) =>
+      angeboteApi.update(id!, body),
+    onSuccess: aktualisiert,
+  });
+
   const pdfMutation = useMutation({
     mutationFn: () => angeboteApi.pdf(id!),
     onSuccess: openPdfBlob,
@@ -290,6 +298,15 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           <FileText size={14} strokeWidth={2} /> PDF anzeigen
         </button>
       </div>
+
+      <ZeichenLeistungsort
+        beleg="Angebot"
+        kundenReferenz={angebot.kunden_referenz}
+        leistungsort={angebot.leistungsort}
+        aenderbar={istEntwurf}
+        speichern={(body) => kopfMutation.mutateAsync(body)}
+        fehler={kopfMutation.error instanceof ApiError ? kopfMutation.error.message : kopfMutation.isError ? "Speichern fehlgeschlagen" : null}
+      />
 
       {ablauf.art === "abgelaufen" && (
         <Hinweiskasten ton="warnung" titel="Angebot abgelaufen">

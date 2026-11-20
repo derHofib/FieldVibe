@@ -1121,6 +1121,8 @@ async def erstelle_stornorechnung(
         erstellt_von=actor_user_id,
         ist_storno=True,
         storniert_rechnung_id=original.id,
+        kunden_referenz=original.kunden_referenz,
+        leistungsort=original.leistungsort,
     )
     session.add(storno)
     await session.flush()

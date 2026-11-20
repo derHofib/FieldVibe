@@ -314,6 +314,8 @@ async def rechnung_aus_angebot(
         erstellt_von=actor_user_id,
         rechnungsart=art,
         angebot_id=angebot.id,
+        kunden_referenz=angebot.kunden_referenz,
+        leistungsort=angebot.leistungsort,
     )
     session.add(rechnung)
     await session.flush()
@@ -533,6 +535,8 @@ async def erstelle_gutschrift(
         versendet_am=jetzt,
         erstellt_von=actor_user_id,
         rechnungsart="gutschrift",
+        kunden_referenz=original.kunden_referenz,
+        leistungsort=original.leistungsort,
         bezug_rechnung_id=original.id,
         gutschrift_grund=body.grund,
     )

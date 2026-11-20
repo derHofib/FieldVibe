@@ -47,6 +47,16 @@ class Projekt(SoftDeleteMixin, TimestampMixin, Base):
     vertrag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vertraege.id"), nullable=True
     )
+    # Auftraggeber und Baustelle (optional): ohne kunde_id lassen sich am Projekt keine Kontakte vor Ort
+    # anlegen.
+    kunde_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True)
+    standort_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("standorte.id", ondelete="SET NULL"), nullable=True
+    )
+    # Abweichender Rechnungsempfaenger (z. B. WEG); NULL = Auftraggeber.
+    rechnung_an_kunde_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
+    )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     archiviert: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

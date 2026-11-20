@@ -5,6 +5,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.kontakt import AnsprechpartnerEintrag
+from app.schemas.vor_ort_kontakt import VorOrtHauptkontaktKurz, VorOrtKontaktZugeordnet
+
 PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 
 VorgangAbrechnungsart = Literal[
@@ -24,6 +27,10 @@ VorgangStatusSetzbar = Literal[
 ]
 
 
+def _einheit_trimmen(v: str | None) -> str | None:
+    return v.strip() or None if v is not None else None
+
+
 class VorgangCreate(BaseModel):
     vorgangsnummer: str | None = None
     kunde_id: UUID
@@ -33,6 +40,8 @@ class VorgangCreate(BaseModel):
     # in den Vorgang uebernommen werden (siehe app/models/vorgang_anlage.py).
     weitere_anlage_ids: list[UUID] = Field(default_factory=list)
     standort_id: UUID | None = None
+    # Lage innerhalb des Standorts; bei auftrag_id aus dem Auftrag vorbelegt, wenn nicht gesetzt.
+    einheit: str | None = None
     vertrag_id: UUID | None = None
     parent_vorgang_id: UUID | None = None
     projekt_id: UUID | None = None
@@ -49,6 +58,8 @@ class VorgangCreate(BaseModel):
     # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
+
+    _einheit_trimmen = field_validator("einheit")(_einheit_trimmen)
 
     @field_validator("titel")
     @classmethod
@@ -73,6 +84,7 @@ class VorgangUpdate(BaseModel):
     kunde_id: UUID | None = None
     anlage_id: UUID | None = None
     standort_id: UUID | None = None
+    einheit: str | None = None
     vertrag_id: UUID | None = None
     projekt_id: UUID | None = None
     auftrag_id: UUID | None = None
@@ -91,6 +103,8 @@ class VorgangUpdate(BaseModel):
     # es, greift der Mandanten- bzw. globale Default (siehe
     # app/api/routes/vorgaenge.py und Mandant.wiedervorlage_standard_tage).
     wiedervorlage_tage: int | None = Field(default=None, gt=0)
+
+    _einheit_trimmen = field_validator("einheit")(_einheit_trimmen)
 
     @field_validator("titel")
     @classmethod
@@ -111,6 +125,7 @@ class VorgangRead(BaseModel):
     kunde_id: UUID
     anlage_id: UUID | None
     standort_id: UUID | None
+    einheit: str | None
     vertrag_id: UUID | None
     parent_vorgang_id: UUID | None
     projekt_id: UUID | None
@@ -135,6 +150,13 @@ class VorgangRead(BaseModel):
     # vorgaenge.eigenstaendig_setzen serverseitig null.
     projekt_name: str | None = None
     auftrag_titel: str | None = None
+    # Feed/Listen: Hauptkontakt der naechsten Ebene (Vorgang, Auftrag, Projekt), im Batch gesetzt.
+    hauptkontakt_vor_ort: VorOrtHauptkontaktKurz | None = None
+    # Nur im Detail (GET /api/vorgaenge/{id}): alle effektiven Kontakte vor Ort mit Herkunft sowie
+    # Sachbearbeitung und Zeichen des Auftraggebers ueber den Auftrag.
+    vor_ort_kontakte: list[VorOrtKontaktZugeordnet] = Field(default_factory=list)
+    auftraggeber_ansprechpartner: AnsprechpartnerEintrag | None = None
+    auftrag_kunden_referenz: str | None = None
     verknuepfung_eigenstaendig: bool = False
     verknuepfung_eigenstaendig_am: datetime | None = None
     verknuepfung_eigenstaendig_von_name: str | None = None

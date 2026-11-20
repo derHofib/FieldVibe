@@ -258,6 +258,17 @@ import type {
   ZeitplanAntragCreate,
   ZeitplanAntragEntscheidung,
   ZeitplanAntragStatus,
+  KundeRefKurz,
+  Leistungsort,
+  PortalVorOrtKontaktEingabe,
+  TelefonNummerZuordnung,
+  VorOrtKontakt,
+  VorOrtKontaktCreate,
+  VorOrtKontaktFilter,
+  VorOrtKontaktUpdate,
+  VorOrtKontaktZugeordnet,
+  VorOrtZiel,
+  VorOrtZuordnungCreate,
 } from "../types";
 
 import type { UserTokenPair, LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
@@ -611,6 +622,7 @@ export const notificationsApi = {
 
 export const kundenApi = {
   list: (q?: string) => apiFetch<Kunde[]>(`/api/kunden${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  verwaltete: (id: string) => apiFetch<KundeRefKurz[]>(`/api/kunden/${id}/verwaltete-kunden`),
   get: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}`),
   profil: (id: string) => apiFetch<KundeProfil>(`/api/kunden/${id}/profil`),
   create: (body: {
@@ -623,6 +635,7 @@ export const kundenApi = {
     ust_13b_nachweis_bis?: string;
     leitweg_id?: string;
     e_rechnung_format?: "zugferd" | "xrechnung";
+    verwaltet_von_kunde_id?: string | null;
   }) => apiFetch<Kunde>("/api/kunden",{ method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -637,6 +650,7 @@ export const kundenApi = {
       e_rechnung_format: "zugferd" | "xrechnung" | null;
       debitorenkonto: string | null;
       ansprechpartner: Ansprechpartner[];
+      verwaltet_von_kunde_id: string | null;
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/kunden/${id}`, { method: "DELETE" }),
@@ -911,6 +925,7 @@ export const vorgaengeApi = {
     anlage_id?: string | null;
     weitere_anlage_ids?: string[];
     standort_id?: string | null;
+    einheit?: string | null;
     // Ordnet den Vorgang direkt beim Anlegen einem Projekt bzw. Auftrag zu
     // (siehe "+ Neuer Vorgang"-Einstiegspunkte in ProjektDetailPanel.tsx/
     // AuftragDetailPanel.tsx) -- beide unabhaengig voneinander nutzbar.
@@ -945,6 +960,7 @@ export const vorgaengeApi = {
         | "kunde_id"
         | "anlage_id"
         | "standort_id"
+        | "einheit"
         | "projekt_id"
         | "auftrag_id"
         | "faelligkeit_am"
@@ -1067,6 +1083,41 @@ export const vorgangEventsApi = {
   },
 };
 
+const VOR_ORT_ZIEL_PFAD: Record<VorOrtZiel, string> = { vorgang: "vorgaenge", auftrag: "auftraege", projekt: "projekte" };
+
+export const vorOrtApi = {
+  listeFuerKunde: (kundeId: string, filter: VorOrtKontaktFilter = {}) => {
+    const qs = new URLSearchParams();
+    if (filter.standort_id) qs.set("standort_id", filter.standort_id);
+    if (filter.rolle) qs.set("rolle", filter.rolle);
+    if (filter.q) qs.set("q", filter.q);
+    if (filter.mit_anonymisierten !== undefined) qs.set("mit_anonymisierten", String(filter.mit_anonymisierten));
+    const query = qs.toString();
+    return apiFetch<VorOrtKontakt[]>(`/api/kunden/${kundeId}/vor-ort-kontakte${query ? `?${query}` : ""}`);
+  },
+  anlegen: (kundeId: string, body: VorOrtKontaktCreate) =>
+    apiFetch<VorOrtKontakt>(`/api/kunden/${kundeId}/vor-ort-kontakte`, { method: "POST", body: JSON.stringify(body) }),
+  aendern: (id: string, body: VorOrtKontaktUpdate) =>
+    apiFetch<VorOrtKontakt>(`/api/vor-ort-kontakte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/vor-ort-kontakte/${id}`, { method: "DELETE" }),
+  anonymisieren: (id: string) =>
+    apiFetch<VorOrtKontakt>(`/api/vor-ort-kontakte/${id}/anonymisieren`, { method: "POST" }),
+  listeFuerZiel: (ziel: VorOrtZiel, zielId: string) =>
+    apiFetch<VorOrtKontaktZugeordnet[]>(`/api/${VOR_ORT_ZIEL_PFAD[ziel]}/${zielId}/vor-ort-kontakte`),
+  zuordnen: (ziel: VorOrtZiel, zielId: string, body: VorOrtZuordnungCreate) =>
+    apiFetch<VorOrtKontaktZugeordnet>(`/api/${VOR_ORT_ZIEL_PFAD[ziel]}/${zielId}/vor-ort-kontakte`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  hauptkontaktSetzen: (zuordnungId: string, istHauptkontakt: boolean) =>
+    apiFetch<VorOrtKontaktZugeordnet>(`/api/vor-ort-kontakt-zuordnungen/${zuordnungId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ist_hauptkontakt: istHauptkontakt }),
+    }),
+  zuordnungEntfernen: (zuordnungId: string) =>
+    apiFetch<void>(`/api/vor-ort-kontakt-zuordnungen/${zuordnungId}`, { method: "DELETE" }),
+};
+
 export const telefonateApi = {
   list: (filter: TelefonatFilter = {}) => {
     const qs = new URLSearchParams();
@@ -1083,6 +1134,9 @@ export const telefonateApi = {
     apiFetch<Telefonat>(`/api/telefonate/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/telefonate/${id}`, { method: "DELETE" }),
   anzahlOffeneRueckrufe: () => apiFetch<{ anzahl: number }>("/api/telefonate/anzahl-offene-rueckrufe"),
+  /** Ordnet eine Rufnummer Kunde, Ansprechpartner bzw. Kontakt vor Ort und offenen Vorgängen zu; null = unbekannt. */
+  nummerZuordnen: (nummer: string) =>
+    apiFetch<TelefonNummerZuordnung | null>(`/api/telefonate/nummer-zuordnen?nummer=${encodeURIComponent(nummer)}`),
 };
 
 export const formModulApi = {
@@ -1592,7 +1646,15 @@ export const angeboteApi = {
     }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
-  update: (id: string, body: { gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
+  update: (
+    id: string,
+    body: {
+      gueltig_bis?: string;
+      mwst_satz?: AngebotMwstSatz;
+      kunden_referenz?: string | null;
+      leistungsort?: Leistungsort | null;
+    },
+  ) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/angebote/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
@@ -1669,6 +1731,9 @@ export const rechnungenApi = {
     apiFetch<AbrechenbarerVorgang[]>(`/api/rechnungen/abrechenbare-vorgaenge?kunde_id=${encodeURIComponent(kundeId)}`),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  // Nur im Entwurf; null leert das Feld.
+  updateKopf: (id: string, body: { kunden_referenz?: string | null; leistungsort?: Leistungsort | null }) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/rechnungen/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
@@ -2074,6 +2139,7 @@ export const mandantEinstellungenApi = {
     km_satz_netto?: string | null;
     fahrzeit_satz_netto?: string | null;
     fahrzeit_abrechnung?: FahrzeitAbrechnung;
+    vor_ort_kontakte_anonymisieren_monate?: number;
   }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
@@ -2106,11 +2172,19 @@ export const projekteApi = {
     return apiFetch<Projekt[]>(`/api/projekte${qs}`);
   },
   get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
-  create: (body: { name: string; beschreibung?: string; vertrag_id?: string }) =>
+  create: (body: { name: string; beschreibung?: string; vertrag_id?: string; kunde_id?: string | null; standort_id?: string | null }) =>
     apiFetch<Projekt>("/api/projekte", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: { name?: string; beschreibung?: string; archiviert?: boolean; vertrag_id?: string | null },
+    body: {
+      name?: string;
+      beschreibung?: string;
+      archiviert?: boolean;
+      vertrag_id?: string | null;
+      kunde_id?: string | null;
+      standort_id?: string | null;
+      rechnung_an_kunde_id?: string | null;
+    },
   ) => apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/projekte/${id}`, { method: "DELETE" }),
   spalten: (projektId: string) =>
@@ -2275,7 +2349,17 @@ export const auftraegeApi = {
     return apiFetch<Auftrag[]>(`/api/auftraege${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Auftrag>(`/api/auftraege/${id}`),
-  create: (body: { titel: string; beschreibung?: string; projekt_id?: string | null; kunde_id?: string | null }) =>
+  create: (body: {
+    titel: string;
+    beschreibung?: string;
+    projekt_id?: string | null;
+    kunde_id?: string | null;
+    standort_id?: string | null;
+    einheit?: string | null;
+    ansprechpartner_id?: string | null;
+    kunden_referenz?: string | null;
+    rechnung_an_kunde_id?: string | null;
+  }) =>
     apiFetch<Auftrag>("/api/auftraege", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -2285,6 +2369,11 @@ export const auftraegeApi = {
       projekt_id?: string | null;
       kunde_id?: string | null;
       status?: AuftragStatus;
+      standort_id?: string | null;
+      einheit?: string | null;
+      ansprechpartner_id?: string | null;
+      kunden_referenz?: string | null;
+      rechnung_an_kunde_id?: string | null;
     },
   ) => apiFetch<Auftrag>(`/api/auftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/auftraege/${id}`, { method: "DELETE" }),
@@ -2482,6 +2571,9 @@ export const kundenportalApi = {
     leistungstyp: Leistungstyp;
     standort_id?: string | null;
     anlage_id?: string | null;
+    einheit?: string | null;
+    kunden_referenz?: string | null;
+    vor_ort_kontakte?: PortalVorOrtKontaktEingabe[];
   }) =>
     kundenApiFetch<PortalVorgangAnfrage>("/api/kundenportal/anfragen", {
       method: "POST",

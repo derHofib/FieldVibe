@@ -5,6 +5,9 @@ import {
   ANDERE_PERSON,
   arbeitszeitSichtbar,
   baueTelefonatCreate,
+  baueTelefonatUpdate,
+  kontaktAuswahlWert,
+  nummerErkennbar,
   dauerSichtbar,
   formatDauer,
   leeresFormular,
@@ -86,6 +89,27 @@ describe("baueTelefonatCreate", () => {
   it("sendet ansprechpartner_id nur für echte Ansprechpartner", () => {
     expect(baueTelefonatCreate(formular({ partnerAuswahl: ANDERE_PERSON }), { kundeId: "k" }).ansprechpartner_id).toBeUndefined();
     expect(baueTelefonatCreate(formular({ partnerAuswahl: "a1" }), { kundeId: "k" }).ansprechpartner_id).toBe("a1");
+  });
+});
+
+describe("Kontakt vor Ort als Gesprächspartner", () => {
+  it("sendet vor_ort_kontakt_id statt ansprechpartner_id", () => {
+    const body = baueTelefonatCreate(formular({ partnerAuswahl: kontaktAuswahlWert("c1") }), { kundeId: "k" });
+    expect(body.vor_ort_kontakt_id).toBe("c1");
+    expect(body.ansprechpartner_id).toBeUndefined();
+  });
+
+  it("setzt beim Ändern den jeweils anderen Verweis auf null", () => {
+    const alt = { rueckruf_am: null, rueckruf_erledigt_am: null } as never;
+    const kontakt = baueTelefonatUpdate(formular({ partnerAuswahl: kontaktAuswahlWert("c1") }), alt);
+    expect([kontakt.vor_ort_kontakt_id, kontakt.ansprechpartner_id]).toEqual(["c1", null]);
+    const person = baueTelefonatUpdate(formular({ partnerAuswahl: "a1" }), alt);
+    expect([person.vor_ort_kontakt_id, person.ansprechpartner_id]).toEqual([null, "a1"]);
+  });
+
+  it("erkennt Rufnummern erst ab fünf Ziffern", () => {
+    expect(nummerErkennbar("0176 22")).toBe(true);
+    expect(nummerErkennbar("12-3")).toBe(false);
   });
 });
 

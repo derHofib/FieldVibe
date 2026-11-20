@@ -51,6 +51,9 @@ export function UebersichtAbschnitt({
   erstelltVonName,
   formulare,
   partner,
+  vorOrt,
+  vorOrtKontakte,
+  einheitZeile,
 }: {
   istAktiverTab: (ziel: string) => boolean;
   tabPanelProps: (ziel: string) => { role: "tabpanel"; "aria-labelledby": string } | { role?: undefined; "aria-labelledby"?: undefined };
@@ -88,6 +91,12 @@ export function UebersichtAbschnitt({
   formulare: ReactNode;
   /** PartnerAbschnitt (nur mit Recht/Modul). */
   partner: ReactNode;
+  /** Gruppe "Auftraggeber" (VorgangAuftraggeber), steht ganz oben. */
+  vorOrt: ReactNode;
+  /** Gruppe "Vor Ort" mit den Kontakten, folgt unmittelbar auf den Einsatzort. */
+  vorOrtKontakte: ReactNode;
+  /** Einheit unter der Adresse im Einsatzort. */
+  einheitZeile: ReactNode;
 }) {
   const { wurzel, zweispaltig } = useZweispaltig(zweispaltigMoeglich);
 
@@ -129,16 +138,19 @@ export function UebersichtAbschnitt({
             <span className={ZEILE_ICON}>
               <MapPin size={15} strokeWidth={1.5} aria-hidden="true" />
             </span>
-            {adresseText ? (
-              <p className="text-fliess text-label">
-                {adresseText}
-                {!vorgang.adresse && (standort || anlage) && (
-                  <span className="ml-1 text-meta text-label2">({standort ? "Standort" : "Anlage"})</span>
-                )}
-              </p>
-            ) : (
-              <p className="pt-0.5 text-fliess text-label2">Keine Adresse hinterlegt.</p>
-            )}
+            <div className="min-w-0">
+              {adresseText ? (
+                <p className="text-fliess text-label">
+                  {adresseText}
+                  {!vorgang.adresse && (standort || anlage) && (
+                    <span className="ml-1 text-meta text-label2">({standort ? "Standort" : "Anlage"})</span>
+                  )}
+                </p>
+              ) : (
+                <p className="pt-0.5 text-fliess text-label2">Keine Adresse hinterlegt.</p>
+              )}
+              {einheitZeile}
+            </div>
           </div>
           {[
             { key: "haupt", anlage: anlage, weitere: false },
@@ -358,6 +370,7 @@ export function UebersichtAbschnitt({
       {zweispaltig ? (
         <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-x-4">
           <div className="min-w-0">
+            {vorOrt}
             {beschreibung}
             {formulare}
             {verknuepft}
@@ -365,13 +378,16 @@ export function UebersichtAbschnitt({
           </div>
           <div className="min-w-0 border-l-[0.5px] border-sep pl-4">
             {einsatzort}
+            {vorOrtKontakte}
             {details}
           </div>
         </div>
       ) : (
         <div className="space-y-4 in-[.office-panel]:space-y-0">
+          {vorOrt}
           {beschreibung}
           {einsatzort}
+          {vorOrtKontakte}
           {formulare}
           {details}
           {verknuepft}

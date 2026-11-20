@@ -44,6 +44,10 @@ async def close_vorgang(
     vorgang.status = "abgeschlossen"
     if vorgang.abgeschlossen_am is None:
         vorgang.abgeschlossen_am = datetime.now(timezone.utc)
+    # Lokaler Import: der Service braucht umgekehrt VORGANG_STATUS_GESCHLOSSEN aus diesem Modul.
+    from app.services.vor_ort_kontakt_service import einsatz_vermerken
+
+    await einsatz_vermerken(session, vorgang)
 
     session.add(
         VorgangEvent(

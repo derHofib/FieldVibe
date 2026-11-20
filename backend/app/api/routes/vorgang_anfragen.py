@@ -20,6 +20,7 @@ from app.schemas.vorgang_anfrage import (
     VorgangAnfrageAnnehmen,
     VorgangAnfrageRead,
 )
+from app.services import vor_ort_kontakt_service
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.zuweisung_service import (
@@ -168,6 +169,7 @@ async def annehmen(
         abrechnungsart=body.abrechnungsart,
         leistungstyp=anfrage.leistungstyp,
         prioritaet=body.prioritaet,
+        einheit=anfrage.einheit,
         erstellt_von_kundenportal_zugang_id=anfrage.kundenportal_zugang_id,
     )
     session.add(vorgang)
@@ -191,6 +193,9 @@ async def annehmen(
         )
     )
     await hauptbetreuer_uebernehmen(session, vorgang, auth.user_id)
+    await vor_ort_kontakt_service.kontakte_aus_anfrage(
+        session, mandant_id=auth.mandant_id, anfrage=anfrage, vorgang=vorgang
+    )
 
     anfrage.status = "angenommen"
     anfrage.vorgang_id = vorgang.id
@@ -217,6 +222,8 @@ async def ablehnen(
 
     anfrage.status = "abgelehnt"
     anfrage.ablehnungsgrund = body.ablehnungsgrund
+    # Die mitgegebenen Kontaktdaten werden nicht mehr gebraucht (Speicherbegrenzung).
+    anfrage.vor_ort_kontakte = []
     anfrage.bearbeitet_von = auth.user_id
     anfrage.bearbeitet_am = datetime.now(timezone.utc)
     await session.flush()

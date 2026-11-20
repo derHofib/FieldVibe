@@ -104,6 +104,8 @@ class MandantEinstellungenRead(BaseModel):
     fahrzeit_satz_netto: Decimal | None
     fahrzeit_abrechnung: FahrzeitAbrechnung
     bundesland: Bundesland | None = None
+    # Anonymisierungsfrist fuer Kontakte vor Ort in Monaten nach dem letzten Einsatz (3..60).
+    vor_ort_kontakte_anonymisieren_monate: int = 12
 
 
 class MandantEinstellungenUpdate(BaseModel):
@@ -125,6 +127,8 @@ class MandantEinstellungenUpdate(BaseModel):
     fahrzeit_abrechnung: FahrzeitAbrechnung | None = None
     # None setzt zurueck (nur bundesweite Feiertage).
     bundesland: Bundesland | None = None
+    # Kein Zuruecksetzen auf None: die Frist ist immer gesetzt (Default 12).
+    vor_ort_kontakte_anonymisieren_monate: int | None = Field(default=None, ge=3, le=60)
 
 
     @field_validator("firmendaten")

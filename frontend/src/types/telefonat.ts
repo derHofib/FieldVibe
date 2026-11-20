@@ -1,3 +1,5 @@
+import type { VorOrtKontaktKurz } from "./vorOrt";
+
 export type TelefonatRichtung = "ausgehend" | "eingehend";
 export type TelefonatErgebnis = "erreicht" | "nicht_erreicht" | "mailbox";
 export type TelefonatErstelltVia = "app" | "claude";
@@ -11,6 +13,9 @@ export interface Telefonat {
   vorgang_titel: string | null;
   // id aus kunde.ansprechpartner (JSONB), kein FK -- der Ansprechpartner kann inzwischen fehlen.
   ansprechpartner_id: string | null;
+  // Alternative zum Ansprechpartner: Person vor Ort (Mieter/in, Hausmeister/in ...).
+  vor_ort_kontakt_id?: string | null;
+  vor_ort_kontakt?: VorOrtKontaktKurz | null;
   partner_name: string;
   partner_nummer: string | null;
   richtung: TelefonatRichtung;
@@ -32,6 +37,7 @@ export interface TelefonatCreate {
   vorgang_id?: string;
   kunde_id?: string;
   ansprechpartner_id?: string;
+  vor_ort_kontakt_id?: string;
   partner_name: string;
   partner_nummer?: string;
   richtung: TelefonatRichtung;
@@ -49,6 +55,7 @@ export interface TelefonatUpdate {
   partner_name?: string;
   partner_nummer?: string | null;
   ansprechpartner_id?: string | null;
+  vor_ort_kontakt_id?: string | null;
   richtung?: TelefonatRichtung;
   ergebnis?: TelefonatErgebnis;
   beginn?: string;

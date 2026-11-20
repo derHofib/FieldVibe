@@ -35,6 +35,29 @@ def _liste(daten: Any) -> list[Any]:
     return daten if isinstance(daten, list) else []
 
 
+def _kontakte_fuer_ki(daten: Any) -> Any:
+    """Kontakte vor Ort in der knappen Form fuer das Modell: ohne E-Mail und Erreichbarkeit, mit Herkunft
+    (auf welcher Ebene der Kontakt zugeordnet ist). Ein Hinweis-Dict (fehlendes Recht) geht unveraendert durch."""
+    if not isinstance(daten, list):
+        return daten
+    ergebnis = []
+    for eintrag in daten:
+        kontakt = eintrag.get("kontakt") or {}
+        ergebnis.append(
+            {
+                "name": kontakt.get("name"),
+                "rolle": kontakt.get("rolle"),
+                "einheit": kontakt.get("einheit"),
+                "telefon": kontakt.get("telefon"),
+                "hinweis": kontakt.get("hinweis"),
+                "hauptkontakt": bool(eintrag.get("ist_hauptkontakt")),
+                "herkunft": eintrag.get("herkunft"),
+                "herkunft_titel": eintrag.get("herkunft_titel"),
+            }
+        )
+    return ergebnis
+
+
 def _iso(wert: date | datetime | None) -> str | None:
     return wert.isoformat() if wert else None
 
@@ -45,7 +68,9 @@ def registrieren(mcp: MCPServer) -> None:
         title="In FieldVibe suchen",
         description=(
             "Volltextsuche als Einstieg: findet Kunden (Name/Kundennummer), Vorgänge, Anlagen, "
-            "Rechnungen und Tags (Suchtext mit # beginnen). Liefert je Kategorie die besten Treffer "
+            "Rechnungen, Kontakte vor Ort (Mieter, Bauherr, Hausmeister; Typ vor_ort_kontakt, die ID ist die "
+            "des Kontakts, kunde_id der Auftraggeber) und Tags (Suchtext mit # beginnen). "
+            "Liefert je Kategorie die besten Treffer "
             "mit ID, die dann mit kunde_lesen, vorgang_lesen oder anlage_lesen geöffnet werden. "
             "Sichtbar ist nur, was der Nutzer auch in der App sehen darf."
         ),
@@ -54,7 +79,7 @@ def registrieren(mcp: MCPServer) -> None:
     async def suchen(
         text: Annotated[str, Field(min_length=1, description="Suchtext, z. B. Kundenname oder Titel.")],
         typ: Annotated[
-            Literal["kunde", "anlage", "vorgang", "rechnung", "tag"] | None,
+            Literal["kunde", "anlage", "vorgang", "rechnung", "vor_ort_kontakt", "tag"] | None,
             Field(description="Optional nur diese Kategorie."),
         ] = None,
     ) -> dict[str, Any]:
@@ -118,7 +143,8 @@ def registrieren(mcp: MCPServer) -> None:
         description=(
             "Liest einen Vorgang vollständig: Stammdaten, Verlauf (Events: Kommentare, Fotos, "
             "Statuswechsel; neueste zuerst, höchstens 100), Mängel (Defekt, der zu Angebot und "
-            "Rechnung führt) und ausgefüllte Formulare/Protokolle (Submissions mit Werten)."
+            "Rechnung führt), ausgefüllte Formulare/Protokolle (Submissions mit Werten) und die Kontakte "
+            "vor Ort (Name, Rolle, Einheit, Telefon, Hinweis, Herkunft: Vorgang, Auftrag oder Projekt)."
         ),
         annotations=NUR_LESEN,
     )
@@ -128,9 +154,11 @@ def registrieren(mcp: MCPServer) -> None:
         events = await _optional(api_get(z, f"/api/vorgaenge/{vorgang_id}/events"))
         maengel = await _optional(api_get(z, "/api/maengel", {"vorgang_id": vorgang_id}))
         formulare = await _optional(api_get(z, "/api/form-submissions", {"vorgang_id": vorgang_id}))
+        kontakte = _kontakte_fuer_ki(vorgang.pop("vor_ort_kontakte", None)) if isinstance(vorgang, dict) else None
         return bereinigen(
             {
                 "vorgang": vorgang,
+                "vor_ort_kontakte": kontakte,
                 "verlauf": seite_aus(events, 1) if isinstance(events, list) else events,
                 "maengel": seite_aus(maengel, 1) if isinstance(maengel, list) else maengel,
                 "formulare": seite_aus(formulare, 1) if isinstance(formulare, list) else formulare,
@@ -204,7 +232,10 @@ def registrieren(mcp: MCPServer) -> None:
     @mcp.tool(
         name="auftrag_lesen",
         title="Auftrag lesen",
-        description="Liest einen Auftrag (Entität Auftrag, nicht Vorgang) und die zugehörigen Vorgänge.",
+        description=(
+            "Liest einen Auftrag (Entität Auftrag, nicht Vorgang), die zugehörigen Vorgänge und die Kontakte "
+            "vor Ort (Name, Rolle, Einheit, Telefon, Hinweis, Herkunft: Auftrag oder Projekt)."
+        ),
         annotations=NUR_LESEN,
     )
     async def auftrag_lesen(auftrag_id: _Id) -> dict[str, Any]:
@@ -213,9 +244,11 @@ def registrieren(mcp: MCPServer) -> None:
         vorgaenge = await _optional(
             api_get(z, "/api/vorgaenge", {"auftrag_id": auftrag_id, "limit": _VORGAENGE_API_LIMIT})
         )
+        kontakte = _kontakte_fuer_ki(await _optional(api_get(z, f"/api/auftraege/{auftrag_id}/vor-ort-kontakte")))
         return bereinigen(
             {
                 "auftrag": auftrag,
+                "vor_ort_kontakte": kontakte,
                 "vorgaenge": seite_aus(vorgaenge, 1) if isinstance(vorgaenge, list) else vorgaenge,
             }
         )

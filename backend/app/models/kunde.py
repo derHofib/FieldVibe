@@ -20,6 +20,7 @@ class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("mandant_id", "kundennummer", name="uq_kunden_mandant_kundennummer"),
         CheckConstraint(f"typ IS NULL OR typ IN {KUNDE_TYPEN}", name="ck_kunden_typ_valid"),
+        CheckConstraint("verwaltet_von_kunde_id <> id", name="ck_kunden_verwaltet_von_nicht_selbst"),
         CheckConstraint(
             f"e_rechnung_format IS NULL OR e_rechnung_format IN {KUNDE_E_RECHNUNG_FORMATE}",
             name="ck_kunden_e_rechnung_format_valid",
@@ -78,6 +79,11 @@ class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     # auf der (fuer den Kunden personalisierten) Portal-Login-Seite gezeigt
     # wird. NULL = kein Logo hinterlegt.
     logo_object_key: Mapped[str | None] = mapped_column(Text)
+    # WEG o. Ae. "verwaltet von" einer Hausverwaltung: filtert die Auswahl "Rechnung an". Nur eine Ebene tief,
+    # kein Zyklus (App-Pruefung, siehe kunde_service).
+    verwaltet_von_kunde_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
+    )
 
     @property
     def ist_gewerblich(self) -> bool:

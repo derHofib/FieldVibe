@@ -21,10 +21,12 @@ from app.schemas.partner import (
     PartnerVorgangKommentar,
     PartnerVorgangRead,
     PartnerVorgangStatusUpdate,
+    PartnerVorOrtKontakt,
     PartnerZeitplanSchritt,
 )
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.event_bus import event_bus
+from app.services.vor_ort_kontakt_service import kontakte_fuer_ziel
 from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 from app.services.partner_service import apply_partner_status_transition
 from app.services.zeitplan_service import VORGANG_ERLEDIGT
@@ -63,6 +65,13 @@ async def _require_eigener_vorgang(
 async def _to_partner_read(session: AsyncSession, vorgang: Vorgang) -> PartnerVorgangRead:
     kunde = await session.get(Kunde, vorgang.kunde_id)
     anlage = await session.get(Anlage, vorgang.anlage_id) if vorgang.anlage_id else None
+    kontakte: list[PartnerVorOrtKontakt] = []
+    if vorgang.partner_freigabe_status == "angenommen":
+        kontakte = [
+            PartnerVorOrtKontakt.model_validate(z.kontakt, from_attributes=True)
+            for z in await kontakte_fuer_ziel(session, vorgang=vorgang)
+            if z.kontakt.anonymisiert_am is None
+        ]
     return PartnerVorgangRead(
         id=vorgang.id,
         vorgangsnummer=vorgang.vorgangsnummer,
@@ -78,6 +87,7 @@ async def _to_partner_read(session: AsyncSession, vorgang: Vorgang) -> PartnerVo
         anlage_adresse=anlage.adresse if anlage else None,
         last_activity_at=vorgang.last_activity_at,
         created_at=vorgang.created_at,
+        vor_ort_kontakte=kontakte,
     )
 
 

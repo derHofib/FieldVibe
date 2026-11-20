@@ -23,6 +23,7 @@ from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 from app.services import privatkunden_service, steuer_service
+from app.services.leistungsort_service import leistungsort_zeile
 from app.services.angebot_gliederung import ist_titel, ordnungszahlen, zwischensummen
 from app.services.form_grenzwert import grenzwert_abweichung, grenzwert_text
 from app.services.steuer_service import SteuerGruppe
@@ -298,6 +299,7 @@ def _beleg_titelbereich(
     titel: str,
     untertitel: list[str],
     einleitung: str,
+    leistungsort: str | None = None,
 ) -> None:
     pdf.set_xy(20, y)
     pdf.set_font("Helvetica", "B", 20)
@@ -307,6 +309,9 @@ def _beleg_titelbereich(
     _set_grau(pdf)
     for zeile in untertitel:
         pdf.cell(0, 5, _pdf_safe_text(zeile), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if leistungsort:
+        # Kann lang werden (Adresse + Bezeichnung): umbrechen statt ueber den Rand laufen zu lassen.
+        pdf.multi_cell(170, 5, _pdf_safe_text(f"Leistungsort: {leistungsort}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(5)
     pdf.set_font("Helvetica", "", 10)
     _set_text(pdf)
@@ -792,6 +797,7 @@ def _beleg_rumpf(
     aufstellung: tuple[list[tuple[str, Decimal]], Decimal] | None = None,
     ohne_summenblock: bool = False,
     steuer_gruppen: list[SteuerGruppe] | None = None,
+    leistungsort: str | None = None,
 ) -> None:
     """aufstellung=(Zeilen, Endbetrag) ersetzt den USt.-Summenblock durch die
     Mahn-Aufstellung; ohne_summenblock laesst den Block ganz weg."""
@@ -802,7 +808,7 @@ def _beleg_rumpf(
 
     ende_adressen = _beleg_adressbereich(pdf, mandant, empfaenger, paare)
     titel_y = max(_B_TITEL_MIN_Y, ende_adressen + _B_TITEL_ABSTAND)
-    _beleg_titelbereich(pdf, titel_y, titel, untertitel, einleitung)
+    _beleg_titelbereich(pdf, titel_y, titel, untertitel, einleitung, leistungsort)
 
     kleinunternehmer = bool((mandant.firmendaten or {}).get("ist_kleinunternehmer"))
     abschluss_hoehe = _beleg_abschluss_hoehe(pdf, absaetze)
@@ -855,6 +861,8 @@ def generate_angebot_pdf(
         ("Datum", _fmt_datum(angebot.created_at)),
         ("Kundennummer", kunde.kundennummer),
     ]
+    if angebot.kunden_referenz:
+        paare.append(("Ihr Zeichen", angebot.kunden_referenz))
     if angebot.gueltig_bis:
         paare.append(("Gültig bis", _fmt_datum(angebot.gueltig_bis)))
     if bearbeiter:
@@ -881,6 +889,7 @@ def generate_angebot_pdf(
         endbetrag_label="Angebotssumme",
         label_akzent=True,
         absaetze=absaetze,
+        leistungsort=leistungsort_zeile(angebot.leistungsort),
     )
     return bytes(pdf.output())
 
@@ -927,8 +936,10 @@ def generate_rechnung_pdf(
         # §14 Abs. 4 Nr. 6 UStG verlangt den Leistungszeitpunkt immer -- ohne
         # eigenes Leistungsdatum gilt das Rechnungsdatum und wird so ausgewiesen.
         ("Leistungsdatum", _fmt_datum(rechnung.leistungsdatum or rechnung.created_at)),
-        ("Kundennummer", kunde.kundennummer),
     ]
+    if rechnung.kunden_referenz:
+        paare.append(("Ihr Zeichen", rechnung.kunden_referenz))
+    paare.append(("Kundennummer", kunde.kundennummer))
     if rechnung.faellig_am:
         paare.append(("Fällig am", _fmt_datum(rechnung.faellig_am)))
     if kunde.ust_idnr:
@@ -992,6 +1003,7 @@ def generate_rechnung_pdf(
         label_akzent=False,
         absaetze=absaetze,
         steuer_gruppen=steuer_service.steuer_gruppen(rechnung, positionen or []),
+        leistungsort=leistungsort_zeile(rechnung.leistungsort),
     )
 
     if pdfa_output_intent:

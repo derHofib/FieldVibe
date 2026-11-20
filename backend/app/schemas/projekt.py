@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.kunde_kurz import RechnungAnKurz
+
 ProjektAufgabePrioritaet = Literal["niedrig", "mittel", "hoch"]
 ProjektAufgabeTyp = Literal["aufgabe", "phase", "schritt", "meilenstein"]
 ZeitplanTyp = Literal["phase", "schritt", "meilenstein"]
@@ -20,6 +22,11 @@ class ProjektCreate(BaseModel):
     name: str
     beschreibung: str | None = None
     vertrag_id: UUID | None = None
+    # Auftraggeber und Baustelle; standort_id muss zum Kunden gehoeren.
+    kunde_id: UUID | None = None
+    standort_id: UUID | None = None
+    # Abweichender Rechnungsempfaenger (z. B. WEG); None = Auftraggeber.
+    rechnung_an_kunde_id: UUID | None = None
 
 
 class ProjektUpdate(BaseModel):
@@ -27,6 +34,9 @@ class ProjektUpdate(BaseModel):
     beschreibung: str | None = None
     archiviert: bool | None = None
     vertrag_id: UUID | None = None
+    kunde_id: UUID | None = None
+    standort_id: UUID | None = None
+    rechnung_an_kunde_id: UUID | None = None
 
 
 class ProjektRead(BaseModel):
@@ -37,9 +47,15 @@ class ProjektRead(BaseModel):
     beschreibung: str | None
     archiviert: bool
     vertrag_id: UUID | None
+    kunde_id: UUID | None
+    standort_id: UUID | None
+    rechnung_an_kunde_id: UUID | None = None
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime
+    kunde_name: str | None = None
+    standort_bezeichnung: str | None = None
+    rechnung_an: RechnungAnKurz | None = None
     # Nicht persistiert, in den Projekt-Routen transient gesetzt (wie
     # AuftragRead.vorgaenge_gesamt). anzahl_vorgaenge zaehlt alle Vorgaenge mit
     # projekt_id, also auch die in Auftraegen (Regel "eine Kette"); offen =

@@ -34,7 +34,7 @@ from app.schemas.projekt import (
     ProjektSpalteUpdate,
     ProjektUpdate,
 )
-from app.services import berechtigung_service, papierkorb_service
+from app.services import berechtigung_service, leistungsort_service, papierkorb_service, vor_ort_kontakt_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import (
     erlaubte_kunde_ids,
@@ -79,6 +79,28 @@ async def _require_projekt(session: AsyncSession, projekt_id: UUID) -> Projekt:
     if projekt is None or projekt.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projekt nicht gefunden")
     return projekt
+
+
+async def _pruefe_auftraggeber(
+    session: AsyncSession, auth: AuthContext, kunde_id: UUID | None, standort_id: UUID | None, *, neu: bool
+) -> None:
+    """Kunde existiert (und ist dem Nutzer zugewiesen, sobald er gesetzt/gewechselt wird); der Standort gehoert
+    zum Kunden. Ein Standort ohne Auftraggeber ist nicht erlaubt (422)."""
+    if kunde_id is not None:
+        if neu:
+            await require_kunde_zugewiesen(session, auth, kunde_id)
+        kunde = await session.get(Kunde, kunde_id)
+        if kunde is None or kunde.geloescht_am is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+    if standort_id is not None:
+        if kunde_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Erst einen Auftraggeber setzen"
+            )
+        await vor_ort_kontakt_service.standort_pruefen(session, standort_id, kunde_id)
 
 
 async def _require_spalte(session: AsyncSession, projekt_id: UUID, spalte_id: UUID) -> ProjektSpalte:
@@ -166,6 +188,24 @@ async def _mit_zaehlern(session: AsyncSession, projekte: list[Projekt]) -> list[
     ids = [p.id for p in projekte]
     if not ids:
         return gelesen
+    kunde_ids = {p.kunde_id for p in projekte if p.kunde_id}
+    if kunde_ids:
+        namen = dict((await session.execute(select(Kunde.id, Kunde.name).where(Kunde.id.in_(kunde_ids)))).all())
+        for read in gelesen:
+            read.kunde_name = namen.get(read.kunde_id)
+    rechnung_an = await leistungsort_service.kunden_kurz(
+        session, {p.rechnung_an_kunde_id for p in projekte if p.rechnung_an_kunde_id}
+    )
+    for read in gelesen:
+        if read.rechnung_an_kunde_id:
+            read.rechnung_an = rechnung_an.get(read.rechnung_an_kunde_id)
+    standort_ids = {p.standort_id for p in projekte if p.standort_id}
+    if standort_ids:
+        bezeichnungen = dict(
+            (await session.execute(select(Standort.id, Standort.bezeichnung).where(Standort.id.in_(standort_ids)))).all()
+        )
+        for read in gelesen:
+            read.standort_bezeichnung = bezeichnungen.get(read.standort_id)
     auftraege = dict(
         (
             await session.execute(
@@ -196,11 +236,17 @@ async def _mit_zaehlern(session: AsyncSession, projekte: list[Projekt]) -> list[
 
 @router.get("", response_model=list[ProjektRead])
 async def list_projekte(
-    vertrag_id: UUID | None = Query(default=None), session: AsyncSession = Depends(get_db)
+    vertrag_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> list[ProjektRead]:
     stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
     if vertrag_id:
         stmt = stmt.where(Projekt.vertrag_id == vertrag_id)
+    # Projekte mit Auftraggeber folgen dem Kundenscope, Projekte ohne Kunde bleiben fuer alle sichtbar.
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(or_(Projekt.kunde_id.is_(None), Projekt.kunde_id.in_(erlaubt)))
     result = await session.execute(stmt)
     return await _mit_zaehlern(session, list(result.scalars().all()))
 
@@ -224,11 +270,18 @@ async def create_projekt(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await _pruefe_auftraggeber(session, auth, body.kunde_id, body.standort_id, neu=True)
+    rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+        session, body.rechnung_an_kunde_id, body.kunde_id
+    )
     projekt = Projekt(
         mandant_id=auth.mandant_id,
         name=body.name,
         beschreibung=body.beschreibung,
         vertrag_id=body.vertrag_id,
+        kunde_id=body.kunde_id,
+        standort_id=body.standort_id,
+        rechnung_an_kunde_id=rechnung_an_kunde_id,
         erstellt_von=auth.user_id,
     )
     session.add(projekt)
@@ -247,8 +300,17 @@ async def create_projekt(
 
 
 @router.get("/{projekt_id}", response_model=ProjektRead)
-async def get_projekt(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> ProjektRead:
-    return (await _mit_zaehlern(session, [await _require_projekt(session, projekt_id)]))[0]
+async def get_projekt(
+    projekt_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ProjektRead:
+    projekt = await _require_projekt(session, projekt_id)
+    if projekt.kunde_id is not None:
+        erlaubt = await erlaubte_kunde_ids(session, auth)
+        if erlaubt is not None and projekt.kunde_id not in erlaubt:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projekt nicht gefunden")
+    return (await _mit_zaehlern(session, [projekt]))[0]
 
 
 @router.patch(
@@ -262,6 +324,7 @@ async def get_projekt(projekt_id: UUID, session: AsyncSession = Depends(get_db))
 async def update_projekt(
     projekt_id: UUID,
     body: ProjektUpdate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ProjektRead:
     projekt = await _require_projekt(session, projekt_id)
@@ -271,8 +334,20 @@ async def update_projekt(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    if changes.keys() & {"kunde_id", "standort_id"}:
+        kunde_neu = changes.get("kunde_id", projekt.kunde_id)
+        await _pruefe_auftraggeber(
+            session, auth, kunde_neu, changes.get("standort_id", projekt.standort_id),
+            neu="kunde_id" in changes and kunde_neu != projekt.kunde_id,
+        )
+        if "kunde_id" in changes and kunde_neu != projekt.kunde_id:
+            await vor_ort_kontakt_service.kundenwechsel_pruefen(session, "projekt_id", projekt.id, kunde_neu)
     for feld, wert in changes.items():
         setattr(projekt, feld, wert)
+    if changes.keys() & {"kunde_id", "rechnung_an_kunde_id"}:
+        projekt.rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+            session, projekt.rechnung_an_kunde_id, projekt.kunde_id
+        )
     await session.flush()
     await session.refresh(projekt)
     return (await _mit_zaehlern(session, [projekt]))[0]

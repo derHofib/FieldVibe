@@ -81,6 +81,7 @@ from app.models.tag import Tag, TagAssignment
 from app.models.telefonat import Telefonat
 from app.models.termin import Termin
 from app.models.user import User
+from app.models.vor_ort_kontakt import VorOrtKontakt, VorOrtKontaktZuordnung
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_abhaengigkeit import VorgangAbhaengigkeit
@@ -190,6 +191,8 @@ __all__ = [
     "MandantExport",
     "S3Loeschauftrag",
     "Vertrag",
+    "VorOrtKontakt",
+    "VorOrtKontaktZuordnung",
     "Vorgang",
     "VorgangAbhaengigkeit",
     "VorgangAnfrage",
