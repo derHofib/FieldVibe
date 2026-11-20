@@ -14,7 +14,9 @@ from app.models.auftrag import Auftrag
 from app.models.mandant import Mandant
 from app.models.projekt import Projekt
 from app.models.standort import Standort
+from app.models.telefonat import Telefonat
 from app.models.vorgang import Vorgang
+from app.models.vorgang_event import VorgangEvent
 from app.models.vor_ort_kontakt import VorOrtKontakt, VorOrtKontaktZuordnung
 from app.schemas.kontakt import AnsprechpartnerEintrag
 from app.schemas.vor_ort_kontakt import (
@@ -24,9 +26,11 @@ from app.schemas.vor_ort_kontakt import (
     VorOrtKontaktZugeordnet,
     VorOrtZuordnungCreate,
 )
+from app.api.deps import AuthContext
 from app.services.audit_service import log_action
 from app.services.mandanten_lauf import je_mandant
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
+from app.services.zuweisung_service import vorgang_scope_filter
 
 Z = VorOrtKontaktZuordnung
 K = VorOrtKontakt
@@ -374,6 +378,44 @@ async def zuordnen(
     return await _ziel_eintrag(session, zuordnung, kontakt)
 
 
+async def kontakte_aus_anfrage(
+    session: AsyncSession, *, mandant_id: UUID, anfrage, vorgang: Vorgang
+) -> list[VorOrtKontakt]:
+    """Annahme einer Portal-Anfrage: aus der JSONB-Liste der Anfrage werden Kontakte (quelle kundenportal) des
+    Anfrage-Kunden, am Standort der Anfrage, dem neuen Vorgang zugeordnet; der erste ist Hauptkontakt. Die
+    Liste an der Anfrage wird danach geleert (Speicherbegrenzung)."""
+    angelegt: list[VorOrtKontakt] = []
+    for index, eintrag in enumerate(anfrage.vor_ort_kontakte or []):
+        kontakt = VorOrtKontakt(
+            mandant_id=mandant_id,
+            kunde_id=anfrage.kunde_id,
+            standort_id=anfrage.standort_id,
+            name=eintrag.get("name"),
+            rolle=eintrag["rolle"],
+            einheit=anfrage.einheit,
+            telefon=eintrag.get("telefon"),
+            erreichbarkeit=eintrag.get("erreichbarkeit"),
+            hinweis=eintrag.get("hinweis"),
+            quelle="kundenportal",
+            erstellt_von_kundenportal_zugang_id=anfrage.kundenportal_zugang_id,
+        )
+        session.add(kontakt)
+        await session.flush()
+        session.add(
+            Z(
+                mandant_id=mandant_id,
+                kontakt_id=kontakt.id,
+                vorgang_id=vorgang.id,
+                ist_hauptkontakt=index == 0,
+                reihenfolge=index,
+            )
+        )
+        angelegt.append(kontakt)
+    anfrage.vor_ort_kontakte = []
+    await session.flush()
+    return angelegt
+
+
 async def hauptkontakt_setzen(session: AsyncSession, zuordnung: VorOrtKontaktZuordnung, ist_haupt: bool) -> VorOrtKontaktZugeordnet:
     spalte = next(s for s in ("vorgang_id", "auftrag_id", "projekt_id") if getattr(zuordnung, s) is not None)
     if ist_haupt and not zuordnung.ist_hauptkontakt:
@@ -382,6 +424,38 @@ async def hauptkontakt_setzen(session: AsyncSession, zuordnung: VorOrtKontaktZuo
     await session.flush()
     kontakt = await session.get(K, zuordnung.kontakt_id)
     return await _ziel_eintrag(session, zuordnung, kontakt)
+
+
+async def vorgang_bedingung_fuer_kontakt(session: AsyncSession, kontakt_id: UUID):
+    """SQL-Bedingung auf Vorgang: Vorgaenge, denen der Kontakt effektiv zugeordnet ist (direkt, ueber den
+    Auftrag oder ueber das Projekt inkl. dessen Auftraege). None, wenn der Kontakt nirgends zugeordnet ist."""
+    zuordnungen = (await session.execute(select(Z).where(Z.kontakt_id == kontakt_id))).scalars().all()
+    vorgang_ids = {z.vorgang_id for z in zuordnungen if z.vorgang_id}
+    auftrag_ids = {z.auftrag_id for z in zuordnungen if z.auftrag_id}
+    projekt_ids = {z.projekt_id for z in zuordnungen if z.projekt_id}
+    if projekt_ids:
+        auftrag_ids |= set((await session.execute(select(Auftrag.id).where(Auftrag.projekt_id.in_(projekt_ids)))).scalars())
+    bedingungen = []
+    if vorgang_ids:
+        bedingungen.append(Vorgang.id.in_(vorgang_ids))
+    if auftrag_ids:
+        bedingungen.append(Vorgang.auftrag_id.in_(auftrag_ids))
+    if projekt_ids:
+        bedingungen.append(Vorgang.projekt_id.in_(projekt_ids))
+    return or_(*bedingungen) if bedingungen else None
+
+
+async def kontakt_an_sichtbarem_vorgang(session: AsyncSession, auth: AuthContext, kontakt_id: UUID) -> bool:
+    """Ist der Kontakt mindestens einem Vorgang zugeordnet, den der Nutzer sehen darf? Grundlage dafuer, dass
+    Techniker (vorgaenge.bearbeiten) eine Telefonnummer vor Ort korrigieren duerfen."""
+    bedingung = await vorgang_bedingung_fuer_kontakt(session, kontakt_id)
+    if bedingung is None:
+        return False
+    stmt = select(Vorgang.id).where(bedingung, Vorgang.geloescht_am.is_(None)).limit(1)
+    scope = await vorgang_scope_filter(session, auth)
+    if scope is not None:
+        stmt = stmt.where(scope)
+    return (await session.execute(stmt)).first() is not None
 
 
 # --- Einsatz, Anonymisierung --------------------------------------------------------------------
@@ -417,11 +491,35 @@ def anonymisieren(kontakt: VorOrtKontakt) -> None:
     kontakt.anonymisiert_am = datetime.now(timezone.utc)
 
 
+ANONYMISIERTER_PARTNER_NAME = "Kontakt anonymisiert"
+
+
+async def _telefonate_anonymisieren(session: AsyncSession, kontakt_id: UUID) -> None:
+    """Die Telefonate des Kontakts tragen Name/Nummer als Kopie (auch im Verlauf-Event am Vorgang)."""
+    telefonate = (await session.execute(select(Telefonat).where(Telefonat.vor_ort_kontakt_id == kontakt_id))).scalars().all()
+    if not telefonate:
+        return
+    for t in telefonate:
+        t.partner_name = ANONYMISIERTER_PARTNER_NAME
+        t.partner_nummer = None
+    events = (
+        await session.execute(
+            select(VorgangEvent).where(
+                VorgangEvent.ref_entity_type == "telefonat", VorgangEvent.ref_entity_id.in_([t.id for t in telefonate])
+            )
+        )
+    ).scalars()
+    for event in events:
+        event.payload = {**(event.payload or {}), "partner_name": ANONYMISIERTER_PARTNER_NAME, "partner_nummer": None}
+    await session.flush()
+
+
 async def anonymisieren_mit_protokoll(
     session: AsyncSession, kontakt: VorOrtKontakt, *, actor_user_id: UUID | None, grund: str
 ) -> None:
     anonymisieren(kontakt)
     await session.flush()
+    await _telefonate_anonymisieren(session, kontakt.id)
     # Kein Name/Telefon im Protokoll: das Audit-Log ist append-only und wuerde die Daten sonst behalten.
     await log_action(
         session,

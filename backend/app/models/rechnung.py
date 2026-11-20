@@ -14,7 +14,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
@@ -127,6 +127,14 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # Leitweg-ID, die darin stand. NULL bei Entwuerfen und Belegen ohne E-Rechnung.
     e_rechnung_profil: Mapped[str | None] = mapped_column(Text, nullable=True)
     leitweg_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # "Ihr Zeichen" des Kunden (BT-13) und Leistungsort-Snapshot {bezeichnung, strasse, plz, ort, land};
+    # im Entwurf aenderbar, ab Versand fest (GoBD).
+    kunden_referenz: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leistungsort: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # "Ihr Zeichen" des Kunden (BT-13) und Leistungsort-Snapshot {bezeichnung, strasse, plz, ort, land};
+    # im Entwurf aenderbar, ab Versand fest (GoBD).
+    kunden_referenz: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leistungsort: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class RechnungPosition(Base):

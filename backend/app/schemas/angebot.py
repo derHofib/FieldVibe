@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from app.schemas.leistungsort import Leistungsort
 from app.services.steuer_service import runde_cent
 
 AngebotPositionstyp = Literal["material", "arbeitszeit"]
@@ -114,6 +115,8 @@ class AngebotCreate(BaseModel):
     gueltig_bis: date | None = None
     # None = Standard (19 %, beim Kleinunternehmer 0 %).
     mwst_satz: Decimal | None = None
+    kunden_referenz: str | None = Field(default=None, max_length=200)
+    leistungsort: Leistungsort | None = None
     positionen: list[AngebotPositionCreate] = Field(default_factory=list)
 
     _mwst_satz_erlaubt = field_validator("mwst_satz")(_pruefe_mwst_satz)
@@ -138,6 +141,9 @@ class AngebotUpdate(BaseModel):
     status: str | None = None
     gueltig_bis: date | None = None
     mwst_satz: Decimal | None = None
+    # Nur im Entwurf; explizites null/leer leert das Feld (exclude_unset).
+    kunden_referenz: str | None = Field(default=None, max_length=200)
+    leistungsort: Leistungsort | None = None
 
     _mwst_satz_erlaubt = field_validator("mwst_satz")(_pruefe_mwst_satz)
 
@@ -185,6 +191,8 @@ class AngebotRead(BaseModel):
     auftrag_vorgang_id: UUID | None
     nachgefasst_am: datetime | None
     widerrufen_am: datetime | None = None
+    kunden_referenz: str | None = None
+    leistungsort: Leistungsort | None = None
     created_at: datetime
     updated_at: datetime
     positionen: list[AngebotPositionRead]

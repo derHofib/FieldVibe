@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
@@ -47,6 +47,11 @@ class VorgangAnfrage(SoftDeleteMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
     )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
+    einheit: Mapped[str | None] = mapped_column(Text)
+    kunden_referenz: Mapped[str | None] = mapped_column(Text)
+    # Vom Portal mitgegebene Kontakte vor Ort bis zur Annahme; danach liegen sie in vor_ort_kontakte und die
+    # Liste wird geleert (Speicherbegrenzung).
+    vor_ort_kontakte: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     beschreibung: Mapped[str | None] = mapped_column(Text)
     leistungstyp: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="offen")

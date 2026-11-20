@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from app.schemas.leistungsort import Leistungsort
+
 # Muss mit RECHNUNG_POSITION_QUELLEN in app/models/rechnung.py
 # uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 8).
 RechnungPositionQuelle = Literal["material", "zeit", "fahrzeit", "fahrtkosten", "leistung"]
@@ -212,6 +214,9 @@ class RechnungCreate(BaseModel):
     # Zeitpunkt der Leistung/Lieferung (§14 Abs. 4 Nr. 6 UStG) -- optional,
     # da oft identisch mit dem Rechnungsdatum.
     leistungsdatum: date | None = None
+    # Ohne Angabe aus dem Vorgang vorbelegt (leistungsort_service); explizit mitgegeben (auch leer) gewinnt.
+    kunden_referenz: str | None = Field(default=None, max_length=200)
+    leistungsort: Leistungsort | None = None
     positionen: list[RechnungPositionCreate] = Field(default_factory=list)
     # Schlussrechnung entsteht nur ueber /aus-angebot bzw. /abschlaege-anrechnen,
     # Gutschrift nur ueber /gutschrift -- hier bewusst nicht waehlbar.
@@ -291,6 +296,9 @@ class RechnungUpdate(BaseModel):
     betrag_netto: Decimal | None = None
     faellig_am: date | None = None
     leistungsdatum: date | None = None
+    # Nur im Entwurf; explizites null/leer leert das Feld (exclude_unset).
+    kunden_referenz: str | None = Field(default=None, max_length=200)
+    leistungsort: Leistungsort | None = None
 
 
 class RechnungRead(BaseModel):
@@ -326,6 +334,8 @@ class RechnungRead(BaseModel):
     # Pflichtfeldpruefung bestanden wurde, nicht den Schematron-Lauf (der braucht Java).
     e_rechnung_profil: Literal["en16931", "xrechnung"] | None = None
     leitweg_id: str | None = None
+    kunden_referenz: str | None = None
+    leistungsort: Leistungsort | None = None
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]

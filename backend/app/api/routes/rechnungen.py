@@ -42,7 +42,8 @@ from app.schemas.rechnung import (
     RechnungVorgangUebernahme,
     RechnungZahlungCreate,
 )
-from app.services import papierkorb_service, rechnungsart_service, steuer_service, storage_service
+from app.schemas.leistungsort import kunden_referenz_bereinigen
+from app.services import leistungsort_service, papierkorb_service, rechnungsart_service, steuer_service, storage_service
 from app.services.audit_service import log_action
 from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
@@ -574,10 +575,27 @@ async def create_rechnung(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
-        if vorgang.kunde_id != body.kunde_id:
+        # Rechnung an einen abweichenden Empfaenger (z. B. WEG): Auftrag/Projekt bestimmen ihn.
+        empfaenger_id = await leistungsort_service.rechnungsempfaenger_id(session, vorgang)
+        if body.kunde_id not in (vorgang.kunde_id, empfaenger_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
+        if body.kunde_id == vorgang.kunde_id and empfaenger_id != kunde.id:
+            kunde = await session.get(Kunde, empfaenger_id)
+            await require_kunde_zugewiesen(session, auth, empfaenger_id)
+
+    kunden_referenz, leistungsort = None, None
+    if vorgang is not None:
+        kunden_referenz, leistungsort = await leistungsort_service.kunden_referenz_und_leistungsort(
+            session, vorgang, kunde
+        )
+    if "kunden_referenz" in body.model_fields_set:
+        kunden_referenz = kunden_referenz_bereinigen(body.kunden_referenz)
+    if "leistungsort" in body.model_fields_set:
+        leistungsort = leistungsort_service.leistungsort_bereinigen(
+            body.leistungsort.model_dump() if body.leistungsort else None
+        )
 
     mandant = await session.get(Mandant, auth.mandant_id)
     # Kleinunternehmer (§19 UStG) duerfen keine Umsatzsteuer ausweisen -- der
@@ -589,9 +607,11 @@ async def create_rechnung(
     rechnungsnummer = await next_rechnungsnummer(session, auth.mandant_id)
     rechnung = Rechnung(
         mandant_id=auth.mandant_id,
-        kunde_id=body.kunde_id,
+        kunde_id=kunde.id,
         vorgang_id=body.vorgang_id,
         rechnungsnummer=rechnungsnummer,
+        kunden_referenz=kunden_referenz,
+        leistungsort=leistungsort,
         betrag_netto=body.betrag_netto,
         mwst_satz=mwst_satz,
         faellig_am=body.faellig_am,
@@ -730,7 +750,7 @@ async def _vorgang_des_kunden(session: AsyncSession, vorgang_id: UUID, kunde_id:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if vorgang.kunde_id != kunde_id:
+    if vorgang.kunde_id != kunde_id and await leistungsort_service.rechnungsempfaenger_id(session, vorgang) != kunde_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum Kunden der Rechnung"
         )
@@ -776,6 +796,12 @@ async def add_vorgang(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Posten ausgewählt")
     vorgang = await _vorgang_des_kunden(session, body.vorgang_id, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
+    if rechnung.kunden_referenz is None and rechnung.leistungsort is None:
+        # Entwurf ohne eigene Angaben: aus dem ersten uebernommenen Vorgang vorbelegen.
+        empfaenger = await session.get(Kunde, rechnung.kunde_id)
+        rechnung.kunden_referenz, rechnung.leistungsort = await leistungsort_service.kunden_referenz_und_leistungsort(
+            session, vorgang, empfaenger
+        )
     await vorgang_uebernehmen(
         session,
         rechnung=rechnung,
@@ -1100,6 +1126,21 @@ async def update_rechnung(
             rechnung.faellig_am = body.faellig_am
         if body.leistungsdatum is not None:
             rechnung.leistungsdatum = body.leistungsdatum
+
+    geaendert = body.model_fields_set & {"kunden_referenz", "leistungsort"}
+    if geaendert:
+        # GoBD: beide Angaben stehen im archivierten PDF bzw. in der E-Rechnung.
+        if rechnung.status != "entwurf":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ihr Zeichen und Leistungsort können nur im Entwurf geändert werden",
+            )
+        if "kunden_referenz" in geaendert:
+            rechnung.kunden_referenz = kunden_referenz_bereinigen(body.kunden_referenz)
+        if "leistungsort" in geaendert:
+            rechnung.leistungsort = leistungsort_service.leistungsort_bereinigen(
+                body.leistungsort.model_dump() if body.leistungsort else None
+            )
 
     neuer_status = body.status
     if neuer_status is not None:

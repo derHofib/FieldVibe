@@ -109,6 +109,32 @@ async def test_einzelsatz_19(client, make_mandant, make_user, make_kunde, tmp_pa
     _pruefe_en16931(xml, tmp_path, "einzelsatz_19")
 
 
+_REFERENZ_UND_ORT = {
+    "kunden_referenz": "HV-2026-17",
+    "leistungsort": {"bezeichnung": "Whg. 3, 2. OG links", "strasse": "Rosenweg 5", "plz": "50667", "ort": "Köln"},
+}
+
+
+@pytest.mark.asyncio
+async def test_kunden_referenz_und_leistungsort_zugferd(client, make_mandant, make_user, make_kunde, tmp_path):
+    # BT-13 (Ihr Zeichen) und BG-13/BG-15 (Leistungsort) muessen die CEN-Regeln bestehen.
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S], **_REFERENZ_UND_ORT)
+    assert b"HV-2026-17" in xml and b"ShipToTradeParty" in xml
+    _pruefe_en16931(xml, tmp_path, "referenz_leistungsort")
+
+
+@pytest.mark.asyncio
+async def test_leistungsort_ohne_bezeichnung_nutzt_strasse_als_name(
+    client, make_mandant, make_user, make_kunde, tmp_path
+):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(
+        client, token, kunde, [_POS_S], leistungsort={"strasse": "Rosenweg 5", "plz": "50667", "ort": "Köln", "land": "DE"}
+    )
+    _pruefe_en16931(xml, tmp_path, "leistungsort_ohne_bezeichnung")
+
+
 @pytest.mark.asyncio
 async def test_mischsatz_19_und_7(client, make_mandant, make_user, make_kunde, tmp_path):
     token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
@@ -453,6 +479,17 @@ async def test_xrechnung_einzelsatz(client, make_mandant, make_user, make_kunde,
     token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
     xml = await _versendet_xml(client, token, kunde, [_POS_S])
     _pruefe_xrechnung(xml, tmp_path, "einzelsatz")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_kunden_referenz_und_leistungsort(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    # BT-13 daneben BT-10 = Leitweg (BR-DE-15 bleibt erfuellt), dazu BG-13/BG-15.
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S], **_REFERENZ_UND_ORT)
+    assert b"HV-2026-17" in xml and b"ShipToTradeParty" in xml
+    _pruefe_xrechnung(xml, tmp_path, "referenz_leistungsort")
 
 
 @pytest.mark.asyncio

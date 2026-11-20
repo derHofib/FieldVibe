@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.schemas.telefonat import (
     KontaktverlaufEintrag,
+    NummerZuordnung,
     TelefonatAnzahlRueckrufe,
     TelefonatCreate,
     TelefonatRead,
@@ -69,6 +70,16 @@ async def anzahl_offene_rueckrufe(
     session: AsyncSession = Depends(get_db),
 ) -> TelefonatAnzahlRueckrufe:
     return TelefonatAnzahlRueckrufe(anzahl=await telefonat_service.anzahl_offene_rueckrufe(session, auth))
+
+
+@router.get("/nummer-zuordnen", response_model=NummerZuordnung | None)
+async def nummer_zuordnen(
+    nummer: str = Query(min_length=3, max_length=50),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> NummerZuordnung | None:
+    """Rufnummer -> Kunde, Ansprechpartner bzw. Kontakt vor Ort und dessen offene Vorgaenge; null ohne Treffer."""
+    return await telefonat_service.nummer_zuordnen(session, auth, nummer)
 
 
 @router.get("/{telefonat_id}", response_model=TelefonatRead)

@@ -47,6 +47,10 @@ class Auftrag(SoftDeleteMixin, TimestampMixin, Base):
     ansprechpartner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     # "Ihr Zeichen" / Auftragsnummer des Auftraggebers.
     kunden_referenz: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Abweichender Rechnungsempfaenger (z. B. WEG); NULL = Auftraggeber.
+    rechnung_an_kunde_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
+    )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="offen")

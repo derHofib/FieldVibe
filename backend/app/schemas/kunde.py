@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.kontakt import AnsprechpartnerEintrag
+from app.schemas.kunde_kurz import KundeKurz
 from app.schemas.kunde_zuweisung import BetreuungKurz
 from app.services import leitweg_id
 from app.schemas.personenkonto import personenkonto_normalisieren
@@ -29,6 +30,8 @@ class KundeCreate(BaseModel):
     ust_13b_nachweis_bis: date | None = None
     leitweg_id: str | None = None
     e_rechnung_format: KundeEmpfangsformat | None = None
+    # WEG o. Ae. "verwaltet von" einer Hausverwaltung (nur eine Ebene, kein Zyklus).
+    verwaltet_von_kunde_id: UUID | None = None
 
     _leitweg_pruefen = field_validator("leitweg_id")(_leitweg_id_pruefen)
     debitorenkonto: str | None = None
@@ -53,6 +56,7 @@ class KundeUpdate(BaseModel):
     ust_13b_nachweis_bis: date | None = None
     leitweg_id: str | None = None
     e_rechnung_format: KundeEmpfangsformat | None = None
+    verwaltet_von_kunde_id: UUID | None = None
 
     _leitweg_pruefen = field_validator("leitweg_id")(_leitweg_id_pruefen)
     debitorenkonto: str | None = None
@@ -80,8 +84,17 @@ class KundeRead(BaseModel):
     debitorenkonto: str | None
     portal_slug: str
     logo_object_key: str | None
+    verwaltet_von_kunde_id: UUID | None = None
+    # Nicht persistiert, von den Kunden-Routen gesetzt.
+    verwaltet_von: KundeKurz | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class VerwalteterKunde(BaseModel):
+    id: UUID
+    name: str
+    kundennummer: str
 
 
 class KundeListeEintrag(KundeRead):

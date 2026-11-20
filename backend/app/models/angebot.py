@@ -12,7 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
@@ -60,6 +60,9 @@ class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     # Nur ueber den Widerrufsbutton im Portal gesetzt -- nie per PATCH,
     # "widerrufen" steht in keiner Uebergangstabelle.
     widerrufen_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "Ihr Zeichen" und Leistungsort ({bezeichnung, strasse, plz, ort, land}), nur im Entwurf aenderbar.
+    kunden_referenz: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leistungsort: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class AngebotPosition(Base):

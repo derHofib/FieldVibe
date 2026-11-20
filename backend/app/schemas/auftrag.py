@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.kontakt import AnsprechpartnerEintrag
+from app.schemas.kunde_kurz import KundeKurz
 
 AuftragStatus = Literal["offen", "in_arbeit", "abgeschlossen", "storniert"]
 
@@ -23,6 +24,8 @@ class AuftragCreate(BaseModel):
     einheit: str | None = None
     ansprechpartner_id: UUID | None = None
     kunden_referenz: str | None = None
+    # Abweichender Rechnungsempfaenger (z. B. WEG); None = Auftraggeber.
+    rechnung_an_kunde_id: UUID | None = None
     titel: str
     beschreibung: str | None = None
 
@@ -44,6 +47,7 @@ class AuftragUpdate(BaseModel):
     einheit: str | None = None
     ansprechpartner_id: UUID | None = None
     kunden_referenz: str | None = None
+    rechnung_an_kunde_id: UUID | None = None
     titel: str | None = None
     beschreibung: str | None = None
     status: AuftragStatus | None = None
@@ -77,6 +81,7 @@ class AuftragRead(BaseModel):
     einheit: str | None
     ansprechpartner_id: UUID | None
     kunden_referenz: str | None
+    rechnung_an_kunde_id: UUID | None = None
     titel: str
     beschreibung: str | None
     status: AuftragStatus
@@ -98,3 +103,4 @@ class AuftragRead(BaseModel):
     # inzwischen entfernt) -> None.
     standort: AuftragStandortKurz | None = None
     ansprechpartner: AnsprechpartnerEintrag | None = None
+    rechnung_an: KundeKurz | None = None

@@ -36,7 +36,14 @@ from app.schemas.anlage import AnlageRead
 from app.schemas.datenexport import KundeDatenexport, VorgangMitEreignissen
 from app.schemas.einladung import EinladungRead, KundeEinladungCreate
 from app.schemas.email import EmailLogRead, EmailSenden
-from app.schemas.kunde import KundeCreate, KundeListeEintrag, KundeLogoUrl, KundeRead, KundeUpdate
+from app.schemas.kunde import (
+    KundeCreate,
+    KundeListeEintrag,
+    KundeLogoUrl,
+    KundeRead,
+    KundeUpdate,
+    VerwalteterKunde,
+)
 from app.schemas.kunde_zuweisung import (
     BetreuerKandidat,
     BetreuerRead,
@@ -53,7 +60,7 @@ from app.schemas.user import MIN_PASSWORT_LAENGE, UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
-from app.services import audit_service, berechtigung_service, vorgang_verknuepfung_service
+from app.services import audit_service, berechtigung_service, kunde_verwaltung_service, vorgang_verknuepfung_service
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services import angebot_service, datev_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
@@ -92,12 +99,15 @@ router = APIRouter(
 )
 async def list_kunden(
     q: str | None = Query(default=None, description="Suche in Name/Kundennummer"),
+    verwaltet_von: UUID | None = Query(default=None, description="Nur Kunden, die von diesem Kunden verwaltet werden"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[KundeListeEintrag]:
     stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
+    if verwaltet_von:
+        stmt = stmt.where(Kunde.verwaltet_von_kunde_id == verwaltet_von)
     erlaubt = await erlaubte_kunde_ids(session, auth)
     if erlaubt is not None:
         stmt = stmt.where(Kunde.id.in_(erlaubt))
@@ -116,8 +126,12 @@ async def list_kunden(
             betreuung.setdefault(kunde_id, []).append(
                 BetreuungKurz(user_id=user_id, name=name, hauptbetreuer=haupt)
             )
+    verwalter = await kunde_verwaltung_service.verwalter_namen(session, kunden)
     return [
-        KundeListeEintrag(**KundeRead.model_validate(k).model_dump(), betreuung=betreuung.get(k.id, []))
+        KundeListeEintrag(
+            **{**KundeRead.model_validate(k).model_dump(), "verwaltet_von": verwalter.get(k.verwaltet_von_kunde_id)},
+            betreuung=betreuung.get(k.id, []),
+        )
         for k in kunden
     ]
 
@@ -181,9 +195,10 @@ async def create_kunde(
     body: KundeCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Kunde:
+) -> KundeRead:
     if body.debitorenkonto:
         await _debitorenkonto_pruefen(session, auth.mandant_id, body.debitorenkonto)
+    await kunde_verwaltung_service.verwalter_pruefen(session, None, body.verwaltet_von_kunde_id)
     kundennummer = body.kundennummer or await next_kundennummer(session, auth.mandant_id)
     kunde = Kunde(
         mandant_id=auth.mandant_id,
@@ -198,6 +213,7 @@ async def create_kunde(
         leitweg_id=body.leitweg_id,
         e_rechnung_format=body.e_rechnung_format,
         debitorenkonto=body.debitorenkonto,
+        verwaltet_von_kunde_id=body.verwaltet_von_kunde_id,
         # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
         # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
         # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
@@ -210,7 +226,15 @@ async def create_kunde(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_integritaetsfehler_text(exc)
         ) from exc
-    return kunde
+    return await _kunde_read(session, kunde)
+
+
+async def _kunde_read(session: AsyncSession, kunde: Kunde) -> KundeRead:
+    gelesen = KundeRead.model_validate(kunde)
+    gelesen.verwaltet_von = (await kunde_verwaltung_service.verwalter_namen(session, [kunde])).get(
+        kunde.verwaltet_von_kunde_id
+    )
+    return gelesen
 
 
 def _integritaetsfehler_text(exc: IntegrityError) -> str:
@@ -239,12 +263,38 @@ async def get_kunde(
     kunde_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Kunde:
+) -> KundeRead:
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
-    return kunde
+    return await _kunde_read(session, kunde)
+
+
+@router.get(
+    "/{kunde_id}/verwaltete-kunden",
+    response_model=list[VerwalteterKunde],
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def list_verwaltete_kunden(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[VerwalteterKunde]:
+    """Kunden, die von diesem Kunden verwaltet werden (Auswahl "Rechnung an"); nur die, die der Nutzer sehen darf."""
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+    stmt = (
+        select(Kunde.id, Kunde.name, Kunde.kundennummer)
+        .where(Kunde.verwaltet_von_kunde_id == kunde_id, Kunde.geloescht_am.is_(None))
+        .order_by(Kunde.name)
+    )
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(Kunde.id.in_(erlaubt))
+    return [VerwalteterKunde(id=z[0], name=z[1], kundennummer=z[2]) for z in (await session.execute(stmt)).all()]
 
 
 @router.get(
@@ -341,7 +391,7 @@ async def get_kunde_profil(
     )
 
     return KundeProfil(
-        **KundeRead.model_validate(kunde).model_dump(),
+        **(await _kunde_read(session, kunde)).model_dump(),
         anlagen=list(anlagen_result.scalars().all()),
         vorgaenge=await vorgang_verknuepfung_service.als_read(
             session, auth, list(vorgaenge_result.scalars().all())
@@ -769,7 +819,7 @@ async def update_kunde(
     body: KundeUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Kunde:
+) -> KundeRead:
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
@@ -785,6 +835,10 @@ async def update_kunde(
         changes["ust_13b_nachweis_bis"] = body.ust_13b_nachweis_bis
     if changes.get("debitorenkonto"):
         await _debitorenkonto_pruefen(session, auth.mandant_id, changes["debitorenkonto"])
+    if changes.get("verwaltet_von_kunde_id"):
+        # mode="json" macht daraus einen String; die UUID-Spalte und der Vergleich brauchen UUID.
+        changes["verwaltet_von_kunde_id"] = body.verwaltet_von_kunde_id
+        await kunde_verwaltung_service.verwalter_pruefen(session, kunde_id, changes["verwaltet_von_kunde_id"])
     for field, value in changes.items():
         setattr(kunde, field, value)
     try:
@@ -795,7 +849,7 @@ async def update_kunde(
         ) from exc
     if changes:
         await session.refresh(kunde)
-    return kunde
+    return await _kunde_read(session, kunde)
 
 
 @router.delete(

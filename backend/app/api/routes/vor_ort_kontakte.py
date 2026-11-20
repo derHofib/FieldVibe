@@ -115,10 +115,27 @@ async def kontakt_anlegen(
     return out
 
 
+async def _kontakt_zum_aendern(session: AsyncSession, auth: AuthContext, kontakt_id: UUID) -> VorOrtKontakt:
+    """Mit kunden.bearbeiten wie bisher (Kunden-Scope); sonst genuegt vorgaenge.bearbeiten, wenn der Kontakt
+    einem Vorgang zugeordnet ist, den der Nutzer sehen darf (Techniker korrigiert eine Nummer vor Ort)."""
+    if await berechtigung_service.hat_recht(session, auth, "kunden", "bearbeiten"):
+        return await _kontakt_laden(session, auth, kontakt_id, "bearbeiten")
+    kontakt = await session.get(VorOrtKontakt, kontakt_id)
+    if (
+        kontakt is None
+        or kontakt.geloescht_am is not None
+        or not await berechtigung_service.hat_recht(session, auth, "vorgaenge", "bearbeiten")
+        or not await vor_ort_kontakt_service.kontakt_an_sichtbarem_vorgang(session, auth, kontakt_id)
+    ):
+        # 404 statt 403: ob es den Kontakt gibt, geht den Nutzer ohne Zugriff nichts an.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_KONTAKT_NICHT_GEFUNDEN)
+    return kontakt
+
+
 @router.patch(
     "/api/vor-ort-kontakte/{kontakt_id}",
     response_model=VorOrtKontaktOut,
-    dependencies=[*_SCHREIBEN, Depends(require_recht("kunden", "bearbeiten"))],
+    dependencies=_SCHREIBEN,
 )
 async def kontakt_aendern(
     kontakt_id: UUID,
@@ -126,7 +143,7 @@ async def kontakt_aendern(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorOrtKontaktOut:
-    kontakt = await _kontakt_laden(session, auth, kontakt_id, "bearbeiten")
+    kontakt = await _kontakt_zum_aendern(session, auth, kontakt_id)
     if kontakt.anonymisiert_am is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Anonymisierte Kontakte sind nicht änderbar")
     changes = body.model_dump(exclude_unset=True)

@@ -4,8 +4,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.schemas.vor_ort_kontakt import VorOrtRolle
 from app.schemas.vorgang import Leistungstyp, VorgangStatus
-from app.schemas.vorgang_anfrage import VorgangAnfrageStatus
+from app.schemas.vorgang_anfrage import VorgangAnfrageKontakt, VorgangAnfrageStatus
 from app.schemas.vorgang_event import EventType
 
 
@@ -101,6 +102,17 @@ class KundenAnlageCreate(BaseModel):
     geo_lng: float | None = None
 
 
+class VorOrtKontaktPortalRead(BaseModel):
+    """Kontakt vor Ort aus Sicht des Auftraggebers: nur eigene, nicht anonymisierte Kontakte, ohne E-Mail."""
+
+    name: str | None
+    rolle: VorOrtRolle
+    einheit: str | None
+    telefon: str | None
+    erreichbarkeit: str | None
+    hinweis: str | None
+
+
 class VorgangPortalRead(BaseModel):
     """Whitelist fuer den Endkunden: bewusst ohne Honorar-/Partner-Felder,
     Abrechnungsart, Prioritaet, Wiedervorlage und interne Nutzer-IDs
@@ -122,6 +134,8 @@ class VorgangPortalRead(BaseModel):
     last_activity_at: datetime
     created_at: datetime
     updated_at: datetime
+    # Nur im Detail befuellt (Whitelist, ohne E-Mail); in der Liste leer.
+    vor_ort_kontakte: list[VorOrtKontaktPortalRead] = Field(default_factory=list)
 
 
 # Nur Ereignistypen, die fuer den Kunden eine Bedeutung haben -- zusaetzlich
@@ -315,6 +329,9 @@ class VorgangAnfragePortalRead(BaseModel):
     titel: str
     beschreibung: str | None
     leistungstyp: Leistungstyp
+    einheit: str | None = None
+    kunden_referenz: str | None = None
+    vor_ort_kontakte: list[VorgangAnfrageKontakt] = Field(default_factory=list)
     status: VorgangAnfrageStatus
     ablehnungsgrund: str | None
     created_at: datetime

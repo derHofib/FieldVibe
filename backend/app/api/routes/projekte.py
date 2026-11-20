@@ -34,7 +34,7 @@ from app.schemas.projekt import (
     ProjektSpalteUpdate,
     ProjektUpdate,
 )
-from app.services import berechtigung_service, papierkorb_service, vor_ort_kontakt_service
+from app.services import berechtigung_service, leistungsort_service, papierkorb_service, vor_ort_kontakt_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import (
     erlaubte_kunde_ids,
@@ -193,6 +193,12 @@ async def _mit_zaehlern(session: AsyncSession, projekte: list[Projekt]) -> list[
         namen = dict((await session.execute(select(Kunde.id, Kunde.name).where(Kunde.id.in_(kunde_ids)))).all())
         for read in gelesen:
             read.kunde_name = namen.get(read.kunde_id)
+    rechnung_an = await leistungsort_service.kunden_kurz(
+        session, {p.rechnung_an_kunde_id for p in projekte if p.rechnung_an_kunde_id}
+    )
+    for read in gelesen:
+        if read.rechnung_an_kunde_id:
+            read.rechnung_an = rechnung_an.get(read.rechnung_an_kunde_id)
     standort_ids = {p.standort_id for p in projekte if p.standort_id}
     if standort_ids:
         bezeichnungen = dict(
@@ -265,6 +271,9 @@ async def create_projekt(
             detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
     await _pruefe_auftraggeber(session, auth, body.kunde_id, body.standort_id, neu=True)
+    rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+        session, body.rechnung_an_kunde_id, body.kunde_id
+    )
     projekt = Projekt(
         mandant_id=auth.mandant_id,
         name=body.name,
@@ -272,6 +281,7 @@ async def create_projekt(
         vertrag_id=body.vertrag_id,
         kunde_id=body.kunde_id,
         standort_id=body.standort_id,
+        rechnung_an_kunde_id=rechnung_an_kunde_id,
         erstellt_von=auth.user_id,
     )
     session.add(projekt)
@@ -334,6 +344,10 @@ async def update_projekt(
             await vor_ort_kontakt_service.kundenwechsel_pruefen(session, "projekt_id", projekt.id, kunde_neu)
     for feld, wert in changes.items():
         setattr(projekt, feld, wert)
+    if changes.keys() & {"kunde_id", "rechnung_an_kunde_id"}:
+        projekt.rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+            session, projekt.rechnung_an_kunde_id, projekt.kunde_id
+        )
     await session.flush()
     await session.refresh(projekt)
     return (await _mit_zaehlern(session, [projekt]))[0]

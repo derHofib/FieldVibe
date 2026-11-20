@@ -159,6 +159,19 @@ class PartnerVorgangStatusUpdate(BaseModel):
     status: Literal["in_arbeit", "wartet_kunde", "abgeschlossen"]
 
 
+class PartnerVorOrtKontakt(BaseModel):
+    """Kontakt vor Ort fuer den Nachunternehmer: bewusst ohne E-Mail und ohne Verweis auf die Kontaktliste
+    der Liegenschaft."""
+
+    name: str | None
+    rolle: str
+    einheit: str | None
+    telefon: str | None
+    telefon2: str | None
+    erreichbarkeit: str | None
+    hinweis: str | None
+
+
 class PartnerVorgangRead(BaseModel):
     """Bewusst reduzierte Sicht auf einen delegierten Vorgang: der Partner
     sieht den technischen Umfang und die Einsatzadresse, aber weder
@@ -180,6 +193,8 @@ class PartnerVorgangRead(BaseModel):
     anlage_adresse: dict | None
     last_activity_at: datetime
     created_at: datetime
+    # Erst nach Annahme der Delegation (partner_freigabe_status = angenommen), vorher leer.
+    vor_ort_kontakte: list[PartnerVorOrtKontakt] = Field(default_factory=list)
 
 
 class VorgangPartnerZuweisungResponse(BaseModel):

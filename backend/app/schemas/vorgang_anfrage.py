@@ -2,11 +2,34 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.vor_ort_kontakt import VorOrtRolle, _getrimmt
 from app.schemas.vorgang import Leistungstyp, VorgangAbrechnungsart
 
 VorgangAnfrageStatus = Literal["offen", "angenommen", "abgelehnt"]
+
+
+MAX_ANFRAGE_KONTAKTE = 5
+
+
+class VorgangAnfrageKontakt(BaseModel):
+    """Kontakt vor Ort, den das Portal mitgibt. Bewusst ohne E-Mail (Datensparsamkeit); bis zur Annahme als
+    JSONB an der Anfrage, danach als vor_ort_kontakte-Zeile."""
+
+    name: str | None = None
+    rolle: VorOrtRolle
+    telefon: str | None = None
+    erreichbarkeit: str | None = Field(default=None, max_length=200)
+    hinweis: str | None = Field(default=None, max_length=500)
+
+    _trimmen = field_validator("name", "telefon", "erreichbarkeit", "hinweis", mode="before")(_getrimmt)
+
+    @model_validator(mode="after")
+    def _name_oder_telefon(self) -> "VorgangAnfrageKontakt":
+        if not self.name and not self.telefon:
+            raise ValueError("Name oder Telefon angeben")
+        return self
 
 
 class VorgangAnfrageCreate(BaseModel):
@@ -15,6 +38,11 @@ class VorgangAnfrageCreate(BaseModel):
     leistungstyp: Leistungstyp
     standort_id: UUID | None = None
     anlage_id: UUID | None = None
+    einheit: str | None = Field(default=None, max_length=200)
+    kunden_referenz: str | None = Field(default=None, max_length=200)
+    vor_ort_kontakte: list[VorgangAnfrageKontakt] = Field(default_factory=list, max_length=MAX_ANFRAGE_KONTAKTE)
+
+    _trimmen = field_validator("einheit", "kunden_referenz", mode="before")(_getrimmt)
 
 
 class VorgangAnfrageAnnehmen(BaseModel):
@@ -37,6 +65,10 @@ class VorgangAnfrageRead(BaseModel):
     titel: str
     beschreibung: str | None
     leistungstyp: Leistungstyp
+    einheit: str | None = None
+    kunden_referenz: str | None = None
+    # Nur bis zur Annahme/Ablehnung gefuellt; danach liegen die Daten in vor_ort_kontakte (bzw. sind geloescht).
+    vor_ort_kontakte: list[VorgangAnfrageKontakt] = Field(default_factory=list)
     status: VorgangAnfrageStatus
     ablehnungsgrund: str | None
     vorgang_id: UUID | None

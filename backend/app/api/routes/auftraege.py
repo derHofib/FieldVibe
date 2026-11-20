@@ -11,7 +11,7 @@ from app.models.projekt import Projekt
 from app.models.standort import Standort
 from app.models.vorgang import Vorgang
 from app.schemas.auftrag import AuftragCreate, AuftragRead, AuftragStandortKurz, AuftragUpdate
-from app.services import papierkorb_service, vor_ort_kontakt_service, vorgang_verknuepfung_service
+from app.services import leistungsort_service, papierkorb_service, vor_ort_kontakt_service, vorgang_verknuepfung_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
 
@@ -71,6 +71,9 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
     Abfragen fuer die Tabellen-Ansicht."""
     if not auftraege:
         return []
+    rechnung_an = await leistungsort_service.kunden_kurz(
+        session, {a.rechnung_an_kunde_id for a in auftraege if a.rechnung_an_kunde_id is not None}
+    )
     kunde_ids = {a.kunde_id for a in auftraege if a.kunde_id is not None}
     kunden_namen: dict[UUID, str] = {}
     kunden_ansprechpartner: dict[UUID, list] = {}
@@ -124,6 +127,8 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
             read.ansprechpartner = vor_ort_kontakt_service.ansprechpartner_aufloesen(
                 kunden_ansprechpartner.get(auftrag.kunde_id), auftrag.ansprechpartner_id
             )
+        if auftrag.rechnung_an_kunde_id is not None:
+            read.rechnung_an = rechnung_an.get(auftrag.rechnung_an_kunde_id)
         read.vorgaenge_gesamt = vorgaenge_counts.get(auftrag.id, 0)
         read.vorgaenge_erledigt = vorgaenge_erledigt.get(auftrag.id, 0)
         if auftrag.projekt_id is not None:
@@ -178,6 +183,9 @@ async def create_auftrag(
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
     await _pruefe_leistungsort(session, body.kunde_id, body.standort_id, body.ansprechpartner_id)
+    rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+        session, body.rechnung_an_kunde_id, body.kunde_id
+    )
     auftrag = Auftrag(
         mandant_id=auth.mandant_id,
         projekt_id=body.projekt_id,
@@ -186,6 +194,7 @@ async def create_auftrag(
         einheit=body.einheit,
         ansprechpartner_id=body.ansprechpartner_id,
         kunden_referenz=body.kunden_referenz,
+        rechnung_an_kunde_id=rechnung_an_kunde_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         erstellt_von=auth.user_id,
@@ -246,6 +255,10 @@ async def update_auftrag(
     altes_projekt_id = auftrag.projekt_id
     for feld, wert in changes.items():
         setattr(auftrag, feld, wert)
+    if changes.keys() & {"kunde_id", "rechnung_an_kunde_id"}:
+        auftrag.rechnung_an_kunde_id = await leistungsort_service.rechnung_an_pruefen(
+            session, auftrag.rechnung_an_kunde_id, auftrag.kunde_id
+        )
     if "projekt_id" in changes and changes["projekt_id"] != altes_projekt_id:
         await vorgang_verknuepfung_service.vorgaenge_des_auftrags_mitziehen(
             session, auftrag, changes["projekt_id"], author_user_id=auth.user_id
