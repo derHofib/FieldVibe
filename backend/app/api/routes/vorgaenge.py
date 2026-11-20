@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     AuthContext,
+    erstellt_via_aus,
     get_current_user,
     get_db,
     require_module,
@@ -314,6 +315,7 @@ async def create_vorgang(
         adresse=body.adresse,
         client_uuid=body.client_uuid,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(vorgang)
     try:
@@ -942,7 +944,11 @@ async def folge_auftrag_erstellen(
     await _require_vorgang_zugriff(session, auth, quelle)
 
     folge_vorgang = await create_folge_vorgang(
-        session, quelle, leistungstyp=body.leistungstyp, author_user_id=auth.user_id
+        session,
+        quelle,
+        leistungstyp=body.leistungstyp,
+        author_user_id=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
     )
     await session.flush()
     await event_bus.publish(

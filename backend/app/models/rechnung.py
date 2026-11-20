@@ -17,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 RECHNUNG_STATUS = ("entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert")
@@ -45,6 +46,7 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("mandant_id", "rechnungsnummer", name="uq_rechnungen_mandant_rechnungsnummer"),
         CheckConstraint(f"status IN {RECHNUNG_STATUS}", name="ck_rechnungen_status_valid"),
+        erstellt_via_check(),
         CheckConstraint(f"rechnungsart IN {RECHNUNGSARTEN}", name="ck_rechnungen_rechnungsart_valid"),
         CheckConstraint(
             "gutschrift_grund IS NULL OR char_length(gutschrift_grund) <= 200",
@@ -76,6 +78,7 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     mwst_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
     status: Mapped[str] = mapped_column(Text, nullable=False, default="entwurf")
     faellig_am: Mapped[date | None] = mapped_column(Date)
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

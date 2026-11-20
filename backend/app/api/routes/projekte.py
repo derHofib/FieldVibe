@@ -9,6 +9,7 @@ from sqlalchemy.orm import aliased
 
 from app.api.deps import (
     AuthContext,
+    erstellt_via_aus,
     get_current_user,
     get_db,
     require_recht,
@@ -283,6 +284,7 @@ async def create_projekt(
         standort_id=body.standort_id,
         rechnung_an_kunde_id=rechnung_an_kunde_id,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(projekt)
     await session.flush()

@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ABRECHNUNGSARTEN_VORGANG = (
@@ -64,6 +65,7 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
         ),
         Index("idx_vorgaenge_feed", "mandant_id", "last_activity_at", "id"),
         Index("ix_vorgaenge_partner_id", "partner_id"),
+        erstellt_via_check(),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -147,6 +149,7 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     # einer Kundenportal-Anfrage (siehe erstellt_von_kundenportal_zugang_id
     # oben) oder bei sehr alten, vor Einfuehrung dieses Felds erstellten
     # Vorgaengen.
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.deps import AuthContext, erstellt_via_aus, get_current_user, get_db, require_recht, require_roles
 from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt
@@ -198,6 +198,7 @@ async def create_auftrag(
         titel=body.titel,
         beschreibung=body.beschreibung,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(auftrag)
     await session.flush()

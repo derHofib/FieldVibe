@@ -4,6 +4,7 @@ from sqlalchemy import CheckConstraint, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 AUFTRAG_STATUS = ("offen", "in_arbeit", "abgeschlossen", "storniert")
@@ -26,6 +27,7 @@ class Auftrag(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "auftraege"
     __table_args__ = (
         CheckConstraint(f"status IN {AUFTRAG_STATUS}", name="ck_auftraege_status_valid"),
+        erstellt_via_check(),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -54,4 +56,5 @@ class Auftrag(SoftDeleteMixin, TimestampMixin, Base):
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="offen")
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

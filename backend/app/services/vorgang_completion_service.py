@@ -165,6 +165,7 @@ async def create_folge_vorgang(
     *,
     leistungstyp: str,
     author_user_id: UUID,
+    erstellt_via: str = "app",
 ) -> Vorgang:
     """Legt aus `quelle` einen Folge-Vorgang mit beliebigem `leistungstyp`
     an -- unabhaengig vom aktuellen Status der Quelle (offen, wartet_kunde,
@@ -195,6 +196,7 @@ async def create_folge_vorgang(
         leistungstyp=leistungstyp,
         prioritaet=quelle.prioritaet,
         erstellt_von=author_user_id,
+        erstellt_via=erstellt_via,
     )
     session.add(folge_vorgang)
     await session.flush()

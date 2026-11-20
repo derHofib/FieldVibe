@@ -39,6 +39,11 @@ class AuthContext:
         return None if self.impersonated_by is not None else self.mandant_id
 
 
+def erstellt_via_aus(auth: AuthContext) -> str:
+    """Herkunft neu angelegter Datensaetze (Spalte erstellt_via): 'ki' bei Aufruf ueber den MCP-Adapter."""
+    return "ki" if auth.via == "mcp" else "app"
+
+
 def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 

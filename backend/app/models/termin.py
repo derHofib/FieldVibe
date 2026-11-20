@@ -5,6 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Te
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 TERMIN_STATUS = ("geplant", "bestaetigt", "abgeschlossen", "abgesagt")
@@ -15,6 +16,7 @@ class Termin(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("ende_at > start_at", name="ck_termine_ende_after_start"),
         CheckConstraint(f"status IN {TERMIN_STATUS}", name="ck_termine_status_valid"),
+        erstellt_via_check(),
         Index("idx_termine_techniker", "techniker_id", "start_at"),
     )
 
@@ -30,6 +32,7 @@ class Termin(SoftDeleteMixin, TimestampMixin, Base):
     techniker_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
