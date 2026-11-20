@@ -1,11 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CalendarDays, CircleDot, Inbox, SearchX, Type, Wrench } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Inbox, SearchX } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
-import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
-import { ApiError } from "../../api/client";
-import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
+import { kundenApi, vorgangAnfragenApi } from "../../api/endpoints";
+import type { VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
@@ -13,72 +12,30 @@ import { SkeletonList } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
 import { filterAnwenden, sucheAnwenden } from "../../components/filter/auswerten";
 import { FilterLeiste } from "../../components/filter/FilterLeiste";
-import type { FilterFeld } from "../../components/filter/typen";
 import { useFilterZustand } from "../../components/filter/useFilterZustand";
-
-const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
-  installation: "Installation",
-  pruefung: "Prüfung",
-  wartung: "Wartung",
-  stoerung: "Störung",
-  beratung: "Beratung",
-  planung: "Planung",
-};
-
-const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
-  { value: "aufwand", label: "Nach Aufwand" },
-  { value: "pauschale", label: "Pauschale" },
-  { value: "festpreis", label: "Festpreis" },
-  { value: "wartungsvertrag", label: "Wartungsvertrag" },
-  { value: "gewaehrleistung", label: "Gewährleistung" },
-];
+import {
+  ABRECHNUNGSARTEN,
+  LEISTUNGSTYP_LABEL,
+  PRIORITAETEN,
+  useAnfrageAktionen,
+  useAnfragenFilterFelder,
+} from "./anfragen/anfragenGemeinsam";
 
 function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   const uid = useId();
-  const queryClient = useQueryClient();
   const [zeigeAnnehmen, setZeigeAnnehmen] = useState(false);
   const [zeigeAblehnen, setZeigeAblehnen] = useState(false);
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("aufwand");
+  const [prioritaet, setPrioritaet] = useState(3);
   const [ablehnungsgrund, setAblehnungsgrund] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const { hatRecht } = useAuth();
-  const { data: kunde } = useQuery({ queryKey: ["kunde", anfrage.kunde_id], queryFn: () => kundenApi.get(anfrage.kunde_id), enabled: hatRecht("kunden", "sehen") });
-  const { data: anlage } = useQuery({
-    queryKey: ["anlage", anfrage.anlage_id],
-    queryFn: () => anlagenApi.get(anfrage.anlage_id!),
-    enabled: !!anfrage.anlage_id,
-  });
-  const { data: standort } = useQuery({
-    queryKey: ["standort", anfrage.standort_id],
-    queryFn: () => standorteApi.get(anfrage.standort_id!),
-    enabled: !!anfrage.standort_id,
-  });
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["vorgang-anfragen"] });
-
-  const annehmenMutation = useMutation({
-    meta: { erfolg: "Angenommen" },
-    mutationFn: () => vorgangAnfragenApi.annehmen(anfrage.id, { abrechnungsart }),
-    onSuccess: invalidate,
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Annehmen"),
-  });
-
-  const ablehnenMutation = useMutation({
-    meta: { erfolg: "Abgelehnt" },
-    mutationFn: () => vorgangAnfragenApi.ablehnen(anfrage.id, ablehnungsgrund || undefined),
-    onSuccess: invalidate,
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Ablehnen"),
-  });
+  const { annehmen, ablehnen, fehler: error } = useAnfrageAktionen(anfrage);
 
   return (
     <div className="card-ap p-4">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-meta text-label2">
-            {kunde?.name ?? "…"}
-            {standort && ` · ${standort.bezeichnung}`}
-            {anlage && ` · ${anlage.bezeichnung}`}
+            {anfrage.kunde_name ?? "–"} · {anfrage.standort_bezeichnung ?? "–"} · {anfrage.anlage_bezeichnung ?? "–"}
           </div>
           <div className="text-fliess font-medium text-label">{anfrage.titel}</div>
           <span className="mt-1 inline-block border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta text-label">
@@ -99,6 +56,11 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
       </div>
       {anfrage.beschreibung && (
         <p className="mt-2 text-fliess text-label">{anfrage.beschreibung}</p>
+      )}
+      {anfrage.status === "angenommen" && anfrage.vorgang_id && (
+        <Link to={`/vorgaenge/${anfrage.vorgang_id}`} className="mt-2 inline-block text-sekundaer font-medium text-tint-text hover:underline">
+          Zum Vorgang {anfrage.vorgang_nummer ?? ""}
+        </Link>
       )}
       {anfrage.ablehnungsgrund && (
         <p className="mt-2 text-sekundaer text-label2">Grund: {anfrage.ablehnungsgrund}</p>
@@ -138,10 +100,18 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                   </option>
                 ))}
               </Select>
+              <label htmlFor={`${uid}-1`} className="block text-sekundaer font-medium text-label2">Priorität</label>
+              <Select id={`${uid}-1`} value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))}>
+                {PRIORITAETEN.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
               <div className="flex gap-2">
                 <button
-                  onClick={() => annehmenMutation.mutate()}
-                  disabled={annehmenMutation.isPending}
+                  onClick={() => annehmen.mutate({ abrechnungsart, prioritaet })}
+                  disabled={annehmen.isPending}
                   className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sekundaer font-medium disabled:opacity-50"
                 >
                   Vorgang anlegen
@@ -167,8 +137,8 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
               />
               <div className="flex gap-2">
                 <button
-                  onClick={() => ablehnenMutation.mutate()}
-                  disabled={ablehnenMutation.isPending}
+                  onClick={() => ablehnen.mutate(ablehnungsgrund)}
+                  disabled={ablehnen.isPending}
                   className="btn-touch flex-1 rounded-md bg-st-fehlt-dot py-2 text-sekundaer font-medium text-white disabled:opacity-50"
                 >
                   Ablehnen bestätigen
@@ -188,8 +158,6 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   );
 }
 
-const STATUS_LABEL = { offen: "Offen", angenommen: "Angenommen", abgelehnt: "Abgelehnt" } as const;
-
 export function AnfragenPage() {
   const { hatRecht } = useAuth();
   const [params] = useSearchParams();
@@ -203,41 +171,7 @@ export function AnfragenPage() {
     enabled: hatRecht("kunden", "sehen"),
   });
 
-  const felder = useMemo<FilterFeld<VorgangAnfrage>[]>(
-    () => [
-      { key: "titel", label: "Titel", typ: "text", icon: Type, wert: (a) => a.titel },
-      {
-        key: "status",
-        label: "Status",
-        typ: "auswahl",
-        icon: CircleDot,
-        wert: (a) => a.status,
-        optionen: Object.entries(STATUS_LABEL).map(([wert, label]) => ({ wert, label })),
-      },
-      {
-        key: "leistungstyp",
-        label: "Leistungstyp",
-        typ: "auswahl",
-        icon: Wrench,
-        wert: (a) => a.leistungstyp,
-        optionen: Object.entries(LEISTUNGSTYP_LABEL).map(([wert, label]) => ({ wert, label })),
-      },
-      ...(kunden
-        ? [
-            {
-              key: "kunde",
-              label: "Kunde",
-              typ: "verknuepfung" as const,
-              icon: Building2,
-              wert: (a: VorgangAnfrage) => a.kunde_id,
-              optionen: kunden.map((k) => ({ wert: k.id, label: k.name })),
-            },
-          ]
-        : []),
-      { key: "eingegangen", label: "Eingegangen", typ: "datum", icon: CalendarDays, wert: (a) => a.created_at.slice(0, 10) },
-    ],
-    [kunden],
-  );
+  const felder = useAnfragenFilterFelder(kunden);
   const zustand = useFilterZustand({ felder });
 
   // Bisher zeigte die Seite standardmäßig nur offene Anfragen; ohne gespeicherten Filterstand bleibt das so.
@@ -249,11 +183,10 @@ export function AnfragenPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const kundenName = (id: string) => kunden?.find((k) => k.id === id)?.name ?? "";
   const sichtbar = sucheAnwenden(
     filterAnwenden(anfragen ?? [], zustand.bedingungen, felder),
     zustand.sucheVerzoegert,
-    (a) => `${a.titel} ${a.beschreibung ?? ""} ${kundenName(a.kunde_id)}`,
+    (a) => `${a.titel} ${a.beschreibung ?? ""} ${a.kunde_name ?? ""}`,
   );
 
   return (

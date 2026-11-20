@@ -44,3 +44,12 @@ class VorgangAnfrageRead(BaseModel):
     bearbeitet_am: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    # Rein lesend, vom Join in der Route befuellt (nicht schreibbar).
+    kunde_name: str | None = None
+    standort_bezeichnung: str | None = None
+    anlage_bezeichnung: str | None = None
+    gestellt_von_name: str | None = None
+    gestellt_von_email: str | None = None
+    vorgang_nummer: str | None = None
+    bearbeitet_von_name: str | None = None

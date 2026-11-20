@@ -11,22 +11,31 @@ export function ListeMitPanel({
   panel,
   panelTitel,
   onSchliessen,
+  nurPanel = false,
 }: {
   liste: ReactNode;
   /** null = kein Panel offen */
   panel: ReactNode | null;
   panelTitel: string;
   onSchliessen: () => void;
+  /** Bei offenem Panel die Liste ausblenden und das Panel allein (max. max-w-3xl) zeigen. */
+  nurPanel?: boolean;
 }) {
   useEscapeSchliesst(onSchliessen, panel !== null);
+
+  const alleinig = nurPanel && panel !== null;
 
   return (
     <div
       className={`grid items-start gap-4 ${
-        panel !== null ? "grid-cols-[minmax(0,1fr)_minmax(420px,520px)]" : "grid-cols-1"
+        alleinig
+          ? "max-w-3xl grid-cols-1"
+          : panel !== null
+            ? "grid-cols-[minmax(0,1fr)_minmax(420px,520px)]"
+            : "grid-cols-1"
       }`}
     >
-      <div className="min-w-0">{liste}</div>
+      {!alleinig && <div className="min-w-0">{liste}</div>}
       {panel !== null && (
         <Karte className="office-panel sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto">
           <section aria-label={panelTitel}>
