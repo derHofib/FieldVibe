@@ -25,6 +25,7 @@ import { useVorgaengeFilter } from "../../hooks/useVorgaengeFilter";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { HauptkontaktZeile } from "./vorOrt/HauptkontaktZeile";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -148,7 +149,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
                 {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
               </div>
             )}
-            {card.anlage_kurzadresse && <div className="text-sekundaer text-label2">{card.anlage_kurzadresse}</div>}
+            {(card.anlage_kurzadresse || card.einheit) && (
+              <div className="text-sekundaer text-label2">
+                {[card.anlage_kurzadresse, card.einheit].filter(Boolean).join(" · ")}
+              </div>
+            )}
             {card.ersteller_name && <div className="text-sekundaer text-label2">von {card.ersteller_name}</div>}
             {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
               <div className="text-sekundaer text-label2">
@@ -209,6 +214,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
           </div>
         )}
       </button>
+      <HauptkontaktZeile kontakt={card.hauptkontakt_vor_ort} />
       {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
         <div className="flex items-center justify-end gap-1.5 border-t-[0.5px] border-sep px-3 py-2">
           {aktionFehlerText && <span className="mr-auto text-sekundaer text-st-fehlt">{aktionFehlerText}</span>}

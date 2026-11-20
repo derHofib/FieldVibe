@@ -258,6 +258,13 @@ import type {
   ZeitplanAntragCreate,
   ZeitplanAntragEntscheidung,
   ZeitplanAntragStatus,
+  VorOrtKontakt,
+  VorOrtKontaktCreate,
+  VorOrtKontaktFilter,
+  VorOrtKontaktUpdate,
+  VorOrtKontaktZugeordnet,
+  VorOrtZiel,
+  VorOrtZuordnungCreate,
 } from "../types";
 
 import type { UserTokenPair, LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
@@ -911,6 +918,7 @@ export const vorgaengeApi = {
     anlage_id?: string | null;
     weitere_anlage_ids?: string[];
     standort_id?: string | null;
+    einheit?: string | null;
     // Ordnet den Vorgang direkt beim Anlegen einem Projekt bzw. Auftrag zu
     // (siehe "+ Neuer Vorgang"-Einstiegspunkte in ProjektDetailPanel.tsx/
     // AuftragDetailPanel.tsx) -- beide unabhaengig voneinander nutzbar.
@@ -945,6 +953,7 @@ export const vorgaengeApi = {
         | "kunde_id"
         | "anlage_id"
         | "standort_id"
+        | "einheit"
         | "projekt_id"
         | "auftrag_id"
         | "faelligkeit_am"
@@ -1065,6 +1074,41 @@ export const vorgangEventsApi = {
     formData.append("kundensichtbar", String(kundensichtbar));
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/unterschrift`, formData);
   },
+};
+
+const VOR_ORT_ZIEL_PFAD: Record<VorOrtZiel, string> = { vorgang: "vorgaenge", auftrag: "auftraege", projekt: "projekte" };
+
+export const vorOrtApi = {
+  listeFuerKunde: (kundeId: string, filter: VorOrtKontaktFilter = {}) => {
+    const qs = new URLSearchParams();
+    if (filter.standort_id) qs.set("standort_id", filter.standort_id);
+    if (filter.rolle) qs.set("rolle", filter.rolle);
+    if (filter.q) qs.set("q", filter.q);
+    if (filter.mit_anonymisierten !== undefined) qs.set("mit_anonymisierten", String(filter.mit_anonymisierten));
+    const query = qs.toString();
+    return apiFetch<VorOrtKontakt[]>(`/api/kunden/${kundeId}/vor-ort-kontakte${query ? `?${query}` : ""}`);
+  },
+  anlegen: (kundeId: string, body: VorOrtKontaktCreate) =>
+    apiFetch<VorOrtKontakt>(`/api/kunden/${kundeId}/vor-ort-kontakte`, { method: "POST", body: JSON.stringify(body) }),
+  aendern: (id: string, body: VorOrtKontaktUpdate) =>
+    apiFetch<VorOrtKontakt>(`/api/vor-ort-kontakte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/vor-ort-kontakte/${id}`, { method: "DELETE" }),
+  anonymisieren: (id: string) =>
+    apiFetch<VorOrtKontakt>(`/api/vor-ort-kontakte/${id}/anonymisieren`, { method: "POST" }),
+  listeFuerZiel: (ziel: VorOrtZiel, zielId: string) =>
+    apiFetch<VorOrtKontaktZugeordnet[]>(`/api/${VOR_ORT_ZIEL_PFAD[ziel]}/${zielId}/vor-ort-kontakte`),
+  zuordnen: (ziel: VorOrtZiel, zielId: string, body: VorOrtZuordnungCreate) =>
+    apiFetch<VorOrtKontaktZugeordnet>(`/api/${VOR_ORT_ZIEL_PFAD[ziel]}/${zielId}/vor-ort-kontakte`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  hauptkontaktSetzen: (zuordnungId: string, istHauptkontakt: boolean) =>
+    apiFetch<VorOrtKontaktZugeordnet>(`/api/vor-ort-kontakt-zuordnungen/${zuordnungId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ist_hauptkontakt: istHauptkontakt }),
+    }),
+  zuordnungEntfernen: (zuordnungId: string) =>
+    apiFetch<void>(`/api/vor-ort-kontakt-zuordnungen/${zuordnungId}`, { method: "DELETE" }),
 };
 
 export const telefonateApi = {
@@ -2074,6 +2118,7 @@ export const mandantEinstellungenApi = {
     km_satz_netto?: string | null;
     fahrzeit_satz_netto?: string | null;
     fahrzeit_abrechnung?: FahrzeitAbrechnung;
+    vor_ort_kontakte_anonymisieren_monate?: number;
   }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
@@ -2106,11 +2151,18 @@ export const projekteApi = {
     return apiFetch<Projekt[]>(`/api/projekte${qs}`);
   },
   get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
-  create: (body: { name: string; beschreibung?: string; vertrag_id?: string }) =>
+  create: (body: { name: string; beschreibung?: string; vertrag_id?: string; kunde_id?: string | null; standort_id?: string | null }) =>
     apiFetch<Projekt>("/api/projekte", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: { name?: string; beschreibung?: string; archiviert?: boolean; vertrag_id?: string | null },
+    body: {
+      name?: string;
+      beschreibung?: string;
+      archiviert?: boolean;
+      vertrag_id?: string | null;
+      kunde_id?: string | null;
+      standort_id?: string | null;
+    },
   ) => apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/projekte/${id}`, { method: "DELETE" }),
   spalten: (projektId: string) =>
@@ -2275,7 +2327,16 @@ export const auftraegeApi = {
     return apiFetch<Auftrag[]>(`/api/auftraege${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Auftrag>(`/api/auftraege/${id}`),
-  create: (body: { titel: string; beschreibung?: string; projekt_id?: string | null; kunde_id?: string | null }) =>
+  create: (body: {
+    titel: string;
+    beschreibung?: string;
+    projekt_id?: string | null;
+    kunde_id?: string | null;
+    standort_id?: string | null;
+    einheit?: string | null;
+    ansprechpartner_id?: string | null;
+    kunden_referenz?: string | null;
+  }) =>
     apiFetch<Auftrag>("/api/auftraege", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -2285,6 +2346,10 @@ export const auftraegeApi = {
       projekt_id?: string | null;
       kunde_id?: string | null;
       status?: AuftragStatus;
+      standort_id?: string | null;
+      einheit?: string | null;
+      ansprechpartner_id?: string | null;
+      kunden_referenz?: string | null;
     },
   ) => apiFetch<Auftrag>(`/api/auftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/auftraege/${id}`, { method: "DELETE" }),

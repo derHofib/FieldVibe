@@ -20,9 +20,10 @@ import { KundeUebersichtTab } from "./kunde/KundeUebersichtTab";
 import { KundeKommunikationTab } from "./kunde/KundeKommunikationTab";
 import { KundeAnlagenTab } from "./kunde/KundeAnlagenTab";
 import { KundeVorgaengeTab } from "./kunde/KundeVorgaengeTab";
+import { KundeVorOrtTab } from "./kunde/KundeVorOrtTab";
 
-type KundeTab = "uebersicht" | "vorgaenge" | "anlagen" | "kommunikation";
-const KUNDE_TABS: KundeTab[] = ["uebersicht", "vorgaenge", "anlagen", "kommunikation"];
+type KundeTab = "uebersicht" | "vorgaenge" | "anlagen" | "vorort" | "kommunikation";
+const KUNDE_TABS: KundeTab[] = ["uebersicht", "vorgaenge", "anlagen", "vorort", "kommunikation"];
 
 /** `id`/`eingebettet` nur für das Detailpanel der Office-Kundenliste
  * (office/kunden): dort fehlt die Route, und "Zurück" ergibt keinen Sinn. */
@@ -207,6 +208,7 @@ export function KundeProfilePage({
           { wert: "uebersicht", label: "Übersicht" },
           { wert: "vorgaenge", label: `Vorgänge${profil.vorgaenge.length > 0 ? ` (${profil.vorgaenge.length})` : ""}` },
           { wert: "anlagen", label: `Anlagen${profil.anlagen.length > 0 ? ` (${profil.anlagen.length})` : ""}` },
+          { wert: "vorort", label: "Vor Ort" },
           { wert: "kommunikation", label: "Kontakt" },
         ]}
         onChange={(key) => setSearchParams(key === "uebersicht" ? {} : { tab: key }, { replace: true })}
@@ -239,6 +241,8 @@ export function KundeProfilePage({
         standorteFuerAnlagen={standorteFuerAnlagen}
       />
       )}
+
+      {tab === "vorort" && <KundeVorOrtTab kundeId={profil.id} kundeTyp={profil.typ} kannVerwalten={kannVerwalten} />}
 
       {tab === "vorgaenge" && (
       <KundeVorgaengeTab

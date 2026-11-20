@@ -51,6 +51,7 @@ export function UebersichtAbschnitt({
   erstelltVonName,
   formulare,
   partner,
+  vorOrt,
 }: {
   istAktiverTab: (ziel: string) => boolean;
   tabPanelProps: (ziel: string) => { role: "tabpanel"; "aria-labelledby": string } | { role?: undefined; "aria-labelledby"?: undefined };
@@ -88,6 +89,8 @@ export function UebersichtAbschnitt({
   formulare: ReactNode;
   /** PartnerAbschnitt (nur mit Recht/Modul). */
   partner: ReactNode;
+  /** Gruppen "Vor Ort" und "Auftraggeber" (VorgangVorOrt), stehen ganz oben. */
+  vorOrt: ReactNode;
 }) {
   const { wurzel, zweispaltig } = useZweispaltig(zweispaltigMoeglich);
 
@@ -358,6 +361,7 @@ export function UebersichtAbschnitt({
       {zweispaltig ? (
         <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-x-4">
           <div className="min-w-0">
+            {vorOrt}
             {beschreibung}
             {formulare}
             {verknuepft}
@@ -370,6 +374,7 @@ export function UebersichtAbschnitt({
         </div>
       ) : (
         <div className="space-y-4 in-[.office-panel]:space-y-0">
+          {vorOrt}
           {beschreibung}
           {einsatzort}
           {formulare}

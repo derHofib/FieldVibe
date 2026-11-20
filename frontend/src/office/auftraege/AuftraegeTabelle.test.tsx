@@ -36,4 +36,18 @@ describe("AuftraegeTabelle", () => {
     );
     expect(screen.getByRole("link", { name: "Aus Liste" })).toBeTruthy();
   });
+
+  it("zeigt Standort und Einheit als Unterzeile der Kundenspalte, nur wenn gesetzt", () => {
+    const mitOrt = [
+      { ...AUFTRAEGE[0], standort: { id: "s1", bezeichnung: "Moselstr. 14", adresse: null }, einheit: "Whg. 3" },
+      AUFTRAEGE[1],
+    ] as Auftrag[];
+    render(
+      <MemoryRouter>
+        <AuftraegeTabelle auftraege={mitOrt} onZeileKlick={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Moselstr. 14 · Whg. 3")).toBeTruthy();
+    expect(screen.getAllByText("Herdrich")).toHaveLength(2);
+  });
 });

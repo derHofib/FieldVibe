@@ -82,6 +82,7 @@ export function NewVorgangPage() {
   const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
   const [standortId, setStandortId] = useState(searchParams.get("standort_id") ?? "");
+  const [einheit, setEinheit] = useState(searchParams.get("einheit") ?? "");
   const [weitereAnlagenIds, setWeitereAnlagenIds] = useState<Set<string>>(new Set());
   const [titel, setTitel] = useState(searchParams.get("titel") ?? "");
   const [beschreibung, setBeschreibung] = useState(searchParams.get("beschreibung") ?? "");
@@ -216,6 +217,8 @@ export function NewVorgangPage() {
         anlage_id: anlage?.id ?? null,
         weitere_anlage_ids: Array.from(weitereAnlagenIds),
         standort_id: standortId || null,
+        // Ohne Angabe belegt der Server die Einheit aus dem Auftrag vor.
+        einheit: einheit.trim() || undefined,
         projekt_id: projektId || null,
         auftrag_id: auftragId || null,
         titel,
@@ -451,6 +454,19 @@ export function NewVorgangPage() {
                 </option>
               ))}
             </Select>
+          </div>
+        )}
+
+        {(standortId || auftragId) && (
+          <div>
+            <label htmlFor={`${uid}-einheit`} className="mb-1 block text-fliess font-medium text-label">Einheit (optional)</label>
+            <input
+              id={`${uid}-einheit`}
+              value={einheit}
+              onChange={(e) => setEinheit(e.target.value)}
+              placeholder="z. B. Whg. 3, 2. OG links"
+              className="field-ap"
+            />
           </div>
         )}
 

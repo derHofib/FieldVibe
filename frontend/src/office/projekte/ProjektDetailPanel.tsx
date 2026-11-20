@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 import { materialBedarfeApi, projekteApi, termineApi, usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { AktionsMenue } from "../../components/AktionsMenue";
+import { useAuth } from "../../context/AuthContext";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
@@ -15,7 +16,9 @@ import { formatDatum } from "../../utils/format";
 import type { Projekt, Zeiterfassung } from "../../types";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
+import { VorOrtKontakteAbschnitt } from "../../pages/feld/vorOrt/VorOrtKontakteAbschnitt";
 import { AuftraegeUndVorgaenge, ProjektKennzahlen, useProjektInhalt } from "./AuftraegeUndVorgaenge";
+import { ProjektAuftraggeberAbschnitt } from "./ProjektAuftraggeberAbschnitt";
 import { ZeitplanTab } from "./zeitplan/ZeitplanTab";
 
 // Fuer den Termine-Wochenkalender -- gleiche Rechenlogik wie in
@@ -69,6 +72,7 @@ export function ProjektDetailPanel({
   onKanbanOeffnen: () => void;
 }) {
   const uid = useId();
+  const { hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [bearbeiten, setBearbeiten] = useState(false);
@@ -123,9 +127,9 @@ export function ProjektDetailPanel({
   });
 
   const aktiv = aktuell ?? projekt;
-  // Projekte tragen keinen eigenen Kunden: nur anzeigen, wenn alle Aufträge denselben haben.
+  // Ohne eigenen Auftraggeber am Projekt: nur anzeigen, wenn alle Aufträge denselben haben.
   const kundenNamen = new Set((auftraege ?? []).map((a) => a.kunde_name).filter(Boolean));
-  const kundeName = kundenNamen.size === 1 ? [...kundenNamen][0] : null;
+  const kundeName = aktiv.kunde_name ?? (kundenNamen.size === 1 ? [...kundenNamen][0] : null);
 
   const zeitEintraegeAbgeschlossen = (zeiterfassungListe ?? [])
     .filter((e) => e.ende_at)
@@ -200,6 +204,16 @@ export function ProjektDetailPanel({
           className="space-y-4 p-4 pt-0"
         >
           <ProjektKennzahlen projekt={aktiv} auftraege={auftraege} vorgaenge={vorgaenge} />
+
+          <ProjektAuftraggeberAbschnitt projekt={aktiv} />
+          <VorOrtKontakteAbschnitt
+            ziel="projekt"
+            zielId={projekt.id}
+            kundeId={aktiv.kunde_id ?? null}
+            standortId={aktiv.standort_id ?? null}
+            darfBearbeiten={hatRecht("projekte", "bearbeiten")}
+            layout="office"
+          />
 
           <AuftraegeUndVorgaenge
             projektId={projekt.id}

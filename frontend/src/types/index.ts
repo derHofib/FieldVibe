@@ -1,4 +1,5 @@
 import type { FehlerberichtKontext } from "../bugreport/typen";
+import type { StandortKurz, VorOrtHauptkontaktKurz, VorOrtKontaktZugeordnet } from "./vorOrt";
 
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
 
@@ -536,6 +537,12 @@ export interface Vorgang {
   verknuepfung_eigenstaendig_am?: string | null;
   verknuepfung_eigenstaendig_von_name?: string | null;
   darf_eigenstaendig_setzen?: boolean;
+  // Kontakte vor Ort (Detail-Antwort: vollstaendige Liste inkl. geerbter; Listen/Feed: nur Hauptkontakt).
+  einheit?: string | null;
+  vor_ort_kontakte?: VorOrtKontaktZugeordnet[];
+  auftraggeber_ansprechpartner?: Ansprechpartner | null;
+  auftrag_kunden_referenz?: string | null;
+  hauptkontakt_vor_ort?: VorOrtHauptkontaktKurz | null;
 }
 
 export type VorgangHerkunftArt =
@@ -830,6 +837,8 @@ export interface FeedCard {
   zugewiesener_name: string | null;
   projekt_name?: string | null;
   auftrag_titel?: string | null;
+  einheit?: string | null;
+  hauptkontakt_vor_ort?: VorOrtHauptkontaktKurz | null;
 }
 
 export interface FeedResponse {
@@ -1977,6 +1986,8 @@ export interface MandantEinstellungen {
   // Eigener Stundensatz fuer "Fahrzeit"-Vorschlaege; null = Preis 0.
   fahrzeit_satz_netto: string | null;
   fahrzeit_abrechnung: FahrzeitAbrechnung;
+  // Frist (Monate nach letztem Einsatz), nach der Kontakte vor Ort anonymisiert werden; 3-60, Standard 12.
+  vor_ort_kontakte_anonymisieren_monate?: number;
 }
 
 export type FahrzeitAbrechnung = "keine" | "zeit" | "km" | "zeit_und_km";
@@ -2560,6 +2571,11 @@ export interface Projekt {
   anzahl_vorgaenge?: number;
   anzahl_offen?: number;
   anzahl_ueberfaellig?: number;
+  // Auftraggeber und Baustelle (optional); Kontakte vor Ort brauchen kunde_id.
+  kunde_id?: string | null;
+  standort_id?: string | null;
+  kunde_name?: string | null;
+  standort_bezeichnung?: string | null;
 }
 
 export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
@@ -2794,6 +2810,13 @@ export interface Auftrag {
   vorgaenge_gesamt: number;
   projekt_name?: string | null;
   vorgaenge_erledigt?: number;
+  // Auftraggeber/Leistungsort; ansprechpartner_id verweist auf kunde.ansprechpartner (kein FK).
+  standort_id?: string | null;
+  einheit?: string | null;
+  ansprechpartner_id?: string | null;
+  kunden_referenz?: string | null;
+  standort?: StandortKurz | null;
+  ansprechpartner?: Ansprechpartner | null;
 }
 
 export interface ProjektSpalte {
@@ -3102,3 +3125,4 @@ export interface AbwesenheitKalenderEintrag {
   tage: string;
 }
 export * from "./telefonat";
+export * from "./vorOrt";

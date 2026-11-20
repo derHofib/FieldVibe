@@ -11,6 +11,7 @@ import { PulldownMenu } from "../../components/apple/PulldownMenu";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { useAuth } from "../../context/AuthContext";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { VorgangStatusPille } from "../../components/VorgangStatusPille";
@@ -20,7 +21,9 @@ import { CHIP_BUTTON, CHIP_NEUTRAL, ChipPopover } from "../../pages/feld/vorgang
 import type { Auftrag, AuftragStatus } from "../../types";
 import { formatDatum } from "../../utils/format";
 import { auftragStatusZuToken, istVorgangErledigt, projektLink } from "../../utils/verknuepfung";
+import { VorOrtKontakteAbschnitt } from "../../pages/feld/vorOrt/VorOrtKontakteAbschnitt";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
+import { AuftragAuftraggeberAbschnitt, AuftragLeistungsortAbschnitt } from "./AuftragOrtAbschnitte";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
 
@@ -31,6 +34,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
   const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hatRecht } = useAuth();
   const [titelBearbeiten, setTitelBearbeiten] = useState(false);
   const [titel, setTitel] = useState(auftrag.titel);
   const [beschreibungBearbeiten, setBeschreibungBearbeiten] = useState(false);
@@ -239,6 +243,25 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
             {fehler}
           </p>
         )}
+
+        <AuftragAuftraggeberAbschnitt
+          auftrag={aktuell}
+          laeuft={aktualisieren.isPending}
+          speichern={(body, onFertig) => aktualisieren.mutate(body, { onSuccess: onFertig })}
+        />
+        <AuftragLeistungsortAbschnitt
+          auftrag={aktuell}
+          laeuft={aktualisieren.isPending}
+          speichern={(body, onFertig) => aktualisieren.mutate(body, { onSuccess: onFertig })}
+        />
+        <VorOrtKontakteAbschnitt
+          ziel="auftrag"
+          zielId={aktuell.id}
+          kundeId={aktuell.kunde_id}
+          standortId={aktuell.standort_id ?? null}
+          darfBearbeiten={hatRecht("projekte", "bearbeiten")}
+          layout="office"
+        />
 
         <Abschnitt
           titel="Vorgänge"
