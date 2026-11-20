@@ -46,6 +46,7 @@ import {
   type SteuerEingabe,
 } from "../../utils/steuer";
 import type { RechnungZahlungsart } from "../../types";
+import { useZuletztGeoeffnetMerken } from "../../components/suche/zuletztGeoeffnet";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { DetailSkeleton } from "../../components/Skeleton";
 import { Select } from "../../components/apple/Select";
@@ -236,6 +237,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     queryFn: () => kundenApi.get(rechnung!.kunde_id),
     enabled: !!rechnung,
   });
+  useZuletztGeoeffnetMerken(
+    rechnung
+      ? {
+          kategorie: "rechnung",
+          id: rechnung.id,
+          titel: rechnung.rechnungsnummer,
+          untertitel: kunde?.name ?? "",
+          status: rechnung.status,
+        }
+      : null,
+  );
   // Die Einstellungen sind nur für mandant_admin lesbar; für alle anderen
   // erkennt die Seite den Kleinunternehmer an den bereits erzwungenen
   // Positionen (kleinunternehmer_aus_positionen weiter unten).

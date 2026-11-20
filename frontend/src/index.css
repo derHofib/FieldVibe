@@ -68,6 +68,12 @@
   --tint-text: #0068cc;
   --tint-solid: var(--tint);
   --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.05);
+  /* Glas nur fuer schwebende Fenster ueber Inhalt (globale Suche), nicht fuer
+     Karten. 84 % Deckkraft, damit Text unabhaengig vom Untergrund 4,5:1 haelt. */
+  --glas: rgba(246, 246, 248, 0.84);
+  --glas-rand: rgba(255, 255, 255, 0.6);
+  --scrim: rgba(0, 0, 0, 0.14);
+  --glas-schatten: 0 24px 70px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
 
   /* Status (Abschnitt 3.2). "wartet"/"fehlt" (Vorgang-Status "wartet_kunde"
      bzw. Mangel-Status "Material fehlt") sind Erweiterungen ueber die 5 im
@@ -366,6 +372,10 @@ body {
   --tint-text: #6ab1ff;
   --tint-solid: #0a6ad1;
   --shadow-card-value: none;
+  --glas: rgba(38, 38, 40, 0.84);
+  --glas-rand: rgba(255, 255, 255, 0.12);
+  --scrim: rgba(0, 0, 0, 0.38);
+  --glas-schatten: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
 
   --st-neu-text: #6ab1ff;
   --st-neu-bg: rgba(10, 132, 255, 0.22);
@@ -413,6 +423,54 @@ body {
 
 .btn-touch {
   @apply min-h-[44px] min-w-[44px];
+}
+
+.glas-flaeche {
+  background: var(--glas);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--glas-rand);
+  box-shadow: var(--glas-schatten);
+}
+/* Ohne Blur (aeltere Browser) oder bei reduzierter Transparenz deckend,
+   sonst scheint der Seitentext durch die 84 %-Flaeche. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glas-flaeche {
+    background: var(--menu);
+  }
+}
+/* Chromium blurt am unteren Rand des Fensters kaum (Backdrop wird an der
+   Kante abgeschnitten), dort scheint Seitentext durch. Die Fusszeile bekommt
+   deshalb eine zweite Glas-Lage. */
+.suche-fuss {
+  background: var(--glas);
+}
+/* Scrim als Klasse statt Inline-var(), damit Tailwind --scrim sicher ausgibt. */
+.suche-scrim {
+  background: var(--scrim);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Nur skalieren, keine Deckkraft: eine Opacity-Animation am Fenster oder
+     am Scrim macht in Chromium das Scrim zur Backdrop-Wurzel, dann bleibt der
+     Blur wirkungslos und der Seitentext scheint durch. */
+  .suche-fenster-ein {
+    animation: suche-ein 150ms ease-out;
+  }
+  @keyframes suche-ein {
+    from {
+      transform: scale(0.98);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glas-flaeche {
+    background: var(--menu);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* Fuer die swipebare Tab-Bar/Chip-Leisten: der Scroll-Balken selbst waere
@@ -704,6 +762,9 @@ textarea.field-ap {
   outline: none;
   color: var(--label);
   width: 100%;
+}
+.suche-eingabe:focus-visible {
+  outline: none;
 }
 .search-ap input::placeholder {
   color: var(--label2);

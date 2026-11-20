@@ -550,6 +550,10 @@ Gesperrt: `GesperrtZustand` (`components/EmptyState.tsx`; Schloss, Erklärsatz, 
 
 Token `live` / `live-text` / `live-bg` (Logo-Lime, in Hell abgedunkelt). Genau eine Rolle: „läuft gerade“ (`LaeuftPille`/`LaeuftPunkt`, `components/apple/LaeuftPille.tsx`). Immer mit Text „Läuft“ und pulsierendem Punkt (nur `motion-safe`), nie dekorativ, nie für Status. Kontrast: Text ≥5,0:1, Punkt ≥3,9:1 auf den Flächen.
 
+## Glas (schwebende Fenster)
+
+Nur für Fenster, die über dem Seiteninhalt schweben, aktuell die globale Suche (`components/suche/GlobaleSuche.tsx`, Office). Klasse `.glas-flaeche` (Token `--glas`, `--glas-rand`, `--glas-schatten`), dahinter ein Scrim mit `--scrim`. 84 % deckend, Unschärfe 40 px; ohne `backdrop-filter` oder bei `prefers-reduced-transparency` deckend (`--menu`). Am Glas-Fenster und am Scrim keine Opacity-Animation, weil Chromium dabei die Unschärfe abschaltet und der Seitentext durchscheint; nur skalieren. Nicht für Karten, Panels oder Leisten. Mobil gibt es kein Glas-Fenster, dort bleibt die Suche eine Vollbild-Seite.
+
 ## Listenmuster (jede Liste/Übersicht)
 
 Ladezustand `SkeletonList`/`DetailSkeleton` (nie „Lädt…“-Text), Fehler `FehlerZustand` mit „Erneut versuchen“, leer `EmptyState` (mit Anlegen-Aktion, wenn das Recht da ist; eigener Text bei Suche ohne Treffer), Anlegen über `NEU_BUTTON_KLASSE` + `AnlegenPanel` (kein Inline-Formular), Suche `SearchField` (mit `useDebouncedValue`, bei kleinen Listen clientseitig), Filter `FilterChip`/`SegmentedControl`/`Select`, Zeilen `card-ap`, Status über `StatusPille`/`VorgangStatusPille`, Löschen im `AktionsMenue` mit `useBestaetigung`. Seitentitel: unter dem Plattform-`Layout` kommt das h1 aus dem Layout, sonst `SeitenKopf` (Office) bzw. `text-titel-mobil` (Feld).

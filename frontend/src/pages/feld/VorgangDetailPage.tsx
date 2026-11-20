@@ -77,6 +77,7 @@ import { TermineAbschnitt } from "./vorgang/TermineAbschnitt";
 import { UebersichtAbschnitt } from "./vorgang/UebersichtAbschnitt";
 import { VerknuepfungTab } from "./vorgang/VerknuepfungTab";
 import { VorgangKopf } from "./vorgang/VorgangKopf";
+import { useZuletztGeoeffnetMerken } from "../../components/suche/zuletztGeoeffnet";
 import { KopfDialoge } from "./vorgang/KopfDialoge";
 import { VorgangTabLeiste } from "./vorgang/VorgangTabLeiste";
 
@@ -260,6 +261,17 @@ export function VorgangDetailPage({
     },
     enabled: !!vorgang,
   });
+  useZuletztGeoeffnetMerken(
+    vorgang
+      ? {
+          kategorie: "vorgang",
+          id: vorgang.id,
+          titel: `${vorgang.vorgangsnummer} · ${vorgang.titel}`,
+          untertitel: kunde?.name ?? "",
+          status: vorgang.status,
+        }
+      : null,
+  );
   const { data: anlage } = useQuery({
     queryKey: ["anlage", vorgang?.anlage_id],
     queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
