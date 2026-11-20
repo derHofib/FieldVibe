@@ -3,7 +3,6 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { AccountTypenPage } from "../pages/AccountTypenPage";
 import { UsersPage } from "../pages/UsersPage";
-import { AnfragenPage } from "../pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "../pages/feld/AngebotDetailPage";
 import { AnlagenFelderPage } from "../pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "../pages/feld/AnlageProfilePage";
@@ -61,6 +60,7 @@ import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
+import { OfficeAnfragenPage } from "./anfragen/OfficeAnfragenPage";
 import { OfficeTelefonatePage } from "./telefonate/OfficeTelefonatePage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 import { NichtGefunden } from "../components/NichtGefunden";
@@ -90,6 +90,9 @@ export function OfficeApp() {
           <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
           <Route path="/postfach" element={<OfficePostfachPage />} />
           <Route path="/postfach/einstellungen" element={<PostfachEinstellungenPage />} />
+          {/* Tabelle mit Detailpanel braucht die volle Breite, nicht die Lesespalte */}
+          <Route path="/anfragen" element={<OfficeAnfragenPage />} />
+          <Route path="/anfragen/:id" element={<OfficeAnfragenPage />} />
           <Route path="/telefonate" element={<OfficeTelefonatePage />} />
           <Route path="/kunden" element={<OfficeKundenPage />} />
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />
@@ -211,7 +214,6 @@ export function OfficeApp() {
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
-          <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/rechnungseingang" element={<RechnungseingangPage />} />

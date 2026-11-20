@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.anlage import Anlage
+from app.models.kunde import Kunde
+from app.models.kundenportal import KundenportalZugang
+from app.models.user import User
 from app.models.standort import Standort
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
@@ -31,14 +34,58 @@ router = APIRouter(
 )
 
 
+def _select_mit_namen():
+    return (
+        select(
+            VorgangAnfrage,
+            Kunde.name,
+            Standort.bezeichnung,
+            Anlage.bezeichnung,
+            KundenportalZugang.name,
+            KundenportalZugang.email,
+            Vorgang.vorgangsnummer,
+            User.name,
+        )
+        .outerjoin(Kunde, Kunde.id == VorgangAnfrage.kunde_id)
+        .outerjoin(Standort, Standort.id == VorgangAnfrage.standort_id)
+        .outerjoin(Anlage, Anlage.id == VorgangAnfrage.anlage_id)
+        .outerjoin(KundenportalZugang, KundenportalZugang.id == VorgangAnfrage.kundenportal_zugang_id)
+        .outerjoin(Vorgang, Vorgang.id == VorgangAnfrage.vorgang_id)
+        .outerjoin(User, User.id == VorgangAnfrage.bearbeitet_von)
+    )
+
+
+def _zeile_zu_read(row) -> VorgangAnfrageRead:
+    (anfrage, kunde_name, standort_bez, anlage_bez, zugang_name, zugang_email, vorgang_nr, bearbeiter) = row
+    return VorgangAnfrageRead.model_validate(anfrage).model_copy(
+        update={
+            "kunde_name": kunde_name,
+            "standort_bezeichnung": standort_bez,
+            "anlage_bezeichnung": anlage_bez,
+            "gestellt_von_name": zugang_name,
+            "gestellt_von_email": zugang_email,
+            "vorgang_nummer": vorgang_nr,
+            "bearbeitet_von_name": bearbeiter,
+        }
+    )
+
+
+async def _lade_read(session: AsyncSession, anfrage_id: UUID) -> VorgangAnfrageRead:
+    # Nach flush/refresh neu lesen, damit auch frisch gesetzte Vorgang-/Bearbeiter-Namen enthalten sind.
+    row = (
+        await session.execute(_select_mit_namen().where(VorgangAnfrage.id == anfrage_id))
+    ).one()
+    return _zeile_zu_read(row)
+
+
 @router.get("", response_model=list[VorgangAnfrageRead])
 async def list_anfragen(
     status_filter: str | None = Query(default=None, alias="status"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[VorgangAnfrage]:
+) -> list[VorgangAnfrageRead]:
     stmt = (
-        select(VorgangAnfrage)
+        _select_mit_namen()
         .where(VorgangAnfrage.geloescht_am.is_(None))
         .order_by(VorgangAnfrage.created_at.desc())
     )
@@ -48,7 +95,7 @@ async def list_anfragen(
     if erlaubte_kunden is not None:
         stmt = stmt.where(VorgangAnfrage.kunde_id.in_(erlaubte_kunden))
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return [_zeile_zu_read(row) for row in result.all()]
 
 
 @router.get("/{anfrage_id}", response_model=VorgangAnfrageRead)
@@ -56,8 +103,9 @@ async def get_anfrage(
     anfrage_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> VorgangAnfrage:
-    return await _require_anfrage(session, auth, anfrage_id)
+) -> VorgangAnfrageRead:
+    await _require_anfrage(session, auth, anfrage_id)
+    return await _lade_read(session, anfrage_id)
 
 
 async def _require_anfrage(session: AsyncSession, auth: AuthContext, anfrage_id: UUID) -> VorgangAnfrage:
@@ -82,7 +130,7 @@ async def annehmen(
     body: VorgangAnfrageAnnehmen,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> VorgangAnfrage:
+) -> VorgangAnfrageRead:
     anfrage = await _require_anfrage(session, auth, anfrage_id)
     _require_offen(anfrage)
 
@@ -149,7 +197,7 @@ async def annehmen(
     await event_bus.publish(
         auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "erstellt"}
     )
-    return anfrage
+    return await _lade_read(session, anfrage.id)
 
 
 @router.post("/{anfrage_id}/ablehnen", response_model=VorgangAnfrageRead)
@@ -158,7 +206,7 @@ async def ablehnen(
     body: VorgangAnfrageAblehnen,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> VorgangAnfrage:
+) -> VorgangAnfrageRead:
     anfrage = await _require_anfrage(session, auth, anfrage_id)
     _require_offen(anfrage)
 
@@ -168,4 +216,4 @@ async def ablehnen(
     anfrage.bearbeitet_am = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(anfrage)
-    return anfrage
+    return await _lade_read(session, anfrage.id)
