@@ -82,7 +82,8 @@ window.fvRendern = function (d) {
 
   var fuss = el("div", "fuss");
   var frist = d.rueckgaengig_bis ? "Rückgängig möglich bis " + datum(d.rueckgaengig_bis) : "Nicht rückgängig zu machen";
-  fuss.appendChild(el("span", "", frist));
+  var fristEl = el("span", "", frist);
+  fuss.appendChild(fristEl);
   var knoepfe = el("div", "knoepfe");
   if (/^https?:\/\//i.test(d.link || "")) {
     var link = el("a", "knopf", "In FieldVibe öffnen");
@@ -107,6 +108,7 @@ window.fvRendern = function (d) {
         }
         zurueck.hidden = false;
         rueck.hidden = true;
+        fristEl.textContent = "Änderung zurückgenommen";
         wurzel.classList.add("zurueckgenommen");
       }).catch(function () {
         meldung.textContent = "Rückgängig ging nicht: Bitte in FieldVibe unter KI-Aktivität versuchen.";
