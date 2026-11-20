@@ -1995,8 +1995,32 @@ export interface MailAccount {
   aktiv: boolean;
   letzter_sync_am: string | null;
   letzter_sync_fehler: string | null;
+  anbieter_id: string | null;
+  server_angepasst: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface MailAnbieter {
+  id: string;
+  name: string;
+  kuerzel: string;
+  farbe: string;
+  beschreibung: string;
+  domains: string[];
+  imap_host: string;
+  imap_port: number;
+  imap_verschluesselung: MailVerschluesselung;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_verschluesselung: MailVerschluesselung;
+  hinweis: string | null;
+  unterstuetzt: boolean;
+}
+
+export interface MailAnbieterErkennung {
+  anbieter: MailAnbieter | null;
+  quelle: "domain" | "mx" | null;
 }
 
 export interface MailAccountVerbindungTest {
@@ -2017,6 +2041,7 @@ export interface MailFolder {
   anzeigename: string;
   sortierung: number;
   letzter_sync_am: string | null;
+  ungelesen: number;
 }
 
 export interface MailAttachment {

@@ -153,7 +153,7 @@ if gpg_verfuegbar; then
   assert_rc 0 "ohne privaten Schluessel: nur Pruefsummen"
   assert_enthaelt "$OUT" "nur Pruefsummen" "klare Meldung"
   assert_enthaelt_nicht "$T/stub.log" "pg_restore" "kein Test-Restore ohne Schluessel"
-  printf 'X' | dd of="$BD/db-$S.dump.gpg" bs=1 seek=20 conv=notrunc 2>/dev/null
+  byte_kippen "$BD/db-$S.dump.gpg" 20
   lauf "$REPO/scripts/backup-pruefen.sh"
   assert_rc 1 "Pruefsumme schlaegt auch ohne Schluessel an"
   unset GNUPGHOME

@@ -128,6 +128,8 @@ import type {
   Lieferant,
   MailAccount,
   MailAccountVerbindungTest,
+  MailAnbieter,
+  MailAnbieterErkennung,
   MailFolder,
   MailMessageDetail,
   MailMessageListResponse,
@@ -2339,6 +2341,12 @@ export const mailApi = {
     apiFetch<void>("/api/mail-accounts/test-verbindung", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  anbieter: () => apiFetch<MailAnbieter[]>("/api/mail-accounts/anbieter"),
+  anbieterErkennen: (emailAdresse: string) =>
+    apiFetch<MailAnbieterErkennung>("/api/mail-accounts/anbieter-erkennen", {
+      method: "POST",
+      body: JSON.stringify({ email_adresse: emailAdresse }),
     }),
   accounts: {
     list: () => apiFetch<MailAccount[]>("/api/mail-accounts"),

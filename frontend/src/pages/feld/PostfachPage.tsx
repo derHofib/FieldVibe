@@ -8,7 +8,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { SkeletonList } from "../../components/Skeleton";
-import { MailKontoFormular } from "../../office/postfach/MailKontoFormular";
+import { PostfachEinrichten } from "../../office/postfach/PostfachEinrichten";
 
 function relativesDatum(iso: string | null): string {
   if (!iso) return "";
@@ -91,7 +91,7 @@ export function PostfachPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-titel-mobil font-bold text-label">Postfach</h1>
-        <MailKontoFormular onFertig={() => window.location.reload()} />
+        <PostfachEinrichten layout="feld" onFertig={() => window.location.reload()} />
       </div>
     );
   }

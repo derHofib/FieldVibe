@@ -1,31 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { Mail, Plus, Settings } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { mailApi } from "../../api/endpoints";
-import { SeitenKopf } from "../OfficeUi";
-import { MailClient } from "./MailClient";
-import { MailKontoFormular } from "./MailKontoFormular";
-import { Select } from "../../components/apple/Select";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
+import { SeitenKopf } from "../OfficeUi";
+import { MailClient } from "./MailClient";
+import { PostfachEinrichten } from "./PostfachEinrichten";
 
-type Ansicht = { art: "client" } | { art: "konto-neu" } | { art: "konto-bearbeiten" };
-
-/** Orchestriert das Postfach: kein Konto -> Einrichtungsformular, sonst der
- * Drei-Spalten-Mailclient fuer das aktive Konto. Mehrere Postfaecher werden
+/** Orchestriert das Postfach: kein Konto -> Einrichten, sonst der
+ * Drei-Flächen-Mailclient für das aktive Konto. Mehrere Postfächer werden
  * nicht gemischt angezeigt (ein Ordnerbaum pro Konto ist eindeutiger als ein
- * gemeinsamer Posteingang mit rätselhafter Herkunft je Nachricht) -- ein
- * Umschalter oben wechselt zwischen ihnen. */
+ * gemeinsamer Posteingang mit rätselhafter Herkunft je Nachricht); der
+ * Kontoumschalter sitzt in der Ordnerspalte, die Auswahl steht in ?konto=. */
 export function OfficePostfachPage() {
   const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ["mail-accounts"],
     queryFn: () => mailApi.accounts.list(),
   });
-  const [aktivesKontoId, setAktivesKontoId] = useState<string | null>(null);
-  const [ansicht, setAnsicht] = useState<Ansicht>({ art: "client" });
-
-  const aktivesKonto = accounts?.find((a) => a.id === aktivesKontoId) ?? accounts?.[0];
+  const [params, setParams] = useSearchParams();
+  const aktivesKonto = accounts?.find((a) => a.id === params.get("konto")) ?? accounts?.[0];
 
   if (isLoading) {
     return (
@@ -36,7 +30,7 @@ export function OfficePostfachPage() {
     );
   }
 
-  // Fehler darf nicht als "kein Konto" durchfallen, sonst erscheint das Einrichtungsformular.
+  // Fehler darf nicht als "kein Konto" durchfallen, sonst erscheint das Einrichten.
   if (error) {
     return (
       <div>
@@ -46,71 +40,23 @@ export function OfficePostfachPage() {
     );
   }
 
-  if (!accounts || accounts.length === 0 || ansicht.art === "konto-neu") {
+  if (!accounts || accounts.length === 0 || !aktivesKonto) {
     return (
       <div>
         <SeitenKopf titel="Postfach" />
-        <MailKontoFormular
-          onFertig={() => setAnsicht({ art: "client" })}
-          onAbbrechen={accounts && accounts.length > 0 ? () => setAnsicht({ art: "client" }) : undefined}
-        />
+        <PostfachEinrichten layout="office" onFertig={() => void refetch()} />
       </div>
     );
   }
-
-  if (ansicht.art === "konto-bearbeiten" && aktivesKonto) {
-    return (
-      <div>
-        <SeitenKopf titel="Postfach bearbeiten" />
-        <MailKontoFormular
-          bestehendesKonto={aktivesKonto}
-          onFertig={() => setAnsicht({ art: "client" })}
-          onAbbrechen={() => setAnsicht({ art: "client" })}
-        />
-      </div>
-    );
-  }
-
-  if (!aktivesKonto) return <SkeletonList count={4} />;
 
   return (
     <div>
-      <SeitenKopf titel="Postfach">
-        {accounts.length > 1 && (
-          <Select className="w-auto" groesse="kompakt"
-            value={aktivesKonto.id}
-            onChange={(e) => setAktivesKontoId(e.target.value)}
-          >
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-        )}
-        <button
-          onClick={() => setAnsicht({ art: "konto-bearbeiten" })}
-          title="Postfach-Einstellungen"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-fill"
-        >
-          <Settings size={15} strokeWidth={2} />
-        </button>
-        <button
-          onClick={() => setAnsicht({ art: "konto-neu" })}
-          title="Weiteres Postfach verbinden"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-fill"
-        >
-          <Plus size={15} strokeWidth={2} />
-        </button>
-      </SeitenKopf>
-
-      {aktivesKonto.letzter_sync_fehler && (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-st-arbeit-bg px-3 py-2 text-sekundaer font-medium text-st-arbeit ">
-          <Mail size={13} strokeWidth={2} /> Letzter Abgleich fehlgeschlagen: {aktivesKonto.letzter_sync_fehler}
-        </p>
-      )}
-
-      <MailClient account={aktivesKonto} />
+      <SeitenKopf titel="Postfach" />
+      <MailClient
+        account={aktivesKonto}
+        accounts={accounts}
+        onKontoWechsel={(id) => setParams({ konto: id }, { replace: true })}
+      />
     </div>
   );
 }

@@ -1,14 +1,48 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Forward, Inbox, Loader2, Paperclip, Reply, Search } from "lucide-react";
+import {
+  Archive,
+  ChevronDown,
+  Folder,
+  Forward,
+  Inbox,
+  Loader2,
+  PenLine,
+  Paperclip,
+  Plus,
+  RefreshCw,
+  Reply,
+  ReplyAll,
+  Send,
+  Settings,
+  ShieldAlert,
+  SquarePen,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { mailApi } from "../../api/endpoints";
+import { Monogramm } from "../../components/apple/Monogramm";
+import { PulldownMenu } from "../../components/apple/PulldownMenu";
+import { SearchField } from "../../components/apple/SearchField";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import type { MailAccount, MailAttachment } from "../../types";
-import { ComposePanel, type ComposeModus } from "./ComposePanel";
 import { SkeletonList } from "../../components/Skeleton";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import type { MailAccount, MailAttachment, MailFolder } from "../../types";
+import { ComposePanel, type ComposeModus } from "./ComposePanel";
+import { ROLLEN_LABEL, ROLLEN_REIHENFOLGE, ordnerRolle, type OrdnerRolle } from "./ordnerRolle";
+import { abgleichStand, allenAntwortenEmpfaenger } from "./postfachHelfer";
+
+const ROLLEN_ICON: Record<OrdnerRolle, LucideIcon> = {
+  posteingang: Inbox,
+  gesendet: Send,
+  entwuerfe: PenLine,
+  archiv: Archive,
+  spam: ShieldAlert,
+  papierkorb: Trash2,
+};
 
 function relativesDatum(iso: string | null): string {
   if (!iso) return "";
@@ -23,12 +57,23 @@ function relativesDatum(iso: string | null): string {
   return datum.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
-function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAttachment }) {
+function dateiTyp(dateiname: string): string {
+  const punkt = dateiname.lastIndexOf(".");
+  return punkt >= 0 ? dateiname.slice(punkt + 1, punkt + 5).toUpperCase() : "DATEI";
+}
+
+function groesseText(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}
+
+function AnhangKachel({ messageId, anhang }: { messageId: string; anhang: MailAttachment }) {
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState(false);
   return (
     <div className="flex flex-col items-start gap-1">
       <button
+        type="button"
         disabled={laedt}
         onClick={async () => {
           setLaedt(true);
@@ -42,24 +87,64 @@ function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAtt
             setLaedt(false);
           }
         }}
-        className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill disabled:opacity-50"
+        className="flex items-center gap-2.5 rounded-[var(--radius-ap-md)] bg-fill px-2.5 py-2 text-left hover:bg-fill2 disabled:opacity-50"
       >
-        {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
-        {anhang.dateiname}
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-card text-meta font-bold text-label2">
+          {laedt ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : dateiTyp(anhang.dateiname)}
+        </span>
+        <span className="min-w-0">
+          <span className="block max-w-56 truncate text-sekundaer font-semibold text-label">{anhang.dateiname}</span>
+          <span className="block text-meta text-label2">{groesseText(anhang.groesse_bytes)}</span>
+        </span>
       </button>
-      {fehler && <span className="text-sekundaer text-st-fehlt ">Anhang konnte nicht geöffnet werden.</span>}
+      {fehler && <span className="text-sekundaer text-st-fehlt">Anhang konnte nicht geöffnet werden.</span>}
     </div>
   );
 }
 
-export function MailClient({ account }: { account: MailAccount }) {
+interface OrdnerGruppen {
+  standard: { rolle: OrdnerRolle; ordner: MailFolder }[];
+  eigene: MailFolder[];
+}
+
+function gruppiere(ordner: MailFolder[]): OrdnerGruppen {
+  const nachRolle = new Map<OrdnerRolle, MailFolder>();
+  const eigene: MailFolder[] = [];
+  for (const o of ordner) {
+    const rolle = ordnerRolle(o.imap_name);
+    if (rolle && !nachRolle.has(rolle)) nachRolle.set(rolle, o);
+    else eigene.push(o);
+  }
+  const standard = ROLLEN_REIHENFOLGE.filter((r) => nachRolle.has(r)).map((rolle) => ({
+    rolle,
+    ordner: nachRolle.get(rolle)!,
+  }));
+  return { standard, eigene };
+}
+
+interface Props {
+  account: MailAccount;
+  accounts: MailAccount[];
+  onKontoWechsel: (id: string) => void;
+}
+
+export function MailClient({ account, accounts, onKontoWechsel }: Props) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [aktiverOrdner, setAktiverOrdner] = useState<string | null>(null);
   const [aktiveNachricht, setAktiveNachricht] = useState<string | null>(null);
   const [sucheEingabe, setSuche] = useState("");
   const suche = useDebouncedValue(sucheEingabe);
   const [compose, setCompose] = useState<ComposeModus | null>(null);
   const [gesendetHinweis, setGesendetHinweis] = useState(false);
+
+  // Kontowechsel: Auswahl zurücksetzen, sonst zeigt die Liste kurz den Ordner des alten Kontos
+  useEffect(() => {
+    setAktiverOrdner(null);
+    setAktiveNachricht(null);
+    setCompose(null);
+    setSuche("");
+  }, [account.id]);
 
   const {
     data: ordner,
@@ -70,12 +155,14 @@ export function MailClient({ account }: { account: MailAccount }) {
     queryKey: ["mail-folders", account.id],
     queryFn: () => mailApi.folders(account.id),
   });
+  const gruppen = useMemo(() => gruppiere(ordner ?? []), [ordner]);
 
   useEffect(() => {
     if (!aktiverOrdner && ordner && ordner.length > 0) {
-      setAktiverOrdner(ordner[0].id);
+      setAktiverOrdner((gruppen.standard[0]?.ordner ?? ordner[0]).id);
     }
-  }, [ordner, aktiverOrdner]);
+  }, [ordner, gruppen, aktiverOrdner]);
+  const aktuellerOrdner = ordner?.find((o) => o.id === aktiverOrdner);
 
   const {
     data: nachrichtenSeiten,
@@ -106,6 +193,7 @@ export function MailClient({ account }: { account: MailAccount }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mail-messages"] });
       queryClient.invalidateQueries({ queryKey: ["mail-message", aktiveNachricht] });
+      queryClient.invalidateQueries({ queryKey: ["mail-folders", account.id] });
     },
   });
 
@@ -117,66 +205,150 @@ export function MailClient({ account }: { account: MailAccount }) {
     }
   };
 
-  const htmlSrcDoc = useMemo(() => {
-    if (!detail?.body_html) return null;
-    // sandbox ohne allow-scripts/allow-same-origin -- fremdes HTML darf
-    // weder Skripte ausfuehren noch auf die App zugreifen. Externe Bilder
-    // laden trotzdem (Tracking-Pixel-Risiko wie in jedem Mailclient,
-    // kein FieldVibe-spezifisches Problem).
-    return detail.body_html;
-  }, [detail]);
+  const waehleOrdner = (id: string) => {
+    setAktiverOrdner(id);
+    setAktiveNachricht(null);
+    setCompose(null);
+  };
+
+  const ordnerZeile = (o: MailFolder, label: string, Icon: LucideIcon) => {
+    const aktiv = o.id === aktiverOrdner;
+    return (
+      <button
+        key={o.id}
+        type="button"
+        title={label}
+        aria-label={label}
+        aria-current={aktiv ? "true" : undefined}
+        onClick={() => waehleOrdner(o.id)}
+        className={`flex w-full items-center gap-2.5 rounded-[var(--radius-ap-md)] px-2.5 py-1.5 text-left text-sekundaer font-medium xl:justify-start max-xl:justify-center ${
+          aktiv ? "bg-tintbg text-tint-text" : "text-label hover:bg-fill"
+        }`}
+      >
+        <span className="relative shrink-0">
+          <Icon size={16} strokeWidth={2} aria-hidden="true" />
+          {o.ungelesen > 0 && (
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-tint xl:hidden" aria-hidden="true" />
+          )}
+        </span>
+        <span className="hidden min-w-0 flex-1 truncate xl:block">{label}</span>
+        {o.ungelesen > 0 && (
+          <span className="hidden text-meta font-semibold text-label2 xl:block">{o.ungelesen}</span>
+        )}
+      </button>
+    );
+  };
+
+  const stand = abgleichStand(account.letzter_sync_am);
+
+  const flaeche = "overflow-hidden rounded-xl bg-card";
 
   return (
-    <div className="grid h-[calc(100vh-7.5rem)] grid-cols-[minmax(120px,160px)_minmax(220px,300px)_minmax(280px,1fr)] gap-3">
-      <div className="overflow-y-auto rounded-xl border border-sep bg-card py-2">
-        {(ordner ?? []).map((o) => (
-          <button
-            key={o.id}
-            onClick={() => {
-              setAktiverOrdner(o.id);
-              setAktiveNachricht(null);
-              setCompose(null);
-            }}
-            className={`block w-full truncate px-3 py-1.5 text-left text-sekundaer font-medium ${
-              o.id === aktiverOrdner
-                ? "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300"
-                : "text-label hover:bg-fill"
-            }`}
-          >
-            {o.anzeigename}
-          </button>
-        ))}
+    <div className="grid h-[calc(100vh-7.5rem)] grid-cols-[56px_minmax(280px,400px)_minmax(0,1fr)] gap-3 xl:grid-cols-[232px_440px_minmax(0,1fr)]">
+      <aside aria-label="Ordner" className={`flex flex-col p-2 ${flaeche}`}>
+        <PulldownMenu
+          ariaLabel="Postfach wechseln"
+          items={[
+            ...accounts.map((a) => ({
+              label: a.name,
+              aktiv: a.id === account.id,
+              onSelect: () => onKontoWechsel(a.id),
+            })),
+            "trenner" as const,
+            {
+              label: "Postfach-Einstellungen",
+              icon: Settings,
+              onSelect: () => navigate(`/postfach/einstellungen?konto=${account.id}`),
+            },
+            {
+              label: "Weiteres Postfach verbinden",
+              icon: Plus,
+              onSelect: () => navigate("/postfach/einstellungen?neu=1"),
+            },
+          ]}
+          trigger={({ toggeln, triggerRef, offen }) => (
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={toggeln}
+              aria-haspopup="menu"
+              aria-expanded={offen}
+              title={`${account.name} · ${account.email_adresse}`}
+              className="flex w-full items-center gap-2.5 rounded-[var(--radius-ap-md)] p-1.5 text-left hover:bg-fill max-xl:justify-center"
+            >
+              <Monogramm name={account.name} groesse={32} ringKlasse="ring-card" />
+              <span className="hidden min-w-0 flex-1 xl:block">
+                <span className="block truncate text-sekundaer font-semibold text-label">{account.name}</span>
+                <span className="block truncate text-meta text-label2">{account.email_adresse}</span>
+              </span>
+              <ChevronDown size={14} className="hidden shrink-0 text-label2 xl:block" aria-hidden="true" />
+            </button>
+          )}
+        />
+
         <button
+          type="button"
+          title="Neue E-Mail"
+          aria-label="Neue E-Mail"
           onClick={() => {
             setCompose({ art: "neu", accountId: account.id });
             setAktiveNachricht(null);
           }}
-          className="btn-ap-primary mx-3 mt-2 w-[calc(100%-1.5rem)] py-2 text-sekundaer"
+          className="btn-ap-primary mt-2 flex w-full items-center justify-center gap-1.5 py-2"
         >
-          Neu
+          <SquarePen size={14} strokeWidth={2} aria-hidden="true" />
+          <span className="hidden xl:inline">Neue E-Mail</span>
         </button>
-      </div>
 
-      <div className="flex flex-col overflow-hidden rounded-xl border border-sep bg-card">
-        <div className="relative border-b border-sep p-2 ">
-          <Search
-            size={13}
-            strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-label2"
-          />
-          <input
+        <nav className="mt-3 flex-1 space-y-0.5 overflow-y-auto">
+          {gruppen.standard.map(({ rolle, ordner: o }) => ordnerZeile(o, ROLLEN_LABEL[rolle], ROLLEN_ICON[rolle]))}
+          {gruppen.eigene.length > 0 && (
+            <>
+              <p className="hidden px-2.5 pt-4 pb-1 text-meta font-semibold tracking-wide text-label2 uppercase xl:block">
+                Ordner
+              </p>
+              <div className="max-xl:mt-3 max-xl:space-y-0.5">
+                {gruppen.eigene.map((o) => ordnerZeile(o, o.anzeigename, Folder))}
+              </div>
+            </>
+          )}
+        </nav>
+
+        <div className="mt-2 flex items-center gap-2 px-2 pt-2 text-meta max-xl:justify-center">
+          {account.letzter_sync_fehler ? (
+            <Link
+              to={`/postfach/einstellungen?konto=${account.id}`}
+              title={account.letzter_sync_fehler}
+              className="flex items-center gap-2 text-st-fehlt"
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              <span className="hidden xl:inline">Abgleich fehlgeschlagen – Einstellungen</span>
+              <span className="sr-only xl:hidden">Abgleich fehlgeschlagen</span>
+            </Link>
+          ) : (
+            <span className="flex items-center gap-2 text-label2" title={stand ?? "Noch nicht abgeglichen"}>
+              <RefreshCw size={13} aria-hidden="true" />
+              <span className="hidden xl:inline">{stand ?? "Noch nicht abgeglichen"}</span>
+            </span>
+          )}
+        </div>
+      </aside>
+
+      <section aria-label="Nachrichten" className={`flex flex-col ${flaeche}`}>
+        <div className="p-2">
+          <SearchField
             value={sucheEingabe}
-            onChange={(e) => setSuche(e.target.value)}
-            placeholder="Suchen…"
-            className="w-full rounded-lg border border-sep bg-fill py-1.5 pr-2 pl-7 text-sekundaer text-label "
+            onChange={setSuche}
+            placeholder={`${aktuellerOrdner ? (ordnerRolle(aktuellerOrdner.imap_name) ? ROLLEN_LABEL[ordnerRolle(aktuellerOrdner.imap_name)!] : aktuellerOrdner.anzeigename) : "Postfach"} durchsuchen`}
+            ariaLabel="Nachrichten suchen"
           />
         </div>
         {gesendetHinweis && (
-          <p className="border-b border-st-erledigt bg-st-erledigt-bg px-3 py-1.5 text-sekundaer font-medium text-st-erledigt ">
+          <p role="status" className="mx-2 mb-1 rounded-lg bg-st-erledigt-bg px-3 py-1.5 text-sekundaer font-medium text-st-erledigt">
             Nachricht gesendet.
           </p>
         )}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-1.5 pb-1.5">
           {ordnerFehler ? (
             <FehlerZustand fehler={ordnerFehler} was="Die Ordner" onErneut={() => void ordnerNeu()} />
           ) : nachrichtenFehler ? (
@@ -196,37 +368,45 @@ export function MailClient({ account }: { account: MailAccount }) {
               }
             />
           ) : (
-            nachrichten.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => waehleNachricht(n.id, n.gelesen)}
-                className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
-                  n.id === aktiveNachricht
-                    ? "border-l-2 border-l-blue-500 bg-tintbg pl-[10px] "
-                    : "hover:bg-fill"
-                }`}
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <p
-                    className={`truncate text-sekundaer ${n.gelesen ? "font-medium text-label" : "font-bold text-label dark:text-white"}`}
-                  >
-                    {n.von_name || n.von_adresse || "Unbekannt"}
-                  </p>
-                  <span className="shrink-0 text-meta text-label2">
-                    {relativesDatum(n.datum)}
-                  </span>
-                </div>
-                <p
-                  className={`truncate text-sekundaer ${n.gelesen ? "text-label2" : "font-semibold text-label"}`}
+            nachrichten.map((n) => {
+              const absender = n.von_name || n.von_adresse || "Unbekannt";
+              const aktiv = n.id === aktiveNachricht;
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  aria-current={aktiv ? "true" : undefined}
+                  onClick={() => waehleNachricht(n.id, n.gelesen)}
+                  className={`relative flex w-full items-start gap-3 rounded-[var(--radius-ap-md)] py-2.5 pr-3 pl-5 text-left ${
+                    aktiv ? "bg-tintbg" : "hover:bg-fill"
+                  }`}
                 >
-                  {n.betreff || "(kein Betreff)"}
-                </p>
-                <p className="mt-0.5 flex items-center gap-1 truncate text-meta text-label2">
-                  {n.hat_anhang && <Paperclip size={11} strokeWidth={2} />}
-                  {n.ausschnitt}
-                </p>
-              </button>
-            ))
+                  {!n.gelesen && (
+                    <span
+                      className="absolute top-[22px] left-2 h-2 w-2 rounded-full bg-tint"
+                      role="img"
+                      aria-label="Ungelesen"
+                    />
+                  )}
+                  <Monogramm name={absender} groesse={36} ringKlasse="ring-card" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className={`truncate text-sekundaer text-label ${n.gelesen ? "font-medium" : "font-bold"}`}>
+                        {absender}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1 text-meta text-label2">
+                        {n.hat_anhang && <Paperclip size={11} strokeWidth={2} aria-label="Mit Anhang" />}
+                        {relativesDatum(n.datum)}
+                      </span>
+                    </span>
+                    <span className={`block truncate text-sekundaer text-label ${n.gelesen ? "" : "font-semibold"}`}>
+                      {n.betreff || "(kein Betreff)"}
+                    </span>
+                    <span className="mt-0.5 line-clamp-2 text-sekundaer text-label2">{n.ausschnitt}</span>
+                  </span>
+                </button>
+              );
+            })
           )}
           {hasNextPage && (
             <button
@@ -238,9 +418,9 @@ export function MailClient({ account }: { account: MailAccount }) {
             </button>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="overflow-hidden rounded-xl border border-sep bg-card">
+      <section aria-label="Lesebereich" className={flaeche}>
         {compose ? (
           <ComposePanel
             modus={compose}
@@ -259,60 +439,94 @@ export function MailClient({ account }: { account: MailAccount }) {
           <EmptyState icon={Inbox} text="Nachricht auswählen." className="h-full justify-center" />
         ) : (
           <div className="flex h-full flex-col">
-            <div className="border-b border-sep p-4 ">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-fliess font-bold text-label dark:text-white">
-                  {detail.betreff || "(kein Betreff)"}
-                </h2>
-                <div className="flex shrink-0 gap-1.5">
-                  <button
-                    onClick={() =>
-                      setCompose({
-                        art: "antworten",
-                        messageId: detail.id,
-                        an: detail.von_adresse ? [detail.von_adresse] : [],
-                        betreff: detail.betreff,
-                      })
-                    }
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
-                  >
-                    <Reply size={13} strokeWidth={2} /> Antworten
-                  </button>
-                  <button
-                    onClick={() => setCompose({ art: "weiterleiten", messageId: detail.id, betreff: detail.betreff })}
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-sekundaer font-medium text-label hover:bg-fill"
-                  >
-                    <Forward size={13} strokeWidth={2} /> Weiterleiten
-                  </button>
+            <div className="flex flex-wrap items-center gap-2 p-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setCompose({
+                    art: "antworten",
+                    messageId: detail.id,
+                    an: detail.von_adresse ? [detail.von_adresse] : [],
+                    betreff: detail.betreff,
+                  })
+                }
+                className="btn-ap flex items-center gap-1.5"
+              >
+                <Reply size={14} strokeWidth={2} aria-hidden="true" /> Antworten
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { an, cc } = allenAntwortenEmpfaenger(detail, account.email_adresse);
+                  setCompose({ art: "antworten", messageId: detail.id, an, cc, betreff: detail.betreff });
+                }}
+                className="btn-ap flex items-center gap-1.5"
+              >
+                <ReplyAll size={14} strokeWidth={2} aria-hidden="true" /> Allen antworten
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompose({ art: "weiterleiten", messageId: detail.id, betreff: detail.betreff })}
+                className="btn-ap flex items-center gap-1.5"
+              >
+                <Forward size={14} strokeWidth={2} aria-hidden="true" /> Weiterleiten
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pb-5">
+              <h2 className="ap-heading text-titel-mobil font-bold text-label">{detail.betreff || "(kein Betreff)"}</h2>
+              <div className="mt-3 flex items-start gap-3">
+                <Monogramm name={detail.von_name || detail.von_adresse || "?"} groesse={40} ringKlasse="ring-card" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-fliess text-label">
+                    <span className="font-semibold">{detail.von_name || detail.von_adresse}</span>
+                    {detail.von_name && detail.von_adresse && (
+                      <span className="ml-1.5 text-sekundaer text-label2">{detail.von_adresse}</span>
+                    )}
+                  </p>
+                  {detail.an.length > 0 && (
+                    <p className="text-sekundaer text-label2">An: {detail.an.join(", ")}</p>
+                  )}
+                  {detail.cc.length > 0 && <p className="text-sekundaer text-label2">Cc: {detail.cc.join(", ")}</p>}
                 </div>
+                <span className="shrink-0 text-sekundaer text-label2">
+                  {detail.datum
+                    ? new Date(detail.datum).toLocaleString("de-DE", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}
+                </span>
               </div>
-              <p className="text-sekundaer text-label2">
-                Von <span className="font-medium text-label">{detail.von_name || detail.von_adresse}</span>
-                {detail.an.length > 0 && <> · An {detail.an.join(", ")}</>}
-              </p>
               {detail.anhaenge.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {detail.anhaenge.map((a) => (
-                    <AnhangZeile key={a.id} messageId={detail.id} anhang={a} />
+                    <AnhangKachel key={a.id} messageId={detail.id} anhang={a} />
                   ))}
                 </div>
               )}
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {htmlSrcDoc ? (
-                <iframe
-                  title="Nachrichteninhalt"
-                  sandbox=""
-                  srcDoc={htmlSrcDoc}
-                  className="h-full w-full rounded-lg border border-sep "
-                />
-              ) : (
-                <p className="text-fliess whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
-              )}
+              {/* Helle Papierfläche auch im Dark Mode: fremde HTML-Mails sind fast immer für weißen Grund gestaltet. */}
+              <div className="mt-4 min-h-[320px] overflow-hidden rounded-xl bg-white text-black">
+                {detail.body_html ? (
+                  // sandbox ohne allow-scripts/allow-same-origin: fremdes HTML darf weder Skripte
+                  // ausführen noch auf die App zugreifen.
+                  <iframe
+                    title="Nachrichteninhalt"
+                    sandbox=""
+                    srcDoc={detail.body_html}
+                    style={{ colorScheme: "light" }}
+                    className="h-[60vh] w-full bg-white"
+                  />
+                ) : (
+                  <p className="p-5 text-fliess whitespace-pre-wrap break-words">{detail.body_text}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

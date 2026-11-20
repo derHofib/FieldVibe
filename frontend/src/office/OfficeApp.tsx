@@ -55,6 +55,7 @@ import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OrganigrammPage } from "./organigramm/OrganigrammPage";
 import { OfficeFehlerberichtDetailPage, OfficeFehlerberichtePage } from "./fehlerberichte/OfficeFehlerberichtePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
+import { PostfachEinstellungenPage } from "./postfach/PostfachEinstellungenPage";
 import { OfficeExportPage } from "./export/OfficeExportPage";
 import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
@@ -88,6 +89,7 @@ export function OfficeApp() {
           <Route path="/angebote" element={<OfficeRechnungenPage />} />
           <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
           <Route path="/postfach" element={<OfficePostfachPage />} />
+          <Route path="/postfach/einstellungen" element={<PostfachEinstellungenPage />} />
           <Route path="/telefonate" element={<OfficeTelefonatePage />} />
           <Route path="/kunden" element={<OfficeKundenPage />} />
           <Route path="/kunden/:id" element={<OfficeKundenPage />} />

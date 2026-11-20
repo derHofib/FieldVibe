@@ -89,14 +89,27 @@ async def list_folders(
     account_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[MailFolder]:
+) -> list[MailFolderRead]:
     await _eigenes_konto(session, auth, account_id)
     result = await session.execute(
         select(MailFolder)
         .where(MailFolder.mail_account_id == account_id)
         .order_by(MailFolder.sortierung, MailFolder.anzeigename)
     )
-    return list(result.scalars().all())
+    ordner = list(result.scalars().all())
+    zaehler = dict(
+        (
+            await session.execute(
+                select(MailMessage.folder_id, func.count())
+                .where(MailMessage.mail_account_id == account_id, MailMessage.gelesen.is_(False))
+                .group_by(MailMessage.folder_id)
+            )
+        ).all()
+    )
+    return [
+        MailFolderRead.model_validate(o, from_attributes=True).model_copy(update={"ungelesen": zaehler.get(o.id, 0)})
+        for o in ordner
+    ]
 
 
 @router.get("/api/mail-folders/{folder_id}/messages", response_model=MailMessageListResponse)
