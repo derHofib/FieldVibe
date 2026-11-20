@@ -254,6 +254,9 @@ behalten ihre eigene Rundung/Farbe. Nur die Bedienelemente drumherum
   Kunden, Profilseite eingebettet) und `/zeiten-buchen` mit `layout="dicht"`
   (Tabelle mit Gruppenzeilen und sticky Sammelaktionen, Logik in
   `utils/zeitenBuchen.ts`)
+- `/rechnungseingang` ist eine eigene Office-Seite (`office/rechnungseingang/OfficeRechnungseingangPage.tsx`):
+  Kennzahlen, Tabelle mit Detailpanel (`layout="dicht"`), E-Rechnungen per Drag & Drop; "Ganze Seite"
+  (`/rechnungseingang/:id/vollbild`, `max-w-[1400px]`) zeigt den Beleg neben den Daten
 
 ## Interaktionsmuster (UX-Überarbeitung Nov. 2026)
 

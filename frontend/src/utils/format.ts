@@ -10,6 +10,18 @@ export function formatEuro(wert: string | number): string {
   }).format(zahl);
 }
 
+/** Menge ohne unnötige Nachkommastellen ("2", "1,5"). */
+export function formatMenge(wert: string | number): string {
+  const zahl = Number(wert);
+  return Number.isNaN(zahl) ? String(wert) : new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(zahl);
+}
+
+/** Prozentwert de-DE: "2 %", "2,5 %". */
+export function formatProzent(wert: string | number): string {
+  const zahl = Number(wert);
+  return Number.isNaN(zahl) ? `${wert} %` : `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(zahl)} %`;
+}
+
 export function formatDatum(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("de-DE");

@@ -12,6 +12,7 @@ export function ListeMitPanel({
   panelTitel,
   onSchliessen,
   nurPanel = false,
+  kopfAktionen,
 }: {
   liste: ReactNode;
   /** null = kein Panel offen */
@@ -20,6 +21,8 @@ export function ListeMitPanel({
   onSchliessen: () => void;
   /** Bei offenem Panel die Liste ausblenden und das Panel allein (max. max-w-3xl) zeigen. */
   nurPanel?: boolean;
+  /** Optional: Aktionen in der Panel-Kopfzeile, links neben dem X. */
+  kopfAktionen?: ReactNode;
 }) {
   useEscapeSchliesst(onSchliessen, panel !== null);
 
@@ -41,6 +44,8 @@ export function ListeMitPanel({
           <section aria-label={panelTitel}>
             <div className="flex items-center justify-between border-b-[0.5px] border-sep py-1.5 pr-2 pl-4">
               <span className="text-sekundaer font-semibold text-label2">{panelTitel}</span>
+              <div className="flex items-center gap-1">
+              {kopfAktionen}
               <button
                 onClick={onSchliessen}
                 aria-label="Panel schließen"
@@ -49,6 +54,7 @@ export function ListeMitPanel({
               >
                 <X size={16} strokeWidth={2} />
               </button>
+              </div>
             </div>
             <div className="px-4 pb-4">{panel}</div>
           </section>

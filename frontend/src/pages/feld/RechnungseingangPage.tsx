@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { heuteIso } from "../../utils/format";
 import { FileUp, ReceiptText, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { formatEuro, formatIsoTag } from "../../utils/format";
 import { ApiError } from "../../api/client";
-import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
+import { eingangsrechnungenApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
 import { pruefeERechnungDatei } from "../../utils/eRechnung";
@@ -20,7 +20,7 @@ import {
 } from "../../components/rechnung/rechnungenFilter";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
-import { Select } from "../../components/apple/Select";
+import { NeueEingangsrechnungForm } from "../../components/rechnung/NeueEingangsrechnungForm";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 
@@ -34,18 +34,6 @@ export function RechnungseingangPage() {
   const kannErstellen = hatRecht("abrechnung", "erstellen");
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    lieferantId: "",
-    lieferantName: "",
-    rechnungsnummerLieferant: "",
-    rechnungsdatum: heuteIso(),
-    faelligAm: "",
-    betragNetto: "",
-    kategorie: "",
-    skontoProzent: "",
-    skontoTage: "",
-  });
-  const [fehler, setFehler] = useState<string | null>(null);
   const [importFehler, setImportFehler] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,12 +42,6 @@ export function RechnungseingangPage() {
     queryFn: () => eingangsrechnungenApi.list(),
     enabled: abrechnungAktiv && kannSehen,
   });
-  const { data: lieferanten } = useQuery({
-    queryKey: ["lieferanten"],
-    queryFn: () => lieferantenApi.list(),
-    enabled: abrechnungAktiv && kannSehen,
-  });
-
   // Die Liste kommt ungepaged vom Server, daher läuft alles clientseitig.
   const felder = useMemo(() => eingangsrechnungFelder(), []);
   const zustand = useFilterZustand({ felder });
@@ -82,40 +64,6 @@ export function RechnungseingangPage() {
     [eingangsrechnungen, zustand.bedingungen, zustand.sucheVerzoegert, felder],
   );
   const filterAktiv = zustand.aktiveAnzahl > 0 || zustand.suche.trim() !== "";
-
-  const createMutation = useMutation({
-    meta: { erfolg: "Angelegt" },
-    mutationFn: () =>
-      eingangsrechnungenApi.create({
-        lieferant_id: form.lieferantId || null,
-        lieferant_name: form.lieferantId ? undefined : form.lieferantName,
-        rechnungsnummer_lieferant: form.rechnungsnummerLieferant,
-        rechnungsdatum: form.rechnungsdatum,
-        faellig_am: form.faelligAm || undefined,
-        betrag_netto: form.betragNetto || "0",
-        kategorie: form.kategorie || undefined,
-        skonto_prozent: form.skontoProzent || undefined,
-        skonto_tage: form.skontoTage ? Number(form.skontoTage) : undefined,
-      }),
-    onSuccess: (eingangsrechnung) => {
-      setShowForm(false);
-      setForm({
-        lieferantId: "",
-        lieferantName: "",
-        rechnungsnummerLieferant: "",
-        rechnungsdatum: heuteIso(),
-        skontoProzent: "",
-        skontoTage: "",
-        faelligAm: "",
-        betragNetto: "",
-        kategorie: "",
-      });
-      setFehler(null);
-      queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
-      navigate(`/rechnungseingang/${eingangsrechnung.id}`);
-    },
-    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Anlegen fehlgeschlagen"),
-  });
 
   const eRechnungMutation = useMutation({
     mutationFn: (file: File) => eingangsrechnungenApi.eRechnungImport(file),
@@ -178,107 +126,12 @@ export function RechnungseingangPage() {
       )}
 
       <AnlegenPanel offen={showForm} titel="Neue Eingangsrechnung" onClose={() => setShowForm(false)}>
-        <div className="space-y-2 p-4">
-          <Select
-            value={form.lieferantId}
-            onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
-          >
-            <option value="">Lieferant manuell eintragen…</option>
-            {(lieferanten ?? []).map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </Select>
-          {!form.lieferantId && (
-            <input
-              value={form.lieferantName}
-              onChange={(e) => setForm({ ...form, lieferantName: e.target.value })}
-              placeholder="Name des Ausstellers"
-              className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-          )}
-          <input
-            value={form.rechnungsnummerLieferant}
-            onChange={(e) => setForm({ ...form, rechnungsnummerLieferant: e.target.value })}
-            placeholder="Rechnungsnummer (vom Aussteller)"
-            className="w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-meta text-label2">
-              Rechnungsdatum
-              <input
-                type="date"
-                value={form.rechnungsdatum}
-                onChange={(e) => setForm({ ...form, rechnungsdatum: e.target.value })}
-                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-              />
-            </label>
-            <label className="text-sekundaer text-label2">
-              Fällig am
-              <input
-                type="date"
-                value={form.faelligAm}
-                onChange={(e) => setForm({ ...form, faelligAm: e.target.value })}
-                className="mt-1 w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              step="0.01"
-              value={form.betragNetto}
-              onChange={(e) => setForm({ ...form, betragNetto: e.target.value })}
-              placeholder="Betrag netto"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-            <Select
-              className="w-auto"
-              value={form.kategorie}
-              onChange={(e) => setForm({ ...form, kategorie: e.target.value })}
-              groesse="kompakt"
-            >
-              <option value="">Kategorie…</option>
-              {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              step="0.01"
-              value={form.skontoProzent}
-              onChange={(e) => setForm({ ...form, skontoProzent: e.target.value })}
-              placeholder="Skonto %"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-            <input
-              type="number"
-              step="1"
-              value={form.skontoTage}
-              onChange={(e) => setForm({ ...form, skontoTage: e.target.value })}
-              placeholder="Skonto-Frist (Tage)"
-              className="border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-2 py-1.5 text-zeile text-label"
-            />
-          </div>
-          {fehler && <p className="text-sekundaer text-st-fehlt ">{fehler}</p>}
-          <button
-            disabled={
-              !form.rechnungsnummerLieferant ||
-              !form.rechnungsdatum ||
-              (!form.lieferantId && !form.lieferantName) ||
-              createMutation.isPending
-            }
-            onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sekundaer font-medium disabled:opacity-50"
-          >
-            Anlegen
-          </button>
-        </div>
+        <NeueEingangsrechnungForm
+          onAngelegt={(eingangsrechnung) => {
+            setShowForm(false);
+            navigate(`/rechnungseingang/${eingangsrechnung.id}`);
+          }}
+        />
       </AnlegenPanel>
 
       <FilterLeiste
@@ -326,7 +179,7 @@ export function RechnungseingangPage() {
                 {e.lieferant_name}
               </div>
               <div className="text-meta text-label2">
-                {e.rechnungsnummer_lieferant} · {new Date(e.rechnungsdatum).toLocaleDateString("de-DE")}
+                {e.rechnungsnummer_lieferant} · {formatIsoTag(e.rechnungsdatum.slice(0, 10))}
                 {e.kategorie && ` · ${KATEGORIE_LABEL[e.kategorie]}`}
                 {e.hat_xml && " · E-Rechnung"}
                 {e.import_hinweis && " · Hinweis prüfen"}
@@ -334,7 +187,7 @@ export function RechnungseingangPage() {
             </div>
             <div className="text-right">
               <div className="text-fliess font-medium text-label">
-                {e.betrag_brutto} EUR
+                {formatEuro(e.betrag_brutto)}
               </div>
               <span className="border rounded-[var(--radius-ap-pill)] border-sep px-2 py-0.5 text-meta font-semibold text-label">
                 {STATUS_LABEL[e.status]}

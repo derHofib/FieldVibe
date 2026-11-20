@@ -10,6 +10,7 @@ import type {
   RechnungStatus,
   Rechnungsart,
 } from "../../types";
+import type { StatusKey } from "../apple/status";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { RECHNUNGSART_FILTER, RECHNUNGSART_LABEL } from "../../utils/rechnungsart";
 import { auswahlKomplement, isoDatum, parseDeutscheZahl, zeitraumAufloesen } from "../filter/auswerten";
@@ -64,6 +65,11 @@ const EINGANG_STATUS_OPTIONEN: FilterOption[] = [
   { wert: "bezahlt", label: EINGANG_STATUS_LABEL.bezahlt, status: "erledigt" },
   { wert: "storniert", label: EINGANG_STATUS_LABEL.storniert, status: "fehlt" },
 ];
+
+/** Status-Token je Eingangsrechnungs-Status, einzige Zuordnung für Filterpillen und Tabellen-Status. */
+export function eingangStatusToken(status: EingangsrechnungStatus): StatusKey | undefined {
+  return EINGANG_STATUS_OPTIONEN.find((o) => o.wert === status)?.status;
+}
 
 const DATUM_SERVER_OPERATOREN = ["am", "vor", "nach", "zwischen", "relativ"] as const;
 const BETRAG_SERVER_OPERATOREN = ["gte", "lte", "zwischen"] as const;
