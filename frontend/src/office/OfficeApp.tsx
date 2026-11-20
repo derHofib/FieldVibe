@@ -34,7 +34,6 @@ import { RechnungDetailPage } from "../pages/feld/RechnungDetailPage";
 import { SettingsPage } from "../pages/feld/SettingsPage";
 import { StandortDetailPage } from "../pages/feld/StandortDetailPage";
 import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
-import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { Karte } from "./OfficeUi";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
@@ -256,7 +255,7 @@ export function OfficeApp() {
           <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
           <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
           <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
-          <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+          <Route path="/techniker-zuweisungen" element={<Navigate to="/kunden" replace />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />
           <Route path="/papierkorb" element={<PapierkorbPage />} />
           </Route>

@@ -5,6 +5,7 @@ from app.schemas.kunde import KundeRead
 from app.schemas.standort import StandortRead
 from app.schemas.tag import TagRead
 from app.schemas.user import UserRead
+from app.schemas.kunde_zuweisung import BetreuerRead
 from app.schemas.vorgang import VorgangRead
 
 
@@ -12,7 +13,9 @@ class KundeProfil(KundeRead):
     anlagen: list[AnlageRead]
     vorgaenge: list[VorgangRead]
     tags: list[TagRead]
+    # techniker bleibt eine Version lang parallel zu betreuung (alter Frontend-Stand).
     techniker: list[UserRead]
+    betreuung: list[BetreuerRead] = []
 
 
 class AnlageProfil(AnlageRead):

@@ -1,10 +1,12 @@
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, Building2, CircleDot, LogOut, Mail, Send, Shield, ShieldOff, Trash2, User as UserIcon, UserCheck, UserX, Users } from "lucide-react";
+import { Ban, Building2, CircleDot, LogOut, Truck, Mail, Send, Shield, ShieldOff, Trash2, User as UserIcon, UserCheck, UserX, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AktionsMenue, type AktionsMenueEintrag } from "../components/AktionsMenue";
-import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
+import { accountTypenApi, fahrzeugZuweisungenApi, mandantenApi, usersApi } from "../api/endpoints";
+import { FahrzeugZuordnungSheet } from "../components/FahrzeugZuordnungSheet";
+import { istModulAktiv } from "../utils/module";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import { Sheet } from "../components/apple/Sheet";
@@ -81,7 +83,7 @@ function rolleText(u: User): string {
 export function UsersPage() {
   const uid = useId();
   const bestaetigen = useBestaetigung();
-  const { currentUser, isImpersonating } = useAuth();
+  const { currentUser, isImpersonating, hatRecht } = useAuth();
   const queryClient = useQueryClient();
   const isSuperAdmin = currentUser?.role === "super_admin";
   const istPlattform = isSuperAdmin && !isImpersonating;
@@ -127,6 +129,21 @@ export function UsersPage() {
     queryKey: ["users", { versteckte: versteckteAnzeigen }],
     queryFn: versteckteAnzeigen ? usersApi.listMitVersteckten : usersApi.list,
   });
+  // Backend (fahrzeug_zuweisungen.py): mandant_admin|custom, dispo.bearbeiten, Modul "fahrzeuge".
+  // Die Übersicht kennt genau die Accounts, denen ein Fahrzeug zugeordnet werden kann.
+  const kannFahrzeugZuordnen =
+    !istPlattform &&
+    (currentUser?.role === "mandant_admin" || currentUser?.role === "custom") &&
+    hatRecht("dispo", "sehen") &&
+    hatRecht("dispo", "bearbeiten") &&
+    istModulAktiv(currentUser, "fahrzeuge");
+  const { data: fahrzeugUebersicht } = useQuery({
+    queryKey: ["fahrzeug-zuweisungen"],
+    queryFn: fahrzeugZuweisungenApi.uebersicht,
+    enabled: kannFahrzeugZuordnen,
+  });
+  const fahrzeugJeUser = new Map((fahrzeugUebersicht ?? []).map((z) => [z.techniker.id, z.fahrzeug]));
+  const [fahrzeugZiel, setFahrzeugZiel] = useState<User | null>(null);
   const { data: mandanten } = useQuery({
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
@@ -302,6 +319,9 @@ export function UsersPage() {
   // Eigener Account: Abmelden erzwingen/Löschen/MFA-Reset gar nicht anbieten
   // (das Backend lehnt sie ab) statt als ausgegrauten Eintrag.
   const kontoAktionen = (u: User): (AktionsMenueEintrag | "trenner")[] => [
+    ...(u.aktiv && fahrzeugJeUser.has(u.id)
+      ? [{ label: "Fahrzeug zuordnen", icon: Truck, onClick: () => setFahrzeugZiel(u) }]
+      : []),
     {
       label: u.aktiv ? "Deaktivieren" : "Aktivieren",
       icon: u.aktiv ? UserX : UserCheck,
@@ -648,6 +668,9 @@ export function UsersPage() {
                   <td className="px-4 py-3 text-label2">{u.email}</td>
                   <td className="px-4 py-3 text-label">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
+                    {fahrzeugJeUser.get(u.id) && (
+                      <span className="block text-sekundaer text-label2">Fahrzeug: {fahrzeugJeUser.get(u.id)?.bezeichnung}</span>
+                    )}
                   </td>
                   {isSuperAdmin && (
                     <td className="px-4 py-3 text-label2">
@@ -677,6 +700,15 @@ export function UsersPage() {
           </>
         )}
       </section>
+
+      {fahrzeugZiel && (
+        <FahrzeugZuordnungSheet
+          userId={fahrzeugZiel.id}
+          name={fahrzeugZiel.name}
+          aktuellesFahrzeugId={fahrzeugJeUser.get(fahrzeugZiel.id)?.id ?? null}
+          onClose={() => setFahrzeugZiel(null)}
+        />
+      )}
 
       <Sheet
         offen={loeschZiel !== null}

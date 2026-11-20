@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kundeTypLabel } from "../../config/kundeDarstellung";
 import { Building2, Hash, MapPin, Tag, User, Users } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
 import { ERechnungFelder, zeigeERechnungFelder } from "../../components/kunde/ERechnungFelder";
+import { useBetreuungFilterFelder } from "../../components/kunde/useBetreuungFilter";
+import { betreuungSuchtext } from "../../utils/betreuung";
 import { Nachweis13bFeld } from "../../components/kunde/Nachweis13b";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
@@ -44,7 +46,7 @@ const KUNDEN_FELDER: FilterFeld<Kunde>[] = [
 ];
 
 function kundeSuchtext(k: Kunde): string {
-  return [k.name, k.kundennummer, k.adresse?.ort, k.ansprechpartner.map((a) => a.name).join(" ")].filter(Boolean).join(" ");
+  return [k.name, k.kundennummer, k.adresse?.ort, k.ansprechpartner.map((a) => a.name).join(" "), betreuungSuchtext(k.betreuung)].filter(Boolean).join(" ");
 }
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
@@ -62,7 +64,6 @@ export function KundenPage() {
   const [showForm, setShowForm] = useState(false);
   const [nameFehler, setNameFehler] = useState<string | null>(null);
   const [kundeFehler, setKundeFehler] = useState<string | null>(null);
-  const zustand = useFilterZustand({ felder: KUNDEN_FELDER });
   const [neuerKunde, setNeuerKunde] = useState({
     name: "",
     kundennummer: "",
@@ -82,8 +83,11 @@ export function KundenPage() {
     queryFn: () => kundenApi.list(),
     enabled: kannSehen,
   });
+  const betreuungFelder = useBetreuungFilterFelder(kunden);
+  const felder = useMemo(() => [...KUNDEN_FELDER, ...betreuungFelder], [betreuungFelder]);
+  const zustand = useFilterZustand({ felder });
   const kundenGefiltert = sucheAnwenden(
-    filterAnwenden(kunden ?? [], zustand.bedingungen, KUNDEN_FELDER),
+    filterAnwenden(kunden ?? [], zustand.bedingungen, felder),
     zustand.sucheVerzoegert,
     kundeSuchtext,
   );
@@ -282,7 +286,7 @@ export function KundenPage() {
       <div className="space-y-2">
         {(kunden ?? []).length > 0 && (
           <FilterLeiste
-            felder={KUNDEN_FELDER}
+            felder={felder}
             zustand={zustand}
             suchPlatzhalter="Name oder Kundennummer…"
             ansichten="kunden"

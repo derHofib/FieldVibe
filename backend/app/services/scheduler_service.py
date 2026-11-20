@@ -29,7 +29,7 @@ from app.services.numbering_service import next_vorgangsnummer
 from app.services.prioritaet_service import berechne_prioritaet
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.worker_system import letzter_scheduler_lauf
-from app.services.zuweisung_service import dispo_verantwortliche_user_ids
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids, hauptbetreuer_uebernehmen
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
 DAUERAUFTRAEGE_SCHEDULER_AKTION = "dauerauftraege_scheduler_run"
@@ -139,6 +139,7 @@ async def _pruefzyklen_fuer_mandant(session: AsyncSession, mandant_id: UUID) -> 
                 payload={"pruefzyklus_id": str(zyklus.id)},
             )
         )
+        await hauptbetreuer_uebernehmen(session, vorgang, None)
 
         for empfaenger in await _admins_und_disponenten(session, zyklus.mandant_id):
             session.add(
@@ -338,6 +339,7 @@ async def _dauerauftraege_fuer_mandant(session: AsyncSession, mandant_id: UUID) 
                 payload={"dauerauftrag_id": str(auftrag.id), "dauerauftrag_ziel_id": str(ziel.id)},
             )
         )
+        await hauptbetreuer_uebernehmen(session, vorgang, None)
 
         for empfaenger in await _admins_und_disponenten(session, auftrag.mandant_id):
             session.add(

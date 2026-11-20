@@ -134,3 +134,23 @@ async def test_uebersicht_zeigt_auch_technikers_ohne_zuweisung(
     by_name = {row["techniker"]["name"]: row["fahrzeug"] for row in resp.json()}
     assert by_name["Mit Fahrzeug"]["id"] == str(fahrzeug.id)
     assert by_name["Ohne Fahrzeug"] is None
+
+
+@pytest.mark.asyncio
+async def test_mitarbeiter_ohne_sichteinschraenkung_bekommt_fahrzeug(
+    client, make_mandant, make_user, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    dispo = await make_user(mandant=mandant, role="disponent", password="pw-123456", name="Dispo")
+    fahrzeug = await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Transporter")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.put(
+        f"/api/fahrzeug-zuweisungen/{dispo.id}",
+        headers=auth_headers(token),
+        json={"anlage_id": str(fahrzeug.id)},
+    )
+    assert resp.status_code == 200
+    uebersicht = await client.get("/api/fahrzeug-zuweisungen", headers=auth_headers(token))
+    assert dispo.name in {row["techniker"]["name"] for row in uebersicht.json()}

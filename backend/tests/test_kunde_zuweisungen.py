@@ -109,7 +109,9 @@ async def test_zuweisung_lehnt_fremden_oder_falschen_user_ab(
     mandant = await make_mandant()
     mandant_fremd = await make_mandant(name="Fremdbetrieb")
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
-    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    deaktiviert = await make_user(
+        mandant=mandant, role="techniker", password="pw-123456", aktiv=False
+    )
     techniker_fremd = await make_user(mandant=mandant_fremd, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
@@ -121,12 +123,12 @@ async def test_zuweisung_lehnt_fremden_oder_falschen_user_ab(
     )
     assert resp_fremd.status_code == 400
 
-    resp_falsche_rolle = await client.put(
+    resp_deaktiviert = await client.put(
         f"/api/kunden/{kunde.id}/techniker",
         headers=auth_headers(token),
-        json={"user_ids": [str(disponent.id)]},
+        json={"user_ids": [str(deaktiviert.id)]},
     )
-    assert resp_falsche_rolle.status_code == 400
+    assert resp_deaktiviert.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -144,29 +146,6 @@ async def test_techniker_darf_zuweisungen_nicht_selbst_verwalten(
         json={"user_ids": [str(techniker.id)]},
     )
     assert resp.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_uebersicht_zeigt_techniker_mit_und_ohne_kunden(
-    client, make_mandant, make_user, make_kunde, make_kunde_zuweisung
-):
-    mandant = await make_mandant()
-    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
-    tech_mit_kunde = await make_user(
-        mandant=mandant, role="techniker", password="pw-123456", name="Mit Kunde"
-    )
-    tech_ohne_kunde = await make_user(
-        mandant=mandant, role="techniker", password="pw-123456", name="Ohne Kunde"
-    )
-    kunde = await make_kunde(mandant=mandant)
-    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=tech_mit_kunde)
-    token = await login(client, disponent.email, "pw-123456")
-
-    resp = await client.get("/api/techniker-zuweisungen", headers=auth_headers(token))
-    assert resp.status_code == 200
-    by_id = {row["techniker"]["id"]: row["kunden"] for row in resp.json()}
-    assert [k["id"] for k in by_id[str(tech_mit_kunde.id)]] == [str(kunde.id)]
-    assert by_id[str(tech_ohne_kunde.id)] == []
 
 
 @pytest.mark.asyncio

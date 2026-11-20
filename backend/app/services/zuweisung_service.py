@@ -209,6 +209,66 @@ async def technik_user_ids(session: AsyncSession, mandant_id: UUID | None) -> se
     }
 
 
+async def betreuer_user_ids(session: AsyncSession, mandant_id: UUID | None) -> set[UUID]:
+    """Wer als Betreuer eines Kunden in Frage kommt: jeder aktive, nicht anonymisierte
+    Mitarbeiter des Mandanten, unabhaengig davon, ob er selbst nur zugewiesene
+    Kunden sieht. Die Sichtlogik (erlaubte_kunde_ids) bleibt davon unberuehrt."""
+    result = await session.execute(
+        select(User.id).where(
+            User.mandant_id == mandant_id,
+            User.role.in_(MITARBEITER_ROLLEN),
+            User.aktiv.is_(True),
+            nicht_anonymisiert(),
+        )
+    )
+    return set(result.scalars().all())
+
+
+async def hauptbetreuer_id(session: AsyncSession, kunde_id: UUID) -> UUID | None:
+    """Hauptbetreuer des Kunden, aber nur solange er aktiv und nicht anonymisiert
+    ist -- ein deaktivierter Hauptbetreuer behaelt die Zuweisung als Historie,
+    bekommt aber keine neuen Vorgaenge mehr."""
+    result = await session.execute(
+        select(KundeZuweisung.user_id)
+        .join(User, User.id == KundeZuweisung.user_id)
+        .where(
+            KundeZuweisung.kunde_id == kunde_id,
+            KundeZuweisung.hauptbetreuer.is_(True),
+            User.aktiv.is_(True),
+            nicht_anonymisiert(),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def hauptbetreuer_uebernehmen(
+    session: AsyncSession, vorgang, author_user_id: UUID | None
+) -> None:
+    """Belegt zugewiesener_user_id eines neuen Vorgangs mit dem Hauptbetreuer des
+    Kunden vor, sofern noch niemand zugewiesen ist. Nur fuer neu angelegte
+    Vorgaenge aufrufen (nicht fuer Folge-/Reparaturvorgaenge). Vorgang muss
+    bereits geflusht sein (id fuer das Event)."""
+    from app.models.vorgang_event import VorgangEvent
+
+    if vorgang.zugewiesener_user_id is not None or vorgang.kunde_id is None:
+        return
+    haupt_id = await hauptbetreuer_id(session, vorgang.kunde_id)
+    if haupt_id is None:
+        return
+    betreuer = await session.get(User, haupt_id)
+    vorgang.zugewiesener_user_id = haupt_id
+    session.add(
+        VorgangEvent(
+            mandant_id=vorgang.mandant_id,
+            vorgang_id=vorgang.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=author_user_id,
+            body=f"Zugewiesen an: {betreuer.name} (Hauptbetreuer des Kunden)",
+        )
+    )
+
+
 async def zuweisbare_user_ids(session: AsyncSession, user_ids: set[UUID]) -> set[UUID]:
     """Teilmenge der user_ids, die neu zugewiesen werden duerfen: aktiv und
     nicht anonymisiert (deaktivierte/geloeschte Nutzer erhalten keine neuen

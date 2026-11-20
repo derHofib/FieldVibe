@@ -65,6 +65,7 @@ const AKTION_LABEL: Record<string, string> = {
   user_rolle_geaendert: "Rolle/Rechte geändert",
   user_anonymisiert: "Nutzer anonymisiert",
   user_geloescht: "Nutzer gelöscht",
+  "kunde.betreuung_geaendert": "Kundenbetreuung geändert",
   rechnung_erstellt: "Rechnung erstellt",
   rechnung_versendet: "Rechnung versendet",
   rechnung_email_versendet: "Rechnung per E-Mail gesendet",

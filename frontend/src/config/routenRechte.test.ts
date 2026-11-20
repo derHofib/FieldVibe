@@ -24,7 +24,7 @@ const ADMIN_PFADE = ["/accounts", "/account-typen", "/anlagen-felder", "/integra
 describe("routeErlaubt", () => {
   it("Techniker ohne Rechte sieht keinen der Admin-Bereiche", () => {
     const techniker = kontext("custom", { vorgaenge: ["sehen"] });
-    for (const pfad of ["/accounts", "/integrationen", "/anlagen-felder", "/techniker-zuweisungen"]) {
+    for (const pfad of ["/accounts", "/integrationen", "/anlagen-felder"]) {
       expect(routeErlaubt(pfad, techniker), pfad).toBe(false);
     }
     // Account-Typen nur mit rechte_verwalten (Backend _verwalter).
@@ -133,7 +133,7 @@ describe("routeErlaubt", () => {
 
   it("Techniker (custom ohne Rechte) sieht die Admin-Seiten nicht", () => {
     const t = kontext("custom", { vorgaenge: ["sehen"] });
-    for (const pfad of ["/accounts", "/form-schemas", "/plan-symbole", "/techniker-zuweisungen", "/integrationen"]) {
+    for (const pfad of ["/accounts", "/form-schemas", "/plan-symbole", "/integrationen"]) {
       expect(routeErlaubt(pfad, t), pfad).toBe(false);
     }
   });
@@ -146,7 +146,7 @@ describe("routeErlaubt", () => {
       dispo: ["sehen"],
       projekte: ["zeitplan_sehen"],
     });
-    for (const pfad of ["/accounts", "/account-typen", "/form-schemas", "/plan-symbole", "/techniker-zuweisungen", "/integrationen"]) {
+    for (const pfad of ["/accounts", "/account-typen", "/form-schemas", "/plan-symbole", "/integrationen"]) {
       expect(routeErlaubt(pfad, t), pfad).toBe(false);
     }
     expect(routeErlaubt("/einstellungen", t)).toBe(true);
