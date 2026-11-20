@@ -10,7 +10,7 @@ Migration ohne app.current_mandant als Tabelleneigentuemerin mit FORCE RLS
 sonst keine Zeile trifft.
 
 Revision ID: 0124
-Revises: 0121
+Revises: 0123
 Create Date: 2026-11-19
 """
 from typing import Sequence, Union
@@ -21,7 +21,7 @@ from alembic import op
 from app.db.migrations_helfer import rls_fuer_backfill_aufheben
 
 revision: str = "0124"
-down_revision: Union[str, None] = "0121"
+down_revision: Union[str, None] = "0123"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
