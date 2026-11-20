@@ -1,82 +1,38 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { datumZuIso, heuteIso } from "../../utils/format";
-import {
-  Building2,
-  CheckCircle2,
-  KanbanSquare,
-  Link2,
-  ListChecks,
-  MapPin,
-  Plus,
-  User as UserIcon,
-  Users,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, ChevronDown, ListChecks } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
+import { projekteApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
-import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
-import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
-import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { FilterLeiste } from "../../components/filter/FilterLeiste";
+import { GruppierenMenue } from "../../components/filter/GruppierenMenue";
 import { SkeletonList } from "../../components/Skeleton";
+import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
+import type { ProjektAufgabe } from "../../types";
+import { heuteIso } from "../../utils/format";
+import { fortschrittText, PrioritaetAnzeige, QuelleAnzeige } from "./aufgaben/AufgabenBausteine";
+import { AufgabePfad } from "./aufgaben/AufgabePfad";
+import { faelligText, GRUPPIERUNGEN, kundeNameVon } from "./aufgaben/aufgabenLogik";
+import { useMeineAufgaben, type Segment } from "./aufgaben/useMeineAufgaben";
 
-const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
-  niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
-  mittel: "bg-st-arbeit-bg text-st-arbeit  ",
-  hoch: "bg-st-fehlt-bg text-st-fehlt  ",
-};
+const SEGMENTE: { wert: Segment; label: string }[] = [
+  { wert: "offen", label: "Offen" },
+  { wert: "erledigt", label: "Erledigt" },
+];
 
-const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
-  niedrig: "Niedrig",
-  mittel: "Mittel",
-  hoch: "Hoch",
-};
-
-function inTagenIso(n: number): string {
-  const datum = new Date();
-  datum.setDate(datum.getDate() + n);
-  return datumZuIso(datum);
-}
-
-type Gruppe = "ueberfaellig" | "heute" | "woche" | "spaeter" | "ohne";
-
-function gruppeVon(a: ProjektAufgabe, heute: string, in7Tagen: string): Gruppe {
-  if (!a.faelligkeit_am) return "ohne";
-  if (a.faelligkeit_am < heute) return "ueberfaellig";
-  if (a.faelligkeit_am === heute) return "heute";
-  if (a.faelligkeit_am <= in7Tagen) return "woche";
-  return "spaeter";
-}
-
-const GRUPPEN_LABEL: Record<Gruppe, string> = {
-  ueberfaellig: "Überfällig",
-  heute: "Heute",
-  woche: "Diese Woche",
-  spaeter: "Später",
-  ohne: "Ohne Termin",
-};
-
-const GRUPPEN_REIHENFOLGE: Gruppe[] = ["ueberfaellig", "heute", "woche", "spaeter", "ohne"];
-
-/** "Meine Aufgaben": aggregiert private Aufgaben (projekt_id=None, siehe
- * app/models/projekt.py) und -- sofern das Kanban-Recht besteht -- alle mir
- * zugewiesenen Projekt-Aufgaben, projektuebergreifend. Bewusst in der
- * Feld-App UND im Office nutzbar (reine Liste, kein Drag&Drop noetig, siehe
- * config/navSeiten.ts). Nutzt fuer Neuanlage/Bearbeitung dasselbe Panel wie
- * das Kanban-Board -- Kanban-Aufgaben brauchen dafuer zusaetzlich die
- * Spalten ihres Projekts, die erst beim Oeffnen des Panels nachgeladen
- * werden (siehe panelSpalten unten). */
+/** "Meine Aufgaben" in der Feld-App: Karten statt Tabelle (das Office hat eine eigene Seite, siehe
+ * office/aufgaben). Aggregiert private Aufgaben (projekt_id=None, siehe app/models/projekt.py) und -- sofern das
+ * Kanban-Recht besteht -- alle mir zugewiesenen Projekt-Aufgaben, projektuebergreifend. Neuanlage/Bearbeitung
+ * nutzen dasselbe Panel wie das Kanban-Board; Kanban-Aufgaben brauchen dafuer die Spalten ihres Projekts, die
+ * erst beim Oeffnen nachgeladen werden. Projekt und Auftrag sind hier nur Text, der Vorgang ein Link: Techniker
+ * haben keine Projekt-/Auftragsseiten. */
 export function MeineAufgabenPage() {
-  const queryClient = useQueryClient();
-  const [neueAufgabe, setNeueAufgabe] = useState("");
+  const navigate = useNavigate();
+  const z = useMeineAufgaben();
   const [panelAufgabe, setPanelAufgabe] = useState<ProjektAufgabe | null | undefined>(undefined);
-  const [zeigeErledigt, setZeigeErledigt] = useState(false);
-
-  const { data: aufgaben, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
-    queryKey: ["projekt-aufgaben", "meine"],
-    queryFn: () => projektAufgabenApi.list({ mir_zugewiesen: true }),
-  });
 
   const { data: panelSpalten } = useQuery({
     queryKey: ["projekt-spalten", panelAufgabe?.projekt_id],
@@ -84,187 +40,152 @@ export function MeineAufgabenPage() {
     enabled: !!panelAufgabe?.projekt_id,
   });
 
-  const invalidieren = () => queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
-
-  const erstellen = useMutation({
-    mutationFn: (titel: string) => projektAufgabenApi.create({ titel }),
-    onSuccess: () => {
-      setNeueAufgabe("");
-      invalidieren();
-    },
-  });
-
-  const umschalten = useMutation({
-    mutationFn: ({ id, erledigt }: { id: string; erledigt: boolean }) =>
-      projektAufgabenApi.update(id, { erledigt }),
-    onSuccess: invalidieren,
-  });
-
-  const { offen, erledigt, gruppen } = useMemo(() => {
-    const heute = heuteIso();
-    const in7Tagen = inTagenIso(7);
-    const alle = aufgaben ?? [];
-    const offen = alle.filter((a) => !a.erledigt_am);
-    const erledigt = alle.filter((a) => a.erledigt_am);
-    const gruppen = new Map<Gruppe, ProjektAufgabe[]>();
-    for (const a of offen) {
-      const g = gruppeVon(a, heute, in7Tagen);
-      gruppen.set(g, [...(gruppen.get(g) ?? []), a]);
-    }
-    return { offen, erledigt, gruppen };
-  }, [aufgaben]);
+  const heute = heuteIso();
+  const suchtext = z.zustand.sucheVerzoegert.trim();
+  const gefiltert = suchtext !== "" || z.zustand.aktiveAnzahl > 0;
+  const gruppiertLabel = GRUPPIERUNGEN.find((g) => g.wert === z.wirksameGruppierung)?.label;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-titel-mobil font-bold text-label">Meine Aufgaben</h1>
-        <span className="text-sekundaer font-medium text-label2">{offen.length} offen</span>
-      </div>
-
-      <div className="card-ap flex items-center gap-2 p-1 pl-3">
-        <input
-          value={neueAufgabe}
-          onChange={(e) => setNeueAufgabe(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && neueAufgabe.trim()) {
-              e.preventDefault();
-              erstellen.mutate(neueAufgabe.trim());
-            }
-          }}
-          placeholder="Neue private Aufgabe…"
-          className="flex-1 border-none bg-transparent p-1.5 text-zeile outline-none placeholder:text-label2 dark:placeholder:text-label2"
-        />
-        <button
-          onClick={() => neueAufgabe.trim() && erstellen.mutate(neueAufgabe.trim())}
-          disabled={!neueAufgabe.trim() || erstellen.isPending}
-          className="btn-touch flex h-10 w-10 shrink-0 items-center justify-center rounded-md btn-ap-primary disabled:opacity-50"
-        >
-          <Plus size={18} strokeWidth={2.5} />
+        <button type="button" onClick={() => setPanelAufgabe(null)} className="btn-touch text-zeile font-medium text-tint-text">
+          + Neue Aufgabe
         </button>
       </div>
 
-      {isLoading ? (
+      <FilterLeiste
+        felder={z.felder}
+        zustand={z.zustand}
+        suchPlatzhalter="Suchen"
+        ansichten="aufgaben"
+        ansichtenZusatz={z.ansichtenZusatz}
+        variante="feld"
+        hinten={
+          <GruppierenMenue
+            variante="feld"
+            wert={z.gruppierung}
+            optionen={GRUPPIERUNGEN}
+            keinWert="keine"
+            onWechsel={z.setGruppierung}
+            onAlleEinklappen={z.alleEinklappen}
+            onAlleAusklappen={z.alleAusklappen}
+            alleEingeklappt={z.alleEingeklappt}
+          />
+        }
+      />
+
+      <SegmentedControl
+        ariaLabel="Aufgaben"
+        groesse="mobil"
+        volleBreite
+        wert={z.segment}
+        onChange={z.setSegment}
+        optionen={SEGMENTE.map((s) => ({
+          wert: s.wert,
+          label: s.wert === "offen" ? `Offen ${z.zahlen.offen}` : `Erledigt${z.anzahlErledigt !== null ? ` ${z.anzahlErledigt}` : ""}`,
+        }))}
+      />
+
+      {gruppiertLabel && z.wirksameGruppierung !== "keine" && <p className="text-sekundaer text-label2">Gruppiert nach {gruppiertLabel}</p>}
+
+      {z.laedt ? (
         <SkeletonList count={4} />
-      ) : ladeFehler && !aufgaben ? (
-        <FehlerZustand fehler={ladeFehler} was="Die Aufgaben" onErneut={() => void neuLaden()} />
-      ) : offen.length === 0 ? (
-        <EmptyState icon={ListChecks} text="Keine offenen Aufgaben." />
+      ) : z.fehler && !z.hatDaten ? (
+        <FehlerZustand fehler={z.fehler} was="Die Aufgaben" onErneut={z.neuLaden} />
+      ) : z.sichtbar.length === 0 ? (
+        <EmptyState
+          icon={ListChecks}
+          text={
+            suchtext
+              ? `Nichts gefunden für ‚${suchtext}‘`
+              : gefiltert
+                ? "Keine Treffer für diese Filter"
+                : z.segment === "erledigt"
+                  ? "Keine erledigten Aufgaben in den letzten 90 Tagen."
+                  : "Keine offenen Aufgaben."
+          }
+          action={
+            gefiltert ? (
+              <button onClick={z.zustand.zuruecksetzen} className="btn-ap">
+                Filter zurücksetzen
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
-        GRUPPEN_REIHENFOLGE.filter((g) => (gruppen.get(g) ?? []).length > 0).map((g) => (
-          <div key={g} className="space-y-1.5">
-            <span
-              className={`block text-meta font-bold tracking-wide uppercase ${
-                g === "ueberfaellig"
-                  ? "text-st-fehlt "
-                  : "text-label2"
-              }`}
-            >
-              {GRUPPEN_LABEL[g]}
-            </span>
-            {gruppen.get(g)!.map((a) => {
-              const ueberfaellig = istUeberfaellig(a.faelligkeit_am);
-              return (
-                <div
-                  key={a.id}
-                  onClick={() => setPanelAufgabe(a)}
-                  // .card-ap bringt eine eigene, unlayered box-shadow mit,
-                  // die per Cascade-Layer-Falle (siehe DESIGN.md) den
-                  // Ueberfaellig-Ring (Tailwind-ring-*-Utility) stillschweigend
-                  // ueberschreiben wuerde -- deshalb hier Radius/Rand/Flaeche
-                  // einzeln statt ueber die Rezeptklasse gesetzt.
-                  className={`card-interactive flex cursor-pointer gap-2.5 rounded-[var(--radius-ap-card)] border border-sep bg-card p-3 ${
-                    ueberfaellig ? "ring-1 ring-st-fehlt " : ""
+        z.gruppen.map((g) => {
+          const zu = z.eingeklappt.includes(g.key);
+          return (
+            <section key={g.key} className="space-y-1.5" aria-label={g.label || "Aufgaben"}>
+              {g.label && (
+                <button
+                  type="button"
+                  aria-expanded={!zu}
+                  onClick={() => z.gruppeUmschalten(g.key)}
+                  className={`flex w-full items-center gap-1 px-1 pt-2 text-left text-meta font-bold tracking-wide uppercase ${
+                    g.warnung ? "text-st-fehlt" : "text-label2"
                   }`}
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      umschalten.mutate({ id: a.id, erledigt: true });
-                    }}
-                    className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-sep before:absolute before:-inset-3.5 "
-                    title="Als erledigt markieren"
-                    aria-label="Als erledigt markieren"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sekundaer font-semibold text-label">{a.titel}</p>
-                      {a.faelligkeit_am && (
-                        <span
-                          className={`shrink-0 text-meta font-semibold ${
-                            ueberfaellig ? "text-st-fehlt " : "text-label2"
-                          }`}
-                        >
-                          {ueberfaellig ? `vor ${tageSeit(a.faelligkeit_am)} Tagen` : a.faelligkeit_am}
-                        </span>
-                      )}
+                  <ChevronDown size={13} strokeWidth={2} className={`shrink-0 transition-transform ${zu ? "-rotate-90" : ""}`} aria-hidden="true" />
+                  {g.label} · {g.aufgaben.length}
+                </button>
+              )}
+              {!zu &&
+                g.aufgaben.map((a) => {
+                  const f = z.segment === "offen" ? faelligText(a.faelligkeit_am, heute) : null;
+                  const ueberfaellig = !!f?.ueberfaellig;
+                  const kunde = kundeNameVon(a);
+                  const fortschritt = fortschrittText(a);
+                  const erledigt = !!a.erledigt_am;
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => setPanelAufgabe(a)}
+                      // .card-ap bringt Rand und Schatten unlayered mit; die gewinnen gegen Tailwind-Utilities
+                      // (Cascade-Layer-Falle, siehe DESIGN.md). Der rote Rahmen der überfälligen Karte muss
+                      // deshalb inline gesetzt werden.
+                      className="card-ap card-interactive flex cursor-pointer gap-2.5 p-3"
+                      style={ueberfaellig ? { borderColor: "var(--st-fehlt-dot)", borderWidth: 1 } : undefined}
+                    >
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={erledigt}
+                        aria-label={erledigt ? `„${a.titel}“ wieder öffnen` : `„${a.titel}“ als erledigt markieren`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          z.umschalten(a);
+                        }}
+                        className={`relative mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full before:absolute before:-inset-3 ${
+                          erledigt
+                            ? "bg-st-erledigt-dot text-white"
+                            : ueberfaellig
+                              ? "border-[1.5px] border-st-fehlt-dot"
+                              : "border-[1.5px] border-label3"
+                        }`}
+                      >
+                        {erledigt && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                      </button>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-zeile font-semibold ${erledigt ? "text-label2 line-through" : "text-label"}`}>{a.titel}</p>
+                          {f && <span className={`shrink-0 text-sekundaer font-semibold ${ueberfaellig ? "text-st-fehlt" : "text-label2"}`}>{f.text}</span>}
+                        </div>
+                        <AufgabePfad aufgabe={a} linksAktiv={false} navigate={navigate} kurz />
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sekundaer">
+                          <QuelleAnzeige aufgabe={a} />
+                          <PrioritaetAnzeige prioritaet={a.prioritaet} />
+                          {kunde && <span className="rounded-full bg-fill px-2 py-0.5 text-label">{kunde}</span>}
+                          {fortschritt && <span className="text-label2">{fortschritt}</span>}
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      {a.projekt_id ? (
-                        <span className="flex items-center gap-1 rounded-full bg-st-arbeit-bg px-2 py-0.5 text-meta font-semibold text-st-arbeit ">
-                          <KanbanSquare size={11} strokeWidth={2} /> Projekt
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-meta font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
-                          <UserIcon size={11} strokeWidth={2} /> Privat
-                        </span>
-                      )}
-                      <span className={`rounded-full px-2 py-0.5 text-meta font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
-                        {PRIORITAET_LABEL[a.prioritaet]}
-                      </span>
-                      {a.vorgang_id && (
-                        <Link2 size={13} strokeWidth={2} className="text-sky-500 dark:text-sky-400" />
-                      )}
-                      {a.kunde_id && <Users size={13} strokeWidth={2} className="text-st-erledigt " />}
-                      {a.anlage_id && <Building2 size={13} strokeWidth={2} className="text-st-arbeit " />}
-                      {a.standort_id && <MapPin size={13} strokeWidth={2} className="text-st-fehlt " />}
-                      {!!a.unteraufgaben_gesamt && (
-                        <span className="text-meta font-medium text-label2">
-                          {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt} Unteraufgaben
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))
-      )}
-
-      {erledigt.length > 0 && (
-        <div>
-          <button
-            onClick={() => setZeigeErledigt((v) => !v)}
-            className="flex items-center gap-1.5 py-1 text-sekundaer font-medium text-label2"
-          >
-            <CheckCircle2 size={14} strokeWidth={2} className="text-st-erledigt " />
-            {erledigt.length} erledigt
-          </button>
-          {zeigeErledigt && (
-            <div className="mt-1.5 space-y-1.5">
-              {erledigt.map((a) => (
-                <div
-                  key={a.id}
-                  onClick={() => setPanelAufgabe(a)}
-                  className="card-interactive flex cursor-pointer items-center gap-2.5 card-ap p-3"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      umschalten.mutate({ id: a.id, erledigt: false });
-                    }}
-                    className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-st-erledigt-dot text-white before:absolute before:-inset-3.5"
-                    title="Als offen markieren"
-                    aria-label="Als offen markieren"
-                  >
-                    <CheckCircle2 size={13} strokeWidth={2.5} />
-                  </button>
-                  <p className="flex-1 text-sekundaer text-label2 line-through">{a.titel}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+            </section>
+          );
+        })
       )}
 
       {panelAufgabe !== undefined && (

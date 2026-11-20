@@ -82,6 +82,7 @@ class ProjektAufgabeCreate(BaseModel):
     prioritaet: ProjektAufgabePrioritaet = "mittel"
     zugewiesen_an: UUID | None = None
     vorgang_id: UUID | None = None
+    auftrag_id: UUID | None = None
     anlage_id: UUID | None = None
     kunde_id: UUID | None = None
     standort_id: UUID | None = None
@@ -92,6 +93,8 @@ class ProjektAufgabeCreate(BaseModel):
     def _spalte_erfordert_projekt(self) -> "ProjektAufgabeCreate":
         if self.spalte_id is not None and self.projekt_id is None:
             raise ValueError("spalte_id setzt projekt_id voraus")
+        if self.auftrag_id is not None and self.vorgang_id is not None:
+            raise ValueError("Eine Aufgabe hängt entweder an einem Auftrag oder an einem Vorgang, nicht an beiden")
         return self
 
 
@@ -108,11 +111,18 @@ class ProjektAufgabeUpdate(BaseModel):
     zugewiesen_an: UUID | None = None
     erledigt: bool | None = None
     vorgang_id: UUID | None = None
+    auftrag_id: UUID | None = None
     anlage_id: UUID | None = None
     kunde_id: UUID | None = None
     standort_id: UUID | None = None
     checkliste: list[ChecklistenPunkt] | None = None
     zusatzfelder: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def _auftrag_oder_vorgang(self) -> "ProjektAufgabeUpdate":
+        if self.auftrag_id is not None and self.vorgang_id is not None:
+            raise ValueError("Eine Aufgabe hängt entweder an einem Auftrag oder an einem Vorgang, nicht an beiden")
+        return self
 
 
 class ProjektAufgabeRead(BaseModel):
@@ -129,6 +139,7 @@ class ProjektAufgabeRead(BaseModel):
     zugewiesen_an: UUID | None
     erledigt_am: datetime | None
     vorgang_id: UUID | None
+    auftrag_id: UUID | None
     anlage_id: UUID | None
     kunde_id: UUID | None
     standort_id: UUID | None
@@ -157,6 +168,18 @@ class ProjektAufgabeMitDetails(ProjektAufgabeRead):
     standort_name: str | None = None
     unteraufgaben_gesamt: int = 0
     unteraufgaben_erledigt: int = 0
+    projekt_name: str | None = None
+    spalte_name: str | None = None
+    vorgang_titel: str | None = None
+    vorgang_status: str | None = None
+    # Effektiv angezeigter Auftrag: direkter auftrag_id oder der des Vorgangs.
+    pfad_auftrag_id: UUID | None = None
+    auftrag_titel: str | None = None
+    auftrag_status: str | None = None
+    pfad_projekt_id: UUID | None = None
+    pfad_projekt_name: str | None = None
+    # Nur bei Kanban-Karte mit Vorgang, dessen Projekt vom Karten-Projekt abweicht.
+    pfad_abweichung_projekt_name: str | None = None
 
 
 class ZeitplanVorgangRef(BaseModel):

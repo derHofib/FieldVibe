@@ -24,7 +24,8 @@ import { OfficeAbwesenheitenPage } from "./zeit/OfficeAbwesenheitenPage";
 import { OfficeArbeitszeitPage } from "./zeit/OfficeArbeitszeitPage";
 import { LeistungsverzeichnisDetailPage } from "../pages/feld/LeistungsverzeichnisDetailPage";
 import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage";
-import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
+import { MeineAufgabeSeite } from "./aufgaben/MeineAufgabeSeite";
+import { MeineAufgabenOffice } from "./aufgaben/MeineAufgabenOffice";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
 import { KiVerbindenPage } from "../pages/KiVerbindenPage";
@@ -96,6 +97,8 @@ export function OfficeApp() {
         <Route element={<RouteGuard oberflaeche="office" />}>
           {/* Eigenstaendige Desktop-Ansichten */}
           <Route path="/vorgaenge" element={<OfficeVorgaengePage />} />
+          <Route path="/meine-aufgaben" element={<MeineAufgabenOffice />} />
+          <Route path="/meine-aufgaben/:id" element={<MeineAufgabeSeite />} />
           <Route path="/dispo" element={<OfficeDispoPage />} />
           <Route path="/rechnungen" element={<OfficeRechnungenPage />} />
           <Route path="/angebote" element={<OfficeRechnungenPage />} />
@@ -238,7 +241,6 @@ export function OfficeApp() {
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-          <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />

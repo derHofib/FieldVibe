@@ -265,7 +265,8 @@ Je Interaktion genau ein Muster; vor einem neuen Baustein hier nachsehen.
 - **Rückmeldung (Toast)**: `components/Toast.tsx`, `useToast()` mit `erfolg`/`fehler`/`info`. Erfolg/Info
   als `role="status"` (4 s), Fehler als `role="alert"` (8 s). Für Mutationen genügt `meta: { erfolg: "Gespeichert" }`;
   Fehler meldet der zentrale `MutationCache` in `main.tsx` automatisch, solange die Mutation kein eigenes
-  `onError` hat (`meta.stumm` unterdrückt ihn).
+  `onError` hat (`meta.stumm` unterdrückt ihn). Umkehrbare Schnellaktionen (Abhaken, Erledigt setzen) bekommen statt
+  einer Bestätigung `erfolg(text, { label: "Rückgängig", onClick })`; ein Toast mit Aktion bleibt 6 s stehen.
 - **Bestätigen**: kein `window.confirm`. `useBestaetigung()` (`components/ConfirmDialog.tsx`):
   `if (!(await bestaetigen({ titel, text, bestaetigenLabel, destruktiv }))) return;`. Titel nennt die Aktion,
   Text die Folge, der Button das Verb ("Löschen", "Stornieren"); destruktiv = roter Button, Fokus startet auf "Abbrechen".
@@ -313,6 +314,8 @@ Nur für Fenster, die über dem Seiteninhalt schweben, aktuell die globale Suche
 ## Listenmuster (jede Liste/Übersicht)
 
 Ladezustand `SkeletonList`/`DetailSkeleton` (nie „Lädt…“-Text), Fehler `FehlerZustand` mit „Erneut versuchen“, leer `EmptyState` (mit Anlegen-Aktion, wenn das Recht da ist; eigener Text bei Suche ohne Treffer), Anlegen über `NEU_BUTTON_KLASSE` + `AnlegenPanel` (kein Inline-Formular), Suche `SearchField` (mit `useDebouncedValue`, bei kleinen Listen clientseitig), Filter `FilterChip`/`SegmentedControl`/`Select`, Zeilen `card-ap`, Status über `StatusPille`/`VorgangStatusPille`, Löschen im `AktionsMenue` mit `useBestaetigung`. Seitentitel: unter dem Plattform-`Layout` kommt das h1 aus dem Layout, sonst `SeitenKopf` (Office) bzw. `text-titel-mobil` (Feld).
+
+**Gruppieren**: `components/filter/GruppierenMenue.tsx` rechts in der Filterzeile („Gruppieren: X“, Office als Pulldown, Feld als Knopf mit Sheet), Optionen mit Icon, „Nicht gruppieren“ und „Alle Gruppen einklappen“. Nur eine Gruppierungsebene; Gruppen sind einklappbare Zwischenzeilen (Button mit `aria-expanded`, Anzahl dahinter), die „Ohne X“-Gruppe steht immer zuletzt. Gruppierung und Sortierung stehen in der URL (`?gruppe=`, `?sort=`) und werden über `FilterLeiste ansichtenZusatz` in Ansichten mitgespeichert; eingeklappte Gruppen merkt sich nur der Browser. Vorbild: Meine Aufgaben.
 
 ## Was offen bleibt (ehrlich dokumentiert, siehe `docs/ui-redesign/REVIEW.md`)
 

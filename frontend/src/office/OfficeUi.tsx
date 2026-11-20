@@ -11,10 +11,13 @@ export function SeitenKopf({
   titel,
   anzahl,
   untertitel,
+  zusatz,
   children,
 }: {
   titel: string;
   anzahl?: number;
+  /** Kurzer Zusatz hinter dem Titel (z. B. "8 offen · 2 überfällig"), statt der reinen Zahl. */
+  zusatz?: ReactNode;
   /** Ein erklärender Satz unter dem Titel (ohne Fachbegriffe). */
   untertitel?: string;
   children?: ReactNode;
@@ -25,6 +28,7 @@ export function SeitenKopf({
         <h1 className="ap-heading text-titel-desktop font-semibold text-label">
           {titel}
           {anzahl !== undefined && <span className="ml-2 text-sekundaer font-medium text-label2">{anzahl}</span>}
+          {zusatz && <span className="ml-2 text-sekundaer font-medium text-label2">{zusatz}</span>}
         </h1>
         {untertitel && <p className="mt-1 text-sekundaer text-label2">{untertitel}</p>}
       </div>

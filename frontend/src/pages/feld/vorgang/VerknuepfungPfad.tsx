@@ -1,4 +1,4 @@
-import { ChevronRight, ClipboardList, Folder, Lock } from "lucide-react";
+import { ChevronRight, Layers, Folder, Lock } from "lucide-react";
 
 import type { Vorgang } from "../../../types";
 import { auftragLink, projektLink } from "../../../utils/verknuepfung";
@@ -55,7 +55,7 @@ export function VerknuepfungPfad({
       {projekt && auftrag && <ChevronRight size={13} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-label3" />}
       {auftrag && (
         <span className="inline-flex min-w-0 items-center gap-1.5">
-          <ClipboardList size={13} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+          <Layers size={13} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
           {knopf(auftrag, auftragLink(vorgang.auftrag_id ?? ""))}
         </span>
       )}

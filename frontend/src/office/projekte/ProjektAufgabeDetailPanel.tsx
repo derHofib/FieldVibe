@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Link2, MapPin, Plus, Users, X } from "lucide-react";
+import { Building2, ChevronLeft, ExternalLink, Link2, MapPin, Plus, Trash2, Users, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
   anlagenApi,
+  auftraegeApi,
   kundenApi,
   projektAufgabenApi,
   standorteApi,
@@ -17,6 +18,9 @@ import type { ChecklistenPunkt, ProjektAufgabe, ProjektAufgabePrioritaet, Projek
 import { useAuth } from "../../context/AuthContext";
 import { Select } from "../../components/apple/Select";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { AktionsMenue } from "../../components/AktionsMenue";
+import { istOfficeHost } from "../hostname";
+import { AufgabeGehoertZu } from "./AufgabeGehoertZu";
 
 const PRIORITAET_OPTIONEN: { wert: ProjektAufgabePrioritaet; label: string }[] = [
   { wert: "niedrig", label: "Niedrig" },
@@ -94,13 +98,21 @@ function VerknuepfungsZeile({
  * unterscheiden sich nur im Titel/Speichern-Verhalten und darin, dass beim
  * Bearbeiten zusaetzlich "Loeschen" und (fuer eigenstaendige Aufgaben) die
  * Unteraufgaben-Liste erscheinen. projektId fehlt -> private Aufgabe (kein
- * Kanban-Board, keine Spalte -- siehe app/models/projekt.py). */
+ * Kanban-Board, keine Spalte -- siehe app/models/projekt.py).
+ *
+ * Standard ist das ueberlagernde Panel (Kanban-Board). `eingebettet` rendert
+ * dieselben Felder als Flaeche in einer Seite (Split in "Meine Aufgaben",
+ * Ganze Seite) mit "Zurueck"/"Ganze Seite" im Kopf. */
 export function ProjektAufgabeDetailPanel({
   projektId,
   spalten,
   aufgabe,
   vorbelegteSpalteId,
   vorbelegteElternId,
+  vorbelegterVorgangId,
+  vorbelegterAuftragId,
+  eingebettet = false,
+  onGanzeSeite,
   onClose,
 }: {
   projektId?: string;
@@ -108,6 +120,12 @@ export function ProjektAufgabeDetailPanel({
   aufgabe: ProjektAufgabe | null;
   vorbelegteSpalteId?: string;
   vorbelegteElternId?: string;
+  /** Neu-Anlage aus Vorgang bzw. Auftrag: der Bezug ist schon gesetzt. */
+  vorbelegterVorgangId?: string;
+  vorbelegterAuftragId?: string;
+  eingebettet?: boolean;
+  /** Nur eingebettet: zeigt "Ganze Seite" im Kopf. */
+  onGanzeSeite?: () => void;
   onClose: () => void;
 }) {
   const uid = useId();
@@ -125,7 +143,8 @@ export function ProjektAufgabeDetailPanel({
   const [prioritaet, setPrioritaet] = useState<ProjektAufgabePrioritaet>(aufgabe?.prioritaet ?? "mittel");
   const [zugewiesenAn, setZugewiesenAn] = useState(aufgabe?.zugewiesen_an ?? "");
   const [erledigt, setErledigt] = useState(!!aufgabe?.erledigt_am);
-  const [vorgangId, setVorgangId] = useState(aufgabe?.vorgang_id ?? "");
+  const [vorgangId, setVorgangId] = useState(aufgabe?.vorgang_id ?? vorbelegterVorgangId ?? "");
+  const [auftragId, setAuftragId] = useState(aufgabe?.auftrag_id ?? vorbelegterAuftragId ?? "");
   const [anlageId, setAnlageId] = useState(aufgabe?.anlage_id ?? "");
   const [kundeId, setKundeId] = useState(aufgabe?.kunde_id ?? "");
   const [standortId, setStandortId] = useState(aufgabe?.standort_id ?? "");
@@ -139,15 +158,12 @@ export function ProjektAufgabeDetailPanel({
   const { data: alleKunden } = useQuery({ queryKey: ["kunden-alle"], queryFn: () => kundenApi.list() });
   const { data: alleAnlagen } = useQuery({ queryKey: ["anlagen-alle"], queryFn: () => anlagenApi.list() });
   const { data: alleStandorte } = useQuery({ queryKey: ["standorte-alle"], queryFn: () => standorteApi.list() });
-  const { data: verknuepfterVorgang } = useQuery({
-    queryKey: ["vorgang", vorgangId],
-    queryFn: () => vorgaengeApi.get(vorgangId),
-    enabled: !!vorgangId && vorgangId !== aufgabe?.vorgang_id,
-  });
-  const { data: verknuepfterKunde } = useQuery({
-    queryKey: ["kunde", verknuepfterVorgang?.kunde_id],
-    queryFn: () => kundenApi.get(verknuepfterVorgang!.kunde_id),
-    enabled: !!verknuepfterVorgang?.kunde_id,
+  // Aufträge sieht nur, wer projekte/sehen hat; ohne das Recht bleibt die Suche auf Vorgänge beschränkt.
+  const darfAuftraegeSehen = hatRecht("projekte", "sehen");
+  const { data: alleAuftraege } = useQuery({
+    queryKey: ["auftraege-alle"],
+    queryFn: () => auftraegeApi.list(),
+    enabled: darfAuftraegeSehen,
   });
   const { data: unteraufgaben } = useQuery({
     queryKey: ["projekt-aufgaben", "unteraufgaben", aufgabe?.id],
@@ -155,10 +171,6 @@ export function ProjektAufgabeDetailPanel({
     enabled: !istNeu && istEigenstaendig,
   });
 
-  const vorgangAnzeige =
-    vorgangId === aufgabe?.vorgang_id
-      ? (aufgabe?.vorgang_vorgangsnummer ?? null)
-      : (alleVorgaenge?.find((v) => v.id === vorgangId)?.vorgangsnummer ?? null);
   const kundeAnzeige =
     kundeId === aufgabe?.kunde_id ? aufgabe?.kunde_name : alleKunden?.find((k) => k.id === kundeId)?.name;
   const anlageAnzeige =
@@ -169,11 +181,7 @@ export function ProjektAufgabeDetailPanel({
     standortId === aufgabe?.standort_id
       ? aufgabe?.standort_name
       : alleStandorte?.find((s) => s.id === standortId)?.bezeichnung;
-  const vorgangVorschau = vorgangAnzeige
-    ? verknuepfterKunde?.name || aufgabe?.vorgang_kunde_name
-      ? `${vorgangAnzeige} · ${verknuepfterKunde?.name ?? aufgabe?.vorgang_kunde_name}`
-      : vorgangAnzeige
-    : null;
+  const projektLinksAktiv = istOfficeHost() && darfAuftraegeSehen;
 
   const invalidateBoard = () => {
     queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
@@ -191,6 +199,8 @@ export function ProjektAufgabeDetailPanel({
         zugewiesen_an: zugewiesenAn || null,
         erledigt,
         vorgang_id: vorgangId || null,
+        // Vorgang und Auftrag zugleich lehnt der Server mit 422 ab: der genauere Bezug (Vorgang) gewinnt.
+        auftrag_id: vorgangId ? null : auftragId || null,
         anlage_id: anlageId || null,
         kunde_id: kundeId || null,
         standort_id: standortId || null,
@@ -206,7 +216,8 @@ export function ProjektAufgabeDetailPanel({
     },
     onSuccess: () => {
       invalidateBoard();
-      onClose();
+      // Eingebettet bleibt eine bearbeitete Aufgabe offen (Liste daneben), nur "Neu" schliesst.
+      if (!eingebettet || istNeu) onClose();
     },
   });
 
@@ -255,15 +266,53 @@ export function ProjektAufgabeDetailPanel({
     setNeuerPunkt("");
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-6"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl border-[0.5px] border-sepstrong bg-card"
-      >
+  const rahmen = (kinder: React.ReactNode) =>
+    eingebettet ? (
+      <div>{kinder}</div>
+    ) : (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-6" onClick={onClose}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl border-[0.5px] border-sepstrong bg-card"
+        >
+          {kinder}
+        </div>
+      </div>
+    );
+
+  return rahmen(
+    <>
+        {eingebettet && (
+          <div className="flex items-center justify-between gap-2 px-4 py-2">
+            <button type="button" onClick={onClose} className="flex items-center gap-1 text-sekundaer font-medium text-tint-text">
+              <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
+              Zurück
+            </button>
+            <div className="flex items-center gap-1.5">
+              {onGanzeSeite && !istNeu && (
+                <button type="button" onClick={onGanzeSeite} className="btn-ap flex items-center gap-1.5 text-sekundaer">
+                  <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
+                  Ganze Seite
+                </button>
+              )}
+              {!istNeu && (
+                <AktionsMenue
+                  label="Weitere Aktionen"
+                  eintraege={[
+                    {
+                      label: "Aufgabe löschen",
+                      icon: Trash2,
+                      destruktiv: true,
+                      onClick: async () => {
+                        if (await bestaetigen({ titel: "Aufgabe löschen?", bestaetigenLabel: "Löschen" })) loeschen.mutate();
+                      },
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3 border-b-[0.5px] border-sep px-5 py-4">
           <div className="flex flex-1 items-start gap-2.5">
             {!istNeu && (
@@ -284,15 +333,64 @@ export function ProjektAufgabeDetailPanel({
               }`}
             />
           </div>
-          <button
-            onClick={onClose}
-            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill"
-          >
-            <X size={16} strokeWidth={2} />
-          </button>
+          {!eingebettet && (
+            <button
+              onClick={onClose}
+              className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill"
+            >
+              <X size={16} strokeWidth={2} />
+            </button>
+          )}
         </div>
 
         <div className="space-y-4 px-5 py-4">
+          <AufgabeGehoertZu
+            aufgabe={aufgabe}
+            vorgangId={vorgangId}
+            auftragId={auftragId}
+            vorgaenge={alleVorgaenge}
+            auftraege={alleAuftraege}
+            // Vorgang wählen leert den Auftrag, Auftrag wählen den Vorgang: höchstens ein direkter Bezug.
+            onWaehleVorgang={(id) => {
+              setVorgangId(id);
+              setAuftragId("");
+            }}
+            onWaehleAuftrag={(id) => {
+              setAuftragId(id);
+              setVorgangId("");
+            }}
+            onEntfernen={() => {
+              setVorgangId("");
+              setAuftragId("");
+            }}
+            linksAktiv={projektLinksAktiv}
+            navigate={navigate}
+            extraAktion={
+              // Nur fuer bereits gespeicherte Aufgaben (aufgabe.id noetig, um den
+              // neuen Vorgang nach dem Anlegen zurueck zu verknuepfen -- siehe
+              // NewVorgangPage.tsx, aufgabe_id-Query-Param). Titel/Kunde/Anlage/
+              // Standort werden vorbelegt, damit sie nicht doppelt erfasst werden.
+              !istNeu && !vorgangId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (kundeId) params.set("kunde_id", kundeId);
+                    if (anlageId) params.set("anlage_id", anlageId);
+                    if (standortId) params.set("standort_id", standortId);
+                    if (titel) params.set("titel", titel);
+                    if (beschreibung) params.set("beschreibung", beschreibung);
+                    params.set("aufgabe_id", aufgabe!.id);
+                    navigate(`/neu?${params.toString()}`);
+                  }}
+                  className="text-sekundaer font-medium text-tint-text hover:underline"
+                >
+                  + Neuen Vorgang aus dieser Aufgabe anlegen
+                </button>
+              ) : undefined
+            }
+          />
+
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1.5 block text-meta font-bold text-label3">
               Beschreibung
@@ -371,46 +469,6 @@ export function ProjektAufgabeDetailPanel({
 
           {/* Rein referenzielle Schnellzugriffe -- kein Status-Sync in
               irgendeine Richtung, siehe app/models/projekt.py. */}
-          <VerknuepfungsZeile
-            icon={Link2}
-            farbe="blue"
-            label="Verknüpfter Vorgang"
-            anzeige={vorgangVorschau}
-            onEntfernen={() => setVorgangId("")}
-            route={vorgangId ? `/vorgaenge/${vorgangId}` : null}
-            navigate={navigate}
-            suchOptionen={(alleVorgaenge ?? []).map((v) => ({
-              value: v.id,
-              label: `${v.vorgangsnummer} · ${v.titel}`,
-            }))}
-            onWaehlen={setVorgangId}
-            platzhalter="Vorgang suchen…"
-            // Nur fuer bereits gespeicherte Aufgaben (aufgabe.id noetig, um den
-            // neuen Vorgang nach dem Anlegen zurueck zu verknuepfen -- siehe
-            // NewVorgangPage.tsx, aufgabe_id-Query-Param). Titel/Kunde/Anlage/
-            // Standort werden vorbelegt, damit sie nicht doppelt erfasst werden.
-            extraAktion={
-              !istNeu ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    if (kundeId) params.set("kunde_id", kundeId);
-                    if (anlageId) params.set("anlage_id", anlageId);
-                    if (standortId) params.set("standort_id", standortId);
-                    if (titel) params.set("titel", titel);
-                    if (beschreibung) params.set("beschreibung", beschreibung);
-                    params.set("aufgabe_id", aufgabe!.id);
-                    navigate(`/neu?${params.toString()}`);
-                  }}
-                  className="mt-1.5 text-sekundaer font-medium text-tint hover:underline"
-                >
-                  + Neuen Vorgang aus dieser Aufgabe anlegen
-                </button>
-              ) : undefined
-            }
-          />
-
           <VerknuepfungsZeile
             icon={Users}
             farbe="green"
@@ -557,7 +615,7 @@ export function ProjektAufgabeDetailPanel({
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t-[0.5px] border-sep px-5 py-4">
-          {istNeu ? (
+          {istNeu || eingebettet ? (
             <span />
           ) : (
             <button
@@ -583,7 +641,6 @@ export function ProjektAufgabeDetailPanel({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </>,
   );
 }
