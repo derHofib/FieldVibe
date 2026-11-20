@@ -75,7 +75,7 @@ export function SortierbareTabelle<T>({
                   aria-sort={
                     aktiv ? (sortierung?.absteigend ? "descending" : "ascending") : undefined
                   }
-                  className={`px-3 py-2 text-meta font-medium tracking-wide uppercase ${spalte.align === "rechts" ? "text-right" : "text-left"} ${gefiltert ? "text-tint-text" : ""}`}
+                  className={`whitespace-nowrap px-3 py-2 text-meta font-medium tracking-wide uppercase ${spalte.align === "rechts" ? "text-right" : "text-left"} ${gefiltert ? "text-tint-text" : ""}`}
                 >
                   {spalte.sortWert ? (
                     <button

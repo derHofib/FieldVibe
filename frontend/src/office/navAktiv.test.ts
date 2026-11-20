@@ -23,6 +23,7 @@ describe("aktiverNavKey", () => {
 
   it("verwechselt Präfixe nicht", () => {
     expect(aktiverNavKey("/rechnungseingang", seiten)).toBe("rechnungseingang");
+    expect(aktiverNavKey("/rechnungseingang/abc/vollbild", seiten)).toBe("rechnungseingang");
   });
 
   it("gibt null zurück, wenn nichts passt", () => {
