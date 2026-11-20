@@ -1,5 +1,8 @@
 import { seiteInWorkspace, type NavSeite, type Workspace } from "../config/navSeiten";
 
+/** localStorage-Schlüssel des gemerkten Workspaces (Seitenleiste und Startdashboard der Kennzahlen). */
+export const WORKSPACE_STORAGE_KEY = "fieldvibe-office-workspace";
+
 /** Die Office-Seitenleiste zeigt die Vorgangsliste unter ihrem eigenen Namen.
  * In config/navSeiten.ts heißt der Eintrag "Feed" und zeigt auf /feed (die
  * Handy-Startseite); im Office leitet /feed nur auf /vorgaenge um, ein Link

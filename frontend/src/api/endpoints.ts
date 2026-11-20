@@ -14,6 +14,13 @@ import {
   type ProtokollListe,
 } from "../office/protokoll/protokollUtils";
 import type { KiAnfrage, KiRedirect, KiScope, KiVerbindung } from "../types/ki";
+import type {
+  DashboardLayout,
+  KennzahlDaten,
+  KennzahlDatenParams,
+  KennzahlDef,
+  KennzahlenDashboard,
+} from "../types/kennzahlen";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
@@ -1964,6 +1971,26 @@ export const bestellungenApi = {
 
 export const insightsApi = {
   get: () => apiFetch<Insights>("/api/insights"),
+};
+
+export const kennzahlenApi = {
+  katalog: () => apiFetch<KennzahlDef[]>("/api/kennzahlen/katalog"),
+  daten: ({ kennzahl, gruppierung = "gesamt", von, bis, vergleich_von, vergleich_bis }: KennzahlDatenParams) => {
+    const query = new URLSearchParams({ kennzahl, gruppierung });
+    // Leere Zeitraumparameter weglassen: "Stand heute"-Kennzahlen kennen keinen Zeitraum.
+    for (const [name, wert] of Object.entries({ von, bis, vergleich_von, vergleich_bis })) {
+      if (wert) query.set(name, wert);
+    }
+    return apiFetch<KennzahlDaten>(`/api/kennzahlen/daten?${query}`);
+  },
+  dashboards: () => apiFetch<KennzahlenDashboard[]>("/api/kennzahlen/dashboards"),
+  dashboardAnlegen: (body: { name: string; layout: DashboardLayout; vorlage?: string | null; fuer_alle?: boolean }) =>
+    apiFetch<KennzahlenDashboard>("/api/kennzahlen/dashboards", { method: "POST", body: JSON.stringify(body) }),
+  dashboardAendern: (id: string, body: { name?: string; layout?: DashboardLayout; fuer_alle?: boolean }) =>
+    apiFetch<KennzahlenDashboard>(`/api/kennzahlen/dashboards/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  dashboardLoeschen: (id: string) => apiFetch<void>(`/api/kennzahlen/dashboards/${id}`, { method: "DELETE" }),
+  reihenfolge: (ids: string[]) =>
+    apiFetch<void>("/api/kennzahlen/dashboards/reihenfolge", { method: "PUT", body: JSON.stringify({ ids }) }),
 };
 
 export const exportApi = {

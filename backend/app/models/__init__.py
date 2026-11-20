@@ -29,6 +29,7 @@ from app.models.form_modul import (
     FormViewFieldLayout,
 )
 from app.models.gespeicherter_filter import GespeicherterFilter
+from app.models.kennzahlen_dashboard import KennzahlenDashboard
 from app.models.highlight import Highlight
 from app.models.import_lauf import ImportLauf, ImportLaufEintrag
 from app.models.job_lauf import JobLauf
@@ -133,6 +134,7 @@ __all__ = [
     "FormView",
     "FormViewFieldLayout",
     "GespeicherterFilter",
+    "KennzahlenDashboard",
     "Highlight",
     "ImportLauf",
     "ImportLaufEintrag",
