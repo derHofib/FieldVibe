@@ -21,6 +21,23 @@ export const TELEFONAT_ERGEBNIS_LABEL: Record<TelefonatErgebnis, string> = {
 /** Marker für "Andere Person" in der Partner-Auswahl (keine echte Ansprechpartner-ID). */
 export const ANDERE_PERSON = "__andere__";
 
+/** Präfix für Kontakte vor Ort in der Partner-Auswahl (Wert = `kontakt:<id>`); Ansprechpartner-IDs tragen keins. */
+export const KONTAKT_PRAEFIX = "kontakt:";
+
+export function kontaktAuswahlWert(kontaktId: string): string {
+  return `${KONTAKT_PRAEFIX}${kontaktId}`;
+}
+
+/** ID des Kontakts vor Ort, wenn die Auswahl einer ist. */
+export function kontaktIdAusAuswahl(auswahl: string): string | null {
+  return auswahl.startsWith(KONTAKT_PRAEFIX) ? auswahl.slice(KONTAKT_PRAEFIX.length) : null;
+}
+
+/** Eine Rufnummer lässt sich erst ab fünf Ziffern sinnvoll zuordnen. */
+export function nummerErkennbar(nummer: string): boolean {
+  return nummer.replace(/\D/g, "").length >= 5;
+}
+
 export function toLocalInputValue(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -117,7 +134,9 @@ export function baueTelefonatCreate(
   // Bei vorgang_id setzt der Server kunde_id selbst; eine abweichende wäre ein 422.
   if (vorgangId) body.vorgang_id = vorgangId;
   else if (kontext.kundeId) body.kunde_id = kontext.kundeId;
-  if (f.partnerAuswahl !== ANDERE_PERSON && f.partnerAuswahl) body.ansprechpartner_id = f.partnerAuswahl;
+  const kontaktId = kontaktIdAusAuswahl(f.partnerAuswahl);
+  if (kontaktId) body.vor_ort_kontakt_id = kontaktId;
+  else if (f.partnerAuswahl !== ANDERE_PERSON && f.partnerAuswahl) body.ansprechpartner_id = f.partnerAuswahl;
   if (f.partnerNummer.trim()) body.partner_nummer = f.partnerNummer.trim();
   if (dauer !== undefined) body.dauer_sekunden = dauer;
   if (f.notiz.trim()) body.notiz = f.notiz.trim();
@@ -134,7 +153,9 @@ export function baueTelefonatUpdate(f: TelefonatFormular, alt: Telefonat, dauerO
   const body: TelefonatUpdate = {
     partner_name: f.partnerName.trim(),
     partner_nummer: f.partnerNummer.trim() || null,
-    ansprechpartner_id: f.partnerAuswahl !== ANDERE_PERSON && f.partnerAuswahl ? f.partnerAuswahl : null,
+    ansprechpartner_id:
+      f.partnerAuswahl !== ANDERE_PERSON && f.partnerAuswahl && !kontaktIdAusAuswahl(f.partnerAuswahl) ? f.partnerAuswahl : null,
+    vor_ort_kontakt_id: kontaktIdAusAuswahl(f.partnerAuswahl),
     richtung: f.richtung,
     ergebnis: f.ergebnis,
     beginn: new Date(f.beginn).toISOString(),
@@ -154,7 +175,7 @@ export function formularAusTelefonat(t: Telefonat, ansprechpartner: Ansprechpart
   return {
     richtung: t.richtung,
     ergebnis: t.ergebnis,
-    partnerAuswahl: bekannt ? t.ansprechpartner_id! : ANDERE_PERSON,
+    partnerAuswahl: t.vor_ort_kontakt_id ? kontaktAuswahlWert(t.vor_ort_kontakt_id) : bekannt ? t.ansprechpartner_id! : ANDERE_PERSON,
     partnerName: t.partner_name,
     partnerNummer: t.partner_nummer ?? "",
     beginn: toLocalInputValue(new Date(t.beginn)),

@@ -1,14 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { kundenApi } from "../../../api/endpoints";
 import { ApiError } from "../../../api/client";
 import { ERechnungFelder, zeigeERechnungFelder } from "../../../components/kunde/ERechnungFelder";
+import { SearchableSelect } from "../../../components/SearchableSelect";
 import { FehlerMeldung } from "../../../components/Hinweiskasten";
 import { Nachweis13bFeld, Nachweis13bStatus } from "../../../components/kunde/Nachweis13b";
 import { validiereDebitorenkonto } from "../../../utils/datev";
 import { E_RECHNUNG_FORMAT_KURZ, type ERechnungFormat, leitwegIdFehler } from "../../../utils/eRechnungVersand";
-import type { Adresse } from "../../../types";
+import type { Adresse, KundeRefKurz } from "../../../types";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -25,6 +26,7 @@ export function Stammdaten({
   eRechnungFormat,
   debitorenkonto,
   kannVerwalten,
+  verwaltetVon,
 }: {
   kundeId: string;
   adresse: Adresse | null;
@@ -36,6 +38,7 @@ export function Stammdaten({
   eRechnungFormat: ERechnungFormat | null;
   debitorenkonto: string | null;
   kannVerwalten: boolean;
+  verwaltetVon?: KundeRefKurz | null;
 }) {
   const queryClient = useQueryClient();
   const [bearbeiten, setBearbeiten] = useState(false);
@@ -47,7 +50,9 @@ export function Stammdaten({
     leitwegId: leitwegId ?? "",
     eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
     debitorenkonto: debitorenkonto ?? "",
+    verwaltetVonId: verwaltetVon?.id ?? "",
   }));
+  const { data: kundenListe } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: bearbeiten });
   const kontoFehler = validiereDebitorenkonto(form.debitorenkonto);
   const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
@@ -65,9 +70,11 @@ export function Stammdaten({
         leitweg_id: form.leitwegId.trim() || null,
         e_rechnung_format: form.eRechnungFormat || null,
         debitorenkonto: form.debitorenkonto.trim() || null,
+        verwaltet_von_kunde_id: form.verwaltetVonId || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
+      queryClient.invalidateQueries({ queryKey: ["kunden"] });
       setBearbeiten(false);
     },
   });
@@ -91,6 +98,7 @@ export function Stammdaten({
                   leitwegId: leitwegId ?? "",
                   eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
                   debitorenkonto: debitorenkonto ?? "",
+                  verwaltetVonId: verwaltetVon?.id ?? "",
                 });
                 speichernMutation.reset();
                 setBearbeiten(true);
@@ -174,6 +182,26 @@ export function Stammdaten({
           onChange={({ leitwegId: neueId, format }) => setForm({ ...form, leitwegId: neueId, eRechnungFormat: format })}
         />
       )}
+      <div>
+        <span className="mb-0.5 block text-sekundaer text-label2">Verwaltet von</span>
+        <SearchableSelect
+          value={form.verwaltetVonId}
+          onChange={(verwaltetVonId) => {
+            setForm({ ...form, verwaltetVonId });
+            speichernMutation.reset();
+          }}
+          placeholder="Nicht verwaltet"
+          options={[
+            { value: "", label: "Nicht verwaltet" },
+            ...(kundenListe ?? [])
+              .filter((k) => k.id !== kundeId)
+              .map((k) => ({ value: k.id, label: k.name, sublabel: k.kundennummer })),
+          ]}
+        />
+        <p className="mt-0.5 text-sekundaer text-label2">
+          Hausverwaltung dieses Kunden (z. B. bei einer WEG); sie kann dann als Auftraggeber die Rechnung an diesen Kunden richten.
+        </p>
+      </div>
       <div>
         <label htmlFor="kunde-debitorenkonto" className="mb-0.5 block text-sekundaer text-label2">
           Debitorenkonto (DATEV, optional)

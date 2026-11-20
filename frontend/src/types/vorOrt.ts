@@ -90,3 +90,42 @@ export interface StandortKurz {
   bezeichnung: string;
   adresse: { strasse?: string; plz?: string; ort?: string } | null;
 }
+
+/** Kontakt, den das Kundenportal mit einer Anfrage mitgibt (max. 5, je Name oder Telefon). */
+export interface PortalVorOrtKontaktEingabe {
+  name?: string | null;
+  rolle: VorOrtRolle;
+  telefon?: string | null;
+  erreichbarkeit?: string | null;
+  hinweis?: string | null;
+}
+
+/** Portal-Sicht auf Kontakte des eigenen Vorgangs (ohne E-Mail). */
+export interface PortalVorOrtKontakt {
+  name: string | null;
+  rolle: VorOrtRolle;
+  einheit: string | null;
+  telefon: string | null;
+  erreichbarkeit: string | null;
+  hinweis: string | null;
+}
+
+/** Partnerportal: nur bei angenommenem Vorgang, keine E-Mail. */
+export interface PartnerVorOrtKontakt extends PortalVorOrtKontakt {
+  telefon2: string | null;
+}
+
+export interface VorOrtKontaktKurz {
+  id: string;
+  name: string | null;
+  rolle: VorOrtRolle;
+}
+
+/** Antwort von GET /api/telefonate/nummer-zuordnen?nummer= (null = unbekannte Nummer). */
+export interface TelefonNummerZuordnung {
+  kunde_id: string;
+  kunde_name: string;
+  ansprechpartner_id: string | null;
+  vor_ort_kontakt_id: string | null;
+  offene_vorgaenge: { id: string; vorgangsnummer: string; titel: string }[];
+}

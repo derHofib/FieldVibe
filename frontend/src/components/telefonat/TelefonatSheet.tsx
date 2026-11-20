@@ -3,12 +3,16 @@ import { Bell, PhoneIncoming, PhoneOutgoing, Timer } from "lucide-react";
 import { type FormEvent, useEffect, useId, useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, vorgaengeApi } from "../../api/endpoints";
+import { kundenApi, telefonateApi, vorgaengeApi } from "../../api/endpoints";
+import { useVorOrtKontakteFuerKunde } from "../../hooks/useVorOrt";
 import { useTelefonatAendern, useTelefonatAnlegen, useTelefonatLoeschen } from "../../hooks/useTelefonate";
-import type { Ansprechpartner, Telefonat, TelefonatErgebnis } from "../../types";
+import { VOR_ORT_ROLLE_LABEL, type Ansprechpartner, type Telefonat, type TelefonatErgebnis } from "../../types";
 import {
   ANDERE_PERSON,
   TELEFONAT_ERGEBNIS_LABEL,
+  kontaktAuswahlWert,
+  kontaktIdAusAuswahl,
+  nummerErkennbar,
   arbeitszeitSichtbar,
   baueTelefonatCreate,
   baueTelefonatUpdate,
@@ -30,6 +34,7 @@ import { useBestaetigung } from "../ConfirmDialog";
 import { Feld, FELD_KLASSE } from "../FormularFeld";
 import { IconBadge } from "../IconBadge";
 import { SearchableSelect } from "../SearchableSelect";
+import { Hinweiskasten } from "../Hinweiskasten";
 import { formatUhr, uhrLoeschen, uhrSekunden, uhrStoppen, type AnrufUhr } from "./anrufUhr";
 
 export interface TelefonatVorgangOption {
@@ -105,6 +110,9 @@ function TelefonatSheetInhalt({
     () => sortiereAnsprechpartner(ansprechpartnerProp ?? kunde?.ansprechpartner ?? []),
     [ansprechpartnerProp, kunde],
   );
+  // Ohne Recht auf die Kontakte (oder ohne Netz) bleibt die Auswahl bei den Ansprechpartnern.
+  const { data: kontakteVorOrt } = useVorOrtKontakteFuerKunde(kundeId ?? null, {}, !!kundeId);
+  const kontakte = useMemo(() => (kontakteVorOrt ?? []).filter((k) => !k.anonymisiert_am), [kontakteVorOrt]);
   const { data: geladeneVorgaenge } = useQuery({
     queryKey: ["vorgaenge", "telefonat-auswahl", kundeId],
     queryFn: () => vorgaengeApi.list({ kunde_id: kundeId!, limit: "200" }),
@@ -153,6 +161,30 @@ function TelefonatSheetInhalt({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ansprechpartner.length]);
 
+  // Rufnummer-Erkennung: schlägt Kunde, Person (Ansprechpartner oder Kontakt vor Ort) und offene Vorgänge vor.
+  const [nummerSuche, setNummerSuche] = useState(() => (telefonat ? "" : (vorbelegung?.partner?.nummer ?? "")));
+  const { data: erkannt } = useQuery({
+    queryKey: ["telefon-nummer-zuordnen", nummerSuche],
+    queryFn: () => telefonateApi.nummerZuordnen(nummerSuche),
+    enabled: !telefonat && nummerErkennbar(nummerSuche),
+    retry: false,
+  });
+  const erkennungAnzeigen = !!erkannt && (!kundeId || kundeId === erkannt.kunde_id);
+
+  function uebernimmErkennung() {
+    if (!erkannt) return;
+    if (kundeWaehlbar && !kundeIdProp) setGewaehlterKunde(erkannt.kunde_id);
+    if (erkannt.vor_ort_kontakt_id) {
+      setForm((f) => ({ ...f, partnerAuswahl: kontaktAuswahlWert(erkannt.vor_ort_kontakt_id!), partnerNummer: nummerSuche }));
+    } else if (erkannt.ansprechpartner_id) {
+      setForm((f) => ({ ...f, partnerAuswahl: erkannt.ansprechpartner_id!, partnerNummer: nummerSuche }));
+    }
+    // Genau ein offener Vorgang ist die naheliegende Zuordnung; bei mehreren wählt die Person selbst.
+    if (!vorgangFest && erkannt.offene_vorgaenge.length === 1) {
+      setForm((f) => ({ ...f, vorgangId: erkannt.offene_vorgaenge[0].id }));
+    }
+  }
+
   function aendere(teil: Partial<TelefonatFormular>) {
     setForm((f) => ({ ...f, ...teil }));
   }
@@ -160,6 +192,12 @@ function TelefonatSheetInhalt({
   function waehlePartner(wert: string) {
     if (wert === ANDERE_PERSON || wert === "") {
       aendere({ partnerAuswahl: wert, partnerName: "", partnerNummer: "" });
+      return;
+    }
+    const kontaktId = kontaktIdAusAuswahl(wert);
+    if (kontaktId) {
+      const k = kontakte.find((x) => x.id === kontaktId);
+      aendere({ partnerAuswahl: wert, partnerName: k?.name ?? "", partnerNummer: k?.telefon ?? "" });
       return;
     }
     const a = ansprechpartner.find((x) => x.id === wert);
@@ -309,6 +347,48 @@ function TelefonatSheetInhalt({
         )}
 
         {kundeWaehlbar && !telefonat && !kundeIdProp && (
+          <Feld label="Rufnummer (optional)">
+            {(p) => (
+              <input
+                {...p}
+                type="tel"
+                inputMode="tel"
+                maxLength={50}
+                placeholder="Nummer eintragen, Kunde wird erkannt"
+                defaultValue={nummerSuche}
+                onBlur={(e) => setNummerSuche(e.target.value.trim())}
+                className={FELD_KLASSE}
+              />
+            )}
+          </Feld>
+        )}
+
+        {erkennungAnzeigen && erkannt && (
+          <Hinweiskasten ton="info" titel={`Nummer erkannt: ${erkannt.kunde_name}`}>
+            {(erkannt.vor_ort_kontakt_id || erkannt.ansprechpartner_id) && (
+              <p>
+                {erkannt.vor_ort_kontakt_id
+                  ? "Passt zu einem Kontakt vor Ort."
+                  : "Passt zu einem Ansprechpartner des Kunden."}
+              </p>
+            )}
+            {!vorgangFest && erkannt.offene_vorgaenge.length > 1 && (
+              <p>
+                Offene Vorgänge: {erkannt.offene_vorgaenge.map((v) => v.vorgangsnummer).join(", ")} – unten auswählen.
+              </p>
+            )}
+            {!vorgangFest && erkannt.offene_vorgaenge.length === 1 && (
+              <p>
+                Offener Vorgang: {erkannt.offene_vorgaenge[0].vorgangsnummer} · {erkannt.offene_vorgaenge[0].titel}
+              </p>
+            )}
+            <button type="button" onClick={uebernimmErkennung} className="btn-touch font-semibold underline-offset-2 hover:underline">
+              Übernehmen
+            </button>
+          </Hinweiskasten>
+        )}
+
+        {kundeWaehlbar && !telefonat && !kundeIdProp && (
           <Feld label="Kunde" pflicht>
             {(p) => (
               <SearchableSelect
@@ -354,11 +434,30 @@ function TelefonatSheetInhalt({
                 onChange={(e) => waehlePartner(e.target.value)}
               >
                 {!form.partnerAuswahl && <option value="">Bitte wählen…</option>}
-                {ansprechpartner.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {[a.name, a.position, a.telefon].filter(Boolean).join(" · ")}
-                  </option>
-                ))}
+                {kontakte.length > 0 ? (
+                  <>
+                    <optgroup label="Ansprechpartner">
+                      {ansprechpartner.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {[a.name, a.position, a.telefon].filter(Boolean).join(" · ")}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Kontakte vor Ort">
+                      {kontakte.map((k) => (
+                        <option key={k.id} value={kontaktAuswahlWert(k.id)}>
+                          {[k.name, VOR_ORT_ROLLE_LABEL[k.rolle], k.einheit, k.telefon].filter(Boolean).join(" · ")}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                ) : (
+                  ansprechpartner.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {[a.name, a.position, a.telefon].filter(Boolean).join(" · ")}
+                    </option>
+                  ))
+                )}
                 <option value={ANDERE_PERSON}>Andere Person…</option>
               </Select>
               {form.partnerAuswahl === ANDERE_PERSON && (
@@ -378,6 +477,7 @@ function TelefonatSheetInhalt({
                     value={form.partnerNummer}
                     maxLength={50}
                     onChange={(e) => aendere({ partnerNummer: e.target.value })}
+                    onBlur={(e) => setNummerSuche(e.target.value.trim())}
                     className={FELD_KLASSE}
                   />
                 </div>

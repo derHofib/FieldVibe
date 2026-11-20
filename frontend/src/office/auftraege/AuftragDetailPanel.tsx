@@ -24,6 +24,7 @@ import { auftragStatusZuToken, istVorgangErledigt, projektLink } from "../../uti
 import { VorOrtKontakteAbschnitt } from "../../pages/feld/vorOrt/VorOrtKontakteAbschnitt";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 import { AuftragAuftraggeberAbschnitt, AuftragLeistungsortAbschnitt } from "./AuftragOrtAbschnitte";
+import { RechnungAnAbschnitt } from "./RechnungAnAbschnitt";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
 
@@ -249,6 +250,13 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
           laeuft={aktualisieren.isPending}
           speichern={(body, onFertig) => aktualisieren.mutate(body, { onSuccess: onFertig })}
         />
+        <RechnungAnAbschnitt
+          auftraggeberId={aktuell.kunde_id}
+          auftraggeberName={aktuell.kunde_name}
+          rechnungAn={aktuell.rechnung_an}
+          laeuft={aktualisieren.isPending}
+          speichern={(id, onFertig) => aktualisieren.mutate({ rechnung_an_kunde_id: id }, { onSuccess: onFertig })}
+        />
         <AuftragLeistungsortAbschnitt
           auftrag={aktuell}
           laeuft={aktualisieren.isPending}
@@ -260,6 +268,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
           kundeId={aktuell.kunde_id}
           standortId={aktuell.standort_id ?? null}
           darfBearbeiten={hatRecht("projekte", "bearbeiten")}
+          darfKorrigieren={hatRecht("vorgaenge", "bearbeiten")}
           layout="office"
         />
 

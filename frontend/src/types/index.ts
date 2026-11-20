@@ -1,5 +1,5 @@
 import type { FehlerberichtKontext } from "../bugreport/typen";
-import type { StandortKurz, VorOrtHauptkontaktKurz, VorOrtKontaktZugeordnet } from "./vorOrt";
+import type { PartnerVorOrtKontakt, PortalVorOrtKontakt, PortalVorOrtKontaktEingabe, StandortKurz, VorOrtHauptkontaktKurz, VorOrtKontaktZugeordnet } from "./vorOrt";
 
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
 
@@ -181,7 +181,8 @@ export type PapierkorbEntityTyp =
   | "inventurzyklus"
   | "fahrzeug_zuweisung"
   | "tag"
-  | "vorgang_anfrage";
+  | "vorgang_anfrage"
+  | "vor_ort_kontakt";
 
 export interface PapierkorbEintrag {
   entity_typ: PapierkorbEntityTyp;
@@ -365,8 +366,16 @@ export interface Kunde {
   logo_object_key: string | null;
   /** Betreuer der Kundenliste, Hauptbetreuer zuerst. */
   betreuung?: KundeBetreuungKurz[];
+  /** Hausverwaltung o. Ä., die diesen Kunden (z. B. eine WEG) verwaltet. */
+  verwaltet_von_kunde_id?: string | null;
+  verwaltet_von?: KundeRefKurz | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface KundeRefKurz {
+  id: string;
+  name: string;
 }
 
 export interface KundeBetreuungKurz {
@@ -603,6 +612,10 @@ export interface VorgangAnfrage {
   leistungstyp: Leistungstyp;
   status: VorgangAnfrageStatus;
   ablehnungsgrund: string | null;
+  // Vom Portal mitgegeben; Kontakte stehen bis zur Annahme hier, danach als VorOrtKontakt am Vorgang.
+  einheit?: string | null;
+  kunden_referenz?: string | null;
+  vor_ort_kontakte?: PortalVorOrtKontaktEingabe[];
   vorgang_id: string | null;
   bearbeitet_von: string | null;
   bearbeitet_am: string | null;
@@ -674,6 +687,7 @@ export interface PortalVorgang {
   last_activity_at: string;
   created_at: string;
   updated_at: string;
+  vor_ort_kontakte?: PortalVorOrtKontakt[];
 }
 
 // Kundenportal-Sicht auf Angebote/Rechnungen/Anlagen/Anfragen (Backend:
@@ -869,11 +883,14 @@ export type SearchKategorie =
   | "auftrag"
   | "projekt"
   | "telefonat"
+  | "vor_ort_kontakt"
   | "tag";
 
 export interface SearchHit {
   kategorie: SearchKategorie;
   id: string;
+  // Nur bei Kontakten vor Ort: der Kunde, an dem sie hängen (Ziel der Navigation).
+  kunde_id?: string | null;
   titel: string;
   subtitel: string | null;
   nummer?: string | null;
@@ -1241,6 +1258,17 @@ export interface Angebot {
   rechnung_id?: string | null;
   fassung_sha256?: string;
   letzter_nachweis?: AngebotNachweis | null;
+  kunden_referenz?: string | null;
+  leistungsort?: Leistungsort | null;
+}
+
+/** Leistungsort auf Rechnung/Angebot (Snapshot); Bezeichnung = Einheit, z. B. "Whg. 3, 2. OG links". */
+export interface Leistungsort {
+  bezeichnung?: string | null;
+  strasse?: string | null;
+  plz?: string | null;
+  ort?: string | null;
+  land?: string | null;
 }
 
 export interface AngebotAbschlag {
@@ -1439,6 +1467,9 @@ export interface Rechnung {
   angerechnete_abschlaege?: AngerechneterAbschlag[];
   // Am Original: nicht stornierte Gutschriften.
   gutschriften?: GutschriftKurz[];
+  // Snapshot aus dem Auftrag; nur im Entwurf änderbar.
+  kunden_referenz?: string | null;
+  leistungsort?: Leistungsort | null;
 }
 
 export interface RechnungAusAngebotCreate {
@@ -2576,6 +2607,8 @@ export interface Projekt {
   standort_id?: string | null;
   kunde_name?: string | null;
   standort_bezeichnung?: string | null;
+  rechnung_an_kunde_id?: string | null;
+  rechnung_an?: KundeRefKurz | null;
 }
 
 export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
@@ -2817,6 +2850,8 @@ export interface Auftrag {
   kunden_referenz?: string | null;
   standort?: StandortKurz | null;
   ansprechpartner?: Ansprechpartner | null;
+  rechnung_an_kunde_id?: string | null;
+  rechnung_an?: KundeRefKurz | null;
 }
 
 export interface ProjektSpalte {
@@ -2923,6 +2958,8 @@ export interface PartnerVorgang {
   kunde_name: string;
   anlage_bezeichnung: string | null;
   anlage_adresse: Adresse | null;
+  // Nur bei angenommenem Auftrag gefüllt, sonst leer; ohne E-Mail.
+  vor_ort_kontakte?: PartnerVorOrtKontakt[];
   last_activity_at: string;
   created_at: string;
 }

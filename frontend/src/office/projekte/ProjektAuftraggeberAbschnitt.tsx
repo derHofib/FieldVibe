@@ -8,6 +8,7 @@ import { FehlerMeldung } from "../../components/Hinweiskasten";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { ABSCHNITT_AKTION, Abschnitt } from "../../pages/feld/vorgang/Abschnitt";
 import type { Projekt } from "../../types";
+import { RechnungAnAbschnitt } from "../auftraege/RechnungAnAbschnitt";
 
 /** Abschnitt "Auftraggeber & Baustelle" im Projekt: Kunde (Voraussetzung für Kontakte vor Ort) und Standort. */
 export function ProjektAuftraggeberAbschnitt({ projekt }: { projekt: Projekt }) {
@@ -111,5 +112,24 @@ export function ProjektAuftraggeberAbschnitt({ projekt }: { projekt: Projekt }) 
         </dl>
       )}
     </Abschnitt>
+  );
+}
+
+/** Zeile "Rechnung an" im Projekt (Standard: Auftraggeber). */
+export function ProjektRechnungAnAbschnitt({ projekt }: { projekt: Projekt }) {
+  const queryClient = useQueryClient();
+  const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
+    mutationFn: (rechnungAnKundeId: string | null) => projekteApi.update(projekt.id, { rechnung_an_kunde_id: rechnungAnKundeId }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["projekte"] }),
+  });
+  return (
+    <RechnungAnAbschnitt
+      auftraggeberId={projekt.kunde_id ?? null}
+      auftraggeberName={projekt.kunde_name ?? null}
+      rechnungAn={projekt.rechnung_an}
+      laeuft={speichern.isPending}
+      speichern={(id, onFertig) => speichern.mutate(id, { onSuccess: onFertig })}
+    />
   );
 }

@@ -38,6 +38,7 @@ const ENTITY_TYP_LABEL: Record<PapierkorbEntityTyp, string> = {
   fahrzeug_zuweisung: "Fahrzeug-Zuweisung",
   tag: "Tag",
   vorgang_anfrage: "Vorgangsanfrage",
+  vor_ort_kontakt: "Kontakt vor Ort",
 };
 
 function formatDatum(iso: string): string {

@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { Select } from "../../components/apple/Select";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { KontaktListeKompakt } from "../../components/vorOrt/KontaktListeKompakt";
 import { useAuth } from "../../context/AuthContext";
 import {
   ABRECHNUNGSARTEN,
@@ -96,12 +97,20 @@ export function AnfragePanel({ anfrage, alle }: { anfrage: VorgangAnfrage; alle:
               "–"
             )}
           </Zeile>
+          <Zeile label="Einheit">{anfrage.einheit || "–"}</Zeile>
+          <Zeile label="Zeichen">{anfrage.kunden_referenz || "–"}</Zeile>
           <Zeile label="Gestellt von">
             {anfrage.gestellt_von_name ?? "–"}
             {anfrage.gestellt_von_email && ` · ${anfrage.gestellt_von_email}`}
           </Zeile>
         </dl>
       </section>
+
+      <KontaktListeKompakt
+        titel="Ansprechpartner vor Ort"
+        variante="inline"
+        kontakte={(anfrage.vor_ort_kontakte ?? []).map((k) => ({ ...k, name: k.name ?? null, einheit: null, telefon: k.telefon ?? null, erreichbarkeit: k.erreichbarkeit ?? null, hinweis: k.hinweis ?? null }))}
+      />
 
       {anfrage.status === "offen" && kannBearbeiten && (
         <section aria-label="Annehmen" className="space-y-3 rounded-[var(--radius-ap-card)] bg-fill p-3">

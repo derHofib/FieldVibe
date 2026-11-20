@@ -8,6 +8,7 @@ import { partnerPortalApi } from "../api/endpoints";
 import { AbschnittskopfB } from "../components/apple/AbschnittsKopf";
 import { GroupedList, GroupedListValueRow } from "../components/apple/GroupedList";
 import { Sheet } from "../components/apple/Sheet";
+import { KontaktListeKompakt } from "../components/vorOrt/KontaktListeKompakt";
 import { StatusPille } from "../components/apple/StatusPille";
 import { FehlerZustand } from "../components/FehlerZustand";
 import { LEISTUNGSTYP_LABEL } from "../config/vorgangDarstellung";
@@ -203,6 +204,13 @@ export function PartnerAuftragDetailPage() {
           <GroupedListValueRow label="Angelegt" wert={formatDatum(auftrag.created_at)} last />
         </GroupedList>
       </div>
+
+      {(auftrag.vor_ort_kontakte ?? []).length > 0 && (
+        <>
+          <AbschnittskopfB titel="Vor Ort" />
+          <KontaktListeKompakt titel="Vor Ort" variante="zelle" kontakte={auftrag.vor_ort_kontakte ?? []} />
+        </>
+      )}
 
       {auftrag.beschreibung && (
         <>

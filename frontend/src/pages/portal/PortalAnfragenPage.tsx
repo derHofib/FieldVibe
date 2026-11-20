@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquareText } from "lucide-react";
+import { Plus, ShieldCheck, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { kundenportalApi } from "../../api/endpoints";
@@ -7,7 +8,15 @@ import { ApiError } from "../../api/client";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
+import { VOR_ORT_ROLLEN, VOR_ORT_ROLLE_LABEL, type Leistungstyp, type VorgangAnfrageStatus, type VorOrtRolle } from "../../types";
+import {
+  PORTAL_ANONYMISIERUNG_MONATE,
+  PORTAL_MAX_KONTAKTE,
+  baueKontakteBody,
+  leererPortalKontakt,
+  validierePortalKontakte,
+  type PortalKontaktFormular,
+} from "../../utils/portalAnfrage";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { Select } from "../../components/apple/Select";
 
@@ -32,6 +41,93 @@ const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
   abgelehnt: "border rounded-[var(--radius-ap-pill)] border-sep text-label2 ",
 };
 
+const KONTAKT_FELD = "btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label";
+
+/** Ansprechpartner vor Ort (z. B. Mieter/in): bis zu fünf, je Name oder Telefon Pflicht; leere Zeilen werden nicht gesendet. */
+function KontakteVorOrtEingabe({
+  liste,
+  fehler,
+  onChange,
+}: {
+  liste: PortalKontaktFormular[];
+  fehler: Record<number, string>;
+  onChange: (liste: PortalKontaktFormular[]) => void;
+}) {
+  const aendere = (i: number, teil: Partial<PortalKontaktFormular>) =>
+    onChange(liste.map((k, j) => (j === i ? { ...k, ...teil } : k)));
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-1 text-meta font-semibold uppercase tracking-wide text-label2">Ansprechpartner vor Ort</legend>
+      {liste.map((k, i) => (
+        <div key={i} className="space-y-2 rounded-[var(--radius-ap-card)] bg-fill p-3">
+          {liste.length > 1 && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => onChange(liste.filter((_, j) => j !== i))}
+                aria-label={`Kontakt ${i + 1} entfernen`}
+                className="btn-touch p-1 text-label2"
+              >
+                <X size={16} strokeWidth={2} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor={`portal-kontakt-name-${i}`} className="mb-1 block text-sekundaer text-label2">Name</label>
+              <input id={`portal-kontakt-name-${i}`} value={k.name} maxLength={200} onChange={(e) => aendere(i, { name: e.target.value })} className={KONTAKT_FELD} />
+            </div>
+            <div>
+              <label htmlFor={`portal-kontakt-rolle-${i}`} className="mb-1 block text-sekundaer text-label2">Rolle</label>
+              <Select id={`portal-kontakt-rolle-${i}`} value={k.rolle} onChange={(e) => aendere(i, { rolle: e.target.value as VorOrtRolle })}>
+                {VOR_ORT_ROLLEN.map((r) => (
+                  <option key={r} value={r}>
+                    {VOR_ORT_ROLLE_LABEL[r]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label htmlFor={`portal-kontakt-telefon-${i}`} className="mb-1 block text-sekundaer text-label2">Telefon</label>
+              <input id={`portal-kontakt-telefon-${i}`} type="tel" value={k.telefon} maxLength={50} onChange={(e) => aendere(i, { telefon: e.target.value })} className={KONTAKT_FELD} />
+            </div>
+            <div>
+              <label htmlFor={`portal-kontakt-erreichbar-${i}`} className="mb-1 block text-sekundaer text-label2">Erreichbar</label>
+              <input id={`portal-kontakt-erreichbar-${i}`} value={k.erreichbarkeit} maxLength={200} placeholder="z. B. nachmittags" onChange={(e) => aendere(i, { erreichbarkeit: e.target.value })} className={KONTAKT_FELD} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor={`portal-kontakt-hinweis-${i}`} className="mb-1 block text-sekundaer text-label2">Hinweis</label>
+            <input id={`portal-kontakt-hinweis-${i}`} value={k.hinweis} maxLength={500} placeholder="z. B. Zugang, Klingel defekt" onChange={(e) => aendere(i, { hinweis: e.target.value })} className={KONTAKT_FELD} />
+          </div>
+          {fehler[i] && (
+            <p role="alert" className="text-sekundaer text-st-fehlt">
+              {fehler[i]}
+            </p>
+          )}
+        </div>
+      ))}
+      {liste.length < PORTAL_MAX_KONTAKTE && (
+        <button
+          type="button"
+          onClick={() => onChange([...liste, leererPortalKontakt()])}
+          className="btn-touch flex items-center gap-1.5 text-fliess font-medium text-tint-text"
+        >
+          <Plus size={16} strokeWidth={2} aria-hidden="true" />
+          Weiteren Kontakt hinzufügen
+        </button>
+      )}
+      <div className="flex items-start gap-2 rounded-[var(--radius-ap-md)] bg-st-neu-bg p-3 text-sekundaer text-st-neu">
+        <ShieldCheck size={16} strokeWidth={2} className="mt-px shrink-0" aria-hidden="true" />
+        <p>
+          Die Kontaktdaten nutzen wir nur für diesen Einsatz und anonymisieren sie {PORTAL_ANONYMISIERUNG_MONATE} Monate nach dem
+          letzten Einsatz. Bitte informieren Sie die Person, dass Sie die Daten an uns weitergeben.
+        </p>
+      </div>
+    </fieldset>
+  );
+}
+
 function NeueAnfrage() {
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
@@ -44,6 +140,10 @@ function NeueAnfrage() {
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [titelFehler, setTitelFehler] = useState<string | null>(null);
+  const [zeichen, setZeichen] = useState("");
+  const [einheit, setEinheit] = useState("");
+  const [kontakte, setKontakte] = useState<PortalKontaktFormular[]>([leererPortalKontakt()]);
+  const [kontaktFehler, setKontaktFehler] = useState<Record<number, string>>({});
   const [standortFehler, setStandortFehler] = useState<string | null>(null);
 
   const { data: standorte } = useQuery({
@@ -78,6 +178,9 @@ function NeueAnfrage() {
         leistungstyp,
         standort_id: standortId || undefined,
         anlage_id: anlageId || undefined,
+        kunden_referenz: zeichen.trim() || undefined,
+        einheit: einheit.trim() || undefined,
+        vor_ort_kontakte: baueKontakteBody(kontakte),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal-anfragen"] });
@@ -86,6 +189,10 @@ function NeueAnfrage() {
       setBeschreibung("");
       setStandortId("");
       setAnlageId("");
+      setZeichen("");
+      setEinheit("");
+      setKontakte([leererPortalKontakt()]);
+      setKontaktFehler({});
       setError(null);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anfrage konnte nicht gesendet werden"),
@@ -99,6 +206,9 @@ function NeueAnfrage() {
       return;
     }
     setTitelFehler(null);
+    const kFehler = validierePortalKontakte(kontakte);
+    setKontaktFehler(kFehler);
+    if (Object.keys(kFehler).length > 0) return;
     createMutation.mutate();
   }
 
@@ -249,6 +359,36 @@ function NeueAnfrage() {
               </Select>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="portal-anfrage-zeichen" className="mb-1 block text-fliess font-medium text-label">
+                Ihr Zeichen (optional)
+              </label>
+              <input
+                id="portal-anfrage-zeichen"
+                value={zeichen}
+                maxLength={200}
+                onChange={(e) => setZeichen(e.target.value)}
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              />
+            </div>
+            <div>
+              <label htmlFor="portal-anfrage-einheit" className="mb-1 block text-fliess font-medium text-label">
+                Einheit / Lage
+              </label>
+              <input
+                id="portal-anfrage-einheit"
+                value={einheit}
+                maxLength={200}
+                placeholder="z. B. Whg. 3, 2. OG links"
+                onChange={(e) => setEinheit(e.target.value)}
+                className="btn-touch w-full border rounded-[var(--radius-ap-input)] border-sep bg-transparent px-3 py-2 text-label"
+              />
+            </div>
+          </div>
+
+          <KontakteVorOrtEingabe liste={kontakte} fehler={kontaktFehler} onChange={setKontakte} />
 
           {error && <p role="alert" className="text-fliess text-st-fehlt">{error}</p>}
 

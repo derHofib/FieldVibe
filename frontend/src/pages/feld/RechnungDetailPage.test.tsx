@@ -246,3 +246,27 @@ describe("RechnungDetailPage – Rechnungsarten", () => {
     expect(await screen.findByText(/ein Komplett-Storno ist nicht mehr möglich/)).toBeInTheDocument();
   });
 });
+
+describe("RechnungDetailPage – Ihr Zeichen und Leistungsort", () => {
+  const ort = { bezeichnung: "Whg. 3, 2. OG links", strasse: "Moselstraße 14", plz: "56068", ort: "Koblenz", land: "DE" };
+
+  it("Entwurf: Abschnitt bearbeitbar, mit Übernahme-Hinweis", async () => {
+    zeige(rechnung({ status: "entwurf", kunden_referenz: "HV-2026-0417", leistungsort: ort }));
+    expect(await screen.findByText("HV-2026-0417")).toBeInTheDocument();
+    expect(screen.getByText("Moselstraße 14, 56068 Koblenz")).toBeInTheDocument();
+    expect(screen.getByText(/Aus dem Auftrag übernommen/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toBeInTheDocument();
+  });
+
+  it("versendet: nur lesend, ohne Bearbeiten", async () => {
+    zeige(rechnung({ kunden_referenz: "HV-2026-0417", leistungsort: ort }));
+    expect(await screen.findByText("HV-2026-0417")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bearbeiten" })).not.toBeInTheDocument();
+  });
+
+  it("versendet ohne beide Angaben: kein Abschnitt", async () => {
+    zeige(rechnung());
+    await screen.findByText("Muster GmbH");
+    expect(screen.queryByText("Ihr Zeichen")).not.toBeInTheDocument();
+  });
+});

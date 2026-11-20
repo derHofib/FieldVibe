@@ -75,7 +75,7 @@ import { PartnerAbschnitt } from "./vorgang/PartnerAbschnitt";
 import { MaengelAbschnitt } from "./vorgang/MaengelAbschnitt";
 import { TermineAbschnitt } from "./vorgang/TermineAbschnitt";
 import { UebersichtAbschnitt } from "./vorgang/UebersichtAbschnitt";
-import { VorgangVorOrt } from "./vorgang/VorgangVorOrt";
+import { EinheitZeile, VorgangAuftraggeber, VorgangKontakteGruppe } from "./vorgang/VorgangVorOrt";
 import { VerknuepfungTab } from "./vorgang/VerknuepfungTab";
 import { VorgangKopf } from "./vorgang/VorgangKopf";
 import { useZuletztGeoeffnetMerken } from "../../components/suche/zuletztGeoeffnet";
@@ -1396,12 +1396,13 @@ export function VorgangDetailPage({
         verknuepfteAufgaben={verknuepfteAufgaben}
         erstelltVonName={erstelltVonName}
         formulare={<FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
-        vorOrt={
-          <VorgangVorOrt
+        vorOrt={<VorgangAuftraggeber vorgang={vorgang} kunde={kunde} />}
+        einheitZeile={<EinheitZeile vorgang={vorgang} darfBearbeiten={kannDisponieren} />}
+        vorOrtKontakte={
+          <VorgangKontakteGruppe
             vorgang={vorgang}
-            kunde={kunde}
-            anzeigeAdresse={anzeigeAdresse}
             darfBearbeiten={kannDisponieren}
+            darfKorrigieren={kannDisponieren}
             layout={layout === "dicht" ? "office" : "feld"}
           />
         }

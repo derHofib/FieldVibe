@@ -8,7 +8,8 @@ import type { Ansprechpartner } from "../../types";
 
 const create = vi.fn();
 vi.mock("../../api/endpoints", () => ({
-  telefonateApi: { create: (b: unknown) => create(b), update: vi.fn(), remove: vi.fn() },
+  telefonateApi: { create: (b: unknown) => create(b), update: vi.fn(), remove: vi.fn(), nummerZuordnen: vi.fn(async () => null) },
+  vorOrtApi: { listeFuerKunde: vi.fn(async () => []) },
   kundenApi: { list: vi.fn(async () => []), get: vi.fn(async () => ({ ansprechpartner: [] })) },
   vorgaengeApi: { list: vi.fn(async () => []) },
 }));

@@ -29,6 +29,7 @@ export function VorOrtKontakteAbschnitt({
   kundeId,
   standortId,
   darfBearbeiten,
+  darfKorrigieren = false,
   layout,
   kontakte,
   eingebettet = false,
@@ -38,6 +39,8 @@ export function VorOrtKontakteAbschnitt({
   kundeId: string | null;
   standortId: string | null;
   darfBearbeiten: boolean;
+  /** Recht vorgaenge.bearbeiten: Angaben des Kontakts (z. B. Telefonnummer) korrigieren, ohne ihn zuzuordnen/zu entfernen. */
+  darfKorrigieren?: boolean;
   layout: "feld" | "office";
   kontakte?: VorOrtKontaktZugeordnet[];
   eingebettet?: boolean;
@@ -83,6 +86,7 @@ export function VorOrtKontakteAbschnitt({
               ziel={ziel}
               layout={layout}
               darfBearbeiten={darfBearbeiten}
+              darfKorrigieren={darfKorrigieren}
               onHauptkontakt={(h) => haupt.mutate({ zuordnungId: z.zuordnung_id, haupt: h })}
               onBearbeiten={() => setBearbeiten(z.kontakt)}
               onEntfernen={async () => {

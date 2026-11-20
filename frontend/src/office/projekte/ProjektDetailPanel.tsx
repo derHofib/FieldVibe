@@ -18,7 +18,7 @@ import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
 import { VorOrtKontakteAbschnitt } from "../../pages/feld/vorOrt/VorOrtKontakteAbschnitt";
 import { AuftraegeUndVorgaenge, ProjektKennzahlen, useProjektInhalt } from "./AuftraegeUndVorgaenge";
-import { ProjektAuftraggeberAbschnitt } from "./ProjektAuftraggeberAbschnitt";
+import { ProjektAuftraggeberAbschnitt, ProjektRechnungAnAbschnitt } from "./ProjektAuftraggeberAbschnitt";
 import { ZeitplanTab } from "./zeitplan/ZeitplanTab";
 
 // Fuer den Termine-Wochenkalender -- gleiche Rechenlogik wie in
@@ -206,12 +206,14 @@ export function ProjektDetailPanel({
           <ProjektKennzahlen projekt={aktiv} auftraege={auftraege} vorgaenge={vorgaenge} />
 
           <ProjektAuftraggeberAbschnitt projekt={aktiv} />
+          <ProjektRechnungAnAbschnitt projekt={aktiv} />
           <VorOrtKontakteAbschnitt
             ziel="projekt"
             zielId={projekt.id}
             kundeId={aktiv.kunde_id ?? null}
             standortId={aktiv.standort_id ?? null}
             darfBearbeiten={hatRecht("projekte", "bearbeiten")}
+            darfKorrigieren={hatRecht("vorgaenge", "bearbeiten")}
             layout="office"
           />
 

@@ -68,6 +68,7 @@ export function KontaktZeile({
   ziel,
   layout,
   darfBearbeiten,
+  darfKorrigieren = false,
   onHauptkontakt,
   onBearbeiten,
   onEntfernen,
@@ -76,6 +77,7 @@ export function KontaktZeile({
   ziel: VorOrtZiel;
   layout: "feld" | "office";
   darfBearbeiten: boolean;
+  darfKorrigieren?: boolean;
   onHauptkontakt: (haupt: boolean) => void;
   onBearbeiten: () => void;
   onEntfernen: () => void;
@@ -88,6 +90,9 @@ export function KontaktZeile({
   const eigen = herkunft === null;
   const feld = layout === "feld";
 
+  // Wer nur korrigieren darf, sieht allein "Bearbeiten" -- auch an geerbten Einträgen, weil der Kontakt selbst geändert wird.
+  const nurKorrigieren = darfKorrigieren && !(eigen && darfBearbeiten);
+  const menueKorrigieren: AktionsMenueEintrag[] = [{ label: "Bearbeiten", icon: Pencil, onClick: onBearbeiten }];
   const menue: (AktionsMenueEintrag | "trenner")[] = [
     ...(!anonym
       ? [
@@ -128,7 +133,8 @@ export function KontaktZeile({
         {!anonym && k.telefon && !feld && <AnrufKnopf telefon={k.telefon} name={name} layout={layout} />}
       </div>
       {!anonym && k.telefon && feld && <AnrufKnopf telefon={k.telefon} name={name} layout={layout} />}
-      {eigen && darfBearbeiten && <AktionsMenue label={`Aktionen für ${name}`} eintraege={menue} touch={feld} />}
+      {nurKorrigieren && !anonym && <AktionsMenue label={`Aktionen für ${name}`} eintraege={menueKorrigieren} touch={feld} />}
+      {!nurKorrigieren && eigen && darfBearbeiten && <AktionsMenue label={`Aktionen für ${name}`} eintraege={menue} touch={feld} />}
     </li>
   );
 }

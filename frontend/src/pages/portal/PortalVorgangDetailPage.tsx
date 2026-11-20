@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { KontaktListeKompakt } from "../../components/vorOrt/KontaktListeKompakt";
 import { SkeletonCard } from "../../components/Skeleton";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
@@ -89,6 +90,8 @@ export function PortalVorgangDetailPage() {
         </span>
         <p className="mt-1 text-sekundaer text-label2">{STATUS_ERKLAERUNG[vorgang.status]}</p>
       </div>
+
+      <KontaktListeKompakt titel="Ansprechpartner vor Ort" kontakte={vorgang.vor_ort_kontakte ?? []} />
 
       <div>
         {eventsChronological.length === 0 ? (
