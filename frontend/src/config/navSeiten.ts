@@ -23,6 +23,7 @@ import {
   Receipt,
   Rss,
   ScrollText,
+  Sparkles,
   Star,
   StickyNote,
   Tags,
@@ -438,6 +439,19 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
   },
   {
+    key: "ki_aktivitaet",
+    label: "KI-Aktivität",
+    icon: Sparkles,
+    // Violett ist für KI reserviert (ClaudeMarke).
+    tone: "violet",
+    route: "/ki-aktivitaet",
+    kategorie: "Verwaltung",
+    // Tabelle mit Detailpanel: nur am Desktop. Admin sieht alle, andere nur eigene Aktionen (Backend filtert).
+    nurOffice: true,
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istModulAktiv(currentUser, "ki_zugriff") && hatRecht("ki_zugriff", "sehen"),
+  },
+  {
     key: "datenimport",
     label: "Datenimport",
     icon: FileUp,
@@ -561,7 +575,7 @@ export const WORKSPACES: Workspace[] = [
     start: ["nutzer", "protokoll"],
     seiten: [
       "nutzer", "account_typen", "organigramm", "anlagen_felder", "formulare", "integrationen",
-      "datenimport", "protokoll", "papierkorb", "kennzahlen",
+      "datenimport", "protokoll", "ki_aktivitaet", "papierkorb", "kennzahlen",
     ],
   },
 ];

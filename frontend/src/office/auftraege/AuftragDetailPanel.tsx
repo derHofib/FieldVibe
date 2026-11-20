@@ -9,6 +9,7 @@ import { AktionsMenue } from "../../components/AktionsMenue";
 import { EmptyState } from "../../components/EmptyState";
 import { PulldownMenu } from "../../components/apple/PulldownMenu";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { ClaudeMarke } from "../../components/formModul/ClaudeMarke";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { useAuth } from "../../context/AuthContext";
@@ -138,6 +139,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
           <div className="flex items-center gap-2">
             <span className="text-meta font-semibold tracking-wide text-label2 uppercase">Auftrag</span>
             <StatusPille status={auftragStatusZuToken(aktuell.status)} label={AUFTRAG_STATUS_LABEL[aktuell.status]} />
+            {aktuell.erstellt_via === "ki" && <ClaudeMarke label="per KI" klein />}
           </div>
           {titelBearbeiten ? (
             <div className="flex gap-2">

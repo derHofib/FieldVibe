@@ -5,7 +5,7 @@ import json
 from sqlalchemy import select
 
 from app.db.session import system_session
-from app.mcp.ansichten import PROTOKOLL_URI, VORLAGE_URI
+from app.mcp.ansichten import AENDERUNG_URI, PROTOKOLL_URI, VORLAGE_URI
 from app.mcp.protokoll_ansicht import abschnitte_aus, protokoll_text
 from app.models.form_modul import FormSubmission
 from tests.mcp_helfer import (
@@ -214,13 +214,15 @@ async def test_tools_tragen_ui_verweis_und_ressourcen_sind_abrufbar(make_mandant
     tools = {t["name"]: t for t in (await mcp_rpc(mcp_client, token, "tools/list")).json()["result"]["tools"]}
     assert tools["protokoll_anzeigen"]["_meta"]["ui"]["resourceUri"] == PROTOKOLL_URI
     assert tools["protokoll_anzeigen"]["annotations"]["readOnlyHint"] is True
-    for name in ("protokoll_vorlage_entwerfen", "protokoll_vorlage_ueberarbeiten"):
+    for name in ("vorlage_entwurf",):
         assert tools[name]["_meta"]["ui"]["resourceUri"] == VORLAGE_URI
-    assert "_meta" not in tools["protokoll_pdf"] or "ui" not in tools["protokoll_pdf"]["_meta"]
+    assert "_meta" not in tools["dokument_abrufen"] or "ui" not in tools["dokument_abrufen"]["_meta"]
+    for name in ("vorgang_speichern", "verknuepfen", "kommentar_anlegen", "protokoll_entwurf"):
+        assert tools[name]["_meta"]["ui"]["resourceUri"] == AENDERUNG_URI
 
     liste = {r["uri"]: r for r in (await mcp_rpc(mcp_client, token, "resources/list")).json()["result"]["resources"]}
-    assert liste[PROTOKOLL_URI]["mimeType"] == APPS_MIME and liste[VORLAGE_URI]["mimeType"] == APPS_MIME
-    for uri in (PROTOKOLL_URI, VORLAGE_URI):
+    assert liste[PROTOKOLL_URI]["mimeType"] == APPS_MIME and liste[VORLAGE_URI]["mimeType"] == APPS_MIME and liste[AENDERUNG_URI]["mimeType"] == APPS_MIME
+    for uri in (PROTOKOLL_URI, VORLAGE_URI, AENDERUNG_URI):
         inhalt = (await mcp_rpc(mcp_client, token, "resources/read", {"uri": uri})).json()["result"]["contents"][0]
         assert inhalt["mimeType"] == APPS_MIME
         html = inhalt["text"]
@@ -239,7 +241,7 @@ async def test_schreib_scope_tools_bleiben_ohne_scope_ungelistet(make_mandant, m
     admin = await make_user(mandant=mandant, role="mandant_admin")
     t = await verbinden(mcp_client, admin, [LESEN])
     namen = {x["name"] for x in (await mcp_rpc(mcp_client, t["access_token"], "tools/list")).json()["result"]["tools"]}
-    assert "protokoll_anzeigen" in namen and "protokoll_vorlage_entwerfen" not in namen
+    assert "protokoll_anzeigen" in namen and "vorlage_entwurf" not in namen
 
 
 async def test_vorlage_entwerfen_liefert_ansichtsdaten(make_mandant, make_user, mcp_client):

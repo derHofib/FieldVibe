@@ -44,3 +44,6 @@ h2 { font-size: 13px; margin: 16px 0 6px; color: var(--label2); text-transform: 
 .knopf { display: inline-block; padding: 8px 14px; border-radius: 10px; background: var(--tint-solid); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; }
 .knopf:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .leer-hinweis { color: var(--label2); padding: 16px 0; }
+
+/* Klassen mit display ueberschreiben sonst das hidden-Attribut (z. B. Badge "Zurueckgenommen"). */
+[hidden] { display: none !important; }

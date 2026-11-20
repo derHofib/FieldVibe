@@ -56,6 +56,7 @@ import { OfficeFehlerberichtDetailPage, OfficeFehlerberichtePage } from "./fehle
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { PostfachEinstellungenPage } from "./postfach/PostfachEinstellungenPage";
 import { OfficeExportPage } from "./export/OfficeExportPage";
+import { OfficeKiAktivitaetPage } from "./ki/OfficeKiAktivitaetPage";
 import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
@@ -127,6 +128,7 @@ export function OfficeApp() {
           <Route path="/auftraege" element={<OfficeAuftraegePage />} />
           <Route path="/datenimport" element={<OfficeDatenimportPage />} />
           <Route path="/protokoll" element={<OfficeProtokollPage />} />
+          <Route path="/ki-aktivitaet" element={<OfficeKiAktivitaetPage />} />
           <Route path="/einstellungen/export" element={<OfficeExportPage />} />
           <Route path="/organigramm" element={<OrganigrammPage />} />
           {/* Tabelle mit Detailpanel in voller Breite; "Ganze Seite" haengt den Beleg

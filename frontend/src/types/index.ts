@@ -510,6 +510,8 @@ export interface VorgangKennzahlen {
 }
 
 export interface Vorgang {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   vorgangsnummer: string;
   kunde_id: string;
@@ -833,6 +835,7 @@ export interface TagAssignment {
 // --- Social-UX (Phase 3) -------------------------------------------------
 
 export interface FeedCard {
+  erstellt_via?: string;
   id: string;
   vorgangsnummer: string;
   titel: string;
@@ -1095,6 +1098,8 @@ export interface ZeiterfassungAenderung {
 export type TerminStatus = "geplant" | "bestaetigt" | "abgeschlossen" | "abgesagt";
 
 export interface Termin {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   vorgang_id: string;
   techniker_id: string;
@@ -1228,6 +1233,8 @@ export interface AngebotNachweis {
 }
 
 export interface Angebot {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   kunde_id: string;
   vorgang_id: string | null;
@@ -1430,6 +1437,8 @@ export interface GutschriftKurz {
 }
 
 export interface Rechnung {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   kunde_id: string;
   vorgang_id: string | null;
@@ -1890,7 +1899,8 @@ export type RechteBereich =
   | "partner"
   | "projekte"
   | "fehlerberichte"
-  | "organigramm";
+  | "organigramm"
+  | "ki_zugriff";
 export type RechteAktion =
   | "sehen"
   | "erstellen"
@@ -2596,6 +2606,8 @@ export interface VorgangAbhaengigkeitenListe {
 }
 
 export interface Projekt {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   name: string;
   beschreibung: string | null;
@@ -2836,6 +2848,8 @@ export interface ZeitplanElementUpdate {
 export type AuftragStatus = "offen" | "in_arbeit" | "abgeschlossen" | "storniert";
 
 export interface Auftrag {
+  // Herkunft des Datensatzes ("app" | "ki" | ...); optional, damit ältere Antworten gültig bleiben.
+  erstellt_via?: string;
   id: string;
   projekt_id: string | null;
   kunde_id: string | null;

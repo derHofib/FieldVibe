@@ -232,7 +232,12 @@ async def _vorgangs_event(session: AsyncSession, rechnung: Rechnung, actor_user_
 
 
 async def rechnung_aus_angebot(
-    session: AsyncSession, body: RechnungAusAngebotCreate, *, mandant: Mandant, actor_user_id: UUID
+    session: AsyncSession,
+    body: RechnungAusAngebotCreate,
+    *,
+    mandant: Mandant,
+    actor_user_id: UUID,
+    erstellt_via: str = "app",
 ) -> Rechnung:
     # Sperre auf dem Angebot: zwei gleichzeitige Anlagen (Abschlaege!) sehen
     # sonst beide denselben Stand und ueberschreiten gemeinsam die 100 %.
@@ -312,6 +317,7 @@ async def rechnung_aus_angebot(
         faellig_am=body.faellig_am,
         leistungsdatum=body.leistungsdatum,
         erstellt_von=actor_user_id,
+        erstellt_via=erstellt_via,
         rechnungsart=art,
         angebot_id=angebot.id,
         kunden_referenz=angebot.kunden_referenz,
@@ -451,6 +457,7 @@ async def erstelle_gutschrift(
     *,
     mandant: Mandant,
     actor_user_id: UUID,
+    erstellt_via: str = "app",
 ) -> Rechnung:
     """Teil- oder Voll-Gutschrift zu einer versendeten Rechnung. Anders als der
     Komplett-Storno (erstelle_stornorechnung) bleibt das Original gueltig; die
@@ -534,6 +541,7 @@ async def erstelle_gutschrift(
         status="versendet",
         versendet_am=jetzt,
         erstellt_von=actor_user_id,
+        erstellt_via=erstellt_via,
         rechnungsart="gutschrift",
         kunden_referenz=original.kunden_referenz,
         leistungsort=original.leistungsort,

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.deps import AuthContext, erstellt_via_aus, get_current_user, get_db, require_recht, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
@@ -171,6 +171,7 @@ async def annehmen(
         prioritaet=body.prioritaet,
         einheit=anfrage.einheit,
         erstellt_von_kundenportal_zugang_id=anfrage.kundenportal_zugang_id,
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(vorgang)
     try:

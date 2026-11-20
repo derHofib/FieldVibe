@@ -31,11 +31,16 @@ ALLE_SCHREIB_TOOLS = {
     "kommentar_anlegen",
     "mangel_erfassen",
     "telefonat_erfassen",
-    "vorgang_anlegen",
-    "protokoll_entwurf_anlegen",
-    "protokoll_entwurf_ergaenzen",
-    "protokoll_vorlage_entwerfen",
-    "protokoll_vorlage_ueberarbeiten",
+    "vorgang_speichern",
+    "auftrag_speichern",
+    "projekt_speichern",
+    "aufgabe_speichern",
+    "termin_speichern",
+    "kunde_speichern",
+    "verknuepfen",
+    "rueckgaengig",
+    "protokoll_entwurf",
+    "vorlage_entwurf",
 }
 
 
@@ -87,7 +92,9 @@ async def test_schreib_token_listet_alle_schreib_tools_mit_additiven_annotations
     assert ALLE_SCHREIB_TOOLS <= set(tools)
     for name in ALLE_SCHREIB_TOOLS:
         a = tools[name]["annotations"]
-        assert a["readOnlyHint"] is False and a["destructiveHint"] is False and a["idempotentHint"] is False, name
+        # Anlegen wiederholt sich nicht folgenlos; Speichern/Verknuepfen/Rueckgaengig/Entwuerfe sind idempotent.
+        anlegen = name in {"kommentar_anlegen", "mangel_erfassen", "telefonat_erfassen"}
+        assert a["readOnlyHint"] is False and a["destructiveHint"] is False and a["idempotentHint"] is (not anlegen), name
         assert "nur mit Schreibzugriff" in tools[name]["description"], name
     # Nichts, was loescht, abschliesst, veroeffentlicht oder versendet.
     for name in tools:
@@ -245,9 +252,10 @@ async def test_vorgang_anlegen_status_neu_ohne_zuweisung_und_kennzeichnung(make_
         {"kunde_id": str(kunde.id), "titel": "Therme macht Geräusche", "beschreibung": "Seit gestern", "leistungstyp": "stoerung"},
     )
     assert r["fehler"] is False, r
-    assert r["daten"]["status"] == "neu" and r["daten"]["abrechnungsart"] == "aufwand"
+    [erzeugt] = r["daten"]["erzeugt"]
     async with system_session(grund="test") as session:
-        v = await session.get(Vorgang, uuid.UUID(r["daten"]["id"]))
+        v = await session.get(Vorgang, uuid.UUID(erzeugt["id"]))
+    assert v.abrechnungsart == "aufwand" and v.erstellt_via == "ki"
     assert v.zugewiesener_user_id is None and v.erstellt_von == admin.id and v.status == "neu"
     [angelegt] = await _events(v.id, "system")
     assert angelegt.payload["via"] == "claude"
@@ -284,6 +292,7 @@ _ID = "11111111-2222-3333-4444-555555555555"
         ("POST", f"/api/form-schemas/{_ID}/groups"),
         ("POST", f"/api/form-schemas/{_ID}/fields"),
         ("PATCH", f"/api/form-schemas/{_ID}/fields/{_ID}"),
+        ("PATCH", f"/api/vorgaenge/{_ID}"),  # Etappe A: Aendern; Status wird in _pruefe_erlaubt hart geblockt
     ],
 )
 def test_allowlist_erlaubt_nur_die_vorgesehenen_schreibwege(methode, pfad):
@@ -298,7 +307,6 @@ def test_allowlist_erlaubt_nur_die_vorgesehenen_schreibwege(methode, pfad):
         ("DELETE", f"/api/form-schemas/{_ID}/fields/{_ID}"),
         ("DELETE", f"/api/form-submissions/{_ID}"),
         ("DELETE", f"/api/maengel/{_ID}"),
-        ("PATCH", f"/api/vorgaenge/{_ID}"),
         ("PATCH", f"/api/form-schemas/{_ID}"),  # Status draft -> published
         ("PATCH", f"/api/form-schemas/{_ID}/groups/{_ID}"),
         ("PATCH", f"/api/maengel/{_ID}"),
@@ -333,6 +341,15 @@ async def test_nicht_erlaubter_schreibaufruf_wird_vor_dem_senden_abgebrochen():
         await rest_client._anfrage(_Token(), "DELETE", f"/api/vorgaenge/{_ID}")
     with pytest.raises(PermissionError):
         await rest_client._anfrage(_Token(), "PATCH", f"/api/form-schemas/{_ID}", body={"status": "published"})
+
+
+@pytest.mark.parametrize("status", ["abgeschlossen", "storniert", "abgerechnet"])
+async def test_vorgang_status_abschluss_ist_hart_gesperrt(status):
+    class _Token:
+        pass
+
+    with pytest.raises(PermissionError):
+        await rest_client._anfrage(_Token(), "PATCH", f"/api/vorgaenge/{_ID}", body={"status": status})
 
 
 def test_tools_gehen_nur_ueber_den_rest_client():

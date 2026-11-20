@@ -13,7 +13,7 @@ import {
   type ProtokollFilter,
   type ProtokollListe,
 } from "../office/protokoll/protokollUtils";
-import type { KiAnfrage, KiRedirect, KiScope, KiVerbindung } from "../types/ki";
+import type { KiAktion, KiAktionenFilter, KiAktionenListe, KiAnfrage, KiRedirect, KiScope, KiVerbindung } from "../types/ki";
 import type {
   DashboardLayout,
   KennzahlDaten,
@@ -281,6 +281,15 @@ export const kiApi = {
     apiFetch<KiRedirect>("/api/ki/ablehnen", { method: "POST", body: JSON.stringify({ anfrage }) }),
   verbindungen: (alle = false) => apiFetch<KiVerbindung[]>(`/api/ki/verbindungen?alle=${alle}`),
   trennen: (id: string) => apiFetch<void>(`/api/ki/verbindungen/${id}`, { method: "DELETE" }),
+  aktionen: (filter: KiAktionenFilter, limit: number, offset: number) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(filter)) if (v) p.set(k, v);
+    p.set("limit", String(limit));
+    p.set("offset", String(offset));
+    return apiFetch<KiAktionenListe>(`/api/ki/aktionen?${p}`);
+  },
+  aktion: (id: string) => apiFetch<KiAktion>(`/api/ki/aktionen/${id}`),
+  rueckgaengig: (id: string) => apiFetch<KiAktion>(`/api/ki/aktionen/${id}/rueckgaengig`, { method: "POST" }),
 };
 
 export const authApi = {

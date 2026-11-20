@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFi
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.deps import AuthContext, erstellt_via_aus, get_current_user, get_db, require_recht, require_roles
 from app.models.anlage import Anlage
 from app.models.mandant import Mandant
 from app.models.form_modul import (
@@ -112,10 +112,6 @@ submissions_router = APIRouter(
 
 
 # --- form_schemas ------------------------------------------------------
-
-
-def _erstellt_via(auth: AuthContext) -> str:
-    return "ki" if auth.via == "mcp" else "app"
 
 
 # Grenzwert-Markierung (nur Anzeige, nie Blocker beim Speichern): siehe generate_form_submission_pdf.
@@ -215,7 +211,7 @@ async def create_schema(
         beschreibung=body.beschreibung,
         erstellt_von=auth.user_id,
         # Nie aus dem Request: nur das signierte Token weiss, ob Claude handelt (wie mit_ki_kennzeichnung).
-        erstellt_via=_erstellt_via(auth),
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(schema)
     await session.flush()
@@ -886,7 +882,7 @@ async def start_submission(
             fields, vorgang, kunde, anlage, standort, zugewiesener.name if zugewiesener else None
         ),
         ausgefuellt_von=auth.user_id,
-        erstellt_via=_erstellt_via(auth),
+        erstellt_via=erstellt_via_aus(auth),
     )
     session.add(submission)
     await session.flush()

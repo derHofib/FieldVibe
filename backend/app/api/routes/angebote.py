@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     AuthContext,
+    erstellt_via_aus,
     get_current_user,
     get_db,
     require_module,
@@ -239,6 +240,7 @@ async def create_angebot(
         leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
         gueltig_bis=body.gueltig_bis,
         mwst_satz=effektiver_mwst_satz(mandant, body.mwst_satz),
     )
@@ -312,6 +314,7 @@ async def create_angebot_from_maengel(
         leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
         gueltig_bis=body.gueltig_bis,
         mwst_satz=await _standard_mwst_satz(session, auth),
     )
@@ -402,6 +405,7 @@ async def _angebot_aus_bedarfen(
         leistungsort=leistungsort,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
         gueltig_bis=gueltig_bis,
         mwst_satz=await _standard_mwst_satz(session, auth),
     )
@@ -532,6 +536,7 @@ async def create_angebot_from_vorgang(
             leistungsort=leistungsort,
             angebotsnummer=angebotsnummer,
             erstellt_von=auth.user_id,
+            erstellt_via=erstellt_via_aus(auth),
             gueltig_bis=body.gueltig_bis,
             mwst_satz=await _standard_mwst_satz(session, auth),
         )

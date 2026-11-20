@@ -15,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "widerrufen")
@@ -27,6 +28,7 @@ class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("mandant_id", "angebotsnummer", name="uq_angebote_mandant_angebotsnummer"),
         CheckConstraint(f"status IN {ANGEBOT_STATUS}", name="ck_angebote_status_valid"),
+        erstellt_via_check(),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -45,6 +47,7 @@ class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="entwurf")
     mwst_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
     gueltig_bis: Mapped[date | None] = mapped_column(Date)
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

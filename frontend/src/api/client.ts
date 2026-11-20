@@ -12,9 +12,12 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** Geparster Fehler-Body; für strukturierte `detail`-Objekte (z. B. 409 beim Rückgängigmachen), die kein Text sind. */
+  body?: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -137,13 +140,14 @@ export async function apiFetch<T>(
 
   if (!resp.ok) {
     let detail = resp.statusText;
+    let errBody: unknown;
     try {
-      const body = await resp.json();
-      detail = extractErrorDetail(body) ?? detail;
+      errBody = await resp.json();
+      detail = extractErrorDetail(errBody) ?? detail;
     } catch {
       /* response had no JSON body */
     }
-    throw new ApiError(resp.status, detail);
+    throw new ApiError(resp.status, detail, errBody);
   }
 
   if (resp.status === 204) return undefined as T;

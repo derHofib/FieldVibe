@@ -1095,7 +1095,7 @@ async def to_read_model(session: AsyncSession, rechnung: Rechnung) -> RechnungRe
 
 
 async def erstelle_stornorechnung(
-    session: AsyncSession, original: Rechnung, actor_user_id: UUID
+    session: AsyncSession, original: Rechnung, actor_user_id: UUID, erstellt_via: str = "app"
 ) -> Rechnung:
     """GoBD verbietet, eine einmal versendete Rechnung nachtraeglich zu
     aendern oder zu loeschen -- die Korrektur braucht einen eigenen,
@@ -1119,6 +1119,7 @@ async def erstelle_stornorechnung(
         status="versendet",
         versendet_am=jetzt,
         erstellt_von=actor_user_id,
+        erstellt_via=erstellt_via,
         ist_storno=True,
         storniert_rechnung_id=original.id,
         kunden_referenz=original.kunden_referenz,

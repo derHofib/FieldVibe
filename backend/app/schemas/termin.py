@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -54,6 +55,8 @@ class TerminRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    # Herkunft: "ki" bei Anlage per KI-Assistent (MCP), sonst "app" (Migration 0129).
+    erstellt_via: Literal["app", "ki"] = "app"
     vorgang_id: UUID
     techniker_id: UUID
     erstellt_von: UUID

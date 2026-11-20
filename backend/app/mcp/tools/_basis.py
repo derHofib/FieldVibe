@@ -8,9 +8,15 @@ from app.core.rate_limit import SlidingWindowRateLimiter
 from app.mcp.oauth_provider import KiAccessToken
 from app.mcp.zugang import SCOPE_LESEN, SCOPE_SCHREIBEN
 
+NUR_LESEN = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+
 # Schreib-Tools legen nur Neues an (nie loeschen/ueberschreiben/abschliessen) und wiederholen sich nicht
 # folgenlos: ein zweiter Aufruf erzeugt einen zweiten Eintrag.
 NUR_ADDITIV = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+
+# Aendern/Speichern/Verknuepfen/Rueckgaengig: veraendert Bestehendes, aber nie destruktiv (Rueckweg im KI-Journal) und
+# wiederholbar (zweiter Aufruf mit denselben Werten aendert nichts mehr).
+AENDERND = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
 # Je Verbindung (nicht je Nutzer), damit eine ausser Kontrolle geratene Sitzung andere nicht ausbremst.
 aufruf_limiter = SlidingWindowRateLimiter(max_attempts=120, window_seconds=60)

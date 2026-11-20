@@ -15,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.erstellt_via import erstellt_via_check, erstellt_via_spalte
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 PROJEKT_AUFGABE_PRIORITAETEN = ("niedrig", "mittel", "hoch")
@@ -41,6 +42,7 @@ class Projekt(SoftDeleteMixin, TimestampMixin, Base):
     nicht aus, sind aber unabhaengig voneinander nutzbar."""
 
     __tablename__ = "projekte"
+    __table_args__ = (erstellt_via_check(),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
@@ -64,6 +66,7 @@ class Projekt(SoftDeleteMixin, TimestampMixin, Base):
     verschiebe_modus: Mapped[str] = mapped_column(
         Text, nullable=False, default="bei_konflikt", server_default="bei_konflikt"
     )
+    erstellt_via: Mapped[str] = erstellt_via_spalte()
     erstellt_von: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
 

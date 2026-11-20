@@ -43,6 +43,8 @@ class ProjektRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    # Herkunft: "ki" bei Anlage per KI-Assistent (MCP), sonst "app" (Migration 0129).
+    erstellt_via: Literal["app", "ki"] = "app"
     name: str
     beschreibung: str | None
     archiviert: bool

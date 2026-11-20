@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     AuthContext,
+    erstellt_via_aus,
     get_current_user,
     get_db,
     nur_mandant_admin,
@@ -617,6 +618,7 @@ async def create_rechnung(
         faellig_am=body.faellig_am,
         leistungsdatum=body.leistungsdatum,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
         rechnungsart=body.rechnungsart,
     )
     session.add(rechnung)
@@ -669,7 +671,7 @@ async def create_rechnung_aus_angebot(
     await require_kunde_zugewiesen(session, auth, angebot.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     rechnung = await rechnungsart_service.rechnung_aus_angebot(
-        session, body, mandant=mandant, actor_user_id=auth.user_id
+        session, body, mandant=mandant, actor_user_id=auth.user_id, erstellt_via=erstellt_via_aus(auth)
     )
     await _audit(session, auth, "rechnung_erstellt", rechnung, angebot_id=str(angebot.id))
     return await to_read_model(session, rechnung)
@@ -715,7 +717,7 @@ async def create_gutschrift(
     original = await _rechnung_laden(session, auth, rechnung_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     gutschrift = await rechnungsart_service.erstelle_gutschrift(
-        session, original, body, mandant=mandant, actor_user_id=auth.user_id
+        session, original, body, mandant=mandant, actor_user_id=auth.user_id, erstellt_via=erstellt_via_aus(auth)
     )
     kunde = await session.get(Kunde, gutschrift.kunde_id)
     await archiviere_pdf(session, gutschrift, mandant, kunde, strikt=False)
@@ -1259,7 +1261,7 @@ async def storno_rechnung(
         )
 
     original_positionen = await positionen_fuer(session, rechnung.id)
-    storno = await erstelle_stornorechnung(session, rechnung, auth.user_id)
+    storno = await erstelle_stornorechnung(session, rechnung, auth.user_id, erstellt_via=erstellt_via_aus(auth))
     # Storno ist endgueltig: die Stunden gehen ohne Verweis zurueck in den Pool.
     await zeiterfassung_freigeben_fuer_rechnung(
         session, rechnung_id=rechnung.id, geaendert_von=auth.user_id, verweis_behalten=False

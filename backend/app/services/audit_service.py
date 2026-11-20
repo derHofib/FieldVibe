@@ -82,13 +82,20 @@ def kontext_zuruecksetzen(tokens) -> None:
     _ki_quelle.reset(tokens[2])
 
 
-def ki_quelle_setzen(ki_verbindung_id: UUID | None) -> None:
-    """Markiert alle Audit-Eintraege des laufenden Requests als per KI ausgeloest."""
+def ki_quelle_setzen(ki_verbindung_id: UUID | None, ki_aktion_id: UUID | None = None) -> None:
+    """Markiert alle Audit-Eintraege des laufenden Requests als per KI ausgeloest; ki_aktion_id verweist auf den
+    Journal-Eintrag (ki_aktionen) der Tool-Aktion."""
     halter = _ki_quelle.get()
     if halter is not None:
         halter["quelle"] = "ki"
         if ki_verbindung_id is not None:
             halter["ki_verbindung_id"] = str(ki_verbindung_id)
+        if ki_aktion_id is not None:
+            halter["ki_aktion_id"] = str(ki_aktion_id)
+
+
+def aktuelle_request_id() -> str | None:
+    return _request_id.get()
 
 
 def ip_kuerzen(ip: str | None) -> str | None:

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Änderung in FieldVibe</title>
+<style>/*STIL*/
+.alt { color: var(--label2); text-decoration: line-through; }
+.pfeil { color: var(--label2); margin: 0 6px; }
+.neu { font-weight: 600; }
+.ziel { font-size: 12px; font-weight: 600; color: var(--label2); padding: 8px 0 0; }
+.knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+.knopf.zweit { background: var(--fill); color: var(--label); }
+.knopf[disabled] { opacity: 0.5; cursor: default; }
+button.knopf { border: 0; font-family: inherit; cursor: pointer; }
+.tab { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 16px minmax(0, 1fr); column-gap: 10px; background: var(--insp); border-radius: 12px; padding: 4px 12px; margin-top: 10px; }
+.tab > div { padding: 7px 0; border-top: 1px solid var(--sep); word-break: break-word; }
+.tab > .kh { border-top: 0; font-size: 11px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: 0.04em; }
+.tab .obj { font-weight: 600; }
+.tab .sub { color: var(--label2); font-size: 12px; font-weight: 400; }
+.tab .feldname { color: var(--label2); }
+@media (max-width: 460px) { .tab { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 16px minmax(0, 1fr); font-size: 13px; } }
+.fehlertext { border-radius: 12px; padding: 8px 12px; margin: 10px 0 0; background: var(--fehlt-bg); color: var(--fehlt-text); }
+</style>
+</head>
+<body>
+<div id="wurzel"><p class="leer-hinweis">Änderung wird geladen …</p></div>
+<script>/*BRUECKE*/</script>
+<script>
+// Alle Texte kommen aus dem Tool-Ergebnis und werden nur ueber textContent eingesetzt.
+function el(tag, klasse, text) {
+  var e = document.createElement(tag);
+  if (klasse) e.className = klasse;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+function datum(iso) {
+  var d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+function textAus(res) {
+  var t = (res && res.content || []).map(function (c) { return c.text || ""; }).join(" ").trim();
+  return t || "Das Rückgängigmachen hat nicht geklappt.";
+}
+window.fvRendern = function (d) {
+  var wurzel = document.getElementById("wurzel");
+  wurzel.textContent = "";
+  var kopf = el("div", "kopf");
+  kopf.appendChild(el("h1", "", d.zusammenfassung || "Änderung"));
+  kopf.appendChild(el("span", "badge claude", "✦ Von Claude"));
+  kopf.appendChild(el("span", "badge offen", "Stufe " + (d.stufe || 1) + " · direkt ausgeführt"));
+  var zurueck = el("span", "badge fertig", "Zurückgenommen");
+  zurueck.hidden = true;
+  kopf.appendChild(zurueck);
+  wurzel.appendChild(kopf);
+
+  var tab = el("div", "tab");
+  ["Objekt / Feld", "Vorher", "", "Nachher"].forEach(function (t) { tab.appendChild(el("div", "kh", t)); });
+  function zeile4(a, b, c, d2) { [a, b, c, d2].forEach(function (x) { tab.appendChild(x); }); }
+  (d.erzeugt || []).forEach(function (e) {
+    var o = el("div", "obj", e.label);
+    zeile4(o, el("div", "alt", "—"), el("div", "pfeil", "→"), el("div", "neu", "angelegt"));
+  });
+  var letzter = null;
+  (d.aenderungen || []).forEach(function (a) {
+    var k = a.typ + ":" + a.id;
+    if (k !== letzter) {
+      letzter = k;
+      var o = el("div", "obj", a.label);
+      o.style.gridColumn = "1 / -1";
+      tab.appendChild(o);
+    }
+    zeile4(el("div", "feldname", a.feld_label), el("div", "alt", a.vorher || "—"), el("div", "pfeil", "→"), el("div", "neu", a.nachher || "—"));
+  });
+  if (tab.children.length > 4) wurzel.appendChild(tab);
+
+  if (d.fehler) wurzel.appendChild(el("div", "fehlertext", d.fehler));
+  var meldung = el("div", "fehlertext", "");
+  meldung.hidden = true;
+  wurzel.appendChild(meldung);
+
+  var fuss = el("div", "fuss");
+  var frist = d.rueckgaengig_bis ? "Rückgängig möglich bis " + datum(d.rueckgaengig_bis) : "Nicht rückgängig zu machen";
+  var fristEl = el("span", "", frist);
+  fuss.appendChild(fristEl);
+  var knoepfe = el("div", "knoepfe");
+  if (/^https?:\/\//i.test(d.link || "")) {
+    var link = el("a", "knopf", "In FieldVibe öffnen");
+    link.href = d.link;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.addEventListener("click", function (ev) { ev.preventDefault(); window.fvLinkOeffnen(d.link); });
+    knoepfe.appendChild(link);
+  }
+  if (d.aktion_id && d.rueckgaengig_bis) {
+    var rueck = el("button", "knopf zweit", "Rückgängig");
+    rueck.type = "button";
+    rueck.addEventListener("click", function () {
+      rueck.disabled = true;
+      meldung.hidden = true;
+      window.fvToolAufrufen("rueckgaengig", { aktion_id: d.aktion_id }).then(function (res) {
+        if (res && res.isError) {
+          meldung.textContent = textAus(res);
+          meldung.hidden = false;
+          rueck.disabled = false;
+          return;
+        }
+        zurueck.hidden = false;
+        rueck.hidden = true;
+        fristEl.textContent = "Änderung zurückgenommen";
+        wurzel.classList.add("zurueckgenommen");
+      }).catch(function () {
+        meldung.textContent = "Rückgängig ging nicht: Bitte in FieldVibe unter KI-Aktivität versuchen.";
+        meldung.hidden = false;
+        rueck.disabled = false;
+      });
+    });
+    knoepfe.appendChild(rueck);
+  }
+  fuss.appendChild(knoepfe);
+  wurzel.appendChild(fuss);
+};
+</script>
+</body>
+</html>

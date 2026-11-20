@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     AuthContext,
+    erstellt_via_aus,
     get_current_user,
     get_db,
     require_module,
@@ -146,6 +147,7 @@ async def create_termin(
         vorgang_id=body.vorgang_id,
         techniker_id=body.techniker_id,
         erstellt_von=auth.user_id,
+        erstellt_via=erstellt_via_aus(auth),
         titel=body.titel,
         start_at=body.start_at,
         ende_at=body.ende_at,
