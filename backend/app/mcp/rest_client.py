@@ -16,7 +16,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from app.api.deps import KI_AKTION_HEADER
 from app.core.security import create_access_token
-from app.mcp.aktionen import AKTIONEN, GESPERRTE_VORGANG_STATUS, UUID_MUSTER, rueckweg_erlaubt, schreibaufruf_erlaubt
+from app.mcp.aktionen import AKTIONEN, GESPERRTE_AUFTRAG_STATUS, GESPERRTE_VORGANG_STATUS, UUID_MUSTER, rueckweg_erlaubt, schreibaufruf_erlaubt
 from app.mcp.oauth_provider import KiAccessToken
 
 logger = logging.getLogger(__name__)
@@ -98,13 +98,11 @@ def _pruefe_erlaubt(methode: str, pfad: str, body: Any, rueckweg: bool) -> None:
         raise PermissionError(f"MCP-Schreibaufruf nicht erlaubt: {methode} {pfad}")
     # Harte Sperre unabhaengig vom Tool: Abschliessen/Stornieren (Stufe 3) kommt erst mit Etappe B, "abgerechnet"
     # setzt nur der Rechnungs-Workflow.
-    if (
-        methode == "PATCH"
-        and isinstance(body, dict)
-        and body.get("status") in GESPERRTE_VORGANG_STATUS
-        and re.fullmatch(rf"/api/vorgaenge/{UUID_MUSTER}", pfad)
-    ):
-        raise PermissionError(f"MCP-Schreibaufruf nicht erlaubt: Vorgang-Status {body['status']!r} per KI")
+    if methode == "PATCH" and isinstance(body, dict):
+        if body.get("status") in GESPERRTE_VORGANG_STATUS and re.fullmatch(rf"/api/vorgaenge/{UUID_MUSTER}", pfad):
+            raise PermissionError(f"MCP-Schreibaufruf nicht erlaubt: Vorgang-Status {body['status']!r} per KI")
+        if body.get("status") in GESPERRTE_AUFTRAG_STATUS and re.fullmatch(rf"/api/auftraege/{UUID_MUSTER}", pfad):
+            raise PermissionError(f"MCP-Schreibaufruf nicht erlaubt: Auftrag-Status {body['status']!r} per KI")
 
 
 async def _anfrage_mit_token(
@@ -173,3 +171,9 @@ async def api_post(
 async def api_patch(zugriff: KiAccessToken, pfad: str, body: Any) -> Any:
     return (await _anfrage(zugriff, "PATCH", pfad, body=body)).json()
 
+
+
+async def api_verknuepfung_loesen(zugriff: KiAccessToken, pfad: str) -> None:
+    """DELETE, das nur eine Verknuepfung entfernt (aktionen.AKTIONEN erlaubt dafuer genau drei Routen); Datensaetze
+    loescht kein Tool, deshalb gibt es bewusst kein allgemeines api_delete."""
+    await _anfrage(zugriff, "DELETE", pfad)

@@ -9,6 +9,7 @@ from mcp.server.apps import Apps
 
 PROTOKOLL_URI = "ui://fieldvibe/protokoll.html"
 VORLAGE_URI = "ui://fieldvibe/vorlage.html"
+AENDERUNG_URI = "ui://fieldvibe/aenderung.html"
 
 _UI = Path(__file__).with_name("ui")
 
@@ -43,5 +44,12 @@ def baue_apps() -> Apps:
         name="vorlage_ansicht",
         title="Vorlagen-Entwurf",
         description="Entwurf einer Protokoll-Vorlage mit Abschnitten und Feldern.",
+    )
+    apps.add_html_resource(
+        AENDERUNG_URI,
+        _html("aenderung.html"),
+        name="aenderung_ansicht",
+        title="Änderungs-Karte",
+        description="Was Claude in FieldVibe angelegt oder geändert hat (Vorher/Nachher), mit Rückgängig.",
     )
     return apps

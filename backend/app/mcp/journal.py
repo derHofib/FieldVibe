@@ -42,10 +42,12 @@ def pruefung(
     erwartet_anzeige: str | None = None,
     anzeige_feld: str | None = None,
     params: dict[str, Any] | None = None,
+    element: tuple[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Bedingung, die vor dem Rueckgaengig gelten muss: `feld` der GET-Antwort auf `pfad` ist noch `erwartet`
     (feld "#anzahl": Laenge der Listenantwort). Label und Anzeigewerte stehen dabei, damit ein Konflikt
-    verstaendlich gemeldet werden kann, ohne die Daten erneut aufzuloesen."""
+    verstaendlich gemeldet werden kann, ohne die Daten erneut aufzuloesen. `element` = (Feld, Wert): die Antwort
+    ist eine Liste (z. B. Kontakte eines Kunden), geprueft wird der Eintrag mit diesem Feldwert."""
     return {
         "pfad": pfad,
         "params": params,
@@ -55,6 +57,7 @@ def pruefung(
         "feld_label": feld_label,
         "erwartet_anzeige": erwartet_anzeige,
         "anzeige_feld": anzeige_feld,
+        "element": list(element) if element else None,
     }
 
 

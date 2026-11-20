@@ -3,7 +3,8 @@ Stufe (Konzept mcp-ausbau, Abschnitt 3 und 9).
 
 Alles ist fail-closed: Was hier nicht steht, loest im rest_client einen PermissionError aus. Zwei getrennte
 Listen:
-- AKTIONEN: Routen, die Tools im normalen Ablauf aufrufen (Anlegen, Aendern, Verknuepfen). Kein DELETE.
+- AKTIONEN: Routen, die Tools im normalen Ablauf aufrufen (Anlegen, Aendern, Verknuepfen). DELETE nur, um eine
+  Verknuepfung zu loesen (verknuepfen(loesen=True)); keine Datensaetze loeschen.
 - RUECKWEG_ROUTEN: Gegenoperationen fuers Rueckgaengig (DELETE, Zuordnung loesen). Nur mit rueckweg=True im
   rest_client, den ausschliesslich ki_rueckgaengig setzt; ein Tool kann sie nicht direkt aufrufen.
 Stufe 3 (Senden, Abschliessen, Loeschen, Festschreiben) gibt es in Etappe A noch nicht."""
@@ -15,6 +16,7 @@ UUID_MUSTER = r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}"
 # Status, die per KI (noch) nicht gesetzt werden duerfen: abgeschlossen/storniert ist Stufe 3, abgerechnet setzt
 # nur der Rechnungs-Workflow.
 GESPERRTE_VORGANG_STATUS = frozenset({"abgeschlossen", "storniert", "abgerechnet"})
+GESPERRTE_AUFTRAG_STATUS = frozenset({"abgeschlossen", "storniert"})
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,10 @@ AKTIONEN: tuple[Route, ...] = (
     _r("POST", "/api/vorgaenge/{id}/vor-ort-kontakte", "kontakt_vor_ort.verknuepfen", 2),
     _r("POST", "/api/auftraege/{id}/vor-ort-kontakte", "kontakt_vor_ort.verknuepfen", 2),
     _r("POST", "/api/projekte/{id}/vor-ort-kontakte", "kontakt_vor_ort.verknuepfen", 2),
+    # Verknuepfung loesen: entfernt nur die Zuordnung, nie den Datensatz selbst.
+    _r("DELETE", "/api/vorgaenge/{id}/anlagen/{id}", "vorgang.entknuepfen", 2),
+    _r("DELETE", "/api/vorgaenge/{id}/abhaengigkeiten/{id}", "vorgang.entknuepfen", 2),
+    _r("DELETE", "/api/vor-ort-kontakt-zuordnungen/{id}", "kontakt_vor_ort.entknuepfen", 2),
 )
 
 # Gegenoperationen fuers Rueckgaengig. Loeschen geht ueber den Papierkorb bzw. verwirft einen offenen Entwurf

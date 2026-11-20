@@ -18,6 +18,11 @@
     anfrage("ui/open-link", { url: url }).catch(function () { window.open(url, "_blank", "noopener"); });
   };
 
+  // MCP-Apps-tools/call: die Ansicht ruft ein Tool des eigenen Servers (z. B. rueckgaengig) ueber den Host auf.
+  window.fvToolAufrufen = function (name, argumente) {
+    return anfrage("tools/call", { name: name, arguments: argumente || {} });
+  };
+
   window.addEventListener("message", function (ev) {
     if (ev.source !== window.parent) return;
     var m = ev.data;

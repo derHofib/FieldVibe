@@ -22,7 +22,7 @@ from app.core.rate_limit import SlidingWindowRateLimiter
 from app.mcp.oauth_provider import FieldVibeOAuthProvider, KiAccessToken, resource_url
 from app.mcp import prompts
 from app.mcp.ansichten import baue_apps
-from app.mcp.tools import auswertung, lesen, protokolle, schreiben
+from app.mcp.tools import auswertung, journal_tools, lesen, protokolle, schreiben, stammdaten
 from app.mcp.zugang import ALLE_SCOPES, SCOPE_LESEN, SCOPE_SCHREIBEN
 
 logger = logging.getLogger(__name__)
@@ -49,12 +49,19 @@ Begriffe, wie sie in der App verwendet werden:
 - Mangel: Defekt, der zu Angebot und Rechnung führt.
 Das Glossar steht vollständig in der Ressource fieldvibe://begriffe.
 
-Einstieg: mit "suchen" nach Kunde, Titel oder Nummer suchen, dann mit den *_lesen-Tools Details holen.
-Listen sind auf 100 Einträge je Aufruf begrenzt (Parameter seite); bei großen Mengen Filter nutzen.
-Lesend ist alles erlaubt, was der Nutzer in der App sehen darf. Mit Schreibzugriff (nur wenn der Nutzer ihn
-erteilt hat) legst du Neues an: Kommentare, Mängel, Vorgänge (Status neu), Protokoll-Entwürfe und Entwürfe
-für Protokoll-Vorlagen. Du löschst, schließt, unterschreibst, veröffentlichst oder versendest nichts; das
-bleibt beim Menschen in der App. Sage dem Nutzer nach dem Anlegen immer, was er in der App noch tun muss.
+Einstieg: mit "suchen" nach Kunde, Titel oder Nummer suchen, dann mit "lesen" (typ und id) Details holen; mit
+"auflisten" (typ, filter) Listen abrufen. Listen sind auf 100 Einträge je Aufruf begrenzt (Parameter seite); bei großen
+Mengen Filter nutzen. Dokumente (PDF) liefert "dokument_abrufen". Mit lesen(typ="ich") siehst du, was du für diesen
+Nutzer darfst.
+Lesend ist alles erlaubt, was der Nutzer in der App sehen darf.
+Mit Schreibzugriff (nur wenn der Nutzer ihn erteilt hat) legst du an und änderst direkt: Vorgänge, Aufträge,
+Projekte, Aufgaben, Termine, Kunden, Standorte, Kontakte vor Ort, Kommentare, Telefonate, Mängel sowie Entwürfe für
+Protokolle und Protokoll-Vorlagen; mit "verknuepfen" ordnest du zu (z. B. Vorgänge einem Auftrag). Jede Änderung steht
+im KI-Journal und lässt sich 7 Tage lang mit "rueckgaengig" zurücknehmen; nenne dem Nutzer die Aktion kurz. Zum Ändern
+übergibst du nur die Felder, die sich ändern; Leeren geht mit felder_leeren. Abschließen, Stornieren, Senden,
+Veröffentlichen, Unterschreiben und Löschen gibt es nicht: Das macht der Mensch in der App. Sage dem Nutzer nach dem
+Anlegen immer, was er in der App noch tun muss. Bei mehr als 10 Änderungen in einem Schritt fasse sie vorher zusammen
+und frage nach.
 """
 
 
@@ -74,7 +81,9 @@ def _transport_security() -> TransportSecuritySettings:
     )
 
 
-SCHREIB_TOOLS = schreiben.SCHREIB_TOOLS | protokolle.SCHREIB_TOOLS
+SCHREIB_TOOLS = (
+    schreiben.SCHREIB_TOOLS | protokolle.SCHREIB_TOOLS | stammdaten.SCHREIB_TOOLS | journal_tools.SCHREIB_TOOLS
+)
 
 
 def _schreib_tools_nach_scope_listen(server: MCPServer) -> None:
@@ -122,6 +131,8 @@ def baue_mcp_server() -> tuple[MCPServer, ASGIApp] | None:
         auswertung.registrieren(server)
         protokolle.registrieren(server)
         schreiben.registrieren(server)
+        stammdaten.registrieren(server)
+        journal_tools.registrieren(server)
         prompts.registrieren(server)
         _schreib_tools_nach_scope_listen(server)
 

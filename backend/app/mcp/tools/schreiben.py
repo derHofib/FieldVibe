@@ -1,7 +1,7 @@
-"""Schreib-Tools (Scope fieldvibe.schreiben + Recht ki_zugriff.bearbeiten): nur additiv und als
-Entwurf. Kommentar, Mangel und neuer Vorgang (Status "neu", ohne Zuweisung -- die Disposition bleibt
-beim Buero). Alles laeuft ueber die bestehenden Routen und ist dadurch im Verlauf mit "via Claude"
-und im Audit-Log mit quelle=ki gekennzeichnet."""
+"""Schreib-Tools (Scope fieldvibe.schreiben + Recht ki_zugriff.bearbeiten): Kommentar, Mangel und Telefonat anlegen.
+Vorgaenge und andere Stammdaten legt stammdaten.py an. Alles laeuft ueber die bestehenden Routen (im Verlauf "via
+Claude", im Audit-Log quelle=ki) und steht im KI-Journal; Mangel und Telefonat lassen sich zuruecknehmen, ein
+Kommentar nicht (Verlaufseintraege sind unveraenderlich)."""
 from datetime import datetime, timezone
 from typing import Annotated, Any, Literal
 
@@ -9,13 +9,15 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
-from app.mcp.aufbereitung import bereinigen
-from app.mcp.rest_client import api_post
+from app.mcp.ansichten import AENDERUNG_URI, ui_meta
+from app.mcp.anzeige import Namen, app_link
+from app.mcp.journal import Aktion, operation, pruefung
+from app.mcp.rest_client import api_get, api_post
 from app.mcp.tools._basis import NUR_ADDITIV, zugriff
 from app.mcp.zugang import SCOPE_SCHREIBEN
 
 # Nur mit Schreib-Scope sichtbar (server.py filtert die Tool-Liste, die Pruefung je Aufruf bleibt).
-SCHREIB_TOOLS = frozenset({"kommentar_anlegen", "mangel_erfassen", "telefonat_erfassen", "vorgang_anlegen"})
+SCHREIB_TOOLS = frozenset({"kommentar_anlegen", "mangel_erfassen", "telefonat_erfassen"})
 
 _Id = Annotated[str, Field(description="ID (UUID), z. B. aus der Suche oder einer Liste.")]
 _NUR_SCHREIBZUGRIFF = " (nur mit Schreibzugriff)"
@@ -24,30 +26,38 @@ _NUR_SCHREIBZUGRIFF = " (nur mit Schreibzugriff)"
 def registrieren(mcp: MCPServer) -> None:
     @mcp.tool(
         name="kommentar_anlegen",
-        title="Kommentar an Vorgang anlegen",
+        title="Kommentar anlegen",
         description=(
-            "Legt einen internen Kommentar (Besprechungs-/Einsatznotiz) im Verlauf eines Vorgangs an. "
-            "Er erscheint dort mit dem Hinweis „via Claude“, ist nicht für den Kunden sichtbar und "
-            "kann nicht per KI geändert oder gelöscht werden. @-Erwähnungen wirken wie in der App. "
-            "Geht nicht bei abgeschlossenen Vorgängen." + _NUR_SCHREIBZUGRIFF
+            "Legt einen internen Kommentar (Besprechungs-/Einsatznotiz) im Verlauf eines Vorgangs an (ziel_typ "
+            "„vorgang“; Aufträge, Projekte und Kunden haben in FieldVibe keinen Kommentar-Verlauf). Er erscheint dort "
+            "mit dem Hinweis „via Claude“, ist nicht für den Kunden sichtbar und kann nicht per KI geändert, gelöscht "
+            "oder zurückgenommen werden. @-Erwähnungen wirken wie in der App. Geht nicht bei abgeschlossenen "
+            "Vorgängen." + _NUR_SCHREIBZUGRIFF
         ),
         annotations=NUR_ADDITIV,
+        meta=ui_meta(AENDERUNG_URI),
     )
     async def kommentar_anlegen(
-        vorgang_id: _Id,
+        ziel_id: Annotated[str, Field(description="ID des Vorgangs, an den der Kommentar kommt.")],
         text: Annotated[str, Field(min_length=1, max_length=4000, description="Text des Kommentars.")],
+        ziel_typ: Annotated[Literal["vorgang"], Field(description="Derzeit nur vorgang.")] = "vorgang",
     ) -> dict[str, Any]:
         z = zugriff(SCOPE_SCHREIBEN)
-        ereignis = await api_post(
-            z,
-            f"/api/vorgaenge/{vorgang_id}/events",
-            {"event_type": "kommentar", "body": text, "kundensichtbar": False},
-        )
-        return {
-            "id": ereignis["id"],
-            "vorgang_id": ereignis["vorgang_id"],
-            "hinweis": "Kommentar angelegt (im Verlauf als „via Claude“ gekennzeichnet).",
-        }
+        aktion = Aktion(z, tool="kommentar_anlegen", aktionsart="kommentar.anlegen", stufe=1)
+        with aktion:
+            ereignis = await api_post(
+                z,
+                f"/api/vorgaenge/{ziel_id}/events",
+                {"event_type": "kommentar", "body": text, "kundensichtbar": False},
+            )
+            label = await Namen(z).aufloesen("vorgang", ziel_id) or str(ziel_id)
+            aktion.ziel("vorgang", ziel_id, label)
+            aktion.neu_erzeugt("kommentar", ereignis["id"], "Kommentar")
+        antwort = await aktion.fertig(f"Kommentar an Vorgang {label} angelegt", link=app_link("vorgang", ziel_id))
+        antwort["id"] = ereignis["id"]
+        antwort["vorgang_id"] = ereignis["vorgang_id"]
+        antwort["hinweis"] = "Kommentar angelegt (im Verlauf als „via Claude“ gekennzeichnet); er lässt sich nicht zurücknehmen."
+        return antwort
 
     @mcp.tool(
         name="mangel_erfassen",
@@ -58,6 +68,7 @@ def registrieren(mcp: MCPServer) -> None:
             "Benötigt das Modul Abrechnung." + _NUR_SCHREIBZUGRIFF
         ),
         annotations=NUR_ADDITIV,
+        meta=ui_meta(AENDERUNG_URI),
     )
     async def mangel_erfassen(
         vorgang_id: _Id,
@@ -69,20 +80,35 @@ def registrieren(mcp: MCPServer) -> None:
         anlage_id: Annotated[str | None, Field(description="Betroffene Anlage (muss zum Vorgang gehören).")] = None,
     ) -> dict[str, Any]:
         z = zugriff(SCOPE_SCHREIBEN)
-        mangel = await api_post(
-            z,
-            "/api/maengel",
-            {
-                "vorgang_id": vorgang_id,
-                "beschreibung": beschreibung,
-                "schweregrad": schweregrad,
-                "anlage_id": anlage_id,
-            },
-        )
-        return {
-            **bereinigen({k: mangel[k] for k in ("id", "vorgang_id", "anlage_id", "schweregrad", "status")}),
-            "hinweis": "Mangel erfasst (im Verlauf als „via Claude“ gekennzeichnet).",
-        }
+        aktion = Aktion(z, tool="mangel_erfassen", aktionsart="mangel.anlegen", stufe=1)
+        with aktion:
+            mangel = await api_post(
+                z,
+                "/api/maengel",
+                {
+                    "vorgang_id": vorgang_id,
+                    "beschreibung": beschreibung,
+                    "schweregrad": schweregrad,
+                    "anlage_id": anlage_id,
+                },
+            )
+            label = await Namen(z).aufloesen("vorgang", vorgang_id) or str(vorgang_id)
+            aktion.ziel("vorgang", vorgang_id, label)
+            aktion.neu_erzeugt("mangel", mangel["id"], beschreibung[:80])
+            # Zurueck nur, solange der Mangel noch genau so dasteht (Status/Angebot macht das Buero).
+            aktion.rueckweg_hinzu(
+                operation(
+                    "DELETE",
+                    f"/api/maengel/{mangel['id']}",
+                    None,
+                    [
+                        pruefung(f"/api/maengel/{mangel['id']}", "updated_at", mangel["updated_at"], label=beschreibung[:80], feld_label="Zuletzt geändert"),
+                    ],
+                )
+            )
+        antwort = await aktion.fertig(f"Mangel zu Vorgang {label} erfasst ({schweregrad})", link=app_link("mangel", mangel["id"], mangel))
+        antwort.update(id=mangel["id"], vorgang_id=mangel["vorgang_id"], schweregrad=mangel["schweregrad"], status=mangel["status"])
+        return antwort
 
     @mcp.tool(
         name="telefonat_erfassen",
@@ -95,6 +121,7 @@ def registrieren(mcp: MCPServer) -> None:
             "und Telefonate ändern oder löschen bleibt beim Menschen in der App." + _NUR_SCHREIBZUGRIFF
         ),
         annotations=NUR_ADDITIV,
+        meta=ui_meta(AENDERUNG_URI),
     )
     async def telefonat_erfassen(
         partner_name: Annotated[str, Field(min_length=1, max_length=200, description="Name des Gesprächspartners.")],
@@ -121,73 +148,34 @@ def registrieren(mcp: MCPServer) -> None:
         z = zugriff(SCOPE_SCHREIBEN)
         if not vorgang_id and not kunde_id:
             raise ToolError("Bitte vorgang_id oder kunde_id angeben.")
-        telefonat = await api_post(
-            z,
-            "/api/telefonate",
-            {
-                "vorgang_id": vorgang_id or None,
-                "kunde_id": kunde_id or None,
-                "partner_name": partner_name,
-                "partner_nummer": partner_nummer,
-                "richtung": richtung,
-                "ergebnis": ergebnis,
-                "beginn": (beginn or datetime.now(timezone.utc)).isoformat(),
-                "dauer_sekunden": dauer_minuten * 60 if dauer_minuten is not None else None,
-                "notiz": notiz,
-                "rueckruf_am": rueckruf_am.isoformat() if rueckruf_am else None,
-            },
-        )
-        return {
-            **bereinigen({k: telefonat[k] for k in ("id", "vorgang_id", "kunde_id", "ergebnis", "rueckruf_am")}),
-            "hinweis": "Telefonat erfasst (als „via Claude“ gekennzeichnet).",
-        }
-
-    @mcp.tool(
-        name="vorgang_anlegen",
-        title="Vorgang anlegen",
-        description=(
-            "Legt einen neuen Vorgang (Ticket/Einsatz) für einen Kunden an. Er startet im Status „neu“ "
-            "und ohne Zuweisung oder Termin; die Disposition macht das Büro. leistungstyp ist Pflicht, "
-            "weil davon abhängt, welche Protokoll-Vorlagen angeboten werden. abrechnungsart ist "
-            "standardmäßig „aufwand“ (Abrechnung nach Aufwand) und kann im Büro angepasst werden. "
-            "Der angelegte Vorgang trägt im Verlauf den Hinweis „via Claude“." + _NUR_SCHREIBZUGRIFF
-        ),
-        annotations=NUR_ADDITIV,
-    )
-    async def vorgang_anlegen(
-        kunde_id: Annotated[str, Field(description="Kunde (ID), z. B. aus der Suche.")],
-        titel: Annotated[str, Field(min_length=1, max_length=200, description="Kurztitel des Vorgangs.")],
-        leistungstyp: Annotated[
-            Literal["installation", "pruefung", "wartung", "stoerung", "beratung", "planung"],
-            Field(description="Art der Leistung (Pflicht)."),
-        ],
-        beschreibung: Annotated[str | None, Field(max_length=4000, description="Was ist zu tun / was wurde gemeldet?")] = None,
-        abrechnungsart: Annotated[
-            Literal["pauschale", "aufwand", "festpreis", "wartungsvertrag", "gewaehrleistung"],
-            Field(description="Standard aufwand."),
-        ] = "aufwand",
-        prioritaet: Annotated[int, Field(ge=1, le=5, description="1 = höchste, 5 = niedrigste, Standard 3.")] = 3,
-        anlage_id: Annotated[str | None, Field(description="Betroffene Anlage (ID).")] = None,
-        standort_id: Annotated[str | None, Field(description="Standort (ID).")] = None,
-        faelligkeit_am: Annotated[datetime | None, Field(description="Gewünschte Fälligkeit (ISO-Datum/Zeit).")] = None,
-    ) -> dict[str, Any]:
-        z = zugriff(SCOPE_SCHREIBEN)
-        vorgang = await api_post(
-            z,
-            "/api/vorgaenge",
-            {
-                "kunde_id": kunde_id,
-                "titel": titel,
-                "beschreibung": beschreibung,
-                "leistungstyp": leistungstyp,
-                "abrechnungsart": abrechnungsart,
-                "prioritaet": prioritaet,
-                "anlage_id": anlage_id,
-                "standort_id": standort_id,
-                "faelligkeit_am": faelligkeit_am.isoformat() if faelligkeit_am else None,
-            },
-        )
-        return {
-            **{k: vorgang[k] for k in ("id", "vorgangsnummer", "titel", "status", "leistungstyp", "abrechnungsart")},
-            "hinweis": "Vorgang im Status „neu“ angelegt, ohne Zuweisung; die Disposition erfolgt im Büro.",
-        }
+        aktion = Aktion(z, tool="telefonat_erfassen", aktionsart="telefonat.anlegen", stufe=1)
+        with aktion:
+            telefonat = await api_post(
+                z,
+                "/api/telefonate",
+                {
+                    "vorgang_id": vorgang_id or None,
+                    "kunde_id": kunde_id or None,
+                    "partner_name": partner_name,
+                    "partner_nummer": partner_nummer,
+                    "richtung": richtung,
+                    "ergebnis": ergebnis,
+                    "beginn": (beginn or datetime.now(timezone.utc)).isoformat(),
+                    "dauer_sekunden": dauer_minuten * 60 if dauer_minuten is not None else None,
+                    "notiz": notiz,
+                    "rueckruf_am": rueckruf_am.isoformat() if rueckruf_am else None,
+                },
+            )
+            label = f"Telefonat mit {partner_name}"
+            aktion.neu_erzeugt("telefonat", telefonat["id"], label)
+            aktion.rueckweg_hinzu(
+                operation(
+                    "DELETE",
+                    f"/api/telefonate/{telefonat['id']}",
+                    None,
+                    [pruefung(f"/api/telefonate/{telefonat['id']}", "updated_at", telefonat["updated_at"], label=label, feld_label="Zuletzt geändert")],
+                )
+            )
+        antwort = await aktion.fertig(f"{label} erfasst ({ergebnis.replace('_', ' ')})", link=app_link("telefonat", telefonat["id"]))
+        antwort.update(id=telefonat["id"], vorgang_id=telefonat.get("vorgang_id"), kunde_id=telefonat.get("kunde_id"), ergebnis=telefonat["ergebnis"])
+        return antwort

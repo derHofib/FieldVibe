@@ -6,6 +6,7 @@ from datetime import date
 import pytest
 from sqlalchemy import select
 
+import app.mcp.tools.lesen as lesen_tools
 import app.mcp.tools.protokolle as protokolle_tools
 from app.db.session import system_session
 from app.mcp.protokoll_werte import werte_abbilden
@@ -23,6 +24,7 @@ from tests.mcp_helfer import (
     mcp_client,  # noqa: F401
     mcp_laeuft,  # noqa: F401
     mcp_rpc,
+    neuer_tool_name,
     tool_aufrufen,
     verbinden,
 )
@@ -108,7 +110,7 @@ async def test_vorlage_entwerfen_erzeugt_draft_mit_gruppen_feldern_pflicht_und_o
     assert daten["status"] == "draft"
     assert daten["link"].endswith(f"/form-schemas/{daten['id']}")
     assert "Entwurf" in daten["hinweis"] and "veröffentlichen" in daten["hinweis"]
-    assert [a["abschnitt"] for a in daten["zusammenfassung"]][:2] == ["Kopf und Anlagendaten", "Prüfpunkte"]
+    assert [a["abschnitt"] for a in daten["inhalt"]][:2] == ["Kopf und Anlagendaten", "Prüfpunkte"]
 
     detail = await _detail(mcp_client, kopf, daten["id"])
     assert detail["status"] == "draft" and detail["name"] == "Wartung Gastherme" and detail["beschreibung"] == "Jahreswartung"
@@ -393,6 +395,7 @@ async def test_protokoll_entwurf_mandant_b_kommt_nicht_an_vorgang_von_a(make_man
 
 
 async def _pdf_resource(mcp_client, token, name, argumente) -> tuple[str, dict]:
+    name, argumente = neuer_tool_name(name, argumente)
     resp = await mcp_rpc(mcp_client, token, "tools/call", {"name": name, "arguments": argumente})
     ergebnis = resp.json()["result"]
     assert not ergebnis.get("isError"), ergebnis
@@ -424,7 +427,7 @@ async def test_pdf_ueber_5_mb_liefert_hinweis_statt_blob(make_mandant, make_user
     async def gross(z, pfad, params=None):
         return b"%PDF" + b"0" * (6 * 1024 * 1024), "application/pdf"
 
-    monkeypatch.setattr(protokolle_tools, "api_get_binaer", gross)
+    monkeypatch.setattr(lesen_tools, "api_get_binaer", gross)
     text, res = await _pdf_resource(mcp_client, token, "maengelprotokoll_pdf", {"vorgang_id": str(vorgang.id)})
     assert res == {} and "5 MB" in text and "App" in text
 
@@ -588,9 +591,9 @@ async def test_prompts_sind_gelistet_und_nennen_die_richtigen_tools(make_mandant
 
     vorlage = await holen("protokoll_vorlage_entwerfen", {"thema": "Wartung Gas-Brennwerttherme", "vorgaben": "Abgasmessung"})
     assert "Wartung Gas-Brennwerttherme" in vorlage and "Abgasmessung" in vorlage
-    assert "protokoll_vorlagen_auflisten" in vorlage and "protokoll_vorlage_entwerfen" in vorlage and "Unterschrift" in vorlage
+    assert "auflisten" in vorlage and "vorlage_entwurf" in vorlage and "Unterschrift" in vorlage
     wartung = await holen("wartungsprotokoll_zu_vorgang_ausfuellen", {"vorgang_id": "abc"})
-    assert "abc" in wartung and "protokoll_entwurf_anlegen" in wartung and "abschließen" in wartung
+    assert "abc" in wartung and "protokoll_entwurf" in wartung and "abschließen" in wartung
     bericht = await holen("monatsbericht", {"monat": "2026-10"})
     assert "2026-10" in bericht and "auswertung" in bericht and "kennzahlen_vorgaenge" in bericht and "Markdown" in bericht
 

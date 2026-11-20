@@ -215,9 +215,63 @@ async def mcp_rpc(c: AsyncClient, access_token: str | None, methode: str, params
     )
 
 
+# Die Tests stammen aus der Zeit der Einzel-Tools. Seit dem MCP-Ausbau Etappe A gibt es lesen/auflisten/
+# dokument_abrufen/protokoll_entwurf/vorlage_entwurf; tool_aufrufen uebersetzt die alten Namen samt Argumenten, damit
+# die geprueften Faelle (Rechte, Mandanten, Validierung) unveraendert gelten. Neue Tests rufen die neuen Namen direkt auf.
+_LESEN = {
+    "vorgang_lesen": ("vorgang", "vorgang_id"),
+    "auftrag_lesen": ("auftrag", "auftrag_id"),
+    "projekt_lesen": ("projekt", "projekt_id"),
+    "kunde_lesen": ("kunde", "kunde_id"),
+    "anlage_lesen": ("anlage", "anlage_id"),
+    "formular_lesen": ("formular", "formular_id"),
+    "protokoll_vorlage_lesen": ("vorlage", "vorlage_id"),
+}
+_LISTEN = {
+    "vorgaenge_auflisten": "vorgang",
+    "auftraege_auflisten": "auftrag",
+    "projekte_auflisten": "projekt",
+    "termine_auflisten": "termin",
+    "telefonate_auflisten": "telefonat",
+    "protokoll_vorlagen_auflisten": "vorlage",
+    "formular_vorlagen": "vorlage",
+}
+
+
+def neuer_tool_name(name: str, args: dict) -> tuple[str, dict]:
+    args = dict(args or {})
+    if name in _LESEN:
+        typ, schluessel = _LESEN[name]
+        return "lesen", {"typ": typ, "id": args[schluessel]} if schluessel in args else {"typ": typ, **args}
+    if name in _LISTEN:
+        seite = args.pop("seite", 1)
+        return "auflisten", {"typ": _LISTEN[name], "filter": args, "seite": seite}
+    if name == "protokoll_pdf":
+        return "dokument_abrufen", {"typ": "protokoll", "id": args["protokoll_id"]}
+    if name == "maengelprotokoll_pdf":
+        return "dokument_abrufen", {"typ": "maengelprotokoll", "id": args["vorgang_id"]}
+    if name == "vorgang_anlegen":
+        return "vorgang_speichern", args
+    if name == "kommentar_anlegen" and "vorgang_id" in args:
+        args["ziel_id"] = args.pop("vorgang_id")
+        return name, args
+    if name == "protokoll_entwurf_anlegen":
+        return "protokoll_entwurf", args
+    if name == "protokoll_entwurf_ergaenzen":
+        args["id"] = args.pop("protokoll_id")
+        return "protokoll_entwurf", args
+    if name == "protokoll_vorlage_entwerfen":
+        return "vorlage_entwurf", args
+    if name == "protokoll_vorlage_ueberarbeiten":
+        vorlage_id = args.pop("vorlage_id")
+        return "vorlage_entwurf", {"id": vorlage_id, "aenderungen": args}
+    return name, args
+
+
 async def tool_aufrufen(c: AsyncClient, access_token: str, name: str, argumente: dict | None = None) -> dict:
     """Ergebnis eines tools/call: {'fehler': bool, 'text': str, 'daten': structuredContent|None}."""
-    resp = await mcp_rpc(c, access_token, "tools/call", {"name": name, "arguments": argumente or {}})
+    name, argumente = neuer_tool_name(name, argumente or {})
+    resp = await mcp_rpc(c, access_token, "tools/call", {"name": name, "arguments": argumente})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert "error" not in body, body

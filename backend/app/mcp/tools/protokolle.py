@@ -1,7 +1,9 @@
-"""Protokoll-Tools: Vorlagen lesen und entwerfen, Protokoll-Entwuerfe zu Vorgaengen anlegen, PDFs liefern.
+"""Protokoll-Tools: Protokoll anzeigen (MCP-App), Vorlagen entwerfen/ueberarbeiten, Protokoll-Entwuerfe zu Vorgaengen
+anlegen/ergaenzen. Vorlagen und Protokolle lesen sowie PDFs liefern laufen ueber lesen/auflisten/dokument_abrufen (lesen.py);
+die Hilfsfunktionen dafuer (vorlage_kompakt, _pdf_ergebnis) liegen weiter hier.
 
-Lesen (Scope fieldvibe.lesen): Vorlagen auflisten/lesen, PDFs. Schreiben (Scope fieldvibe.schreiben):
-Vorlagen im Status "draft" entwerfen/ueberarbeiten und Protokolle im Status "offen" befuellen.
+Schreiben (Scope fieldvibe.schreiben): Vorlagen im Status "draft" entwerfen/ueberarbeiten und Protokolle im Status
+"offen" befuellen.
 Abschliessen, Unterschreiben, Veroeffentlichen/Archivieren einer Vorlage und die Zuordnung zu
 Leistungstypen gibt es per KI bewusst nicht (rest_client.SCHREIB_ALLOWLIST), ebenso kein Loeschen."""
 import base64
@@ -14,13 +16,14 @@ from mcp.types import BlobResourceContents, CallToolResult, EmbeddedResource, Te
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import get_settings
-from app.mcp.ansichten import PROTOKOLL_URI, VORLAGE_URI, ui_meta
+from app.mcp.ansichten import AENDERUNG_URI, PROTOKOLL_URI, VORLAGE_URI, ui_meta
+from app.mcp.anzeige import Namen
+from app.mcp.journal import RUECKGAENGIG_HINWEIS, Aktion, operation, pruefung
 from app.mcp.aufbereitung import bereinigen, seite_aus
 from app.mcp.protokoll_ansicht import protokoll_ansicht, protokoll_text
 from app.mcp.protokoll_werte import fehlende_pflichtfelder, werte_abbilden
-from app.mcp.rest_client import api_get, api_get_binaer, api_patch, api_post
-from app.mcp.tools._basis import NUR_ADDITIV, zugriff
-from app.mcp.tools.lesen import NUR_LESEN
+from app.mcp.rest_client import api_get, api_patch, api_post
+from app.mcp.tools._basis import AENDERND, NUR_LESEN, zugriff
 from app.mcp.vorlage_entwurf import (
     TYPEN_MIT_OPTIONEN,
     AbschnittEntwurf,
@@ -37,14 +40,7 @@ from app.mcp.vorlage_entwurf import (
 )
 from app.mcp.zugang import SCOPE_SCHREIBEN
 
-SCHREIB_TOOLS = frozenset(
-    {
-        "protokoll_entwurf_anlegen",
-        "protokoll_entwurf_ergaenzen",
-        "protokoll_vorlage_entwerfen",
-        "protokoll_vorlage_ueberarbeiten",
-    }
-)
+SCHREIB_TOOLS = frozenset({"protokoll_entwurf", "vorlage_entwurf"})
 
 MAX_PDF_BYTES = 5 * 1024 * 1024
 
@@ -140,63 +136,13 @@ def registrieren(mcp: MCPServer) -> None:
     # --- Lesen ---------------------------------------------------------------------------------
 
     @mcp.tool(
-        name="protokoll_vorlagen_auflisten",
-        title="Protokoll-Vorlagen auflisten",
-        description=(
-            "Listet die Protokoll-/Formular-Vorlagen des Betriebs (Name, Status draft/published/archived, "
-            "Version). Vor dem Entwerfen einer neuen Vorlage prüfen, ob es schon eine gibt. "
-            "Braucht das Recht Formulare › sehen."
-        ),
-        annotations=NUR_LESEN,
-    )
-    async def protokoll_vorlagen_auflisten(
-        status: Annotated[Literal["draft", "published", "archived"] | None, Field(description="Optional nach Status filtern.")] = None,
-        seite: Annotated[int, Field(ge=1, description="Seite (je 100 Einträge).")] = 1,
-    ) -> dict[str, Any]:
-        z = zugriff()
-        daten = await api_get(z, "/api/form-schemas", {"status": status})
-        kompakt = [{k: v[k] for k in ("id", "name", "beschreibung", "status", "version")} for v in daten]
-        return seite_aus(kompakt, seite)
-
-    @mcp.tool(
-        name="protokoll_vorlage_lesen",
-        title="Protokoll-Vorlage lesen",
-        description=(
-            "Liest den Aufbau einer Vorlage: Abschnitte (wiederholbar oder nicht) mit Feldern, Typ, Pflicht, "
-            "Hilfetext und Auswahloptionen. Nötig, um ein Protokoll auszufüllen oder eine Variante zu entwerfen. "
-            "Braucht das Recht Formulare › sehen."
-        ),
-        annotations=NUR_LESEN,
-    )
-    async def protokoll_vorlage_lesen(vorlage_id: _Id) -> dict[str, Any]:
-        z = zugriff()
-        return bereinigen(vorlage_kompakt(await api_get(z, f"/api/form-schemas/{vorlage_id}")))
-
-    @mcp.tool(
-        name="protokoll_pdf",
-        title="Protokoll als PDF",
-        description=(
-            "Liefert ein Protokoll (ausgefülltes Formular) als PDF. Ein noch offenes Protokoll ist nur eine "
-            "Vorschau mit Hinweis. Größer als 5 MB wird nicht übertragen. Voraussetzung: die Vorlage hat "
-            "eine Druckansicht."
-        ),
-        annotations=NUR_LESEN,
-    )
-    async def protokoll_pdf(
-        protokoll_id: Annotated[str, Field(description="ID des ausgefüllten Protokolls (Submission).")],
-    ) -> list[TextContent | EmbeddedResource]:
-        z = zugriff()
-        daten, typ = await api_get_binaer(z, f"/api/form-submissions/{protokoll_id}/pdf")
-        return _pdf_ergebnis(daten, typ, f"fieldvibe://protokoll/{protokoll_id}.pdf", "Das Protokoll")
-
-    @mcp.tool(
         name="protokoll_anzeigen",
         title="Protokoll anzeigen",
         description=(
             "Zeigt ein ausgefülltes Protokoll (Submission) als Zusammenfassung: Abschnitte mit Beschriftungen, "
             "Ja/Nein, Zahlen mit Grenzwert-Markierung („über 50“), fehlende Pflichtfelder, Fotos nur als Anzahl, "
             "dazu der Link zum Öffnen in FieldVibe. In Claude-Clients mit MCP Apps erscheint die Ansicht im Chat, "
-            "sonst kommt derselbe Inhalt als Text. Für die Rohwerte formular_lesen, für eine Datei protokoll_pdf. "
+            "sonst kommt derselbe Inhalt als Text. Für die Rohwerte lesen(typ=\"formular\"), für eine Datei dokument_abrufen. "
             "Braucht die Rechte Vorgänge › sehen und Formulare › sehen."
         ),
         annotations=NUR_LESEN,
@@ -220,167 +166,225 @@ def registrieren(mcp: MCPServer) -> None:
             text = "Die Ansicht wird im Chat angezeigt; fasse sie nicht erneut vollständig zusammen.\n\n" + text
         return CallToolResult(content=[TextContent(type="text", text=text)], structured_content=ansicht)
 
-    @mcp.tool(
-        name="maengelprotokoll_pdf",
-        title="Mängelprotokoll als PDF",
-        description="Liefert das Mängelprotokoll eines Vorgangs (alle erfassten Mängel) als PDF. Benötigt das Modul Abrechnung.",
-        annotations=NUR_LESEN,
-    )
-    async def maengelprotokoll_pdf(vorgang_id: _Id) -> list[TextContent | EmbeddedResource]:
-        z = zugriff()
-        daten, typ = await api_get_binaer(z, "/api/maengel/protokoll/pdf", {"vorgang_id": vorgang_id})
-        return _pdf_ergebnis(daten, typ, f"fieldvibe://maengelprotokoll/{vorgang_id}.pdf", "Das Mängelprotokoll")
-
     # --- Protokoll-Entwuerfe zu Vorgaengen ---------------------------------------------------------
 
     @mcp.tool(
-        name="protokoll_entwurf_anlegen",
-        title="Protokoll-Entwurf zu Vorgang anlegen",
+        name="protokoll_entwurf",
+        title="Protokoll-Entwurf anlegen oder ergänzen",
         description=(
-            "Legt zu einem Vorgang ein Protokoll aus einer veröffentlichten Vorlage an (Status „offen“) und trägt "
-            "die übergebenen Werte ein. `werte` ist ein Objekt: Schlüssel = Feld-Key oder Beschriftung der "
-            "Vorlage (Groß-/Kleinschreibung egal, siehe protokoll_vorlage_lesen). Felder in einem Abschnitt: "
+            "Legt zu einem Vorgang ein Protokoll aus einer veröffentlichten Vorlage an (ohne id: vorgang_id und "
+            "vorlage_id nötig; Status „offen“) oder ergänzt ein noch offenes Protokoll (mit id). `werte` ist ein "
+            "Objekt: Schlüssel = Feld-Key oder Beschriftung der Vorlage (Groß-/Kleinschreibung egal, siehe "
+            "lesen(typ=\"vorlage\")). Felder in einem Abschnitt: "
             '{"Abgasmessung": {"CO-Wert (ppm)": 12}}; wiederholbarer Abschnitt als Liste von Einträgen: '
             '{"Mängel": [{"Beschreibung": "Dichtung porös"}]}. Zahlen als Zahl, Ja/Nein als true/false, '
-            "Datum als JJJJ-MM-TT, Dropdown/Mehrfachauswahl mit den Optionen der Vorlage. Foto, Unterschrift, "
-            "Datei, GPS, QR-Scan und Fotoplan kann Claude nicht füllen. Abschließen und Unterschreiben "
-            "geschieht in der App durch den Techniker." + _NUR_SCHREIBZUGRIFF
+            "Datum als JJJJ-MM-TT, Dropdown/Mehrfachauswahl mit den Optionen der Vorlage. Beim Ergänzen bleiben bereits "
+            "befüllte Felder unverändert, es sei denn `vorhandene_ueberschreiben` ist true; Einträge in wiederholbaren "
+            "Abschnitten werden angehängt. Foto, Unterschrift, Datei, GPS, QR-Scan und Fotoplan kann Claude nicht füllen; "
+            "Abschließen und Unterschreiben geschieht in der App durch den Techniker. Das Anlegen lässt sich mit "
+            "rueckgaengig zurücknehmen (solange das Protokoll offen und unverändert ist), das Ergänzen nicht." + _NUR_SCHREIBZUGRIFF
         ),
-        annotations=NUR_ADDITIV,
+        annotations=AENDERND,
+        meta=ui_meta(AENDERUNG_URI),
     )
-    async def protokoll_entwurf_anlegen(
-        vorgang_id: _Id,
-        vorlage_id: Annotated[str, Field(description="ID einer veröffentlichten Vorlage (published).")],
+    async def protokoll_entwurf(
         werte: Annotated[dict[str, Any], Field(description="Werte, siehe Beschreibung.")],
+        vorgang_id: Annotated[str | None, Field(description="Vorgang (ID); nötig beim Anlegen.")] = None,
+        vorlage_id: Annotated[str | None, Field(description="ID einer veröffentlichten Vorlage (published); nötig beim Anlegen.")] = None,
+        id: Annotated[str | None, Field(description="ID eines offenen Protokolls (Submission) zum Ergänzen; ohne id wird angelegt.")] = None,
+        vorhandene_ueberschreiben: Annotated[bool, Field(description="Nur beim Ergänzen: auch bereits befüllte Felder ersetzen. Standard false.")] = False,
     ) -> dict[str, Any]:
         z = zugriff(SCOPE_SCHREIBEN)
-        schema = await api_get(z, f"/api/form-schemas/{vorlage_id}")
-        if schema["status"] != "published":
-            raise ToolError(
-                f"Die Vorlage „{schema['name']}“ ist {'noch ein Entwurf' if schema['status'] == 'draft' else 'archiviert'}. "
-                "Nur veröffentlichte Vorlagen können ausgefüllt werden; veröffentlichen kann ein Berechtigter im Formular-Baukasten."
-            )
-        # Vor dem Anlegen komplett pruefen, damit bei einem Eingabefehler kein leeres Protokoll zurueckbleibt.
-        werte_abbilden(schema, werte)
-        angelegt = await api_post(z, "/api/form-submissions", {"schema_id": vorlage_id}, params={"vorgang_id": vorgang_id})
-        patch, gesetzt, uebersprungen = werte_abbilden(schema, werte, angelegt["values"])
-        aktuell = dict(angelegt["values"])
-        if patch:
-            try:
-                gespeichert = await api_patch(z, f"/api/form-submissions/{angelegt['id']}", {"values": patch})
-            except ToolError as exc:
-                raise ToolError(
-                    f"Das Protokoll wurde leer angelegt (ID {angelegt['id']}, Status offen), die Werte konnten aber nicht "
-                    f"gespeichert werden: {exc}"
-                ) from exc
-            aktuell = gespeichert["values"]
-        return _protokoll_ergebnis(angelegt, schema, aktuell, gesetzt, uebersprungen)
-
-    @mcp.tool(
-        name="protokoll_entwurf_ergaenzen",
-        title="Protokoll-Entwurf ergänzen",
-        description=(
-            "Ergänzt ein noch offenes Protokoll um weitere Werte (gleiches Format wie bei "
-            "protokoll_entwurf_anlegen). Bereits befüllte Felder bleiben unverändert, es sei denn "
-            "`vorhandene_ueberschreiben` ist true; Einträge in wiederholbaren Abschnitten werden angehängt. "
-            "Abgeschlossene Protokolle ändert Claude nicht." + _NUR_SCHREIBZUGRIFF
-        ),
-        annotations=NUR_ADDITIV,
-    )
-    async def protokoll_entwurf_ergaenzen(
-        protokoll_id: Annotated[str, Field(description="ID des offenen Protokolls (Submission).")],
-        werte: Annotated[dict[str, Any], Field(description="Werte, siehe protokoll_entwurf_anlegen.")],
-        vorhandene_ueberschreiben: Annotated[bool, Field(description="Auch bereits befüllte Felder ersetzen. Standard false.")] = False,
-    ) -> dict[str, Any]:
-        z = zugriff(SCOPE_SCHREIBEN)
-        protokoll = await api_get(z, f"/api/form-submissions/{protokoll_id}")
-        if protokoll["status"] != "offen":
-            raise ToolError("Dieses Protokoll ist bereits abgeschlossen. Abgeschlossene Protokolle ändert Claude nicht.")
-        schema = await api_get(z, f"/api/form-schemas/{protokoll['schema_id']}")
-        patch, gesetzt, uebersprungen = werte_abbilden(schema, werte, protokoll["values"], vorhandene_ueberschreiben)
-        aktuell = protokoll["values"]
-        if patch:
-            aktuell = (await api_patch(z, f"/api/form-submissions/{protokoll_id}", {"values": patch}))["values"]
-        return _protokoll_ergebnis(protokoll, schema, aktuell, gesetzt, uebersprungen)
+        if id is None:
+            if not vorgang_id or not vorlage_id:
+                raise ToolError("Zum Anlegen eines Protokolls werden vorgang_id und vorlage_id gebraucht.")
+            return await _protokoll_anlegen(z, vorgang_id, vorlage_id, werte)
+        return await _protokoll_ergaenzen(z, id, werte, vorhandene_ueberschreiben)
 
     # --- Vorlagen entwerfen --------------------------------------------------------------------
 
     @mcp.tool(
-        name="protokoll_vorlage_entwerfen",
-        title="Protokoll-Vorlage entwerfen",
+        name="vorlage_entwurf",
+        title="Protokoll-Vorlage entwerfen oder überarbeiten",
         description=(
-            "Legt eine neue Protokoll-Vorlage im Formular-Baukasten als ENTWURF an (Status draft). Sie ist erst "
-            "für Techniker sichtbar, wenn ein Berechtigter sie im Baukasten geprüft und veröffentlicht und einem "
-            "Leistungstyp zugeordnet hat; das geht per KI nicht. `abschnitte` ist eine Liste aus {titel, "
-            "wiederholbar (Standard false; true z. B. für Mängellisten), felder: [{label, typ, pflicht, hilfetext, "
-            "optionen}]}. optionen (Liste von Texten) nur bei dropdown und mehrfachauswahl, dort Pflicht. "
-            "Sinnvolle Gliederung: Kopf/Anlagendaten, Prüfpunkte, Messwerte, Mängel (wiederholbar), Abschluss "
-            "mit Unterschrift. Vorher mit protokoll_vorlagen_auflisten prüfen, ob es die Vorlage schon gibt. "
-            "Braucht das Recht Formulare › erstellen." + _NUR_SCHREIBZUGRIFF
+            "Ohne id: legt eine neue Protokoll-Vorlage im Formular-Baukasten als ENTWURF an (Status draft; name und "
+            "abschnitte nötig). Sie ist erst für Techniker sichtbar, wenn ein Berechtigter sie im Baukasten geprüft und "
+            "veröffentlicht und einem Leistungstyp zugeordnet hat; das geht per KI nicht. `abschnitte` ist eine Liste aus "
+            "{titel, wiederholbar (Standard false; true z. B. für Mängellisten), felder: [{label, typ, pflicht, hilfetext, "
+            "optionen}]}. optionen (Liste von Texten) nur bei dropdown und mehrfachauswahl, dort Pflicht. Sinnvolle "
+            "Gliederung: Kopf/Anlagendaten, Prüfpunkte, Messwerte, Mängel (wiederholbar), Abschluss mit Unterschrift. "
+            "Vorher mit auflisten(typ=\"vorlage\") prüfen, ob es die Vorlage schon gibt. Braucht das Recht Formulare › "
+            "erstellen.\n"
+            "Mit id: überarbeitet einen Entwurf über `aenderungen` {abschnitte_hinzufuegen, felder_hinzufuegen, "
+            "felder_aendern}: Abschnitte hinzufügen, Felder zu einem Abschnitt hinzufügen, Beschriftung/Pflicht/Hilfetext/"
+            "Optionen bestehender Felder ändern. Entfernen und Typwechsel gibt es nicht (im Baukasten). Veröffentlichte "
+            "Vorlagen ändert Claude nicht; dafür mit lesen(typ=\"vorlage\") den Aufbau holen und eine neue Variante "
+            "entwerfen. Vorlagen-Entwürfe lassen sich nicht per rueckgaengig zurücknehmen (im Baukasten löschen)." + _NUR_SCHREIBZUGRIFF
         ),
-        annotations=NUR_ADDITIV,
+        annotations=AENDERND,
         meta=ui_meta(VORLAGE_URI),
     )
-    async def protokoll_vorlage_entwerfen(
-        name: Annotated[str, Field(min_length=1, max_length=200, description="Name der Vorlage.")],
-        abschnitte: Annotated[list[AbschnittEntwurf], Field(description="Abschnitte mit Feldern.")],
-        beschreibung: Annotated[str | None, Field(max_length=1000, description="Kurzbeschreibung, wofür die Vorlage dient.")] = None,
+    async def vorlage_entwurf(
+        id: Annotated[str | None, Field(description="ID eines Vorlagen-Entwurfs zum Überarbeiten; ohne id wird neu entworfen.")] = None,
+        name: Annotated[str | None, Field(min_length=1, max_length=200, description="Name der neuen Vorlage (nur ohne id).")] = None,
+        beschreibung: Annotated[str | None, Field(max_length=1000, description="Kurzbeschreibung, wofür die Vorlage dient (nur ohne id).")] = None,
+        abschnitte: Annotated[list[AbschnittEntwurf] | None, Field(description="Abschnitte mit Feldern (nur ohne id).")] = None,
+        aenderungen: Annotated[VorlagenAenderung | None, Field(description="Änderungen (nur mit id).")] = None,
     ) -> dict[str, Any]:
         z = zugriff(SCOPE_SCHREIBEN)
-        pruefe_abschnitte(abschnitte)
-        plan = abschnitte_planen(abschnitte, set())
-        schema = await api_post(z, "/api/form-schemas", {"name": name, "beschreibung": beschreibung})
-        await _ausfuehren(z, schema, name, [*ansicht_schritte(), *plan.schritte])
-        return {
-            "id": schema["id"],
-            "name": schema["name"],
-            "status": schema["status"],
-            "zusammenfassung": zusammenfassung(abschnitte),
-            "link": vorlagen_link(schema["id"]),
-            "hinweis": f"KI-Entwurf, noch nicht veröffentlicht. {_ENTWURF_HINWEIS}",
-            **await _vorlage_ansicht(z, schema["id"]),
-        }
+        if id is None:
+            if not name or abschnitte is None:
+                raise ToolError("Zum Entwerfen einer neuen Vorlage werden name und abschnitte gebraucht.")
+            if aenderungen:
+                raise ToolError("aenderungen gibt es nur zusammen mit id (Überarbeiten).")
+            return await _vorlage_neu(z, name, beschreibung, abschnitte)
+        if name or beschreibung or abschnitte:
+            raise ToolError("Beim Überarbeiten (mit id) bitte nur aenderungen angeben.")
+        if aenderungen is None:
+            raise ToolError("Es gibt nichts zu ändern: bitte aenderungen angeben.")
+        return await _vorlage_ueberarbeiten(z, id, aenderungen)
 
-    @mcp.tool(
-        name="protokoll_vorlage_ueberarbeiten",
-        title="Protokoll-Vorlage-Entwurf überarbeiten",
-        description=(
-            "Überarbeitet eine Vorlage, solange sie Entwurf (draft) ist: Abschnitte hinzufügen, Felder zu einem "
-            "bestehenden oder in diesem Aufruf angelegten Abschnitt hinzufügen, Beschriftung/Pflicht/Hilfetext/"
-            "Optionen bestehender Felder ändern. Entfernen und Typwechsel gibt es nicht (im Baukasten). "
-            "Veröffentlichte Vorlagen ändert Claude nicht; dafür mit protokoll_vorlage_lesen den Aufbau holen und "
-            "eine neue Variante mit protokoll_vorlage_entwerfen anlegen." + _NUR_SCHREIBZUGRIFF
-        ),
-        annotations=NUR_ADDITIV,
-        meta=ui_meta(VORLAGE_URI),
+
+async def _protokoll_anlegen(z, vorgang_id: str, vorlage_id: str, werte: dict[str, Any]) -> dict[str, Any]:
+    schema = await api_get(z, f"/api/form-schemas/{vorlage_id}")
+    if schema["status"] != "published":
+        raise ToolError(
+            f"Die Vorlage „{schema['name']}“ ist {'noch ein Entwurf' if schema['status'] == 'draft' else 'archiviert'}. "
+            "Nur veröffentlichte Vorlagen können ausgefüllt werden; veröffentlichen kann ein Berechtigter im Formular-Baukasten."
+        )
+    # Vor dem Anlegen komplett pruefen, damit bei einem Eingabefehler kein leeres Protokoll zurueckbleibt.
+    werte_abbilden(schema, werte)
+    aktion = Aktion(z, tool="protokoll_entwurf", aktionsart="protokoll.anlegen", stufe=1)
+    fehler: str | None = None
+    with aktion:
+        angelegt = await api_post(z, "/api/form-submissions", {"schema_id": vorlage_id}, params={"vorgang_id": vorgang_id})
+        label = f"{schema['name']}"
+        aktion.neu_erzeugt("formular", angelegt["id"], label)
+        vorgang_label = await Namen(z).aufloesen("vorgang", vorgang_id) or str(vorgang_id)
+        aktion.ziel("vorgang", vorgang_id, vorgang_label)
+        patch, gesetzt, uebersprungen = werte_abbilden(schema, werte, angelegt["values"])
+        aktuell = dict(angelegt["values"])
+        stand = angelegt
+        if patch:
+            try:
+                stand = await api_patch(z, f"/api/form-submissions/{angelegt['id']}", {"values": patch})
+                aktuell = stand["values"]
+            except ToolError as exc:
+                fehler = (
+                    f"Das Protokoll wurde leer angelegt (ID {angelegt['id']}, Status offen), die Werte konnten aber nicht "
+                    f"gespeichert werden: {exc}"
+                )
+        aktion.rueckweg_hinzu(
+            operation(
+                "DELETE",
+                f"/api/form-submissions/{angelegt['id']}",
+                None,
+                [
+                    pruefung(f"/api/form-submissions/{angelegt['id']}", "status", "offen", label=label, feld_label="Status"),
+                    pruefung(
+                        f"/api/form-submissions/{angelegt['id']}", "updated_at", stand.get("updated_at"), label=label, feld_label="Zuletzt geändert"
+                    ),
+                ],
+            )
+        )
+    ergebnis = _protokoll_ergebnis(angelegt, schema, aktuell, gesetzt, uebersprungen)
+    antwort = await aktion.fertig(
+        f"Protokoll „{label}“ zu Vorgang {vorgang_label} als Entwurf angelegt ({len(gesetzt)} Felder befüllt)",
+        link=protokoll_link(angelegt["id"]),
+        fehler=fehler,
+        extra=ergebnis,
     )
-    async def protokoll_vorlage_ueberarbeiten(
-        vorlage_id: _Id,
-        abschnitte_hinzufuegen: Annotated[list[AbschnittEntwurf] | None, Field(description="Neue Abschnitte samt Feldern.")] = None,
-        felder_hinzufuegen: Annotated[list[FeldHinzufuegen] | None, Field(description="Neue Felder in einem Abschnitt.")] = None,
-        felder_aendern: Annotated[list[FeldAenderung] | None, Field(description="Änderungen an bestehenden Feldern.")] = None,
-    ) -> dict[str, Any]:
-        z = zugriff(SCOPE_SCHREIBEN)
-        if not (abschnitte_hinzufuegen or felder_hinzufuegen or felder_aendern):
-            raise ToolError("Es gibt nichts zu ändern: bitte abschnitte_hinzufuegen, felder_hinzufuegen oder felder_aendern angeben.")
-        detail = await api_get(z, f"/api/form-schemas/{vorlage_id}")
-        if detail["status"] != "draft":
-            raise ToolError("Veröffentlichte Vorlagen ändert Claude nicht – lege eine neue Variante an.")
-        schritte = _ueberarbeitung_planen(detail, abschnitte_hinzufuegen or [], felder_hinzufuegen or [], felder_aendern or [])
-        # Entwuerfe ohne jede Ansicht (aeltere KI-Entwuerfe) bekommen sie nachtraeglich; wer im Baukasten schon
-        # Ansichten angelegt hat, behaelt seine Auswahl.
-        if not await api_get(z, f"/api/form-schemas/{vorlage_id}/views"):
-            schritte = [*ansicht_schritte(), *schritte]
-        await _ausfuehren(z, detail, detail["name"], schritte)
-        return {
-            "id": detail["id"],
-            "name": detail["name"],
-            "status": detail["status"],
-            "angewendet": [s.beschreibung for s in schritte],
-            "link": vorlagen_link(detail["id"]),
-            "hinweis": f"KI-Entwurf überarbeitet. {_ENTWURF_HINWEIS}",
-            **await _vorlage_ansicht(z, detail["id"]),
-        }
+    # Die Protokoll-Hinweise (Abschliessen in der App) bleiben fuehrend; der Rueckgaengig-Hinweis kommt dazu.
+    antwort["hinweis"] = f"{ergebnis['hinweis']} {RUECKGAENGIG_HINWEIS}"
+    return antwort
+
+
+async def _protokoll_ergaenzen(z, protokoll_id: str, werte: dict[str, Any], ueberschreiben: bool) -> dict[str, Any]:
+    protokoll = await api_get(z, f"/api/form-submissions/{protokoll_id}")
+    if protokoll["status"] != "offen":
+        raise ToolError("Dieses Protokoll ist bereits abgeschlossen. Abgeschlossene Protokolle ändert Claude nicht.")
+    schema = await api_get(z, f"/api/form-schemas/{protokoll['schema_id']}")
+    patch, gesetzt, uebersprungen = werte_abbilden(schema, werte, protokoll["values"], ueberschreiben)
+    aktuell = protokoll["values"]
+    aktion = Aktion(z, tool="protokoll_entwurf", aktionsart="protokoll.aendern", stufe=2)
+    with aktion:
+        if patch:
+            aktuell = (await api_patch(z, f"/api/form-submissions/{protokoll_id}", {"values": patch}))["values"]
+        vorgang_label = await Namen(z).aufloesen("vorgang", protokoll["vorgang_id"]) or str(protokoll["vorgang_id"])
+        aktion.ziel("vorgang", protokoll["vorgang_id"], vorgang_label)
+        aktion.ziel("formular", protokoll_id, schema["name"])
+    ergebnis = _protokoll_ergebnis(protokoll, schema, aktuell, gesetzt, uebersprungen)
+    if not patch:
+        return {**ergebnis, "aktion_id": None, "zusammenfassung": "Nichts geändert: Alle Felder waren schon befüllt.", "aenderungen": []}
+    # Kein Rueckweg: Werte einzeln zuruecksetzen waere bei wiederholbaren Abschnitten nicht eindeutig.
+    antwort = await aktion.fertig(
+        f"Protokoll „{schema['name']}“ ergänzt ({len(gesetzt)} Felder)", link=protokoll_link(protokoll_id), extra=ergebnis
+    )
+    antwort["hinweis"] = ergebnis["hinweis"]
+    return antwort
+
+
+class VorlagenAenderung(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    abschnitte_hinzufuegen: Annotated[list[AbschnittEntwurf] | None, Field(description="Neue Abschnitte samt Feldern.")] = None
+    felder_hinzufuegen: Annotated[list[FeldHinzufuegen] | None, Field(description="Neue Felder in einem Abschnitt.")] = None
+    felder_aendern: Annotated[list[FeldAenderung] | None, Field(description="Änderungen an bestehenden Feldern.")] = None
+
+
+async def _vorlage_neu(z, name: str, beschreibung: str | None, abschnitte: list[AbschnittEntwurf]) -> dict[str, Any]:
+    pruefe_abschnitte(abschnitte)
+    plan = abschnitte_planen(abschnitte, set())
+    aktion = Aktion(z, tool="vorlage_entwurf", aktionsart="vorlage.anlegen", stufe=1)
+    with aktion:
+        schema = await api_post(z, "/api/form-schemas", {"name": name, "beschreibung": beschreibung})
+        aktion.neu_erzeugt("vorlage", schema["id"], name)
+        try:
+            await _ausfuehren(z, schema, name, [*ansicht_schritte(), *plan.schritte])
+        except ToolError as exc:
+            await aktion.fertig(f"Vorlage „{name}“ als Entwurf angelegt, aber unvollständig", link=vorlagen_link(schema["id"]), fehler=str(exc))
+            raise
+    antwort = await aktion.fertig(f"Vorlagen-Entwurf „{name}“ angelegt", link=vorlagen_link(schema["id"]))
+    return {
+        **antwort,
+        "id": schema["id"],
+        "name": schema["name"],
+        "status": schema["status"],
+        "inhalt": zusammenfassung(abschnitte),
+        "hinweis": f"KI-Entwurf, noch nicht veröffentlicht. {_ENTWURF_HINWEIS}",
+        **await _vorlage_ansicht(z, schema["id"]),
+    }
+
+
+async def _vorlage_ueberarbeiten(z, vorlage_id: str, a: VorlagenAenderung) -> dict[str, Any]:
+    if not (a.abschnitte_hinzufuegen or a.felder_hinzufuegen or a.felder_aendern):
+        raise ToolError("Es gibt nichts zu ändern: bitte abschnitte_hinzufuegen, felder_hinzufuegen oder felder_aendern angeben.")
+    detail = await api_get(z, f"/api/form-schemas/{vorlage_id}")
+    if detail["status"] != "draft":
+        raise ToolError("Veröffentlichte Vorlagen ändert Claude nicht – lege eine neue Variante an.")
+    schritte = _ueberarbeitung_planen(detail, a.abschnitte_hinzufuegen or [], a.felder_hinzufuegen or [], a.felder_aendern or [])
+    # Entwuerfe ohne jede Ansicht (aeltere KI-Entwuerfe) bekommen sie nachtraeglich; wer im Baukasten schon
+    # Ansichten angelegt hat, behaelt seine Auswahl.
+    if not await api_get(z, f"/api/form-schemas/{vorlage_id}/views"):
+        schritte = [*ansicht_schritte(), *schritte]
+    aktion = Aktion(z, tool="vorlage_entwurf", aktionsart="vorlage.aendern", stufe=2)
+    with aktion:
+        aktion.ziel("vorlage", detail["id"], detail["name"])
+        try:
+            await _ausfuehren(z, detail, detail["name"], schritte)
+        except ToolError as exc:
+            await aktion.fertig(f"Vorlagen-Entwurf „{detail['name']}“ teilweise überarbeitet", link=vorlagen_link(detail["id"]), fehler=str(exc))
+            raise
+    antwort = await aktion.fertig(f"Vorlagen-Entwurf „{detail['name']}“ überarbeitet", link=vorlagen_link(detail["id"]))
+    return {
+        **antwort,
+        "id": detail["id"],
+        "name": detail["name"],
+        "status": detail["status"],
+        "angewendet": [s.beschreibung for s in schritte],
+        "hinweis": f"KI-Entwurf überarbeitet. {_ENTWURF_HINWEIS}",
+        **await _vorlage_ansicht(z, detail["id"]),
+    }
 
 
 async def _vorlage_ansicht(z, schema_id: str) -> dict[str, Any]:

@@ -154,9 +154,9 @@ async def test_voller_ablauf_register_authorize_token_und_mcp_aufruf(make_mandan
     assert "FieldVibe" in init.json()["result"]["instructions"]
 
     liste = (await mcp_rpc(mcp_client, daten["access_token"], "tools/list")).json()["result"]["tools"]
-    assert "vorgaenge_auflisten" in {t["name"] for t in liste}
+    assert "auflisten" in {t["name"] for t in liste}
 
-    aufruf = await tool_aufrufen(mcp_client, daten["access_token"], "vorgaenge_auflisten")
+    aufruf = await tool_aufrufen(mcp_client, daten["access_token"], "auflisten", {"typ": "vorgang"})
     assert aufruf["fehler"] is False and aufruf["daten"]["eintraege"] == []
 
     verbindungen = await mcp_client.get("/api/ki/verbindungen", headers=auth_headers(login_token))

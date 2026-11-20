@@ -82,6 +82,9 @@ async def _konflikte(token: str, rueckweg: list[dict[str, Any]]) -> list[Konflik
             except ToolError:
                 abrufe[schluessel] = None
         daten = abrufe[schluessel]
+        if daten is not None and p.get("element"):
+            feld_name, wert = p["element"]
+            daten = next((e for e in daten if isinstance(e, dict) and str(e.get(feld_name)) == str(wert)), None)
         label, feld_label, erwartet = p.get("label") or "", p.get("feld_label") or p["feld"], p.get("erwartet_anzeige")
         if daten is None:
             konflikte.append(Konflikt(label, feld_label, erwartet, _NICHT_VERFUEGBAR))
