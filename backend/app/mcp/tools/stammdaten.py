@@ -11,7 +11,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.mcp.ansichten import AENDERUNG_URI, ui_meta
-from app.mcp.anzeige import Namen, app_link, eintrag, feld_label
+from app.mcp.anzeige import EINGEBETTET, Namen, app_link, eintrag, feld_label
 from app.mcp.journal import Aktion, operation, pruefung
 from app.mcp.oauth_provider import KiAccessToken
 from app.mcp.rest_client import api_get, api_patch, api_post, api_verknuepfung_loesen
@@ -130,7 +130,7 @@ async def _feld_verknuepfen(
     geaendert = await aktion.vergleichen(namen, objekt_typ, id_, label, vorher, nachher, list(dict.fromkeys([feld, "projekt_id"] if objekt_typ == "vorgang" else [feld])))
     rueck = {f: vorher.get(f) for f in geaendert}
     pruefungen = [
-        pruefung(pfad, f, nachher.get(f), label=label, feld_label=feld_label(objekt_typ, f), erwartet_anzeige=await namen.anzeige(f, nachher.get(f), nachher))
+        pruefung(pfad, f, nachher.get(f), label=label, feld_label=feld_label(objekt_typ, f), erwartet_anzeige=await namen.anzeige(f, nachher.get(f), nachher), anzeige_feld=EINGEBETTET.get(f))
         for f in geaendert
     ]
     aktion.rueckweg_hinzu(operation("PATCH", pfad, rueck, pruefungen))

@@ -14,7 +14,7 @@ from typing import Any
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-from app.mcp.anzeige import Namen, app_link, feld_label
+from app.mcp.anzeige import EINGEBETTET, Namen, app_link, feld_label
 from app.mcp.journal import Aktion, operation, pruefung
 from app.mcp.oauth_provider import KiAccessToken
 from app.mcp.rest_client import api_get, api_patch, api_post
@@ -321,6 +321,7 @@ async def _aendern(
                 label=label,
                 feld_label=feld_label(art.typ, f),
                 erwartet_anzeige=await namen.anzeige(f, nachher.get(f), nachher),
+                anzeige_feld=EINGEBETTET.get(f),
                 element=element,
             )
             for f in geaendert
