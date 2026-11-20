@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from app.api.deps import (
     require_roles,
 )
 from app.core.security import hash_password
+from app.models.account_typ import AccountTyp
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.einladung import Einladung
@@ -35,8 +36,16 @@ from app.schemas.anlage import AnlageRead
 from app.schemas.datenexport import KundeDatenexport, VorgangMitEreignissen
 from app.schemas.einladung import EinladungRead, KundeEinladungCreate
 from app.schemas.email import EmailLogRead, EmailSenden
-from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
-from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
+from app.schemas.kunde import KundeCreate, KundeListeEintrag, KundeLogoUrl, KundeRead, KundeUpdate
+from app.schemas.kunde_zuweisung import (
+    BetreuerKandidat,
+    BetreuerRead,
+    BetreuungKurz,
+    KundeBetreuungSammel,
+    KundeBetreuungSammelErgebnis,
+    KundeBetreuungUpdate,
+    KundeZuweisungUpdate,
+)
 from app.schemas.kundenportal import KundenportalZugangRead, KundenportalZugangUpdate
 from app.schemas.profile import KundeProfil
 from app.schemas.standort import StandortRead
@@ -44,7 +53,7 @@ from app.schemas.user import MIN_PASSWORT_LAENGE, UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
-from app.services import vorgang_verknuepfung_service
+from app.services import audit_service, berechtigung_service, vorgang_verknuepfung_service
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services import angebot_service, datev_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
@@ -56,11 +65,10 @@ from app.services.einladung_service import (
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.zuweisung_service import (
+    betreuer_user_ids,
     erlaubte_kunde_ids,
     require_kunde_zugriff,
     scope_cache_leeren,
-    technik_user_ids,
-    zuweisbare_user_ids,
 )
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
@@ -79,20 +87,85 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[KundeRead], dependencies=[Depends(require_recht("kunden", "sehen"))])
+@router.get(
+    "", response_model=list[KundeListeEintrag], dependencies=[Depends(require_recht("kunden", "sehen"))]
+)
 async def list_kunden(
     q: str | None = Query(default=None, description="Suche in Name/Kundennummer"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[Kunde]:
+) -> list[KundeListeEintrag]:
     stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
     erlaubt = await erlaubte_kunde_ids(session, auth)
     if erlaubt is not None:
         stmt = stmt.where(Kunde.id.in_(erlaubt))
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    kunden = list((await session.execute(stmt)).scalars().all())
+
+    # Eine Sammelabfrage statt je Kunde eine -- Hauptbetreuer zuerst, dann Name.
+    betreuung: dict[UUID, list[BetreuungKurz]] = {}
+    if kunden:
+        zeilen = await session.execute(
+            select(KundeZuweisung.kunde_id, User.id, User.name, KundeZuweisung.hauptbetreuer)
+            .join(User, User.id == KundeZuweisung.user_id)
+            .where(KundeZuweisung.kunde_id.in_([k.id for k in kunden]))
+            .order_by(KundeZuweisung.hauptbetreuer.desc(), User.name)
+        )
+        for kunde_id, user_id, name, haupt in zeilen.all():
+            betreuung.setdefault(kunde_id, []).append(
+                BetreuungKurz(user_id=user_id, name=name, hauptbetreuer=haupt)
+            )
+    return [
+        KundeListeEintrag(**KundeRead.model_validate(k).model_dump(), betreuung=betreuung.get(k.id, []))
+        for k in kunden
+    ]
+
+
+@router.get(
+    "/betreuer-auswahl",
+    response_model=list[BetreuerKandidat],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_module("kundenverwaltung")),
+    ],
+)
+async def betreuer_auswahl(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> list[BetreuerKandidat]:
+    """Auswahlliste fuer die Betreuungspflege. Eigener Endpoint, weil die
+    allgemeine Nutzer-Auswahl mitarbeiterverwaltung.sehen verlangt. Inaktive
+    Nutzer erscheinen nur, solange sie noch Betreuer sind (zum Entfernen)."""
+    anzahl = {
+        user_id: n
+        for user_id, n in (
+            await session.execute(
+                select(KundeZuweisung.user_id, func.count()).group_by(KundeZuweisung.user_id)
+            )
+        ).all()
+    }
+    kandidaten = await betreuer_user_ids(session, auth.mandant_id)
+    zeilen = await session.execute(
+        select(User, AccountTyp.name)
+        .outerjoin(AccountTyp, AccountTyp.id == User.account_typ_id)
+        .where(User.mandant_id == auth.mandant_id, User.id.in_(kandidaten | set(anzahl)))
+        .order_by(User.name)
+    )
+    return [
+        BetreuerKandidat(
+            user_id=user.id,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            aktiv=user.aktiv,
+            nur_betreute_kunden=await berechtigung_service.ist_auf_zugewiesene_kunden_beschraenkt(
+                session, user_id=user.id, rolle=user.role
+            ),
+            account_typ_name=typ_name,
+            anzahl_kunden=anzahl.get(user.id, 0),
+        )
+        for user, typ_name in zeilen.all()
+    ]
 
 
 @router.post(
@@ -275,6 +348,7 @@ async def get_kunde_profil(
         ),
         tags=list(tags_result.scalars().all()),
         techniker=list(techniker_result.scalars().all()),
+        betreuung=await _betreuung_laden(session, kunde_id),
     )
 
 
@@ -379,6 +453,256 @@ async def get_kunde_datenexport(
     )
 
 
+async def _betreuung_laden(session: AsyncSession, kunde_id: UUID) -> list[BetreuerRead]:
+    zeilen = await session.execute(
+        select(User, KundeZuweisung.hauptbetreuer, AccountTyp.name)
+        .join(KundeZuweisung, KundeZuweisung.user_id == User.id)
+        .outerjoin(AccountTyp, AccountTyp.id == User.account_typ_id)
+        .where(KundeZuweisung.kunde_id == kunde_id)
+        .order_by(KundeZuweisung.hauptbetreuer.desc(), User.name)
+    )
+    return [
+        BetreuerRead(
+            user_id=user.id,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            hauptbetreuer=haupt,
+            aktiv=user.aktiv,
+            nur_betreute_kunden=await berechtigung_service.ist_auf_zugewiesene_kunden_beschraenkt(
+                session, user_id=user.id, rolle=user.role
+            ),
+            account_typ_name=typ_name,
+        )
+        for user, haupt, typ_name in zeilen.all()
+    ]
+
+
+async def _kunde_oder_404(session: AsyncSession, kunde_id: UUID) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    return kunde
+
+
+def _betreuung_audit_stand(zuweisungen: list[KundeZuweisung]) -> dict:
+    return {
+        "user_ids": sorted(str(z.user_id) for z in zuweisungen),
+        "hauptbetreuer_id": next((str(z.user_id) for z in zuweisungen if z.hauptbetreuer), None),
+    }
+
+
+async def _betreuung_ersetzen(
+    session: AsyncSession,
+    auth: AuthContext,
+    kunde_id: UUID,
+    user_ids: set[UUID],
+    hauptbetreuer_id: UUID | None,
+    *,
+    haupt_behalten: bool = False,
+) -> None:
+    """Gemeinsame Logik von PUT /betreuung und PUT /techniker. haupt_behalten:
+    der bisherige Hauptbetreuer bleibt, solange er in user_ids steht (der alte
+    Pfad kennt das Feld nicht)."""
+    bestehende_result = await session.execute(
+        select(KundeZuweisung).where(KundeZuweisung.kunde_id == kunde_id)
+    )
+    bestehende = {z.user_id: z for z in bestehende_result.scalars().all()}
+    vorher = _betreuung_audit_stand(list(bestehende.values()))
+
+    if haupt_behalten:
+        hauptbetreuer_id = next(
+            (uid for uid, z in bestehende.items() if z.hauptbetreuer and uid in user_ids), None
+        )
+    elif hauptbetreuer_id is not None and hauptbetreuer_id not in user_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Der Hauptbetreuer muss in der Betreuerliste enthalten sein",
+        )
+
+    # Nur Neues pruefen: ein inzwischen deaktivierter Betreuer darf in der
+    # unveraenderten Liste mitgeschickt werden, ohne dass das Speichern scheitert.
+    zu_pruefen = user_ids - bestehende.keys()
+    if hauptbetreuer_id is not None and not (
+        bestehende.get(hauptbetreuer_id) is not None and bestehende[hauptbetreuer_id].hauptbetreuer
+    ):
+        zu_pruefen = zu_pruefen | {hauptbetreuer_id}
+    if zu_pruefen and not zu_pruefen <= await betreuer_user_ids(session, auth.mandant_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mindestens ein user_id ist ungültig, deaktiviert oder kein Mitarbeiter dieses Mandanten",
+        )
+
+    for user_id, zuweisung in bestehende.items():
+        if user_id not in user_ids:
+            await session.delete(zuweisung)
+        elif zuweisung.hauptbetreuer and user_id != hauptbetreuer_id:
+            zuweisung.hauptbetreuer = False
+    for user_id in user_ids - bestehende.keys():
+        bestehende[user_id] = KundeZuweisung(
+            mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=user_id
+        )
+        session.add(bestehende[user_id])
+    # Erst das alte Flag loesen, dann das neue setzen: der partielle Unique-Index
+    # vertraegt nie zwei Hauptbetreuer, auch nicht innerhalb eines Flush.
+    await session.flush()
+    if hauptbetreuer_id is not None:
+        bestehende[hauptbetreuer_id].hauptbetreuer = True
+        await session.flush()
+    scope_cache_leeren(session)
+
+    nachher = _betreuung_audit_stand([bestehende[uid] for uid in user_ids])
+    if nachher != vorher:
+        await audit_service.log_aenderung(
+            session,
+            aktion="kunde.betreuung_geaendert",
+            mandant_id=auth.mandant_id,
+            actor_user_id=auth.user_id,
+            entity_type="kunde",
+            entity_id=kunde_id,
+            vorher=vorher,
+            nachher=nachher,
+        )
+
+
+@router.get(
+    "/{kunde_id}/betreuung",
+    response_model=list[BetreuerRead],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "sehen")),
+        Depends(require_module("kundenverwaltung")),
+    ],
+)
+async def list_kunde_betreuung(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[BetreuerRead]:
+    await _kunde_oder_404(session, kunde_id)
+    await _require_kunde_zugriff(session, auth, kunde_id)
+    return await _betreuung_laden(session, kunde_id)
+
+
+@router.put(
+    "/{kunde_id}/betreuung",
+    response_model=list[BetreuerRead],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_module("kundenverwaltung")),
+    ],
+)
+async def set_kunde_betreuung(
+    kunde_id: UUID,
+    body: KundeBetreuungUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[BetreuerRead]:
+    await _kunde_oder_404(session, kunde_id)
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
+    await _betreuung_ersetzen(
+        session, auth, kunde_id, set(body.user_ids), body.hauptbetreuer_id
+    )
+    return await _betreuung_laden(session, kunde_id)
+
+
+@router.post(
+    "/betreuung/sammel",
+    response_model=KundeBetreuungSammelErgebnis,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_module("kundenverwaltung")),
+    ],
+)
+async def betreuung_sammel(
+    body: KundeBetreuungSammel,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> KundeBetreuungSammelErgebnis:
+    kunde_ids = set(body.kunde_ids)
+    gefunden = set(
+        (
+            await session.execute(
+                select(Kunde.id).where(Kunde.id.in_(kunde_ids), Kunde.geloescht_am.is_(None))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    erlaubt = await erlaubte_kunde_ids(session, auth, "bearbeiten")
+    if gefunden != kunde_ids or (erlaubt is not None and not kunde_ids <= erlaubt):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+
+    if body.user_id not in await betreuer_user_ids(session, auth.mandant_id):
+        # Auch beim Entfernen: gesperrte oder fremde Nutzer sind hier kein gueltiges Ziel.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id ist ungültig, deaktiviert oder kein Mitarbeiter dieses Mandanten",
+        )
+
+    zeilen = await session.execute(
+        select(KundeZuweisung).where(KundeZuweisung.kunde_id.in_(kunde_ids))
+    )
+    je_kunde: dict[UUID, list[KundeZuweisung]] = {kid: [] for kid in kunde_ids}
+    for zuweisung in zeilen.scalars().all():
+        je_kunde[zuweisung.kunde_id].append(zuweisung)
+
+    geaendert = 0
+    for kunde_id, vorhandene in je_kunde.items():
+        vorher = _betreuung_audit_stand(vorhandene)
+        eigene = next((z for z in vorhandene if z.user_id == body.user_id), None)
+        haupt = next((z for z in vorhandene if z.hauptbetreuer), None)
+
+        if body.aktion == "entfernen":
+            if eigene is None:
+                continue
+            await session.delete(eigene)
+            vorhandene.remove(eigene)
+        elif body.aktion == "hinzufuegen":
+            neu = eigene is None
+            if neu:
+                eigene = KundeZuweisung(
+                    mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=body.user_id
+                )
+                session.add(eigene)
+                vorhandene.append(eigene)
+            setze_haupt = body.auch_hauptbetreuer and haupt is None
+            if setze_haupt:
+                eigene.hauptbetreuer = True
+            if not neu and not setze_haupt:
+                continue
+        else:
+            if eigene is not None and eigene.hauptbetreuer:
+                continue
+            if haupt is not None:
+                haupt.hauptbetreuer = False
+                await session.flush()
+            if eigene is None:
+                eigene = KundeZuweisung(
+                    mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=body.user_id
+                )
+                session.add(eigene)
+                vorhandene.append(eigene)
+            eigene.hauptbetreuer = True
+
+        geaendert += 1
+        await audit_service.log_aenderung(
+            session,
+            aktion="kunde.betreuung_geaendert",
+            mandant_id=auth.mandant_id,
+            actor_user_id=auth.user_id,
+            entity_type="kunde",
+            entity_id=kunde_id,
+            vorher=vorher,
+            nachher=_betreuung_audit_stand(vorhandene),
+        )
+
+    await session.flush()
+    scope_cache_leeren(session)
+    return KundeBetreuungSammelErgebnis(geaendert=geaendert)
+
+
 @router.get(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
@@ -420,39 +744,7 @@ async def set_kunde_techniker(
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
-
-    user_ids = set(body.user_ids)
-    if user_ids:
-        gueltige_ids = await technik_user_ids(session, auth.mandant_id) & user_ids
-        if gueltige_ids != user_ids:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Mindestens ein user_id ist ungültig oder kein Techniker dieses Mandanten",
-            )
-
-    bestehende_result = await session.execute(
-        select(KundeZuweisung).where(KundeZuweisung.kunde_id == kunde_id)
-    )
-    bestehende = {z.user_id: z for z in bestehende_result.scalars().all()}
-
-    # Nur neue Zuweisungen pruefen: ein inzwischen deaktivierter Techniker darf
-    # in der unveraenderten Liste mitgeschickt werden, ohne dass das Speichern scheitert.
-    neue_ids = user_ids - bestehende.keys()
-    if neue_ids and await zuweisbare_user_ids(session, neue_ids) != neue_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
-        )
-
-    for user_id, zuweisung in bestehende.items():
-        if user_id not in user_ids:
-            await session.delete(zuweisung)
-    for user_id in user_ids - bestehende.keys():
-        session.add(
-            KundeZuweisung(mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=user_id)
-        )
-    await session.flush()
-    scope_cache_leeren(session)
+    await _betreuung_ersetzen(session, auth, kunde_id, set(body.user_ids), None, haupt_behalten=True)
 
     result = await session.execute(
         select(User)

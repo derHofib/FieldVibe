@@ -1,5 +1,6 @@
 import type { KundeProfil } from "../../../types";
-import { Stammdaten, TechnikerZuweisung } from "./KundeUebersicht";
+import { KundeBetreuung } from "../../../components/kunde/KundeBetreuung";
+import { Stammdaten } from "./KundeUebersicht";
 
 export function KundeUebersichtTab({
   id,
@@ -25,7 +26,7 @@ export function KundeUebersichtTab({
       kannVerwalten={kannVerwalten}
     />
 
-    {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
+    <KundeBetreuung kundeId={id!} betreuung={profil.betreuung ?? []} kannVerwalten={kannVerwalten} />
     </>
   );
 }

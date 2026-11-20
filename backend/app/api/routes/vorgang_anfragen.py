@@ -22,7 +22,11 @@ from app.schemas.vorgang_anfrage import (
 )
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
-from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    hauptbetreuer_uebernehmen,
+    require_kunde_zugriff,
+)
 
 router = APIRouter(
     prefix="/api/vorgang-anfragen",
@@ -186,6 +190,7 @@ async def annehmen(
             payload={"status": vorgang.status, "vorgang_anfrage_id": str(anfrage.id)},
         )
     )
+    await hauptbetreuer_uebernehmen(session, vorgang, auth.user_id)
 
     anfrage.status = "angenommen"
     anfrage.vorgang_id = vorgang.id

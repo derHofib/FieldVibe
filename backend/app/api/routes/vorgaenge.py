@@ -63,6 +63,7 @@ from app.services.vorgang_completion_service import (
 )
 from app.services import vorgang_verknuepfung_service as verknuepfung
 from app.services.zuweisung_service import (
+    hauptbetreuer_uebernehmen,
     require_kunde_zugewiesen,
     require_vorgang_zugriff,
     vorgang_scope_filter,
@@ -316,6 +317,7 @@ async def create_vorgang(
             payload=mit_ki_kennzeichnung(auth, {"status": vorgang.status}),
         )
     )
+    await hauptbetreuer_uebernehmen(session, vorgang, auth.user_id)
     await session.flush()
     await session.refresh(vorgang)
     await ki_schreibzugriff_protokollieren(

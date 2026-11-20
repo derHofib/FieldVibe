@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Hash, MapPin, Plus, Search, User, Users } from "lucide-react";
-import { useState } from "react";
+import { Building2, Hash, MapPin, Plus, Search, Star, User, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
+import { Monogramm } from "../../components/apple/Monogramm";
+import { useBetreuungFilterFelder } from "../../components/kunde/useBetreuungFilter";
+import { betreuungSuchtext } from "../../utils/betreuung";
+import { KundenSammelleiste } from "./KundenSammelleiste";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
@@ -47,12 +51,31 @@ const SPALTEN: Spalte<Kunde>[] = [
     render: (k) => k.ansprechpartner[0]?.name ?? "–",
     sortWert: (k) => k.ansprechpartner[0]?.name ?? "",
   },
+  {
+    key: "betreuung",
+    label: "Betreuung",
+    render: (k) => {
+      const erster = k.betreuung?.[0];
+      if (!erster) return <span className="whitespace-nowrap text-label3">Ohne Betreuung</span>;
+      return (
+        <span className="flex min-w-[9rem] items-center gap-1.5">
+          <Monogramm name={erster.name} groesse={22} />
+          <span className="min-w-0 truncate">{erster.name}</span>
+          {erster.hauptbetreuer && (
+            <Star size={12} strokeWidth={2} className="shrink-0 fill-current text-st-arbeit-dot" aria-label="Hauptbetreuer" />
+          )}
+          {k.betreuung!.length > 1 && <span className="shrink-0 text-label2">+{k.betreuung!.length - 1}</span>}
+        </span>
+      );
+    },
+    sortWert: (k) => k.betreuung?.[0]?.name ?? "",
+  },
 ];
 
 const ANSPRECHPARTNER = (k: Kunde) => k.ansprechpartner.map((a) => a.name).join(", ");
 
 // Schlüssel = Spalten-Key, damit SortierbareTabelle den Kopf hervorheben kann.
-const FELDER: FilterFeld<Kunde>[] = [
+const BASIS_FELDER: FilterFeld<Kunde>[] = [
   { key: "nr", label: "Kundennr.", typ: "text", icon: Hash, wert: (k) => k.kundennummer },
   { key: "name", label: "Name", typ: "text", icon: Users, wert: (k) => k.name },
   {
@@ -68,7 +91,7 @@ const FELDER: FilterFeld<Kunde>[] = [
 ];
 
 const suchtext = (k: Kunde) =>
-  [k.kundennummer, k.name, k.typ ? TYP_LABEL[k.typ] : "", ORT(k), ANSPRECHPARTNER(k)].join(" ");
+  [k.kundennummer, k.name, k.typ ? TYP_LABEL[k.typ] : "", ORT(k), ANSPRECHPARTNER(k), betreuungSuchtext(k.betreuung)].join(" ");
 
 /** Desktop-Fassung des Tabs "Kunden" aus GeschaeftPage: Tabelle links, das
  * bestehende Kundenprofil als Detailpanel rechts. Die Auswahl steckt in der
@@ -77,19 +100,41 @@ export function OfficeKundenPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hatRecht } = useAuth();
-  const zustand = useFilterZustand({ felder: FELDER });
   const [neu, setNeu] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
   });
+  const betreuungFelder = useBetreuungFilterFelder(data);
+  const FELDER = useMemo(() => [...BASIS_FELDER, ...betreuungFelder], [betreuungFelder]);
+  const zustand = useFilterZustand({ felder: FELDER });
+
+  const kannBetreuen = hatRecht("kunden", "bearbeiten");
+  const { data: kandidaten } = useQuery({
+    queryKey: ["kunden", "betreuer-auswahl"],
+    queryFn: kundenApi.betreuerAuswahl,
+    enabled: kannBetreuen,
+  });
+  const [gewaehlteIds, setGewaehlteIds] = useState<ReadonlySet<string>>(new Set());
 
   const gefiltert = sucheAnwenden(
     filterAnwenden(data ?? [], zustand.bedingungen, FELDER),
     zustand.sucheVerzoegert,
     suchtext,
   );
+
+  // Nur sichtbare Zeilen zählen: die Leiste nennt genau die Kunden, die man in der Tabelle sieht.
+  const ausgewaehlt = gefiltert.filter((k) => gewaehlteIds.has(k.id));
+  const auswahlAendern = (keys: string[], an: boolean) =>
+    setGewaehlteIds((alt) => {
+      const neuesSet = new Set(alt);
+      for (const key of keys) {
+        if (an) neuesSet.add(key);
+        else neuesSet.delete(key);
+      }
+      return neuesSet;
+    });
 
   const waehlen = (kunde: Kunde) => {
     navigate(`/kunden/${kunde.id}`);
@@ -114,15 +159,23 @@ export function OfficeKundenPage() {
         )}
       </SeitenKopf>
 
-      <FilterLeiste
-        felder={FELDER}
-        zustand={zustand}
-        variante="office"
-        suchPlatzhalter="Kunden suchen…"
-        ansichten="kunden"
-        alteVorlageUmrechnen={() => []}
-        className="mb-4"
-      />
+      {kannBetreuen && ausgewaehlt.length > 0 ? (
+        <KundenSammelleiste
+          ausgewaehlt={ausgewaehlt}
+          kandidaten={kandidaten}
+          onLeeren={() => setGewaehlteIds(new Set())}
+        />
+      ) : (
+        <FilterLeiste
+          felder={FELDER}
+          zustand={zustand}
+          variante="office"
+          suchPlatzhalter="Kunden suchen…"
+          ansichten="kunden"
+          alteVorlageUmrechnen={() => []}
+          className="mb-4"
+        />
+      )}
 
       <ListeMitPanel
         panelTitel="Kundenprofil"
@@ -159,12 +212,15 @@ export function OfficeKundenPage() {
             <SortierbareTabelle
               zeilen={gefiltert}
               // Bei offenem Panel ist die Tabelle schmal -- Nebenspalte weglassen statt abschneiden
-              spalten={id ? SPALTEN.filter((sp) => sp.key !== "kontakt") : SPALTEN}
+              spalten={id ? SPALTEN.filter((sp) => sp.key !== "kontakt" && sp.key !== "typ" && sp.key !== "ort") : SPALTEN}
               zeilenKey={(k) => k.id}
               gewaehlt={id}
               onWaehlen={waehlen}
               startSortierung={{ key: "name" }}
               hervorgehoben={zustand.bedingungen.map((b) => b.feld)}
+              auswahl={kannBetreuen ? gewaehlteIds : undefined}
+              onAuswahl={kannBetreuen ? auswahlAendern : undefined}
+              auswahlLabel={(k) => `${k.name} auswählen`}
             />
           )
         }
