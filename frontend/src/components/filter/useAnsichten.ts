@@ -14,6 +14,14 @@ export interface Ansicht {
   name: string;
   istStandard: boolean;
   bedingungen: FilterBedingung[];
+  /** Seitenspezifischer Zusatzzustand (z. B. Gruppierung/Sortierung); fehlt bei älteren Ansichten. */
+  zusatz?: Record<string, unknown>;
+}
+
+/** Zusatzzustand der Seite, der mit in die Ansicht gespeichert wird (`filter_json.zusatz`). */
+export interface AnsichtenZusatz {
+  lesen: () => Record<string, unknown>;
+  anwenden: (zusatz: Record<string, unknown>) => void;
 }
 
 function bereinige<T>(roh: unknown, felder: FilterFeld<T>[]): FilterBedingung[] {
@@ -39,8 +47,10 @@ export function useAnsichten<T>(opts: {
   zustand: FilterZustand;
   felder: FilterFeld<T>[];
   alteVorlageUmrechnen?: (alt: Record<string, string>) => FilterBedingung[];
+  zusatz?: AnsichtenZusatz;
 }) {
-  const { entitaet, zustand, felder, alteVorlageUmrechnen } = opts;
+  const { entitaet, zustand, felder, alteVorlageUmrechnen, zusatz } = opts;
+  const filterJson = () => ({ v: 2, bedingungen: zustand.bedingungen, ...(zusatz ? { zusatz: zusatz.lesen() } : {}) });
   const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const standardAngewendet = useRef(false);
@@ -58,7 +68,8 @@ export function useAnsichten<T>(opts: {
     let bedingungen: FilterBedingung[] | null = null;
     if (fj.v === 2) bedingungen = bereinige(fj.bedingungen, felder);
     else if (alteVorlageUmrechnen) bedingungen = bereinige(alteVorlageUmrechnen(fj as Record<string, string>), felder);
-    return bedingungen ? [{ id: v.id, name: v.name, istStandard: v.ist_standard, bedingungen }] : [];
+    const z = fj.v === 2 && fj.zusatz && typeof fj.zusatz === "object" && !Array.isArray(fj.zusatz) ? (fj.zusatz as Record<string, unknown>) : undefined;
+    return bedingungen ? [{ id: v.id, name: v.name, istStandard: v.ist_standard, bedingungen, zusatz: z }] : [];
   });
 
   useEffect(() => {
@@ -68,6 +79,7 @@ export function useAnsichten<T>(opts: {
     // Link oder Zurück-Taste mit eigenen Filtern gewinnt gegen die Standard-Ansicht.
     if (standard && zustand.bedingungen.length === 0) {
       zustand.setBedingungen(standard.bedingungen);
+      if (standard.zusatz) zusatz?.anwenden(standard.zusatz);
       setGewaehltId(standard.id);
     }
     // Nur beim ersten Laden der Liste anwenden.
@@ -87,7 +99,7 @@ export function useAnsichten<T>(opts: {
       gespeicherteFilterApi.create({
         entitaet: entitaet!,
         name: v.name,
-        filter_json: { v: 2, bedingungen: zustand.bedingungen },
+        filter_json: filterJson(),
         ist_standard: v.alsStandard,
       }),
     onSuccess: (neu) => {
@@ -100,7 +112,7 @@ export function useAnsichten<T>(opts: {
   const uebernehmenMut = useMutation({
     meta: { erfolg: "Ansicht aktualisiert" },
     mutationFn: (a: Ansicht) =>
-      gespeicherteFilterApi.update(a.id, { filter_json: { v: 2, bedingungen: zustand.bedingungen } }),
+      gespeicherteFilterApi.update(a.id, { filter_json: filterJson() }),
     onSuccess: invalidate,
   });
 
@@ -127,6 +139,7 @@ export function useAnsichten<T>(opts: {
     speichernLaeuft: erstellen.isPending,
     anwenden: (a: Ansicht) => {
       zustand.setBedingungen(a.bedingungen);
+      if (a.zusatz) zusatz?.anwenden(a.zusatz);
       setGewaehltId(a.id);
     },
     speichern: (name: string, alsStandard: boolean) => erstellen.mutate({ name, alsStandard }),

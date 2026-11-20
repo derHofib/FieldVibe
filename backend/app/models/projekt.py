@@ -119,6 +119,9 @@ class ProjektAufgabe(SoftDeleteMixin, TimestampMixin, Base):
             name="ck_projekt_aufgaben_meilenstein_eintaegig",
         ),
         CheckConstraint("fortschritt BETWEEN 0 AND 100", name="ck_projekt_aufgaben_fortschritt_valid"),
+        CheckConstraint(
+            "auftrag_id IS NULL OR vorgang_id IS NULL", name="ck_projekt_aufgaben_auftrag_oder_vorgang"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -148,6 +151,11 @@ class ProjektAufgabe(SoftDeleteMixin, TimestampMixin, Base):
     # Sync in irgendeine Richtung (siehe app/api/routes/projekte.py).
     vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
+    )
+    # Entweder Auftrag oder Vorgang: der Auftrag eines Vorgangs ergibt sich
+    # ueber den Vorgang, ein zweiter direkter Bezug waere widerspruechlich.
+    auftrag_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auftraege.id", ondelete="SET NULL"), nullable=True, index=True
     )
     anlage_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("anlagen.id", ondelete="SET NULL"), nullable=True

@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 GespeicherterFilterEntitaet = Literal[
-    "vorgaenge", "anlagen", "kunden", "standorte", "rechnungen"
+    "vorgaenge", "anlagen", "kunden", "standorte", "rechnungen", "aufgaben"
 ]
 
 

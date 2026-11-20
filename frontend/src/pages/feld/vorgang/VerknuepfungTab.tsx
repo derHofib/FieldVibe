@@ -9,6 +9,7 @@ import type { Vorgang, VorgangHerkunftArt, VorgangHerkunftEintrag, VorgangVerknu
 import { formatDatum, formatEuro } from "../../../utils/format";
 import { auftragLink, istVorgangErledigt, projektLink } from "../../../utils/verknuepfung";
 import { ABSCHNITT_AKTION, Abschnitt } from "./Abschnitt";
+import { BezugAufgabenAbschnitt } from "../aufgaben/BezugAufgabenAbschnitt";
 import { useZweispaltig } from "./useZweispaltig";
 
 const ICON: Record<VorgangHerkunftArt, LucideIcon> = {
@@ -241,6 +242,8 @@ export function VerknuepfungTab({
         </Abschnitt>
       ) : null;
 
+    const aufgaben = <BezugAufgabenAbschnitt vorgangId={vorgang.id} />;
+
     inhalt = zweispaltig ? (
       <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-x-4">
         <div className="min-w-0">
@@ -250,6 +253,7 @@ export function VerknuepfungTab({
         <div className="min-w-0 border-l-[0.5px] border-sep pl-4">
           {freigabe}
           {geschwister}
+          {aufgaben}
         </div>
       </div>
     ) : (
@@ -258,6 +262,7 @@ export function VerknuepfungTab({
         {rueckmeldung}
         {freigabe}
         {geschwister}
+        {aufgaben}
       </div>
     );
   }

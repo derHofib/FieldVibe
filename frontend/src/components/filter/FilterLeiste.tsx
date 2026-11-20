@@ -12,7 +12,7 @@ import { Kopf, Liste, type Variante } from "./FilterListe";
 import { FilterPopover, PopoverRahmen } from "./FilterPopover";
 import { OperatorSchritt, SpaltenSchritt, WertSchritt } from "./FilterSchritte";
 import { OPERATOR_LABEL, type FilterBedingung, type FilterFeld } from "./typen";
-import { useAnsichten } from "./useAnsichten";
+import { useAnsichten, type AnsichtenZusatz } from "./useAnsichten";
 import { useFilterEntwurf } from "./useFilterEntwurf";
 import type { FilterZustand } from "./useFilterZustand";
 
@@ -25,12 +25,14 @@ export interface FilterLeisteProps<T> {
   suchPlatzhalter?: string;
   ansichten?: GespeicherterFilterEntitaet;
   alteVorlageUmrechnen?: (alt: Record<string, string>) => FilterBedingung[];
+  /** Seitenzustand neben den Filtern (Gruppierung, Sortierung), der mit in Ansichten gespeichert wird. */
+  ansichtenZusatz?: AnsichtenZusatz;
   variante?: Variante;
   ohneSuche?: boolean;
   className?: string;
   /** Office: Platz links vor der Suche (z. B. Umschalter Vorlagen | Ausgefüllt). */
   vorne?: React.ReactNode;
-  /** Office: Platz rechts außen (z. B. Trefferzahl). */
+  /** Office: Platz rechts außen (z. B. Trefferzahl). Feld: Knöpfe neben dem Filter-Knopf (z. B. Gruppieren). */
   hinten?: React.ReactNode;
 }
 
@@ -46,7 +48,7 @@ export function FilterLeiste<T>(props: FilterLeisteProps<T>) {
   const { felder, zustand, suchPlatzhalter = "Suchen…", ansichten, alteVorlageUmrechnen, ohneSuche = false, className = "" } = props;
   const variante: Variante = props.variante ?? (istOfficeHost() ? "office" : "feld");
   const e = useFilterEntwurf(felder, zustand);
-  const a = useAnsichten({ entitaet: ansichten, zustand, felder, alteVorlageUmrechnen });
+  const a = useAnsichten({ entitaet: ansichten, zustand, felder, alteVorlageUmrechnen, zusatz: props.ansichtenZusatz });
   const [anker, setAnker] = useState<HTMLElement | null>(null);
 
   const eintraege: PillenEintrag[] = useMemo(
@@ -69,6 +71,7 @@ export function FilterLeiste<T>(props: FilterLeisteProps<T>) {
     return (
       <FeldLeiste
         {...{ felder, zustand, suchPlatzhalter, ansichten, ohneSuche, className, e, a, eintraege }}
+        hinten={props.hinten}
         live={live}
       />
     );
@@ -354,7 +357,19 @@ function OfficeLeiste<T>({
 
 function noop() {}
 
-function FeldLeiste<T>({ felder, zustand, suchPlatzhalter, ansichten, ohneSuche, className, e, a, eintraege, live }: Gemeinsam<T>) {
+function FeldLeiste<T>({
+  felder,
+  zustand,
+  suchPlatzhalter,
+  ansichten,
+  ohneSuche,
+  className,
+  e,
+  a,
+  eintraege,
+  live,
+  hinten,
+}: Gemeinsam<T> & { hinten?: React.ReactNode }) {
   const n = eintraege.length;
   const [ansichtenSeite, setAnsichtenSeite] = useState(false);
   const offen = e.entwurf !== null;
@@ -389,6 +404,7 @@ function FeldLeiste<T>({ felder, zustand, suchPlatzhalter, ansichten, ohneSuche,
           <Funnel size={16} strokeWidth={2} aria-hidden="true" />
           Filter
         </button>
+        {hinten}
         {eintraege.map((x) => (
           <FilterPille
             key={`${x.index}-${x.teile.spalte}`}

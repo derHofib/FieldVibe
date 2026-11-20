@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-GESPEICHERTER_FILTER_ENTITAETEN = ("vorgaenge", "anlagen", "kunden", "standorte", "rechnungen")
+GESPEICHERTER_FILTER_ENTITAETEN = ("vorgaenge", "anlagen", "kunden", "standorte", "rechnungen", "aufgaben")
 
 
 class GespeicherterFilter(TimestampMixin, Base):

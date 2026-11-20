@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Vorgang, VorgangVerknuepfung } from "../../../../types";
 import { VerknuepfungTab } from "../VerknuepfungTab";
 
+// Der Aufgaben-Abschnitt braucht Router und QueryClient und hat eigene Tests.
+vi.mock("../../aufgaben/BezugAufgabenAbschnitt", () => ({ BezugAufgabenAbschnitt: () => null }));
+
 afterEach(cleanup);
 
 const DATEN: VorgangVerknuepfung = {
