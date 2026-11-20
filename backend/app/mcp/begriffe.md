@@ -12,7 +12,8 @@ Fehlermeldungen. Bezeichner im Code und URLs bleiben unverändert
 | Arbeitszeit | Erfasste Zeiten (Seite `/statistik`, Menüpunkt, CSV-Export) | "Zeiterfassung" in sichtbaren Texten |
 | Kunden, Material, Rechnungen | Eigene Seiten (`GeschaeftPage` entfällt, BACKLOG 7 damit erledigt) | "Geschäft" |
 | Anlage | Betriebsmittel beim Kunden | |
-| Standort | Site eines Kunden | |
+| Standort | Site eines Kunden; bei Hausverwaltungen als "Liegenschaft" beschriftet | |
+| Kontakt vor Ort | Person beim Kunden des Kunden (Mieter, Eigentümer, Bauherr, Hausmeister) an Projekt, Auftrag oder Vorgang; kein eigener Kunde, keine Rechnung, kein Portalzugang | "Endkunde" (meint im Kundenportal unseren Kunden) |
 | Mandant | Tenant (Betrieb, der FieldVibe nutzt) | |
 | Mangel | Defekt, der zu Angebot und Rechnung führt | |
 | Telefonat | Erfasstes Gespräch (Richtung, Partner, Dauer, Ergebnis, Notiz) am Vorgang oder Kunden, optional mit Rückruf | "Anruf", "Telefonnotiz" |

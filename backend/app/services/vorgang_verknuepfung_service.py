@@ -28,6 +28,7 @@ from app.schemas.vorgang_verknuepfung import (
     VorgangVerknuepfung,
 )
 from app.services import berechtigung_service
+from app.services.vor_ort_kontakt_service import hauptkontakte_fuer_vorgaenge
 from app.services.zuweisung_service import vorgang_scope_filter
 
 BEREICH = "vorgaenge"
@@ -182,9 +183,18 @@ async def als_read(session: AsyncSession, auth, vorgaenge: list[Vorgang]) -> lis
             )
             darf_ids = {z[0] for z in zeilen}
 
+    # Ohne das Recht sieht der Nutzer bei eigenstaendig gefuehrten Vorgaengen weder Auftrag noch Projekt --
+    # deren Kontakte vor Ort bleiben dann ebenfalls aussen vor.
+    haupt = await hauptkontakte_fuer_vorgaenge(
+        session,
+        vorgaenge,
+        ohne_vererbung=frozenset() if hat_recht else frozenset(v.id for v in vorgaenge if v.verknuepfung_eigenstaendig),
+    )
+
     gelesen = []
     for vorgang in vorgaenge:
         read = VorgangRead.model_validate(vorgang)
+        read.hauptkontakt_vor_ort = haupt.get(vorgang.id)
         if vorgang.verknuepfung_eigenstaendig and not hat_recht:
             read.projekt_id = None
             read.auftrag_id = None

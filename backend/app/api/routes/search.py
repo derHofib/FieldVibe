@@ -17,6 +17,7 @@ from app.models.standort import Standort
 from app.models.tag import Tag
 from app.models.telefonat import Telefonat
 from app.models.user import User
+from app.models.vor_ort_kontakt import VorOrtKontakt
 from app.models.vorgang import Vorgang
 from app.schemas.search import SearchHit, SearchKategorie, SearchResponse
 from app.services import berechtigung_service
@@ -111,6 +112,9 @@ async def search(
     if await berechtigung_service.hat_recht(session, auth, "projekte", "sehen"):
         erlaubt |= {"auftrag", "projekt"}
     erlaubt.add("telefonat")  # Rechte je Bezug in telefonat_sichtbar_query
+    # Kontakte vor Ort folgen dem Kunden: gleiches Gate wie die Kundenliste.
+    if await berechtigung_service.hat_recht(session, auth, "kunden", "sehen"):
+        erlaubt.add("vor_ort_kontakt")
     # Projekt/Auftrag haben kein Zustaendigkeitsfeld, Telefonate nur "erfasst von".
     if mir_zugewiesen:
         erlaubt &= {"vorgang"}
@@ -383,6 +387,43 @@ async def search(
                 zusatz=_kurz(t.notiz),
             )
             for t, kunde_name in (await session.execute(stmt)).all()
+        ]
+
+    if "vor_ort_kontakt" in erlaubt:
+        stmt = (
+            select(VorOrtKontakt, Kunde.name)
+            .select_from(VorOrtKontakt)
+            .join(Kunde, Kunde.id == VorOrtKontakt.kunde_id)
+            .where(
+                or_(
+                    VorOrtKontakt.name.ilike(muster, escape="\\"),
+                    VorOrtKontakt.telefon.ilike(muster, escape="\\"),
+                    VorOrtKontakt.telefon2.ilike(muster, escape="\\"),
+                    VorOrtKontakt.einheit.ilike(muster, escape="\\"),
+                ),
+                VorOrtKontakt.geloescht_am.is_(None),
+                Kunde.geloescht_am.is_(None),
+            )
+        )
+        if kunde_ids is not None:
+            stmt = stmt.where(VorOrtKontakt.kunde_id.in_(kunde_ids))
+        if seit_ab:
+            stmt = stmt.where(VorOrtKontakt.updated_at >= seit_ab)
+        anzahl["vor_ort_kontakt"] = await _anzahl(session, stmt, VorOrtKontakt.id)
+        stmt = stmt.order_by(
+            func.similarity(func.coalesce(VorOrtKontakt.name, VorOrtKontakt.telefon, ""), q).desc(), VorOrtKontakt.id
+        ).limit(limit).offset(offset)
+        treffer += [
+            SearchHit(
+                kategorie="vor_ort_kontakt",
+                id=k.id,
+                titel=k.name or k.telefon or k.rolle,
+                subtitel=" · ".join(t for t in (k.rolle, k.einheit) if t),
+                kunde_name=kunde_name,
+                kunde_id=k.kunde_id,
+                zusatz=k.telefon if k.name else None,
+            )
+            for k, kunde_name in (await session.execute(stmt)).all()
         ]
 
     if "tag" in erlaubt:

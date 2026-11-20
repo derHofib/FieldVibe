@@ -70,6 +70,7 @@ from app.api.routes import (
     search,
     standorte,
     telefonate,
+    vor_ort_kontakte,
     statistik,
     stories,
     stream,
@@ -175,6 +176,7 @@ app.include_router(dsgvo.router)
 app.include_router(kunden.router)
 app.include_router(telefonate.kontaktverlauf_router)
 app.include_router(telefonate.router)
+app.include_router(vor_ort_kontakte.router)
 app.include_router(anlagen.router)
 app.include_router(anlagen_feld_definitionen.router)
 app.include_router(standorte.router)

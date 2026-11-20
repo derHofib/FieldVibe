@@ -36,6 +36,17 @@ class Auftrag(SoftDeleteMixin, TimestampMixin, Base):
     kunde_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
     )
+    # Leistungsort/Liegenschaft; muss zum Kunden des Auftrags gehoeren (App-Pruefung).
+    standort_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("standorte.id", ondelete="SET NULL"), nullable=True
+    )
+    # Lage innerhalb der Liegenschaft ("Whg. 3, 2. OG links").
+    einheit: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Sachbearbeitung beim Auftraggeber: Id aus kunden.ansprechpartner (JSONB), kein FK
+    # (Muster Telefonat.ansprechpartner_id).
+    ansprechpartner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # "Ihr Zeichen" / Auftragsnummer des Auftraggebers.
+    kunden_referenz: Mapped[str | None] = mapped_column(Text, nullable=True)
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="offen")

@@ -36,6 +36,7 @@ from app.models.standort import Standort
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vertrag import Vertrag
+from app.models.vor_ort_kontakt import VorOrtKontakt, VorOrtKontaktZuordnung
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
@@ -62,6 +63,8 @@ TABELLEN: tuple[Tabelle, ...] = (
     Tabelle("anlagen", Anlage, "Anlagen/Betriebsmittel (inkl. Lagerorte und Fahrzeuge)"),
     Tabelle("vertraege", Vertrag, "Wartungs-/Serviceverträge"),
     Tabelle("vorgaenge", Vorgang, "Vorgänge (Aufträge/Tickets)"),
+    Tabelle("vor_ort_kontakte", VorOrtKontakt, "Kontakte vor Ort (Mieter, Bauherr, Hausmeister ...; anonymisierte Zeilen ohne Namen)"),
+    Tabelle("vor_ort_kontakt_zuordnungen", VorOrtKontaktZuordnung, "Zuordnung der Kontakte vor Ort zu Projekt, Auftrag oder Vorgang"),
     Tabelle("vorgang_verlauf", VorgangEvent, "Verlauf der Vorgänge (Chat, Statusänderungen, Foto-/Dokumentverweise)"),
     Tabelle("termine", Termin, "Termine"),
     Tabelle("maengel", Mangel, "Mängel"),
@@ -98,7 +101,7 @@ EINSTELLUNGEN_FELDER = (
     "id", "name", "slug", "branche", "status", "branding", "deaktivierte_module", "firmendaten",
     "scheduler_stunde_utc", "wiedervorlage_standard_tage", "standard_lohn_gemeinkosten_prozent",
     "standard_gewinn_wagnis_prozent", "km_satz_netto", "fahrzeit_satz_netto", "fahrzeit_abrechnung",
-    "bundesland", "created_at", "updated_at",
+    "bundesland", "vor_ort_kontakte_anonymisieren_monate", "created_at", "updated_at",
 )
 
 

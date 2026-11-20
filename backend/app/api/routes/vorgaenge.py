@@ -45,7 +45,7 @@ from app.schemas.vorgang_abhaengigkeit import (
     VorgangAbhaengigkeitenListe,
     VorgangAbhaengigkeitRead,
 )
-from app.services import papierkorb_service
+from app.services import papierkorb_service, vor_ort_kontakt_service
 from app.services.audit_service import ki_schreibzugriff_protokollieren, log_action
 from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
@@ -231,6 +231,25 @@ async def _validate_references(
         )
 
 
+async def _aus_auftrag_vorbelegen(
+    session: AsyncSession, body: VorgangCreate, auftrag_id: UUID | None
+) -> tuple[UUID | None, str | None]:
+    """Standort und Einheit kommen aus dem Auftrag, wenn der Request sie nicht setzt (aenderbar, keine Live-
+    Vererbung). Die Adresse bleibt unangetastet. Ein Standort wird nur uebernommen, wenn er zum Kunden des
+    Vorgangs gehoert und noch aktiv ist."""
+    standort_id, einheit = body.standort_id, body.einheit
+    auftrag = await session.get(Auftrag, auftrag_id) if auftrag_id is not None else None
+    if auftrag is None:
+        return standort_id, einheit
+    if standort_id is None and auftrag.standort_id is not None and auftrag.kunde_id == body.kunde_id:
+        standort = await session.get(Standort, auftrag.standort_id)
+        if standort is not None and standort.geloescht_am is None and standort.aktiv:
+            standort_id = standort.id
+    if einheit is None:
+        einheit = auftrag.einheit
+    return standort_id, einheit
+
+
 @router.post(
     "",
     response_model=VorgangRead,
@@ -272,13 +291,16 @@ async def create_vorgang(
         neu_projekt_id=body.projekt_id,
     )
 
+    standort_id, einheit = await _aus_auftrag_vorbelegen(session, body, auftrag_id)
+
     vorgangsnummer = body.vorgangsnummer or await next_vorgangsnummer(session, auth.mandant_id)
     vorgang = Vorgang(
         mandant_id=auth.mandant_id,
         vorgangsnummer=vorgangsnummer,
         kunde_id=body.kunde_id,
         anlage_id=body.anlage_id,
-        standort_id=body.standort_id,
+        standort_id=standort_id,
+        einheit=einheit,
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
         projekt_id=projekt_id,
@@ -421,7 +443,27 @@ async def get_vorgang(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
     await _mit_zugewiesenem_namen(session, vorgang)
-    return await verknuepfung.als_read_einzeln(session, auth, vorgang)
+    read = await verknuepfung.als_read_einzeln(session, auth, vorgang)
+    await _vor_ort_anreichern(session, auth, vorgang, read)
+    return read
+
+
+async def _vor_ort_anreichern(session: AsyncSession, auth: AuthContext, vorgang: Vorgang, read: VorgangRead) -> None:
+    """Kontakte vor Ort (eigene + Auftrag + Projekt), Sachbearbeitung und Zeichen des Auftraggebers fuer die
+    Feld-App. Bei eigenstaendig gefuehrten Vorgaengen ohne Recht nur die eigenen Kontakte, ohne Auftrag."""
+    verborgen = vorgang.verknuepfung_eigenstaendig and not await verknuepfung.hat_eigenstaendig_recht(session, auth)
+    read.vor_ort_kontakte = await vor_ort_kontakt_service.kontakte_fuer_ziel(
+        session, vorgang=vorgang, ohne_vererbung=verborgen
+    )
+    auftrag = await session.get(Auftrag, vorgang.auftrag_id) if vorgang.auftrag_id and not verborgen else None
+    if auftrag is not None and auftrag.geloescht_am is None:
+        read.auftrag_kunden_referenz = auftrag.kunden_referenz
+        if auftrag.kunde_id is not None and auftrag.ansprechpartner_id is not None:
+            kunde = await session.get(Kunde, auftrag.kunde_id)
+            if kunde is not None:
+                read.auftraggeber_ansprechpartner = vor_ort_kontakt_service.ansprechpartner_aufloesen(
+                    kunde.ansprechpartner, auftrag.ansprechpartner_id
+                )
 
 
 @router.get(
@@ -678,6 +720,8 @@ async def update_vorgang(
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
         await require_kunde_zugewiesen(session, auth, neuer_kunde_id)
+        if neuer_kunde_id != alter_kunde_id:
+            await vor_ort_kontakt_service.kundenwechsel_pruefen(session, "vorgang_id", vorgang.id, neuer_kunde_id)
         # Eine bestehende Anlage-Zuordnung gehoerte zum alten Kunden -- wird
         # die neue Anlage nicht im selben Request mitgegeben, bleibt sie
         # sonst inkonsistent (Anlage eines anderen Kunden) an diesem Vorgang

@@ -20,6 +20,9 @@ class ProjektCreate(BaseModel):
     name: str
     beschreibung: str | None = None
     vertrag_id: UUID | None = None
+    # Auftraggeber und Baustelle; standort_id muss zum Kunden gehoeren.
+    kunde_id: UUID | None = None
+    standort_id: UUID | None = None
 
 
 class ProjektUpdate(BaseModel):
@@ -27,6 +30,8 @@ class ProjektUpdate(BaseModel):
     beschreibung: str | None = None
     archiviert: bool | None = None
     vertrag_id: UUID | None = None
+    kunde_id: UUID | None = None
+    standort_id: UUID | None = None
 
 
 class ProjektRead(BaseModel):
@@ -37,9 +42,13 @@ class ProjektRead(BaseModel):
     beschreibung: str | None
     archiviert: bool
     vertrag_id: UUID | None
+    kunde_id: UUID | None
+    standort_id: UUID | None
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime
+    kunde_name: str | None = None
+    standort_bezeichnung: str | None = None
     # Nicht persistiert, in den Projekt-Routen transient gesetzt (wie
     # AuftragRead.vorgaenge_gesamt). anzahl_vorgaenge zaehlt alle Vorgaenge mit
     # projekt_id, also auch die in Auftraegen (Regel "eine Kette"); offen =

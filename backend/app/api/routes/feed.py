@@ -22,6 +22,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
 from app.services import vorgang_verknuepfung_service
+from app.services.vor_ort_kontakt_service import hauptkontakte_fuer_vorgaenge
 from app.services.zuweisung_service import vorgang_scope_filter
 
 router = APIRouter(
@@ -339,6 +340,12 @@ async def get_feed(
         zeilen = await session.execute(select(Auftrag.id, Auftrag.titel).where(Auftrag.id.in_(auftrag_ids)))
         auftrag_titel = {z[0]: z[1] for z in zeilen}
 
+    hauptkontakte = await hauptkontakte_fuer_vorgaenge(
+        session,
+        page,
+        ohne_vererbung=frozenset() if darf_verknuepfung else frozenset(v.id for v in page if v.verknuepfung_eigenstaendig),
+    )
+
     last_events_by_vorgang: dict[UUID, VorgangEvent] = {}
     if vorgang_ids:
         # DISTINCT ON (Postgres) statt einer eigenen Query pro Vorgang: eine
@@ -423,6 +430,8 @@ async def get_feed(
                 anlage_kurzadresse=anlage_kurzadresse,
                 anlage_bezeichnung=anlage.bezeichnung if anlage else None,
                 standort_bezeichnung=standort.bezeichnung if standort else None,
+                einheit=vorgang.einheit,
+                hauptkontakt_vor_ort=hauptkontakte.get(vorgang.id),
                 ersteller_name=ersteller_name,
                 status=vorgang.status,
                 leistungstyp=vorgang.leistungstyp,

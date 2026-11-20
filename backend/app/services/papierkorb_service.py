@@ -44,6 +44,7 @@ from app.models.standort import Standort
 from app.models.tag import Tag
 from app.models.termin import Termin
 from app.models.vertrag import Vertrag
+from app.models.vor_ort_kontakt import VorOrtKontakt
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.zeiterfassung import Zeiterfassung
@@ -84,6 +85,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("vorgang_anfrage", "kunde_id"),
             ("vorgang", "kunde_id"),
             ("auftrag", "kunde_id"),
+            ("vor_ort_kontakt", "kunde_id"),
             # KEIN Cascade-Eintrag fuer leistungsverzeichnis(_position) mehr:
             # ein Leistungsverzeichnis kann mehreren Kunden zugewiesen sein
             # (siehe leistungsverzeichnis_kunden), das Loeschen eines Kunden
@@ -128,6 +130,9 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("vorgang", "parent_vorgang_id"),
         ),
     ),
+    # Zuordnungen kaskadieren per DB (ON DELETE CASCADE) erst beim endgueltigen Loeschen; im Papierkorb
+    # blendet die Leseseite geloeschte Kontakte aus.
+    "vor_ort_kontakt": EntityKind(VorOrtKontakt, "name"),
     "termin": EntityKind(Termin, "titel"),
     "pruefzyklus": EntityKind(Pruefzyklus, "bezeichnung"),
     "pruefmittel": EntityKind(Pruefmittel, "bezeichnung"),
