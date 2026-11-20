@@ -2,6 +2,7 @@ import { CalendarClock, ChevronDown, Clock, ExternalLink, Flag, FolderTree, GitB
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
+import { ClaudeMarke } from "../../../components/formModul/ClaudeMarke";
 import { VorgangStatusPille } from "../../../components/VorgangStatusPille";
 import type { Adresse, Anlage, CurrentUser, Kunde, Standort, UserAuswahl, Vorgang, VorgangStatus } from "../../../types";
 import { heuteIso } from "../../../utils/format";
@@ -367,6 +368,7 @@ export function VorgangKopf({
         <div className="flex items-center gap-2">
           <span className="text-sekundaer text-label2">{vorgang.vorgangsnummer}</span>
           <VorgangStatusPille status={vorgang.status} />
+          {vorgang.erstellt_via === "ki" && <ClaudeMarke label="per KI" klein />}
         </div>
         <h1 className="font-heading text-titel-mobil font-bold text-label">{vorgang.titel}</h1>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-fliess">

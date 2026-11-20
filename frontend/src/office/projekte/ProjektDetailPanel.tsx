@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { ClaudeMarke } from "../../components/formModul/ClaudeMarke";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { Abschnitt, ABSCHNITT_AKTION } from "../../pages/feld/vorgang/Abschnitt";
 import { formatDatum } from "../../utils/format";
@@ -152,6 +153,7 @@ export function ProjektDetailPanel({
         <div className="flex items-center gap-2">
           <span className="text-meta font-semibold tracking-wide text-label2 uppercase">Projekt</span>
           <StatusPille status={aktiv.archiviert ? "geplant" : "arbeit"} label={aktiv.archiviert ? "Archiviert" : "Aktiv"} />
+          {aktiv.erstellt_via === "ki" && <ClaudeMarke label="per KI" klein />}
         </div>
         <h1 className="font-heading text-titel-mobil font-bold text-label">{aktiv.name}</h1>
         {kundeName && <p className="text-fliess text-label2">{kundeName}</p>}

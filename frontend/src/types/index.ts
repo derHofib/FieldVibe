@@ -835,6 +835,7 @@ export interface TagAssignment {
 // --- Social-UX (Phase 3) -------------------------------------------------
 
 export interface FeedCard {
+  erstellt_via?: string;
   id: string;
   vorgangsnummer: string;
   titel: string;

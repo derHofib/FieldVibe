@@ -61,6 +61,14 @@ function rendern(vorgangTeil: Record<string, unknown> = {}, propsTeil: Partial<P
 }
 
 describe("VorgangKopf", () => {
+  it('zeigt die Marke "per KI" nur bei erstellt_via=ki', () => {
+    rendern({ erstellt_via: "ki" });
+    expect(screen.getByText("per KI")).toBeTruthy();
+    cleanup();
+    rendern({ erstellt_via: "app" });
+    expect(screen.queryByText("per KI")).toBeNull();
+  });
+
   it("ändert die Priorität über das Chip-Menü", () => {
     const props = rendern();
     const chip = screen.getByRole("button", { name: /Priorität 2/ });

@@ -10,6 +10,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { ClaudeMarke } from "../../components/formModul/ClaudeMarke";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { vorgangStatusZuToken } from "../../components/apple/status";
 import { STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
@@ -23,7 +24,15 @@ const SPALTEN = [
     header: "Nr.",
     cell: (info) => <span className="whitespace-nowrap">{info.getValue()}</span>,
   }),
-  spalten.accessor("titel", { header: "Titel" }),
+  spalten.accessor("titel", {
+    header: "Titel",
+    cell: (info) => (
+      <span className="inline-flex items-center gap-1.5">
+        {info.getValue()}
+        {info.row.original.erstellt_via === "ki" && <ClaudeMarke label="per KI" klein />}
+      </span>
+    ),
+  }),
   spalten.accessor("kunde_name", { header: "Kunde" }),
   spalten.accessor((v) => v.anlage_bezeichnung ?? v.standort_bezeichnung ?? "—", {
     id: "anlage",
