@@ -79,7 +79,7 @@ export function RechnungAnAbschnitt({ auftraggeberId, auftraggeberName, rechnung
       ) : (
         <dl className="text-fliess">
           <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-label2">Rechnung an</dt>
+            <dt className="shrink-0 whitespace-nowrap text-label2">Rechnung an</dt>
             <dd className="text-right font-medium text-label">{rechnungAn ? <EmpfaengerMitCo name={rechnungAn.name} verwaltetVonName={rechnungAn.verwaltet_von_name} /> : "Auftraggeber"}</dd>
           </div>
         </dl>
