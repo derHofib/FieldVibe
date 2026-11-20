@@ -44,6 +44,13 @@ def erstellt_via_aus(auth: AuthContext) -> str:
     return "ki" if auth.via == "mcp" else "app"
 
 
+def _uuid_oder_none(wert: str | None) -> UUID | None:
+    try:
+        return UUID(wert) if wert else None
+    except ValueError:
+        return None
+
+
 def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
@@ -78,10 +85,16 @@ async def token_version_gueltig(
 MFA_EINRICHTUNG_DETAIL = "MFA-Einrichtung erforderlich"
 
 
+KI_AKTION_HEADER = "x-fieldvibe-ki-aktion"
+
+
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> AuthContext:
-    return await _auth_context_aus_token(credentials, einrichtung_erlaubt=False)
+    return await _auth_context_aus_token(
+        credentials, einrichtung_erlaubt=False, ki_aktion_id=request.headers.get(KI_AKTION_HEADER)
+    )
 
 
 async def get_current_user_mfa_einrichtung(
@@ -95,7 +108,10 @@ async def get_current_user_mfa_einrichtung(
 
 
 async def _auth_context_aus_token(
-    credentials: HTTPAuthorizationCredentials | None, *, einrichtung_erlaubt: bool
+    credentials: HTTPAuthorizationCredentials | None,
+    *,
+    einrichtung_erlaubt: bool,
+    ki_aktion_id: str | None = None,
 ) -> AuthContext:
     if credentials is None:
         raise HTTPException(
@@ -139,7 +155,9 @@ async def _auth_context_aus_token(
     via = payload.get("via") if payload.get("via") == "mcp" else None
     ki_verbindung_id = UUID(payload["kv"]) if via and payload.get("kv") else None
     if via:
-        audit_service.ki_quelle_setzen(ki_verbindung_id)
+        # Die Aktions-ID kommt vom MCP-Adapter (Journal) und zaehlt nur bei einem KI-Token; ungueltige Werte
+        # werden verworfen statt abgelehnt, die Fachroute soll an einem kaputten Header nicht scheitern.
+        audit_service.ki_quelle_setzen(ki_verbindung_id, ki_aktion_id=_uuid_oder_none(ki_aktion_id))
     return AuthContext(
         user_id=user_id,
         token_version=token_version,

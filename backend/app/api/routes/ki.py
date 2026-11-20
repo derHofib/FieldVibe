@@ -2,7 +2,7 @@
 Normale JWT-Auth wie die uebrige API -- der Nutzer meldet sich auf der Einwilligungsseite
 des Frontends regulaer an (inkl. MFA). Details: docs/MCP.md."""
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user
 from app.core.rollen import MITARBEITER_ROLLEN, ist_mandant_admin
-from app.core.security import create_mcp_code
+from app.core.security import create_access_token, create_mcp_code
 from app.db.session import tenant_session
 from app.mcp.oauth_provider import anfrage_pruefen
 from app.mcp.zugang import (
@@ -28,12 +28,17 @@ from app.models.ki_verbindung import KiClient, KiVerbindung
 from app.models.user import User
 from app.schemas.ki import (
     KiAblehnen,
+    KiAktionenListe,
+    KiAktionRead,
+    KiAktionStatus,
     KiAnfrageRead,
     KiAutorisieren,
     KiRedirect,
     KiVerbindungRead,
 )
+from app.services import ki_journal_service
 from app.services.audit_service import log_action
+from app.services.ki_rueckgaengig import RueckgaengigAbgelehnt, rueckgaengig
 
 router = APIRouter(prefix="/api/ki", tags=["ki"])
 
@@ -217,3 +222,89 @@ async def verbindung_widerrufen(
             payload={"client": verbindung.client_name, "nutzer_id": verbindung.user_id},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Journal (KI-Aktivitaet) ----------------------------------------------------------------------
+
+
+@router.get("/aktionen", response_model=KiAktionenListe)
+async def aktionen_auflisten(
+    status_filter: KiAktionStatus | None = Query(default=None, alias="status"),
+    user_id: UUID | None = None,
+    von: date | None = None,
+    bis: date | None = None,
+    q: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    auth: AuthContext = Depends(_ki_auth),
+    session: AsyncSession = Depends(_ki_db),
+) -> KiAktionenListe:
+    await _zugang(session, auth)
+    eintraege, gesamt = await ki_journal_service.auflisten(
+        session,
+        user_id=auth.user_id,
+        ist_admin=ist_mandant_admin(auth),
+        status=status_filter,
+        filter_user_id=user_id,
+        von=von,
+        bis=bis,
+        q=q,
+        limit=limit,
+        offset=offset,
+    )
+    return KiAktionenListe(eintraege=eintraege, gesamt=gesamt)
+
+
+async def _aktion_lesen(session: AsyncSession, auth: AuthContext, aktion_id: UUID) -> KiAktionRead:
+    aktion = await ki_journal_service.lesen(
+        session, user_id=auth.user_id, ist_admin=ist_mandant_admin(auth), aktion_id=aktion_id
+    )
+    if aktion is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aktion nicht gefunden")
+    return aktion
+
+
+@router.get("/aktionen/{aktion_id}", response_model=KiAktionRead)
+async def aktion_lesen(
+    aktion_id: UUID,
+    auth: AuthContext = Depends(_ki_auth),
+    session: AsyncSession = Depends(_ki_db),
+) -> KiAktionRead:
+    await _zugang(session, auth)
+    return await _aktion_lesen(session, auth, aktion_id)
+
+
+@router.post("/aktionen/{aktion_id}/rueckgaengig", response_model=KiAktionRead)
+async def aktion_rueckgaengig(
+    aktion_id: UUID,
+    auth: AuthContext = Depends(_ki_auth),
+    session: AsyncSession = Depends(_ki_db),
+) -> KiAktionRead:
+    await _zugang(session, auth)
+    # Die Fachrouten laufen in-process mit einem kurzlebigen Token des angemeldeten Nutzers (ohne via=mcp):
+    # es zaehlen seine Rechte, nicht die der damaligen KI-Verbindung.
+    token = create_access_token(
+        subject=auth.user_id,
+        role=auth.role,
+        mandant_id=auth.mandant_id,
+        token_version=auth.token_version,
+        account_typ_id=auth.account_typ_id,
+        expires_delta=timedelta(minutes=2),
+    )
+    try:
+        await rueckgaengig(
+            mandant_id=auth.mandant_id,
+            user_id=auth.user_id,
+            ist_admin=ist_mandant_admin(auth),
+            aktion_id=aktion_id,
+            token=token,
+            ausloeser="app",
+        )
+    except RueckgaengigAbgelehnt as exc:
+        detail: dict | str = (
+            {"meldung": exc.meldung, "konflikte": [k.als_dict() for k in exc.konflikte]}
+            if exc.status_code == status.HTTP_409_CONFLICT
+            else exc.meldung
+        )
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+    return await _aktion_lesen(session, auth, aktion_id)
