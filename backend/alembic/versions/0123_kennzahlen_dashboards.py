@@ -8,7 +8,7 @@ Schluessel der Systemvorlage, aus der kopiert wurde.
 - user_id mit ON DELETE CASCADE: Dashboards gehoeren der Person, nicht dem Mandanten.
 
 Revision ID: 0123
-Revises: 0121
+Revises: 0122
 Create Date: 2026-11-19
 """
 from typing import Sequence, Union
@@ -18,7 +18,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0123"
-down_revision: Union[str, None] = "0121"
+down_revision: Union[str, None] = "0122"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
