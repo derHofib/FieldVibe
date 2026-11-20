@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
+import { useZuletztGeoeffnetMerken } from "../../components/suche/zuletztGeoeffnet";
 import { VorgangStatusPille } from "../../components/VorgangStatusPille";
 import { Inbox, Repeat, Trash2 } from "lucide-react";
 import { AktionsMenue } from "../../components/AktionsMenue";
@@ -356,6 +357,11 @@ export function AnlageProfilePage() {
     queryFn: () => anlagenApi.profil(id!),
     enabled: !!id,
   });
+  useZuletztGeoeffnetMerken(
+    profil
+      ? { kategorie: "anlage", id: profil.id, titel: profil.bezeichnung, untertitel: profil.kunde?.name ?? "" }
+      : null,
+  );
   const pruefzyklenAktiv = istModulAktiv(currentUser, "pruefzyklen");
   const fahrzeugeAktiv = istModulAktiv(currentUser, "fahrzeuge");
   const materialAktiv = istModulAktiv(currentUser, "material");
