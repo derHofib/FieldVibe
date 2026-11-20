@@ -723,6 +723,9 @@ textarea.field-ap {
   border: 0.5px solid var(--sep);
   border-radius: var(--radius-ap-input);
 }
+.select-ap-transparent {
+  background: transparent;
+}
 .select-ap:focus-visible {
   outline: 2px solid var(--tint);
   outline-offset: 2px;

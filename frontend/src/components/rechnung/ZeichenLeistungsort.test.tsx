@@ -52,4 +52,21 @@ describe("ZeichenLeistungsort", () => {
     await waitFor(() => expect(speichern).toHaveBeenCalledTimes(2));
     expect(speichern).toHaveBeenLastCalledWith({ kunden_referenz: null, leistungsort: null });
   });
+
+  it("zeigt den Rechnungsempfänger mit c/o beim Verwalter, auch ohne Zeichen und Leistungsort", () => {
+    render(
+      <ZeichenLeistungsort
+        beleg="Rechnung"
+        empfaengerName="WEG Moselstraße 14"
+        verwaltetVonName="Hausverwaltung Rheinblick"
+        kundenReferenz={null}
+        leistungsort={null}
+        aenderbar={false}
+        speichern={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Rechnung an")).toBeInTheDocument();
+    expect(screen.getByText(/WEG Moselstraße 14/)).toBeInTheDocument();
+    expect(screen.getByText("c/o Hausverwaltung Rheinblick")).toBeInTheDocument();
+  });
 });

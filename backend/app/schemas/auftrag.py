@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.kontakt import AnsprechpartnerEintrag
-from app.schemas.kunde_kurz import KundeKurz
+from app.schemas.kunde_kurz import RechnungAnKurz
 
 AuftragStatus = Literal["offen", "in_arbeit", "abgeschlossen", "storniert"]
 
@@ -103,4 +103,4 @@ class AuftragRead(BaseModel):
     # inzwischen entfernt) -> None.
     standort: AuftragStandortKurz | None = None
     ansprechpartner: AnsprechpartnerEintrag | None = None
-    rechnung_an: KundeKurz | None = None
+    rechnung_an: RechnungAnKurz | None = None

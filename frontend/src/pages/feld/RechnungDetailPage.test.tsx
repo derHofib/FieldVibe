@@ -106,7 +106,7 @@ describe("RechnungDetailPage – Rechnungsarten", () => {
   it("ohne Recht abrechnung/erstellen kein Gutschrift-Button", async () => {
     recht.abrechnung = false;
     zeige(rechnung());
-    await screen.findByText("Muster GmbH");
+    await screen.findByRole("heading", { name: "Muster GmbH" });
     expect(screen.queryByRole("button", { name: "Gutschrift erstellen" })).not.toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe("RechnungDetailPage – Rechnungsarten", () => {
       { ist_storno: true },
     ]) {
       zeige(rechnung(teil));
-      await screen.findByText("Muster GmbH");
+      await screen.findByRole("heading", { name: "Muster GmbH" });
       expect(screen.queryByRole("button", { name: "Gutschrift erstellen" })).not.toBeInTheDocument();
       cleanup();
     }
@@ -223,14 +223,14 @@ describe("RechnungDetailPage – Rechnungsarten", () => {
         angebot({ abschlaege: [{ rechnung_id: "ab1", rechnungsnummer: "RE-9", status: "entwurf", netto: "300.00" }] }),
       );
       zeige(rechnung(entwurf));
-      await screen.findByText("Muster GmbH");
+      await screen.findByRole("heading", { name: "Muster GmbH" });
       await waitFor(() => expect(angeboteApi.get).toHaveBeenCalled());
       expect(screen.queryByRole("button", { name: "Abschläge anrechnen" })).not.toBeInTheDocument();
     });
 
     it("Rechnung ohne Angebotsbezug bekommt keinen Button", async () => {
       zeige(rechnung({ status: "entwurf" }));
-      await screen.findByText("Muster GmbH");
+      await screen.findByRole("heading", { name: "Muster GmbH" });
       expect(angeboteApi.get).not.toHaveBeenCalled();
       expect(screen.queryByRole("button", { name: "Abschläge anrechnen" })).not.toBeInTheDocument();
     });
@@ -266,7 +266,7 @@ describe("RechnungDetailPage – Ihr Zeichen und Leistungsort", () => {
 
   it("versendet ohne beide Angaben: kein Abschnitt", async () => {
     zeige(rechnung());
-    await screen.findByText("Muster GmbH");
+    await screen.findByRole("heading", { name: "Muster GmbH" });
     expect(screen.queryByText("Ihr Zeichen")).not.toBeInTheDocument();
   });
 });

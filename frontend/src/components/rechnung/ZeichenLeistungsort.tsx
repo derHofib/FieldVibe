@@ -9,6 +9,7 @@ import {
   type LeistungsortFormular,
 } from "../../utils/leistungsort";
 import { Hinweiskasten, FehlerMeldung } from "../Hinweiskasten";
+import { EmpfaengerMitCo } from "./EmpfaengerMitCo";
 
 interface Props {
   kundenReferenz: string | null | undefined;
@@ -18,12 +19,15 @@ interface Props {
   speichern: (body: { kunden_referenz: string | null; leistungsort: Leistungsort | null }) => Promise<unknown>;
   fehler?: string | null;
   beleg: "Rechnung" | "Angebot";
+  /** Rechnungsempfänger (Kunde der Rechnung) und dessen Verwalter für "c/o". */
+  empfaengerName?: string | null;
+  verwaltetVonName?: string | null;
 }
 
 const ZEILE = "flex items-baseline justify-between gap-3 py-1.5";
 
 /** Abschnitte "Empfänger" (Ihr Zeichen) und "Leistungsort" von Rechnung und Angebot. */
-export function ZeichenLeistungsort({ kundenReferenz, leistungsort, aenderbar, speichern, fehler, beleg }: Props) {
+export function ZeichenLeistungsort({ kundenReferenz, leistungsort, aenderbar, speichern, fehler, beleg, empfaengerName, verwaltetVonName }: Props) {
   const [bearbeiten, setBearbeiten] = useState(false);
   const [zeichen, setZeichen] = useState("");
   const [form, setForm] = useState<LeistungsortFormular>(leistungsortAlsFormular(null));
@@ -31,7 +35,7 @@ export function ZeichenLeistungsort({ kundenReferenz, leistungsort, aenderbar, s
 
   const hatZeichen = !!kundenReferenz;
   const hatOrt = !leistungsortIstLeer(leistungsort);
-  if (!aenderbar && !hatZeichen && !hatOrt) return null;
+  if (!aenderbar && !hatZeichen && !hatOrt && !verwaltetVonName) return null;
 
   const start = () => {
     setZeichen(kundenReferenz ?? "");
@@ -114,6 +118,14 @@ export function ZeichenLeistungsort({ kundenReferenz, leistungsort, aenderbar, s
       ) : (
         <>
           <dl className="divide-y divide-sep text-fliess">
+            {empfaengerName && (
+              <div className={ZEILE}>
+                <dt className="text-label2">Rechnung an</dt>
+                <dd className="text-right font-medium text-label">
+                  <EmpfaengerMitCo name={empfaengerName} verwaltetVonName={verwaltetVonName} />
+                </dd>
+              </div>
+            )}
             <div className={ZEILE}>
               <dt className="text-label2">Ihr Zeichen</dt>
               <dd className="text-right font-medium text-label">{kundenReferenz || "—"}</dd>

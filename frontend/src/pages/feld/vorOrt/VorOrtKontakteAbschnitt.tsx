@@ -4,7 +4,7 @@ import { Abschnitt, ABSCHNITT_AKTION } from "../vorgang/Abschnitt";
 import { ApiError } from "../../../api/client";
 import { Sheet } from "../../../components/apple/Sheet";
 import { useBestaetigung } from "../../../components/ConfirmDialog";
-import { FehlerMeldung } from "../../../components/Hinweiskasten";
+import { FehlerMeldung, Hinweiskasten } from "../../../components/Hinweiskasten";
 import { SkeletonList } from "../../../components/Skeleton";
 import {
   useVorOrtEntfernen,
@@ -33,6 +33,7 @@ export function VorOrtKontakteAbschnitt({
   layout,
   kontakte,
   eingebettet = false,
+  vorgangAnzahl,
 }: {
   ziel: VorOrtZiel;
   zielId: string;
@@ -44,6 +45,8 @@ export function VorOrtKontakteAbschnitt({
   layout: "feld" | "office";
   kontakte?: VorOrtKontaktZugeordnet[];
   eingebettet?: boolean;
+  /** Auftrag (Office): Anzahl der Vorgänge, für den Hinweis, wo die Kontakte erscheinen. */
+  vorgangAnzahl?: number;
 }) {
   const bestaetigen = useBestaetigung();
   const [hinzufuegen, setHinzufuegen] = useState(false);
@@ -85,6 +88,7 @@ export function VorOrtKontakteAbschnitt({
               eintrag={z}
               ziel={ziel}
               layout={layout}
+              herkunftAusblenden={fussnote !== null}
               darfBearbeiten={darfBearbeiten}
               darfKorrigieren={darfKorrigieren}
               onHauptkontakt={(h) => haupt.mutate({ zuordnungId: z.zuordnung_id, haupt: h })}
@@ -110,6 +114,17 @@ export function VorOrtKontakteAbschnitt({
         <FehlerMeldung alsKasten meldung={mutationFehler instanceof ApiError ? mutationFehler.message : "Aktion fehlgeschlagen."} />
       )}
       {fussnote && <p className="mt-2 text-meta text-label2">{fussnote}</p>}
+      {ziel === "auftrag" && vorgangAnzahl !== undefined && vorgangAnzahl >= 1 && liste.length >= 1 && (
+        <div className="mt-2">
+          <Hinweiskasten ton="info">
+            <p>
+              {vorgangAnzahl === 1
+                ? "Die Kontakte gelten für den Vorgang dieses Auftrags und erscheinen dort in der Feld-App."
+                : `Die Kontakte gelten für alle ${vorgangAnzahl} Vorgänge dieses Auftrags und erscheinen dort in der Feld-App.`}
+            </p>
+          </Hinweiskasten>
+        </div>
+      )}
       {eingebettet && hinzufuegenKnopf && <div className="mt-1 flex justify-end">{hinzufuegenKnopf}</div>}
     </>
   );

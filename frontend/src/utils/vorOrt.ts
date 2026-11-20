@@ -151,3 +151,21 @@ export function nachStandortGruppieren(kontakte: VorOrtKontakt[]): KontaktStando
 export function standortBegriff(kundeTyp: string | null | undefined): "Standort" | "Liegenschaft" {
   return kundeTyp === "hausverwaltung" ? "Liegenschaft" : "Standort";
 }
+
+/** Ortsteile der Vorgang-Kopfzeile: Standort-Bezeichnung nur, wenn sie nicht ohnehin in der Adresse steht
+ * ("Moselstraße 14" + "Moselstraße 14, 56073 Koblenz" -> nur die Adresse); Einheit hängt hinten an. */
+export function kopfOrtTeile(standortBezeichnung: string | null | undefined, adresse: string, einheit: string | null | undefined): string[] {
+  const bez = standortBezeichnung?.trim() || "";
+  const ort = adresse.trim();
+  const bezInAdresse = !!bez && ort.toLocaleLowerCase("de").includes(bez.toLocaleLowerCase("de"));
+  return [bezInAdresse ? "" : bez, ort, einheit?.trim() || ""].filter(Boolean);
+}
+
+/** Ortszeile der Feed-Karte: Adresse der Anlage (sonst Standort-Bezeichnung) und Einheit in einer Zeile. */
+export function feedOrtZeile(karte: {
+  anlage_kurzadresse: string | null;
+  standort_bezeichnung: string | null;
+  einheit?: string | null;
+}): string {
+  return [karte.anlage_kurzadresse || karte.standort_bezeichnung, karte.einheit?.trim()].filter(Boolean).join(" · ");
+}

@@ -35,7 +35,7 @@ import {
   telHref,
 } from "../../../utils/vorOrt";
 import { KontaktFormular } from "../vorOrt/KontaktFormular";
-import { RollenChip } from "../vorOrt/KontaktZeile";
+import { HinweisZeile, RollenChip } from "../vorOrt/KontaktZeile";
 
 /** Reiter "Kontakte vor Ort" im Kundenprofil (Feld-App und Office-Detailpanel): alle Kontakte des Kunden, nach Standort
  * gruppiert; bei Hausverwaltungen heißen die Standorte "Liegenschaft". */
@@ -127,7 +127,7 @@ export function KundeVorOrtTab({
           className="min-w-40 flex-1"
           value={suche}
           onChange={setSuche}
-          placeholder="Name, Telefon, Einheit"
+          placeholder="Suchen"
           ariaLabel="Kontakte vor Ort suchen"
           groesse="mobil"
         />
@@ -200,9 +200,10 @@ export function KundeVorOrtTab({
                       )}
                       <p className="text-meta text-label2">
                         {k.zuordnungen_anzahl} {k.zuordnungen_anzahl === 1 ? "Auftrag" : "Aufträge"}
-                        {letzter && ` · Letzter Einsatz ${letzter}`}
+                        {` · ${letzter ? `Letzter Einsatz ${letzter}` : "noch kein Einsatz"}`}
                         {anonym && ` · anonymisiert ${monatJahr(k.anonymisiert_am) ?? ""}`}
                       </p>
+                      {!anonym && k.hinweis && <HinweisZeile text={k.hinweis} layout="office" />}
                     </div>
                     {eintraege.length > 0 && <AktionsMenue label={`Aktionen für ${name}`} eintraege={eintraege} touch />}
                   </li>
@@ -215,7 +216,7 @@ export function KundeVorOrtTab({
 
       <p className="flex items-start gap-2 rounded-[var(--radius-ap-md)] bg-tintbg px-3 py-2 text-sekundaer text-label">
         <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-tint" aria-hidden="true" />
-        Kontakte werden {monate} Monate nach dem letzten Einsatz anonymisiert, sofern sie keinem offenen Auftrag zugeordnet sind.
+        Kontakte ohne Einsatz werden nach {monate} Monaten anonymisiert.
       </p>
 
       <AnlegenPanel offen={anlegen} titel="Kontakt vor Ort" onClose={() => setAnlegen(false)}>

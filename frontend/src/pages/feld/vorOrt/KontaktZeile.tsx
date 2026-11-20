@@ -1,7 +1,8 @@
-import { AlertTriangle, Pencil, Phone, Star, Trash2, UserRound } from "lucide-react";
+import { AlertTriangle, KeyRound, Pencil, Phone, Star, Trash2, UserRound } from "lucide-react";
 
 import { AktionsMenue, type AktionsMenueEintrag } from "../../../components/AktionsMenue";
 import { Monogramm } from "../../../components/apple/Monogramm";
+import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
 import { VOR_ORT_ROLLE_LABEL, type VorOrtKontaktZugeordnet, type VorOrtRolle, type VorOrtZiel } from "../../../types";
 import { herkunftText, istAnonymisiert, kontaktAnzeigename, kontaktUnterzeile, telHref } from "../../../utils/vorOrt";
 
@@ -47,7 +48,13 @@ export function AnrufKnopf({ telefon, name, layout }: { telefon: string; name: s
   );
 }
 
+/** Hinweise zum Schlüssel bekommen ein Schlüssel-Symbol, alle anderen das Warnzeichen. */
+export function hinweisIstSchluessel(text: string): boolean {
+  return /schl(ü|ue)ssel/i.test(text);
+}
+
 export function HinweisZeile({ text, layout }: { text: string; layout: "feld" | "office" }) {
+  const Icon = hinweisIstSchluessel(text) ? KeyRound : AlertTriangle;
   return (
     <p
       className={
@@ -56,7 +63,7 @@ export function HinweisZeile({ text, layout }: { text: string; layout: "feld" | 
           : "flex items-start gap-1.5 text-sekundaer text-st-arbeit"
       }
     >
-      <AlertTriangle size={14} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <Icon size={14} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden="true" />
       <span className="min-w-0">{text}</span>
     </p>
   );
@@ -72,6 +79,7 @@ export function KontaktZeile({
   onHauptkontakt,
   onBearbeiten,
   onEntfernen,
+  herkunftAusblenden = false,
 }: {
   eintrag: VorOrtKontaktZugeordnet;
   ziel: VorOrtZiel;
@@ -81,13 +89,16 @@ export function KontaktZeile({
   onHauptkontakt: (haupt: boolean) => void;
   onBearbeiten: () => void;
   onEntfernen: () => void;
+  /** Die Herkunft steht schon in der Fußnote des Abschnitts ("Vom Auftrag … übernommen"). */
+  herkunftAusblenden?: boolean;
 }) {
   const k = eintrag.kontakt;
   const anonym = istAnonymisiert(k);
   const name = kontaktAnzeigename(k);
   const unterzeile = anonym ? [k.einheit].filter(Boolean).join("") : kontaktUnterzeile(k);
-  const herkunft = herkunftText(eintrag, ziel);
-  const eigen = herkunft === null;
+  const herkunftVoll = herkunftText(eintrag, ziel);
+  const eigen = herkunftVoll === null;
+  const herkunft = herkunftAusblenden ? null : herkunftVoll;
   const feld = layout === "feld";
 
   // Wer nur korrigieren darf, sieht allein "Bearbeiten" -- auch an geerbten Einträgen, weil der Kontakt selbst geändert wird.
@@ -108,6 +119,24 @@ export function KontaktZeile({
     { label: "Entfernen", icon: Trash2, destruktiv: true, onClick: onEntfernen },
   ];
 
+  const eintraege = nurKorrigieren && !anonym ? menueKorrigieren : !nurKorrigieren && eigen && darfBearbeiten ? menue : null;
+  // Feld: Die Zeile selbst öffnet das Menü, damit die Textspalte neben dem Anruf-Knopf die volle Breite bekommt.
+  const zeileAlsMenue = feld && eintraege !== null;
+
+  const textspalte = (
+    <>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className={`${feld ? "text-zeile" : "text-fliess"} font-medium ${anonym ? "text-label3" : "text-label"}`}>{name}</span>
+        <RollenChip rolle={k.rolle} />
+        {eintrag.ist_hauptkontakt && <HauptkontaktTag />}
+      </div>
+      {unterzeile && <p className="text-sekundaer text-label2">{unterzeile}</p>}
+      {herkunft && <p className="text-meta text-label2">{herkunft}</p>}
+      {!anonym && k.hinweis && <HinweisZeile text={k.hinweis} layout={layout} />}
+      {!anonym && k.telefon && !feld && <AnrufKnopf telefon={k.telefon} name={name} layout={layout} />}
+    </>
+  );
+
   return (
     <li className={`flex items-start gap-3 ${feld ? "py-3" : "py-2.5"}`}>
       {anonym ? (
@@ -121,20 +150,29 @@ export function KontaktZeile({
       ) : (
         <Monogramm name={name} groesse={feld ? 40 : 32} ringKlasse="ring-card" />
       )}
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={`${feld ? "text-zeile" : "text-fliess"} font-medium ${anonym ? "text-label3" : "text-label"}`}>{name}</span>
-          <RollenChip rolle={k.rolle} />
-          {eintrag.ist_hauptkontakt && <HauptkontaktTag />}
-        </div>
-        {unterzeile && <p className="text-sekundaer text-label2">{unterzeile}</p>}
-        {herkunft && <p className="text-meta text-label2">{herkunft}</p>}
-        {!anonym && k.hinweis && <HinweisZeile text={k.hinweis} layout={layout} />}
-        {!anonym && k.telefon && !feld && <AnrufKnopf telefon={k.telefon} name={name} layout={layout} />}
-      </div>
+      {zeileAlsMenue ? (
+        <PulldownMenu
+          ariaLabel={`Aktionen für ${name}`}
+          items={eintraege.map((e): PulldownItem => (e === "trenner" ? e : { ...e, onSelect: e.onClick }))}
+          trigger={({ offen, toggeln, triggerRef }) => (
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={toggeln}
+              aria-label={`Aktionen für ${name}`}
+              aria-haspopup="menu"
+              aria-expanded={offen}
+              className="min-w-0 flex-1 space-y-1 text-left"
+            >
+              {textspalte}
+            </button>
+          )}
+        />
+      ) : (
+        <div className="min-w-0 flex-1 space-y-1">{textspalte}</div>
+      )}
       {!anonym && k.telefon && feld && <AnrufKnopf telefon={k.telefon} name={name} layout={layout} />}
-      {nurKorrigieren && !anonym && <AktionsMenue label={`Aktionen für ${name}`} eintraege={menueKorrigieren} touch={feld} />}
-      {!nurKorrigieren && eigen && darfBearbeiten && <AktionsMenue label={`Aktionen für ${name}`} eintraege={menue} touch={feld} />}
+      {!feld && eintraege && <AktionsMenue label={`Aktionen für ${name}`} eintraege={eintraege} />}
     </li>
   );
 }

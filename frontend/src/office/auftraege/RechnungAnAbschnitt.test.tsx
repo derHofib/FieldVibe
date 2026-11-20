@@ -54,6 +54,12 @@ describe("RechnungAnAbschnitt", () => {
     expect(speichern.mock.calls[0][0]).toBe("weg");
   });
 
+  it("zeigt bei verwaltetem Empfänger grau c/o den Verwalter", () => {
+    rendern({ rechnungAn: { id: "weg", name: "WEG Moselstraße 14", verwaltet_von_name: "Hausverwaltung Rheinblick" } });
+    expect(screen.getByText(/WEG Moselstraße 14/)).toBeInTheDocument();
+    expect(screen.getByText("c/o Hausverwaltung Rheinblick")).toBeInTheDocument();
+  });
+
   it("rendert nichts ohne Auftraggeber", () => {
     const { container } = rendern({ auftraggeberId: null, auftraggeberName: null });
     expect(container).toBeEmptyDOMElement();

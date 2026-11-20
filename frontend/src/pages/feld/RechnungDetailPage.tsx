@@ -715,6 +715,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
       <ZeichenLeistungsort
         beleg="Rechnung"
+        empfaengerName={kunde?.name}
+        verwaltetVonName={kunde?.verwaltet_von?.name}
         kundenReferenz={rechnung.kunden_referenz}
         leistungsort={rechnung.leistungsort}
         aenderbar={rechnung.status === "entwurf"}

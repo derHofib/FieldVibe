@@ -163,3 +163,51 @@ async def test_partner_sieht_kontakte_erst_nach_annahme(client, make_mandant, ma
         }
     ]
     assert "b@example.de" not in str(nachher)
+
+
+@pytest.mark.asyncio
+async def test_annahme_verwendet_bestehenden_kontakt_wieder(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    portal = await _portal(client, mandant, kunde)
+    standort = (
+        await client.post(
+            "/api/standorte", headers=h,
+            json={"kunde_id": str(kunde.id), "bezeichnung": "Rosenweg 5", "adresse": {"ort": "Köln"}},
+        )
+    ).json()
+
+    async def annehmen(**kw):
+        anfrage = await _anfrage(client, portal, standort_id=standort["id"], **kw)
+        r = await client.post(
+            f"/api/vorgang-anfragen/{anfrage['id']}/annehmen", headers=h, json={"abrechnungsart": "aufwand"}
+        )
+        assert r.status_code == 200, r.text
+        return r.json()["vorgang_id"]
+
+    # Erste Anfrage legt Becker (ohne Hinweis/Einheit) und einen Hausmeister mit Nummer an.
+    await annehmen(vor_ort_kontakte=[
+        {"name": "Frau Becker", "rolle": "mieter", "telefon": "0171 111 22"},
+        {"name": "Herr Kurz", "rolle": "hausmeister", "telefon": "0171 999 88"},
+    ])
+    # Zweite Anfrage: Becker per Name am gleichen Standort, Hausmeister per +49-Schreibweise der Nummer;
+    # ausserdem derselbe Mensch doppelt in einer Anfrage.
+    vorgang_id = await annehmen(
+        einheit="Whg. 3",
+        vor_ort_kontakte=[
+            {"name": " frau BECKER ", "rolle": "mieter", "hinweis": "Hund", "erreichbarkeit": "abends"},
+            {"telefon": "+49 171 99988", "rolle": "hausmeister"},
+            {"telefon": "0171-999-88", "rolle": "hausmeister"},
+        ],
+    )
+
+    async with system_session(grund="test") as s:
+        kontakte = (await s.execute(select(VorOrtKontakt).where(VorOrtKontakt.kunde_id == kunde.id))).scalars().all()
+        assert sorted(k.name for k in kontakte) == ["Frau Becker", "Herr Kurz"]
+        becker = next(k for k in kontakte if k.name == "Frau Becker")
+        # Leeres ergaenzt, Vorhandenes (Telefon) bleibt.
+        assert becker.hinweis == "Hund" and becker.einheit == "Whg. 3" and becker.erreichbarkeit == "abends"
+        assert becker.telefon == "0171 111 22"
+
+    zugeordnet = (await client.get(f"/api/vorgaenge/{vorgang_id}/vor-ort-kontakte", headers=h)).json()
+    assert [k["kontakt"]["name"] for k in zugeordnet] == ["Frau Becker", "Herr Kurz"]
+    assert [k["ist_hauptkontakt"] for k in zugeordnet] == [True, False]

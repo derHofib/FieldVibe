@@ -6,13 +6,14 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt
 from app.models.standort import Standort
 from app.models.vorgang import Vorgang
-from app.schemas.kunde_kurz import KundeKurz
+from app.schemas.kunde_kurz import RechnungAnKurz
 
 LEISTUNGSORT_FELDER = ("bezeichnung", "strasse", "plz", "ort", "land")
 
@@ -112,8 +113,13 @@ async def rechnung_an_pruefen(
     return None if rechnung_an_kunde_id == kunde_id else rechnung_an_kunde_id
 
 
-async def kunden_kurz(session: AsyncSession, ids: set[UUID]) -> dict[UUID, KundeKurz]:
+async def kunden_kurz(session: AsyncSession, ids: set[UUID]) -> dict[UUID, RechnungAnKurz]:
     if not ids:
         return {}
-    zeilen = await session.execute(select(Kunde.id, Kunde.name).where(Kunde.id.in_(ids)))
-    return {z[0]: KundeKurz(id=z[0], name=z[1]) for z in zeilen}
+    verwalter = aliased(Kunde)
+    zeilen = await session.execute(
+        select(Kunde.id, Kunde.name, verwalter.name)
+        .outerjoin(verwalter, verwalter.id == Kunde.verwaltet_von_kunde_id)
+        .where(Kunde.id.in_(ids))
+    )
+    return {z[0]: RechnungAnKurz(id=z[0], name=z[1], verwaltet_von_name=z[2]) for z in zeilen}

@@ -172,4 +172,28 @@ describe("VorOrtKontakteAbschnitt", () => {
     fireEvent.click(screen.getByText("Eva Lang"));
     await waitFor(() => expect(vorOrtApi.zuordnen).toHaveBeenCalledWith("vorgang", "v1", { kontakt_id: "c3" }));
   });
+
+  it("Feld: geerbte Zeile ohne Menü, Herkunft steht nur in der Fußnote", () => {
+    rendern({
+      layout: "feld",
+      kontakte: [zugeordnet("z1", kontakt("c1", { hinweis: "Schlüssel beim Nachbarn" }), { herkunft: "auftrag", herkunft_id: "a1", herkunft_titel: "Heizungstausch" })],
+    });
+    expect(screen.queryByText("vom Auftrag ‚Heizungstausch‘")).not.toBeInTheDocument();
+    expect(screen.getByText("Vom Auftrag ‚Heizungstausch‘ übernommen.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Aktionen für/ })).not.toBeInTheDocument();
+  });
+
+  it("Feld: Antippen der Zeile öffnet die Aktionen", () => {
+    rendern({ layout: "feld", kontakte: [zugeordnet("z1", kontakt("c1"))] });
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen für Anna Becker" }));
+    expect(screen.getByRole("menuitem", { name: /Als Hauptkontakt setzen/ })).toBeInTheDocument();
+  });
+
+  it("Auftrag: Hinweis nennt die Zahl der Vorgänge, nur mit Kontakt", () => {
+    const { unmount } = rendern({ ziel: "auftrag", zielId: "a1", vorgangAnzahl: 3, kontakte: [zugeordnet("z1", kontakt("c1"), { herkunft: "auftrag" })] });
+    expect(screen.getByText("Die Kontakte gelten für alle 3 Vorgänge dieses Auftrags und erscheinen dort in der Feld-App.")).toBeInTheDocument();
+    unmount();
+    rendern({ ziel: "auftrag", zielId: "a1", vorgangAnzahl: 3, kontakte: [] });
+    expect(screen.queryByText(/Die Kontakte gelten für/)).not.toBeInTheDocument();
+  });
 });

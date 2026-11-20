@@ -19,6 +19,8 @@ import {
 } from "../../utils/portalAnfrage";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { Select } from "../../components/apple/Select";
+import { useKundenAuth } from "../../context/KundenAuthContext";
+import { standortBegriff } from "../../utils/vorOrt";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -79,7 +81,7 @@ function KontakteVorOrtEingabe({
             </div>
             <div>
               <label htmlFor={`portal-kontakt-rolle-${i}`} className="mb-1 block text-sekundaer text-label2">Rolle</label>
-              <Select id={`portal-kontakt-rolle-${i}`} value={k.rolle} onChange={(e) => aendere(i, { rolle: e.target.value as VorOrtRolle })}>
+              <Select flaeche="transparent" id={`portal-kontakt-rolle-${i}`} value={k.rolle} onChange={(e) => aendere(i, { rolle: e.target.value as VorOrtRolle })}>
                 {VOR_ORT_ROLLEN.map((r) => (
                   <option key={r} value={r}>
                     {VOR_ORT_ROLLE_LABEL[r]}
@@ -130,6 +132,8 @@ function KontakteVorOrtEingabe({
 
 function NeueAnfrage() {
   const queryClient = useQueryClient();
+  const { currentKunde } = useKundenAuth();
+  const standortWort = standortBegriff(currentKunde?.kunde_typ);
   const [zeigen, setZeigen] = useState(false);
   const [titel, setTitel] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
@@ -273,7 +277,7 @@ function NeueAnfrage() {
           {(standorte ?? []).length > 0 && (
             <div>
               <label htmlFor="portal-anfrage-standort" className="mb-1 block text-fliess font-medium text-label">
-                Standort (optional)
+                {standortWort} (optional)
               </label>
               <Select
                 id="portal-anfrage-standort"
@@ -283,7 +287,7 @@ function NeueAnfrage() {
                   setAnlageId("");
                 }}
               >
-                <option value="">Kein Standort</option>
+                <option value="">{standortWort === "Liegenschaft" ? "Keine Liegenschaft" : "Kein Standort"}</option>
                 {standorte?.filter((s) => s.aktiv).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.bezeichnung}
@@ -299,12 +303,12 @@ function NeueAnfrage() {
               onClick={() => setZeigeNeuerStandort(true)}
               className="btn-touch btn-ap px-4 py-2 text-sekundaer font-medium"
             >
-              + Neuer Standort
+              {standortWort === "Liegenschaft" ? "+ Neue Liegenschaft" : "+ Neuer Standort"}
             </button>
           ) : (
             <div>
               <label htmlFor="portal-anfrage-neuer-standort" className="mb-1 block text-fliess font-medium text-label">
-                Neuer Standort <span aria-hidden="true" className="text-st-fehlt">*</span>
+                {standortWort === "Liegenschaft" ? "Neue Liegenschaft" : "Neuer Standort"} <span aria-hidden="true" className="text-st-fehlt">*</span>
               </label>
               <div className="flex gap-2">
                 <input

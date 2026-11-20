@@ -7,6 +7,7 @@ import { Select } from "../../components/apple/Select";
 import type { Auftrag } from "../../types";
 import { adresseAlsZeile } from "../../pages/feld/vorgang/konstanten";
 import { ABSCHNITT_AKTION, Abschnitt } from "../../pages/feld/vorgang/Abschnitt";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
 import { standortBegriff, telHref } from "../../utils/vorOrt";
 
 type AuftragAenderung = {
@@ -54,7 +55,7 @@ export function AuftragAuftraggeberAbschnitt({ auftrag, speichern, laeuft }: Pro
   const { data: kunde } = useQuery({
     queryKey: ["kunde", auftrag.kunde_id],
     queryFn: () => kundenApi.get(auftrag.kunde_id!),
-    enabled: !!auftrag.kunde_id && bearbeiten,
+    enabled: !!auftrag.kunde_id,
   });
   const sach = auftrag.ansprechpartner ?? null;
 
@@ -110,7 +111,14 @@ export function AuftragAuftraggeberAbschnitt({ auftrag, speichern, laeuft }: Pro
         <dl className="space-y-1.5 text-fliess">
           <div className={ZEILE}>
             <dt className="text-label2">Kunde</dt>
-            <dd className="text-right font-medium text-label">{auftrag.kunde_name ?? "—"}</dd>
+            <dd className="flex flex-wrap items-center justify-end gap-2 text-right font-medium text-label">
+              {auftrag.kunde_name ?? "—"}
+              {kunde?.typ && (
+                <span className="rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-meta font-medium text-label2">
+                  {kundeTypLabel(kunde.typ)}
+                </span>
+              )}
+            </dd>
           </div>
           <div className={ZEILE}>
             <dt className="text-label2">Sachbearbeitung</dt>

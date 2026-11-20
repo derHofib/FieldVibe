@@ -270,6 +270,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
           darfBearbeiten={hatRecht("projekte", "bearbeiten")}
           darfKorrigieren={hatRecht("vorgaenge", "bearbeiten")}
           layout="office"
+          vorgangAnzahl={gesamt}
         />
 
         <Abschnitt

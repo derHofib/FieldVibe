@@ -31,6 +31,8 @@ class CurrentKunde(BaseModel):
     # Mandanten-Kontext fuer die Impressum-/Datenschutz-Links im angemeldeten
     # Portal (GET /api/public/rechtliches?portal_slug=...).
     portal_slug: str | None = None
+    # Kundentyp (z. B. hausverwaltung): steuert im Portal die Wortwahl (Liegenschaft statt Standort).
+    kunde_typ: str | None = None
 
 
 class KundenportalZugangUpdate(BaseModel):

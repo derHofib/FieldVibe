@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso, statusMetaZeile } from "../../utils/format";
-import { Bell, CheckCircle2, Clock, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Inbox, MapPin, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users } from "lucide-react";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { useVorgaengeFilter } from "../../hooks/useVorgaengeFilter";
 import { istModulAktiv } from "../../utils/module";
+import { feedOrtZeile } from "../../utils/vorOrt";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { HauptkontaktZeile } from "./vorOrt/HauptkontaktZeile";
@@ -144,14 +145,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
             <div className="text-meta tracking-wide text-label2">{card.vorgangsnummer}</div>
             <div className="mt-0.5 font-semibold text-label">{card.titel}</div>
             <div className="text-meta text-label2">{card.kunde_name}</div>
-            {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-              <div className="text-meta text-label2">
-                {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
-              </div>
-            )}
-            {(card.anlage_kurzadresse || card.einheit) && (
-              <div className="text-sekundaer text-label2">
-                {[card.anlage_kurzadresse, card.einheit].filter(Boolean).join(" · ")}
+            {card.anlage_bezeichnung && <div className="text-meta text-label2">{card.anlage_bezeichnung}</div>}
+            {feedOrtZeile(card) && (
+              <div className="flex items-start gap-1 text-sekundaer text-label2">
+                <MapPin size={13} strokeWidth={1.5} className="mt-0.5 shrink-0" aria-hidden="true" />
+                <span>{feedOrtZeile(card)}</span>
               </div>
             )}
             {card.ersteller_name && <div className="text-sekundaer text-label2">von {card.ersteller_name}</div>}

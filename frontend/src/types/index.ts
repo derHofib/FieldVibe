@@ -378,6 +378,11 @@ export interface KundeRefKurz {
   name: string;
 }
 
+/** Empfänger von Auftrag/Projekt; `verwaltet_von_name` für "c/o <Verwalter>". */
+export interface RechnungAnKurz extends KundeRefKurz {
+  verwaltet_von_name?: string | null;
+}
+
 export interface KundeBetreuungKurz {
   user_id: string;
   name: string;
@@ -1847,6 +1852,8 @@ export interface CurrentKunde {
   email: string;
   // Mandanten-Kontext fuer die Rechtstext-Links im angemeldeten Portal.
   portal_slug: string | null;
+  // Kundentyp (z. B. "hausverwaltung"): steuert die Wortwahl (Liegenschaft statt Standort).
+  kunde_typ?: string | null;
 }
 
 export interface KundenportalZugang {
@@ -2608,7 +2615,7 @@ export interface Projekt {
   kunde_name?: string | null;
   standort_bezeichnung?: string | null;
   rechnung_an_kunde_id?: string | null;
-  rechnung_an?: KundeRefKurz | null;
+  rechnung_an?: RechnungAnKurz | null;
 }
 
 export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
@@ -2851,7 +2858,7 @@ export interface Auftrag {
   standort?: StandortKurz | null;
   ansprechpartner?: Ansprechpartner | null;
   rechnung_an_kunde_id?: string | null;
-  rechnung_an?: KundeRefKurz | null;
+  rechnung_an?: RechnungAnKurz | null;
 }
 
 export interface ProjektSpalte {

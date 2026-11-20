@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { VorOrtKontakt, VorOrtKontaktZugeordnet } from "../types";
 import {
   auswahlGruppen,
+  feedOrtZeile,
+  kopfOrtTeile,
   geerbtFussnote,
   kontaktAnzeigename,
   nachStandortGruppieren,
@@ -70,5 +72,22 @@ describe("vorOrt utils", () => {
   it("Hausverwaltung: Liegenschaft", () => {
     expect(standortBegriff("hausverwaltung")).toBe("Liegenschaft");
     expect(standortBegriff("privat")).toBe("Standort");
+  });
+
+  it("kopfOrtTeile: Bezeichnung nur, wenn nicht schon in der Adresse; Einheit hinten", () => {
+    expect(kopfOrtTeile("Moselstraße 14", "Moselstraße 14, 56073 Koblenz", "Whg. 3")).toEqual([
+      "Moselstraße 14, 56073 Koblenz",
+      "Whg. 3",
+    ]);
+    expect(kopfOrtTeile("Zentrale", "Moselstraße 14, 56073 Koblenz", null)).toEqual(["Zentrale", "Moselstraße 14, 56073 Koblenz"]);
+    expect(kopfOrtTeile("Moselstraße 14", "", null)).toEqual(["Moselstraße 14"]);
+  });
+
+  it("feedOrtZeile: Adresse oder Standort plus Einheit in einer Zeile", () => {
+    expect(feedOrtZeile({ anlage_kurzadresse: null, standort_bezeichnung: "Moselstraße 14", einheit: "Whg. 3, 2. OG links" })).toBe(
+      "Moselstraße 14 · Whg. 3, 2. OG links",
+    );
+    expect(feedOrtZeile({ anlage_kurzadresse: "Hauptstr. 1, Köln", standort_bezeichnung: "X", einheit: null })).toBe("Hauptstr. 1, Köln");
+    expect(feedOrtZeile({ anlage_kurzadresse: null, standort_bezeichnung: null, einheit: null })).toBe("");
   });
 });

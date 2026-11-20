@@ -378,42 +378,99 @@ async def zuordnen(
     return await _ziel_eintrag(session, zuordnung, kontakt)
 
 
+def _gleiche_nummer(a: str | None, b: str | None) -> bool:
+    """Gleiche Normalisierung wie die Rufnummer-Erkennung (nummer-zuordnen), inkl. Mindestlaenge."""
+    from app.services.telefonat_service import _nummer_varianten  # lokal: telefonat_service importiert diesen Dienst
+
+    if not a or not b:
+        return False
+    va, vb = _nummer_varianten(a), _nummer_varianten(b)
+    if not va or not vb or len(max(va, key=len)) < 5 or len(max(vb, key=len)) < 5:
+        return False
+    return bool(va & vb)
+
+
+def _kontakt_zu_eintrag(kandidaten: list[VorOrtKontakt], eintrag: dict, standort_id: UUID | None) -> VorOrtKontakt | None:
+    """Bestehender Kontakt, der zum Portal-Eintrag passt: gleiche Telefonnummer ODER gleicher Name am selben Standort."""
+    name = (eintrag.get("name") or "").strip().casefold()
+    telefon = eintrag.get("telefon")
+    for kontakt in kandidaten:
+        if telefon and (_gleiche_nummer(telefon, kontakt.telefon) or _gleiche_nummer(telefon, kontakt.telefon2)):
+            return kontakt
+        if (
+            name
+            and standort_id is not None
+            and kontakt.standort_id == standort_id
+            and (kontakt.name or "").strip().casefold() == name
+        ):
+            return kontakt
+    return None
+
+
 async def kontakte_aus_anfrage(
     session: AsyncSession, *, mandant_id: UUID, anfrage, vorgang: Vorgang
 ) -> list[VorOrtKontakt]:
     """Annahme einer Portal-Anfrage: aus der JSONB-Liste der Anfrage werden Kontakte (quelle kundenportal) des
-    Anfrage-Kunden, am Standort der Anfrage, dem neuen Vorgang zugeordnet; der erste ist Hauptkontakt. Die
-    Liste an der Anfrage wird danach geleert (Speicherbegrenzung)."""
-    angelegt: list[VorOrtKontakt] = []
-    for index, eintrag in enumerate(anfrage.vor_ort_kontakte or []):
-        kontakt = VorOrtKontakt(
-            mandant_id=mandant_id,
-            kunde_id=anfrage.kunde_id,
-            standort_id=anfrage.standort_id,
-            name=eintrag.get("name"),
-            rolle=eintrag["rolle"],
-            einheit=anfrage.einheit,
-            telefon=eintrag.get("telefon"),
-            erreichbarkeit=eintrag.get("erreichbarkeit"),
-            hinweis=eintrag.get("hinweis"),
-            quelle="kundenportal",
-            erstellt_von_kundenportal_zugang_id=anfrage.kundenportal_zugang_id,
+    Anfrage-Kunden, am Standort der Anfrage, dem neuen Vorgang zugeordnet; der erste ist Hauptkontakt. Ein
+    bereits vorhandener Kontakt desselben Kunden (gleiche Nummer oder gleicher Name am Standort) wird wieder
+    verwendet und nur um leere Felder ergaenzt, damit wiederkehrende Mieter nicht doppelt entstehen. Die Liste
+    an der Anfrage wird danach geleert (Speicherbegrenzung)."""
+    eintraege = anfrage.vor_ort_kontakte or []
+    kandidaten: list[VorOrtKontakt] = []
+    if eintraege:
+        kandidaten = list(
+            (
+                await session.execute(
+                    select(K)
+                    .where(K.kunde_id == anfrage.kunde_id, K.geloescht_am.is_(None), K.anonymisiert_am.is_(None))
+                    .order_by(K.created_at, K.id)
+                )
+            ).scalars()
         )
-        session.add(kontakt)
-        await session.flush()
+    verwendet: list[VorOrtKontakt] = []
+    for eintrag in eintraege:
+        kontakt = _kontakt_zu_eintrag(kandidaten, eintrag, anfrage.standort_id)
+        if kontakt is not None and any(kontakt.id == v.id for v in verwendet):
+            continue  # Zwei Eintraege derselben Anfrage fuer denselben Menschen: nur eine Zuordnung.
+        if kontakt is None:
+            kontakt = VorOrtKontakt(
+                mandant_id=mandant_id,
+                kunde_id=anfrage.kunde_id,
+                standort_id=anfrage.standort_id,
+                name=eintrag.get("name"),
+                rolle=eintrag["rolle"],
+                einheit=anfrage.einheit,
+                telefon=eintrag.get("telefon"),
+                erreichbarkeit=eintrag.get("erreichbarkeit"),
+                hinweis=eintrag.get("hinweis"),
+                quelle="kundenportal",
+                erstellt_von_kundenportal_zugang_id=anfrage.kundenportal_zugang_id,
+            )
+            session.add(kontakt)
+            await session.flush()
+            kandidaten.append(kontakt)
+        else:
+            for feld, wert in (
+                ("einheit", anfrage.einheit),
+                ("telefon", eintrag.get("telefon")),
+                ("erreichbarkeit", eintrag.get("erreichbarkeit")),
+                ("hinweis", eintrag.get("hinweis")),
+            ):
+                if wert and not getattr(kontakt, feld):
+                    setattr(kontakt, feld, wert)
         session.add(
             Z(
                 mandant_id=mandant_id,
                 kontakt_id=kontakt.id,
                 vorgang_id=vorgang.id,
-                ist_hauptkontakt=index == 0,
-                reihenfolge=index,
+                ist_hauptkontakt=not verwendet,
+                reihenfolge=len(verwendet),
             )
         )
-        angelegt.append(kontakt)
+        verwendet.append(kontakt)
     anfrage.vor_ort_kontakte = []
     await session.flush()
-    return angelegt
+    return verwendet
 
 
 async def hauptkontakt_setzen(session: AsyncSession, zuordnung: VorOrtKontaktZuordnung, ist_haupt: bool) -> VorOrtKontaktZugeordnet:

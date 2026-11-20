@@ -254,7 +254,9 @@ async def test_rechnung_geht_an_die_weg(client, hv, weg):
     auftrag = await _auftrag(
         client, h, hv["kunde"], standort_id=hv["standort"]["id"], kunden_referenz="Z-1", rechnung_an_kunde_id=str(weg.id)
     )
-    assert auftrag["rechnung_an_kunde_id"] == str(weg.id) and auftrag["rechnung_an"] == {"id": str(weg.id), "name": "WEG Rosenweg 5"}
+    assert auftrag["rechnung_an_kunde_id"] == str(weg.id) and auftrag["rechnung_an"] == {
+        "id": str(weg.id), "name": "WEG Rosenweg 5", "verwaltet_von_name": "Hausverwaltung Nord"
+    }
     vorgang = await _vorgang(client, h, hv["kunde"], auftrag_id=auftrag["id"])
 
     # Auch wenn der Client den Auftraggeber schickt: der Auftrag bestimmt den Empfaenger.
@@ -275,6 +277,7 @@ async def test_rechnung_an_vom_projekt_und_validierung(client, hv, weg):
         client, h, "/api/projekte", name="Sanierung", kunde_id=str(hv["kunde"].id), rechnung_an_kunde_id=str(weg.id)
     )
     assert projekt["rechnung_an"]["name"] == "WEG Rosenweg 5"
+    assert projekt["rechnung_an"]["verwaltet_von_name"] == "Hausverwaltung Nord"
     vorgang = await _vorgang(client, h, hv["kunde"], projekt_id=projekt["id"])
     assert (await _rechnung(client, h, hv["kunde"], vorgang))["kunde_id"] == str(weg.id)
 

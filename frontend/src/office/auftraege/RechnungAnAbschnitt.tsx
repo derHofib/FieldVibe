@@ -3,14 +3,15 @@ import { useState } from "react";
 
 import { kundenApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
+import { EmpfaengerMitCo } from "../../components/rechnung/EmpfaengerMitCo";
 import { ABSCHNITT_AKTION, Abschnitt } from "../../pages/feld/vorgang/Abschnitt";
-import type { KundeRefKurz } from "../../types";
+import type { RechnungAnKurz } from "../../types";
 import { RECHNUNG_AN_AUFTRAGGEBER, rechnungAnOptionen } from "../../utils/rechnungAn";
 
 interface Props {
   auftraggeberId: string | null;
   auftraggeberName: string | null;
-  rechnungAn: KundeRefKurz | null | undefined;
+  rechnungAn: RechnungAnKurz | null | undefined;
   /** Speichert; `onFertig` schließt das Bearbeiten erst nach Erfolg. Leer = Auftraggeber. */
   speichern: (rechnungAnKundeId: string | null, onFertig: () => void) => void;
   laeuft: boolean;
@@ -79,7 +80,7 @@ export function RechnungAnAbschnitt({ auftraggeberId, auftraggeberName, rechnung
         <dl className="text-fliess">
           <div className="flex items-baseline justify-between gap-3">
             <dt className="text-label2">Rechnung an</dt>
-            <dd className="text-right font-medium text-label">{rechnungAn?.name ?? "Auftraggeber"}</dd>
+            <dd className="text-right font-medium text-label">{rechnungAn ? <EmpfaengerMitCo name={rechnungAn.name} verwaltetVonName={rechnungAn.verwaltet_von_name} /> : "Auftraggeber"}</dd>
           </div>
         </dl>
       )}
